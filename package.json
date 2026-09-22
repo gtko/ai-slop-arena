@@ -1,0 +1,20 @@
+{
+  "name": "ai-slop-arena",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:server": "wrangler dev --port 8787",
+    "build": "vite build",
+    "preview": "vite build && wrangler dev --port 8787",
+    "deploy": "vite build && wrangler deploy"
+  },
+  "dependencies": {
+    "three": "^0.186.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.0",
+    "wrangler": "^4.136.3"
+  }
+}
