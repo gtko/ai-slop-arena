@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { charMat, radialTexture } from './materials.js';
+import { radialTexture } from './materials.js';
+import { buildModel as buildSculpted, OUTLINES } from './models.js';
 
 export const TYPES = {
   blaster: {
@@ -79,122 +80,6 @@ function geos() {
 let BLOB_MAT = null;
 let ICE_MAT = null;
 
-function mesh(geo, mat, x, y, z, parent) {
-  const m = new THREE.Mesh(geo, mat);
-  m.position.set(x, y, z);
-  m.castShadow = true;
-  m.receiveShadow = true;
-  parent.add(m);
-  return m;
-}
-
-function buildModel(T) {
-  const g = geos(), P = T.palette;
-  const M = {
-    skin: charMat(P.skin, { roughness: 0.6 }),
-    main: charMat(P.main),
-    dark: charMat(P.dark, { roughness: 0.7 }),
-    accent: charMat(P.accent, { roughness: 0.45 }),
-    hair: charMat(P.hair, { roughness: 0.65 }),
-    metal: charMat(0x3a3f4a, { roughness: 0.3, metalness: 0.7 }),
-    white: charMat(0xffffff, { roughness: 0.25 }),
-    black: charMat(0x141414, { roughness: 0.2 }),
-  };
-  const root = new THREE.Group();
-  const hips = new THREE.Group(); hips.position.y = 0.62; root.add(hips);
-
-  const legL = new THREE.Group(); legL.position.set(-0.21, 0, 0); hips.add(legL);
-  const legR = new THREE.Group(); legR.position.set(0.21, 0, 0); hips.add(legR);
-  for (const L of [legL, legR]) {
-    mesh(g.leg, M.dark, 0, -0.3, 0, L);
-    const s = mesh(g.shoe, M.black, 0, -0.55, 0.06, L); s.scale.set(1, 0.6, 1.3);
-  }
-  const torso = new THREE.Group(); hips.add(torso);
-  mesh(g.torso, M.main, 0, 0.45, 0, torso);
-  mesh(g.belt, M.dark, 0, 0.12, 0, torso);
-
-  const head = new THREE.Group(); head.position.y = 1.33; torso.add(head);
-  mesh(g.head, M.skin, 0, 0, 0, head);
-  for (const sx of [-1, 1]) {
-    mesh(g.eye, M.white, 0.17 * sx, 0.06, 0.39, head);
-    mesh(g.pupil, M.black, 0.17 * sx, 0.06, 0.48, head);
-  }
-
-  const armL = new THREE.Group(); armL.position.set(-0.54, 0.78, 0); torso.add(armL);
-  const armR = new THREE.Group(); armR.position.set(0.54, 0.78, 0); torso.add(armR);
-  for (const A of [armL, armR]) {
-    mesh(g.arm, M.main, 0, -0.24, 0, A);
-    mesh(g.hand, M.skin, 0, -0.5, 0, A);
-  }
-  armR.rotation.x = -1.35;
-  const gun = new THREE.Group(); gun.position.set(0, -0.52, 0.04); armR.add(gun);
-  let twoHanded = false;
-
-  if (T.key === 'blaster') {
-    for (let k = 0; k < 6; k++) {
-      const a = (k / 6) * Math.PI * 2;
-      const s = mesh(g.spike, M.hair, Math.cos(a) * 0.3, 0.38, Math.sin(a) * 0.3 - 0.08, head);
-      s.rotation.set(Math.sin(a) * 0.6 - 0.3, 0, -Math.cos(a) * 0.6);
-    }
-    mesh(g.spike, M.hair, 0, 0.52, -0.05, head);
-    const b1 = mesh(g.barrel, M.metal, -0.05, -0.35, 0, gun);
-    const b2 = mesh(g.barrel, M.metal, 0.07, -0.35, 0, gun);
-    mesh(g.stock, charMat(0x8b5a2b), 0, 0.12, 0, gun);
-    b1.scale.y = b2.scale.y = 1;
-    const scarf = mesh(g.belt, M.accent, 0, 0.92, 0, torso); scarf.scale.set(0.8, 1.2, 0.8);
-  } else if (T.key === 'gunslinger') {
-    mesh(g.brim, M.hair, 0, 0.36, 0, head);
-    mesh(g.crown, M.hair, 0, 0.56, 0, head);
-    mesh(g.band, M.accent, 0, 0.43, 0, head);
-    mesh(g.pistol, M.metal, 0, -0.2, 0, gun);
-    const gun2 = new THREE.Group(); gun2.position.set(0, -0.52, 0.04); armL.add(gun2);
-    mesh(g.pistol, M.metal, 0, -0.2, 0, gun2);
-    armL.rotation.x = -1.35;
-    twoHanded = true;
-    const kerchief = mesh(g.belt, M.accent, 0, 0.92, 0.05, torso); kerchief.scale.set(0.75, 1.3, 0.75);
-  } else if (T.key === 'frostbite') {
-    // hooded ice mage with a crystal-topped staff
-    const hood = mesh(g.hood, M.main, 0, 0.3, -0.05, head); hood.material.side = THREE.DoubleSide;
-    for (const [x, y, z, r] of [[-0.3, 0.45, -0.1, 0.5], [0.3, 0.45, -0.1, -0.5], [0, 0.62, -0.2, 0], [0, 0.35, -0.42, 0]]) {
-      const sp = mesh(g.crystal, M.accent, x, y, z, head); sp.scale.set(0.6, 1.3, 0.6); sp.rotation.z = r;
-    }
-    const glow = charMat(0xbff0ff, { emissive: 0x6fdcff, emissiveIntensity: 3, roughness: 0.1 });
-    glow.userData.glow = true;
-    const staff = mesh(g.staff, M.dark, 0, -0.1, 0, gun); staff.rotation.x = 0.2;
-    const tip = mesh(g.crystal, glow, 0, -0.9, 0.12, gun); tip.scale.set(1.1, 1.8, 1.1);
-    const scarf = mesh(g.belt, M.accent, 0, 0.92, 0, torso); scarf.scale.set(0.8, 1.2, 0.8);
-  } else if (T.key === 'volt') {
-    // boxy little robot: glowing visor, antenna bulb, sparking fists
-    const hb = new THREE.Mesh(g.botHead, M.metal); hb.castShadow = hb.receiveShadow = true; head.add(hb);
-    head.children[0].visible = false; // hide the round skin head under the box
-    for (const e of head.children.slice(1, 5)) e.visible = false; // hide the cartoon eyes
-    const screen = charMat(0x0a1a22, { emissive: 0x2fe0ff, emissiveIntensity: 1.6, roughness: 0.2 });
-    const bulbMat = charMat(0xfff2a0, { emissive: 0xffd23f, emissiveIntensity: 4 });
-    const fist = charMat(0xfff2a0, { emissive: 0x7ff0ff, emissiveIntensity: 2.2 });
-    screen.userData.glow = bulbMat.userData.glow = fist.userData.glow = true;
-    mesh(g.visor, screen, 0, 0.02, 0.41, head);
-    for (const sx of [-1, 1]) mesh(g.pupil, M.black, 0.14 * sx, 0.04, 0.45, head);
-    mesh(g.antenna, M.metal, 0.18, 0.55, 0, head);
-    mesh(g.bulb, bulbMat, 0.18, 0.78, 0, head);
-    for (const A of [armL, armR]) A.children[1].material = fist; // glowing hands
-    mesh(g.belt, M.accent, 0, 0.12, 0, torso);
-  } else {
-    mesh(g.helmet, M.accent, 0, 0.08, 0, head);
-    const lampMat = charMat(0xfff2b0, { emissive: 0xffe28a, emissiveIntensity: 3 });
-    const fuseMat = charMat(0xffaa33, { emissive: 0xff7722, emissiveIntensity: 4 });
-    lampMat.userData.glow = fuseMat.userData.glow = true;
-    const lamp = mesh(g.lamp, lampMat, 0, 0.3, 0.47, head);
-    lamp.rotation.x = Math.PI / 2;
-    const beard = mesh(g.beard, M.hair, 0, -0.28, 0.2, head); beard.scale.set(1.1, 0.8, 0.8);
-    mesh(g.bomb, M.black, 0, -0.1, 0, gun);
-    const fuse = mesh(g.lamp, fuseMat, 0, -0.1, 0.22, gun);
-    fuse.scale.set(0.4, 1, 0.4);
-  }
-
-  const mats = Object.values(M);
-  root.traverse(o => { if (o.isMesh && !mats.includes(o.material)) mats.push(o.material); });
-  return { root, hips, torso, head, legL, legR, armL, armR, gun, mats, twoHanded };
-}
 
 const lerpAngle = (a, b, t) => {
   let d = (b - a) % (Math.PI * 2);
@@ -209,7 +94,8 @@ export class Brawler {
     this.type = TYPES[typeKey];
     this.name = name;
     this.isPlayer = isPlayer;
-    this.model = buildModel(this.type);
+    this.model = buildSculpted(this.type);
+    this.blinkT = 1 + Math.random() * 3;
     this.root = new THREE.Group();
     this.root.add(this.model.root);
     game.scene.add(this.root);
@@ -337,6 +223,13 @@ export class Brawler {
     m.hips.position.y = 0.62 + Math.abs(Math.cos(this.walkPhase)) * 0.08 * a + Math.sin(t * 2.2) * 0.012;
     m.torso.rotation.z = s * 0.05 * a;
     m.torso.rotation.x = 0.08 * a;
+    m.torso.scale.set(1 + Math.sin(t * 2.2) * 0.012, 1 + Math.sin(t * 2.2 + 1) * 0.015, 1); // breathing
+    // blink every few seconds
+    if (m.eyes) {
+      this.blinkT -= dt;
+      if (this.blinkT < 0) this.blinkT = 2 + Math.random() * 3.5;
+      m.eyes.scale.y = this.blinkT < 0.12 ? 0.12 : 1;
+    }
     this.recoil = Math.max(0, this.recoil - dt * 6);
     m.armR.rotation.x = -1.35 + this.recoil * 0.55;
     if (m.twoHanded) m.armL.rotation.x = -1.35 + this.recoil * 0.4;
@@ -377,6 +270,7 @@ export class Brawler {
     this.g.scene.remove(this.root);
     this.g.fx.remove(this.ring, this.blob);
     for (const m of this.model.mats) m.dispose();
+    this.model.root.traverse(o => { if (o.isMesh && o.userData.baked) o.geometry.dispose(); if (o.userData.outline) OUTLINES.delete(o); }); // outlines share the geometry
     this.ring.material.dispose();
   }
 }

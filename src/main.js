@@ -19,6 +19,7 @@ import { loadTextures, ASSET_BASE } from './assets.js';
 import { shared } from './materials.js';
 import { settings, set as setSetting, onChange } from './settings.js';
 import { Menus } from './menu.js';
+import { OUTLINES } from './models.js';
 import { PAD } from './input.js';
 import './style.css';
 
@@ -60,7 +61,7 @@ gtao.blendIntensity = 1;
 const hideFx = gtao._overrideVisibility.bind(gtao);
 gtao._overrideVisibility = () => {
   hideFx();
-  for (const g of [game.fx, game.arena && game.arena.halos]) {
+  for (const g of [game.fx, game.arena && game.arena.halos, ...OUTLINES]) {
     if (g && g.visible) { g.visible = false; gtao._visibilityCache.push(g); }
   }
   if (lighting.helper && lighting.helper.visible) { lighting.helper.visible = false; gtao._visibilityCache.push(lighting.helper); }
