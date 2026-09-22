@@ -178,3 +178,58 @@ export function obstacleGeometry(kind) {
     if (kind === 'boulder' && ny > 0.45) c.copy(snow);
   });
 }
+
+/* ------------------------------------------------------------------ */
+/* Cartoon desert set: grass tufts and faceted cliffs                  */
+/* ------------------------------------------------------------------ */
+
+// Tall golden grass for one 2x2 tile: tapered, slightly curved blades, orange at the root and
+// yellow at the tip. Normals lean up so the tuft reads as one bright soft volume.
+export function grassTuftGeometry(seed = 3, blades = 95) {
+  const r = mulberry(seed), pos = [], nor = [], col = [];
+  const root = new THREE.Color(0xf08a34), tip = new THREE.Color(0xffe06a), mid = new THREE.Color(0xffb640);
+  for (let k = 0; k < blades; k++) {
+    const x = (r() - 0.5) * 2.1, z = (r() - 0.5) * 2.1, a = r() * Math.PI * 2;
+    const h = 0.95 + r() * 0.5, w = 0.16 + r() * 0.08, lean = 0.15 + r() * 0.25;
+    const dx = Math.cos(a), dz = Math.sin(a), px = -dz * w, pz = dx * w;           // blade width direction
+    const ox = x * 0.12 * lean, oz = z * 0.12 * lean;                                // lean away from the centre
+    const tipC = tip.clone().lerp(mid, r() * 0.5);
+    const ring = [[0, 1], [0.55, 0.62], [1, 0]]; // (height fraction, width fraction)
+    const pts = ring.map(([t, wf]) => [x + ox * t * t * 6, h * t, z + oz * t * t * 6, wf]);
+    const n = new THREE.Vector3(x * 0.3 + dx * 0.2, 1, z * 0.3 + dz * 0.2).normalize();
+    const cAt = t => root.clone().lerp(tipC, Math.pow(t, 0.7));
+    for (let s = 0; s < 2; s++) {
+      const [ax, ay, az, aw] = pts[s], [bx, by, bz, bw] = pts[s + 1];
+      const quad = [[ax - px * aw, ay, az - pz * aw, ay / h], [ax + px * aw, ay, az + pz * aw, ay / h], [bx + px * bw, by, bz + pz * bw, by / h],
+        [ax - px * aw, ay, az - pz * aw, ay / h], [bx + px * bw, by, bz + pz * bw, by / h], [bx - px * bw, by, bz - pz * bw, by / h]];
+      for (const [qx, qy, qz, t] of quad) {
+        pos.push(qx, qy, qz); nor.push(n.x, n.y, n.z);
+        const c = cAt(t); col.push(c.r, c.g, c.b);
+      }
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(pos.length / 3 * 2), 2));
+  return g;
+}
+
+// Chunky faceted canyon rock: a squashed low-poly blob, warm sunlit top, darker flanks.
+export function cliffGeometry(seed = 8) {
+  const r = mulberry(seed), g = new THREE.IcosahedronGeometry(1, 1);
+  const p = g.attributes.position;
+  const bump = new Map();
+  for (let i = 0; i < p.count; i++) {
+    const key = `${p.getX(i).toFixed(3)},${p.getY(i).toFixed(3)},${p.getZ(i).toFixed(3)}`;
+    if (!bump.has(key)) bump.set(key, 0.8 + r() * 0.4);
+    const k = bump.get(key), y = p.getY(i);
+    p.setXYZ(i, p.getX(i) * k * 1.3, Math.max(-0.2, y) * k * 1.1 + 0.2, p.getZ(i) * k * 1.3);
+  }
+  g.computeVertexNormals();
+  const top = new THREE.Color(0xf29a62), side = new THREE.Color(0xc4583c), base = new THREE.Color(0x9c4432);
+  return colorize(g, (c, x, y, z, ny) => {
+    if (ny > 0.55) c.copy(top); else c.copy(side).lerp(base, THREE.MathUtils.clamp(0.6 - y * 0.4, 0, 1));
+  });
+}

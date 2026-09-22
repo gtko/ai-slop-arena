@@ -138,11 +138,16 @@ function foliageVertex(shader) {
 // derivatives), and a sun-coloured rim / transmission term so foliage glows where light
 // grazes or shines through it: strongest at sunset when the sun is low behind the arena.
 const FOL_COLOR = /* glsl */`#include <color_fragment>
+#ifdef FOL_NO_LEAF
+folLeaf = 0.6;
+#else
 folLeaf = leafField( vFolWorld * LEAF_SCALE );
+#endif
 diffuseColor.rgb *= mix( 0.8, 1.08, folLeaf ) * mix( 0.85, 1.1, vFolH );
 diffuseColor.rgb = mix( diffuseColor.rgb, diffuseColor.rgb * vec3( 1.15, 1.2, 0.8 ), folLeaf * vFolH * 0.35 );
 `;
 const FOL_NORMAL = /* glsl */`#include <normal_fragment_maps>
+#ifndef FOL_NO_LEAF
 {
   vec3 sx = dFdx( - vViewPosition ), sy = dFdy( - vViewPosition );
   vec3 r1 = cross( sy, normal ), r2 = cross( normal, sx );
@@ -150,6 +155,11 @@ const FOL_NORMAL = /* glsl */`#include <normal_fragment_maps>
   vec3 grad = sign( det ) * ( dFdx( folLeaf ) * r1 + dFdy( folLeaf ) * r2 );
   normal = normalize( abs( det ) * normal - grad * LEAF_BUMP );
 }
+#endif
+#ifdef FOL_UP_NORMAL
+// cartoon grass: every blade (front or back face) is lit like one soft volume facing the sky
+normal = normalize( ( viewMatrix * vec4( 0.0, 1.0, 0.0, 0.0 ) ).xyz );
+#endif
 #ifdef FOL_SNOW
 {
   // snow settles on whatever faces up (world-space normal from the view-space one)
@@ -185,12 +195,14 @@ function foliagePatch(shader) {
     .replace('#include <lights_fragment_end>', FOL_LIGHT);
 }
 
-export function foliageMaterials(params, { reveal = true, leafScale = 3.6, leafBump = 0.5, snow = false } = {}) {
+export function foliageMaterials(params, { reveal = true, leafScale = 3.6, leafBump = 0.5, snow = false, leaves = true, upNormal = false } = {}) {
   const mat = new THREE.MeshStandardMaterial(params);
   // extend (don't replace) the defines: MeshStandardMaterial relies on its STANDARD define
   Object.assign(mat.defines, { LEAF_SCALE: leafScale.toFixed(2), LEAF_BUMP: leafBump.toFixed(2) });
   if (!reveal) mat.defines.FOL_NO_REVEAL = '';
   if (snow) mat.defines.FOL_SNOW = '';
+  if (!leaves) mat.defines.FOL_NO_LEAF = '';
+  if (upNormal) mat.defines.FOL_UP_NORMAL = '';
   mat.onBeforeCompile = foliagePatch;
   const depth = new THREE.MeshDepthMaterial();
   depth.onBeforeCompile = foliageVertex;
@@ -331,5 +343,52 @@ export function radialTexture(inner = 'rgba(0,0,0,0.85)', outer = 'rgba(0,0,0,0)
   }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+// Cartoon canyon block sides: warm horizontal rock bands with wavy darker strata lines.
+// Two bands per texture repeat; the wall side shows about two repeats vertically.
+export function strataTexture(base = '#c95b3c') {
+  const S = 256, [c, x] = canvas(S), r = mulberry(17);
+  const col = new THREE.Color(base);
+  const shade = k => `#${col.clone().multiplyScalar(k).getHexString()}`;
+  x.fillStyle = shade(1); x.fillRect(0, 0, S, S);
+  x.fillStyle = shade(0.9); x.fillRect(0, S * 0.5, S, S * 0.5);
+  x.strokeStyle = shade(0.62); x.lineWidth = 5; x.lineCap = 'round';
+  for (const y0 of [S * 0.18, S * 0.5, S * 0.8]) {
+    x.beginPath();
+    for (let px = 0; px <= S; px += 8) {
+      const y = y0 + Math.sin(px / S * Math.PI * 4 + y0) * 4; // integer periods: tiles horizontally
+      px === 0 ? x.moveTo(px, y) : x.lineTo(px, y);
+    }
+    x.stroke();
+  }
+  for (let k = 0; k < 14; k++) { // little crack ticks
+    const px = r() * S, py = r() * S;
+    x.beginPath(); x.moveTo(px, py); x.lineTo(px + 10 + r() * 10, py + (r() - 0.5) * 6); x.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8;
+  return t;
+}
+
+// Flat cartoon ground: two soft tones per 2x2 tiles, faint speckles, no busy detail.
+export function cartoonGround(a = '#f0ad7e', b = '#eba272') {
+  const S = 512, [c, x] = canvas(S), r = mulberry(29);
+  for (let ty = 0; ty < 2; ty++) for (let tx = 0; tx < 2; tx++) {
+    x.fillStyle = (tx + ty) % 2 ? b : a;
+    x.fillRect(tx * S / 2, ty * S / 2, S / 2, S / 2);
+  }
+  for (let k = 0; k < 900; k++) {
+    x.fillStyle = r() < 0.5 ? 'rgba(170,80,40,0.08)' : 'rgba(255,230,200,0.1)';
+    const s = 2 + r() * 4;
+    x.beginPath(); x.arc(r() * S, r() * S, s, 0, Math.PI * 2); x.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8;
   return t;
 }

@@ -117,17 +117,18 @@ export class Lighting {
     const el = THREE.MathUtils.degToRad(S.el), az = THREE.MathUtils.degToRad(S.az);
     this.sunDir.set(Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az)).normalize();
     this.sun.color.copy(S.sun);
-    this.sun.intensity = S.sunI;
+    const st = this.style || {};
+    this.sun.intensity = S.sunI * (st.sun ?? 1);
     this.sun.shadow.intensity = S.shadowI;
     this.hemi.color.copy(S.sky);
     this.hemi.groundColor.copy(S.ground);
-    this.hemi.intensity = S.hemiI;
-    this.scene.environmentIntensity = S.env;
+    this.hemi.intensity = S.hemiI * (st.hemi ?? 1);
+    this.scene.environmentIntensity = S.env * (st.env ?? 1);
     this.scene.fog.color.copy(S.fog);
     this.scene.fog.near = S.fogNear;
     this.scene.fog.far = S.fogFar;
     this.scene.background.copy(S.fog);
-    this.renderer.toneMappingExposure = S.exposure * this.exposureMul;
+    this.renderer.toneMappingExposure = S.exposure * this.exposureMul * (st.exposure ?? 1);
     shared.rimColor.value.copy(S.rimC);
     shared.rimStrength.value = S.rim;
   }

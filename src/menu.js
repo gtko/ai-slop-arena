@@ -30,6 +30,7 @@ function tabs(ctx) {
         { label: 'Quality preset', type: 'choice', opts: [['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['ultra', 'Ultra'], ['custom', 'Custom']],
           get: () => settings.preset, set: v => { if (v !== 'custom') applyQuality(v); }, hint: 'Sets resolution, AA, shadows, AO, bloom and weather at once.' },
         { section: 'Display' },
+        choice('art', 'Art style', [['cartoon', 'Cartoon'], ['realistic', 'Realistic']], 'Cartoon: soft cel shading and vivid colours. Changing it reloads the game.'),
         choice('renderScale', 'Render resolution', [[0.5, '50%'], [0.75, '75%'], [1, '100%'], [1.25, '125%'], [1.5, '150%']], 'Lower = faster, higher = sharper.'),
         choice('msaa', 'Anti-aliasing', [[0, 'Off'], [2, 'MSAA 2x'], [4, 'MSAA 4x']]),
         slider('exposure', 'Brightness', 0.5, 1.8, 0.05, v => v.toFixed(2)),

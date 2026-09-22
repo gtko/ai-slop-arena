@@ -20,7 +20,7 @@ const QUALITY_KEYS = new Set(Object.keys(QUALITY.high));
 export const DEFAULTS = {
   preset: 'high', ...QUALITY.high,
   fitFrustum: true, texelSnap: true, showFrustum: false, aoView: false, dynLights: true,
-  tod: '2', exposure: 1, shake: true, fps: false, debugPanel: false,
+  art: 'cartoon', tod: '2', exposure: 1, shake: true, fps: false, debugPanel: false,
   deadzone: 0.18, vibration: true,
   binds: { ...DEFAULT_BINDS },
 };

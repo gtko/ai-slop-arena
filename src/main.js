@@ -20,10 +20,13 @@ import { shared } from './materials.js';
 import { settings, set as setSetting, onChange } from './settings.js';
 import { Menus } from './menu.js';
 import { OUTLINES } from './models.js';
+import { enableCartoonShading, cartoonGradePass } from './cartoon.js';
 import { PAD } from './input.js';
 import './style.css';
 
 const $ = s => document.querySelector(s);
+const CARTOON = settings.art === 'cartoon';
+if (CARTOON) enableCartoonShading(); // must run before any material compiles
 
 /* ------------------------------ renderer ------------------------------ */
 
@@ -34,13 +37,15 @@ renderer.setPixelRatio(DPR);
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
+// Neutral keeps cartoon colours saturated; ACES rolls highlights off more photographically.
+renderer.toneMapping = CARTOON ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
 renderer.info.autoReset = false;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.5, 260);
 
 const lighting = new Lighting(renderer, scene);
+if (CARTOON) lighting.style = { hemi: 1.45, env: 0.55, exposure: 0.95, sun: 0.9 };
 const lights = new LightPool(scene, 12);
 const hud = new Hud();
 const input = new Input(canvas);
@@ -72,6 +77,7 @@ composer.addPass(visionFog.pass);
 
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.5, 1.6);
 composer.addPass(bloom);
+if (CARTOON) composer.addPass(cartoonGradePass());
 composer.addPass(new OutputPass());
 
 addEventListener('resize', () => {
@@ -116,6 +122,7 @@ function applySetting(k) {
     case 'shake': game.shakeEnabled = v; break;
     case 'fps': $('#fpsBadge').classList.toggle('hidden', !v); break;
     case 'debugPanel': $('#panel').classList.toggle('off', !v); break;
+    case 'art': if ((v === 'cartoon') !== CARTOON) setTimeout(() => location.reload(), 150); break;
   }
   syncPanel();
 }

@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {
-  foliageMaterials, groundTexture, grassTexture, mulberry,
+  foliageMaterials, groundTexture, grassTexture, mulberry, strataTexture, cartoonGround,
 } from './materials.js';
 import { Water, IceField } from './water.js';
-import { bushGeometry, roundTree, pineTree, cactusGeometry, deadTree, obstacleGeometry } from './foliage.js';
+import { bushGeometry, roundTree, pineTree, cactusGeometry, deadTree, obstacleGeometry, grassTuftGeometry, cliffGeometry } from './foliage.js';
 import { MAPS } from './maps.js';
 import { lanternKit, makeLantern } from './lantern.js';
 import { tex, image } from './assets.js';
@@ -72,6 +72,7 @@ export class Arena {
     this.ice = new IceField(this, N, TILE);
     this.buildObstacles();
     if (map.wet) this.buildPuddles();
+    if (map.stones) this.buildStones();
     this.buildCrates();
     this.buildTorches();
     this.buildDecor();
@@ -165,10 +166,11 @@ export class Arena {
 
   buildGround() {
     const M = this.map, key = M.ground + M.checker;
-    if (!groundMaps.has(key)) groundMaps.set(key, groundTexture(image(M.ground) || image('sand'), M.checker));
+    const cartoon = M.ground === 'cartoon';
+    if (!groundMaps.has(key)) groundMaps.set(key, cartoon ? cartoonGround(...(M.groundTones || [])) : groundTexture(image(M.ground) || image('sand'), M.checker));
     const map = groundMaps.get(key).clone();
     map.repeat.set(N / 2, N / 2);
-    const groundN = tex(M.ground + '_n', N, N) || tex('sand_n', N, N); // one normal tile per arena tile
+    const groundN = cartoon ? null : tex(M.ground + '_n', N, N) || tex('sand_n', N, N); // one normal tile per arena tile
     // Wet maps: darker, glossier floor so lanterns, lightning and projectiles smear across it.
     const ground = new THREE.Mesh(
       this.groundGeometry(),
@@ -207,7 +209,12 @@ export class Arena {
     }
     // Box face groups: +x, -x, +y (cap), -y, +z, -z. Painted texture on the sides, plain cap on top.
     const sided = (name, rep, capColor) => {
-      const map = tex(name, 1, rep), normalMap = tex(name + '_n', 1, rep);
+      let map = tex(name, 1, rep), normalMap = tex(name + '_n', 1, rep);
+      if (name.startsWith('strata')) { // cartoon canyon blocks: banded sides, bright flat top
+        map = strataTexture(name === 'strataDark' ? '#9c4a36' : '#c95b3c');
+        map.repeat.set(1, rep);
+        normalMap = null;
+      }
       const side = new THREE.MeshStandardMaterial({
         vertexColors: true, roughness: 0.8, map, normalMap, normalScale: new THREE.Vector2(1.2, 1.2),
       });
@@ -215,8 +222,9 @@ export class Arena {
       return [side, side, cap, side, side, side];
     };
     const M = this.map;
-    const wallTex = tex(M.wall) ? M.wall : 'brick', boundTex = tex(M.bound) ? M.bound : 'stone';
-    this.textured = !!tex(wallTex);
+    const pick = (n, fallback) => (n.startsWith('strata') || tex(n) ? n : fallback);
+    const wallTex = pick(M.wall, 'brick'), boundTex = pick(M.bound, 'stone');
+    this.textured = wallTex.startsWith('strata') || !!tex(wallTex);
     this.walls = new THREE.InstancedMesh(tintedBox(1.98, WALL_H, 1.98, 0.18), sided(wallTex, 0.55, M.wallCap), nw);
     this.bounds = new THREE.InstancedMesh(tintedBox(1.99, BOUND_H, 1.99, 0.22, 0.5), sided(boundTex, 0.75, M.boundCap), nb);
     const [wh, ws, wl] = M.wallTint, [bh, bs, bl] = M.boundTint;
@@ -250,10 +258,13 @@ export class Arena {
   }
 
   buildBushes() {
-    const geo = bushGeometry(7);
+    const grass = this.map.bushStyle === 'grass';
+    const geo = grass ? grassTuftGeometry(3) : bushGeometry(7);
     const tiles = [];
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) if (this.grid[j][i] === 'B') tiles.push([i, j]);
-    const { mat, depth } = foliageMaterials({ vertexColors: true, roughness: 0.72 }, { snow: !!this.map.snow });
+    const { mat, depth } = grass
+      ? foliageMaterials({ vertexColors: true, roughness: 0.9, side: THREE.DoubleSide }, { leaves: false, upNormal: true })
+      : foliageMaterials({ vertexColors: true, roughness: 0.72 }, { snow: !!this.map.snow });
     const [bh, bs, bl] = this.map.bush;
     const mesh = new THREE.InstancedMesh(geo, mat, tiles.length);
     mesh.customDepthMaterial = depth;
@@ -377,6 +388,11 @@ export class Arena {
       const pts = raw.map(([x, z, s]) => [x, z, s, this.rand() * 6.28, 0.9 + this.rand() * 0.25]);
       if (kind === 'cactus') { addInstanced(cactusGeometry(4, 2.4), plainMat, pts); continue; }
       if (kind === 'dead') { addInstanced(deadTree(6), plainMat, pts); continue; }
+      if (kind === 'cliff') {
+        const rock = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
+        addInstanced(cliffGeometry(8), rock, pts.map(([x, z, s, ry]) => [x, z, s * (1.4 + this.rand() * 1.2), ry, 0.7 + this.rand() * 0.8]));
+        continue;
+      }
       const geo = kind === 'pine' ? pineTree(5) : roundTree(3);
       const leaf = kind === 'pine' ? { leafScale: 4.2, leafBump: 0.45 } : { leafScale: 2.8, leafBump: 0.6 };
       const { mat, depth } = foliageMaterials({ vertexColors: true, roughness: 0.75 }, { reveal: false, snow: !!M.snow, ...leaf });
@@ -403,6 +419,30 @@ export class Arena {
     mesh.castShadow = mesh.receiveShadow = true;
     mesh.computeBoundingSphere();
     this.group.add(mesh);
+  }
+
+  // Flat stepping stones scattered on the cartoon ground, each with a darker rim.
+  buildStones() {
+    const plate = new THREE.CircleGeometry(1, 5); plate.rotateX(-Math.PI / 2);
+    const spots = [];
+    for (let k = 0; k < 400 && spots.length < 70; k++) {
+      const [i, j] = this.randomOpenTile(1, this.rand);
+      if (this.grid[j][i] !== '.') continue;
+      this.center(i, j, _v);
+      spots.push([_v.x + (this.rand() - 0.5) * 1.4, _v.z + (this.rand() - 0.5) * 1.4, 0.28 + this.rand() * 0.3, this.rand() * 6.28]);
+    }
+    const make = (color, y, grow) => {
+      const mesh = new THREE.InstancedMesh(plate, new THREE.MeshStandardMaterial({ color, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1 }), spots.length);
+      spots.forEach(([x, z, r, a], k) => {
+        _q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, a);
+        _m.compose(_v.set(x, y, z), _q, _s.set(r * grow, 1, r * grow * 0.85));
+        mesh.setMatrixAt(k, _m);
+      });
+      mesh.receiveShadow = true;
+      this.group.add(mesh);
+    };
+    make(0xc8704a, 0.008, 1.18); // rim
+    make(this.map.stoneColor || 0xf7c48e, 0.014, 1);
   }
 
   // Glossy dark puddles on wet maps: pure mirrors for lanterns, projectiles and lightning.

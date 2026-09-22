@@ -24,10 +24,11 @@ export const MAPS = {
       'X.....BB..#..',
       'X.S....T.#..C',
     ],
-    ground: 'sand', checker: 'rgba(150,92,38,0.14)', outer: 'grass',
-    wall: 'brick', wallCap: 0xf2c48a, wallTint: [0.08, 0.15, 0.86], debris: 0xd98a4c,
-    bound: 'stone', boundCap: 0x6a6478, boundTint: [0.7, 0.08, 0.8],
-    bush: [0.27, 0.35, 0.82], trees: { round: 0.65, pine: 0.35 }, water: 'water', obstacle: 'rock',
+    // cartoon canyon set: flat warm ground + stepping stones, banded blocks, golden grass, faceted cliffs
+    ground: 'cartoon', groundTones: ['#f0ad7e', '#eaa272'], checker: '', outer: 'sand', stones: true,
+    wall: 'strata', wallCap: 0xee7a4e, wallTint: [0.05, 0.05, 0.95], debris: 0xc9603e,
+    bound: 'strataDark', boundCap: 0xc0613f, boundTint: [0.05, 0.05, 0.85],
+    bush: [0.1, 0.1, 0.95], bushStyle: 'grass', trees: { cliff: 0.7, cactus: 0.3 }, water: 'water', obstacle: 'cactus',
   },
 
   dunes: {
@@ -49,9 +50,9 @@ export const MAPS = {
       'X.S......K..C',
     ],
     ground: 'clay', checker: 'rgba(110,40,15,0.12)', outer: 'sand',
-    wall: 'brick', wallCap: 0xe9a86e, wallTint: [0.04, 0.4, 0.78], debris: 0xc9643a,
-    bound: 'stone', boundCap: 0x8a6a58, boundTint: [0.06, 0.25, 0.72],
-    bush: [0.13, 0.5, 0.95], trees: { cactus: 0.7, dead: 0.3 }, water: 'none', obstacle: 'cactus',
+    wall: 'strata', wallCap: 0xe0724a, wallTint: [0.04, 0.1, 0.9], debris: 0xc9643a,
+    bound: 'strataDark', boundCap: 0xb05a3c, boundTint: [0.05, 0.1, 0.8],
+    bush: [0.1, 0.1, 0.92], bushStyle: 'grass', trees: { cliff: 0.55, cactus: 0.3, dead: 0.15 }, water: 'none', obstacle: 'cactus',
   },
 
   grove: {
