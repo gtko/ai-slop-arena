@@ -49,16 +49,18 @@ function familyMaterial(sp) {
 }
 
 // Cartoon outline: inverted hull pushed out along the normals, drawn back-faces only.
-let OUTLINE = null;
 export const OUTLINES = new Set(); // hidden during the AO pre-pass (see main.js)
-function outlineMaterial() {
-  if (OUTLINE) return OUTLINE;
-  OUTLINE = new THREE.MeshBasicMaterial({ color: 0x1a1024, side: THREE.BackSide });
-  OUTLINE.onBeforeCompile = sh => {
-    sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += normalize( objectNormal ) * 0.032;');
+const OUTLINE_MATS = new Map(); // one shared material per line width
+export function outlineMaterial(width = 0.032) {
+  if (OUTLINE_MATS.has(width)) return OUTLINE_MATS.get(width);
+  const m = new THREE.MeshBasicMaterial({ color: 0x1a1024, side: THREE.BackSide });
+  m.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\ntransformed += normalize( normal ) * ${width.toFixed(4)};`);
   };
-  OUTLINE.userData.outline = true;
-  return OUTLINE;
+  m.customProgramCacheKey = () => 'outline' + width;
+  m.userData.outline = true;
+  OUTLINE_MATS.set(width, m);
+  return m;
 }
 const DUMMY = new THREE.MeshBasicMaterial();
 

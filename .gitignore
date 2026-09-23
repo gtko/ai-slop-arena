@@ -3,3 +3,7 @@ dist
 .wrangler
 art-src/old
 *.log
+.ai3d/
+
+# raw image-to-3D outputs (85 MB, regenerate with art-src/ai3d); the game ships the optimised copies
+art-src/glb/

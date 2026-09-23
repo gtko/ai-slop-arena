@@ -6,8 +6,15 @@ import {
 import { Water, IceField } from './water.js';
 import { bushGeometry, roundTree, pineTree, cactusGeometry, deadTree, obstacleGeometry, grassTuftGeometry, cliffGeometry } from './foliage.js';
 import { MAPS } from './maps.js';
-import { lanternKit, makeLantern } from './lantern.js';
+import { lanternKit, makeLantern, makeSculptedLantern, sculptedLanternMaterial } from './lantern.js';
 import { tex, image } from './assets.js';
+import { hasProp, propGeometry, propMaterial, propDepth, propMap } from './props.js';
+
+// Sculpted prop (props.js) for each procedural style, when its model exists.
+const WALL_PROP = { strata: 'wall_canyon', strataDark: 'wall_canyon', mossbrick: 'wall_moss', stone: 'wall_moss', icestone: 'wall_ice', brick: 'wall_canyon' };
+const TREE_PROP = { round: 'tree_round', pine: 'tree_pine', dead: 'tree_dead', cactus: 'cactus', cliff: 'rock_canyon' };
+const OBSTACLE_PROP = { cactus: 'cactus', stump: 'stump', boulder: 'boulder', rock: 'boulder' };
+const snowy = (name, snow) => (snow && hasProp(name + '_snow') ? name + '_snow' : name);
 
 const groundMaps = new Map(); // composed once per ground texture, reused by every match
 
@@ -225,8 +232,14 @@ export class Arena {
     const pick = (n, fallback) => (n.startsWith('strata') || tex(n) ? n : fallback);
     const wallTex = pick(M.wall, 'brick'), boundTex = pick(M.bound, 'stone');
     this.textured = wallTex.startsWith('strata') || !!tex(wallTex);
-    this.walls = new THREE.InstancedMesh(tintedBox(1.98, WALL_H, 1.98, 0.18), sided(wallTex, 0.55, M.wallCap), nw);
-    this.bounds = new THREE.InstancedMesh(tintedBox(1.99, BOUND_H, 1.99, 0.22, 0.5), sided(boundTex, 0.75, M.boundCap), nb);
+    const wallProp = WALL_PROP[M.wall] && hasProp(WALL_PROP[M.wall]) ? WALL_PROP[M.wall] : null;
+    const boundProp = WALL_PROP[M.bound] && hasProp(WALL_PROP[M.bound]) ? WALL_PROP[M.bound] : null;
+    this.walls = wallProp
+      ? new THREE.InstancedMesh(propGeometry(wallProp, { box: [1.98, WALL_H, 1.98] }), propMaterial(wallProp), nw)
+      : new THREE.InstancedMesh(tintedBox(1.98, WALL_H, 1.98, 0.18), sided(wallTex, 0.55, M.wallCap), nw);
+    this.bounds = boundProp
+      ? new THREE.InstancedMesh(propGeometry(boundProp, { box: [1.99, BOUND_H, 1.99] }), propMaterial(boundProp), nb)
+      : new THREE.InstancedMesh(tintedBox(1.99, BOUND_H, 1.99, 0.22, 0.5), sided(boundTex, 0.75, M.boundCap), nb);
     const [wh, ws, wl] = M.wallTint, [bh, bs, bl] = M.boundTint;
     this.wallIndex = new Map();
     this.wallColors = [];
@@ -235,16 +248,18 @@ export class Arena {
       const ch = this.grid[j][i];
       if (ch !== '#' && ch !== 'X') continue;
       this.center(i, j, _v);
-      _m.makeTranslation(_v.x, 0, _v.z);
+      _m.makeRotationY(Math.floor(this.rand() * 4) * Math.PI / 2).setPosition(_v.x, 0, _v.z);
       if (ch === '#') {
-        if (this.textured) _c.setHSL(wh, ws, wl + this.rand() * 0.14); // tint the painted bricks lightly
+        if (wallProp) _c.setHSL(0, 0, 0.9 + this.rand() * 0.12);
+        else if (this.textured) _c.setHSL(wh, ws, wl + this.rand() * 0.14); // tint the painted bricks lightly
         else _c.setHSL(0.065 + this.rand() * 0.02, 0.58, 0.5 + this.rand() * 0.07);
         this.walls.setMatrixAt(a, _m);
         this.walls.setColorAt(a, _c);
         this.wallColors[a] = this.textured ? new THREE.Color(M.debris) : _c.clone(); // debris colour
         this.wallIndex.set(this.key(i, j), a++);
       } else {
-        if (this.textured) _c.setHSL(bh, bs, bl + this.rand() * 0.12);
+        if (boundProp) _c.setHSL(0, 0, 0.62 + this.rand() * 0.08); // the outer ring reads darker
+        else if (this.textured) _c.setHSL(bh, bs, bl + this.rand() * 0.12);
         else _c.setHSL(0.68, 0.14, 0.34 + this.rand() * 0.05);
         this.bounds.setMatrixAt(b++, _m);
         this.bounds.setColorAt(b - 1, _c);
@@ -259,12 +274,15 @@ export class Arena {
 
   buildBushes() {
     const grass = this.map.bushStyle === 'grass';
-    const geo = grass ? grassTuftGeometry(3) : bushGeometry(7);
+    const sculpted = !grass && hasProp('bush'); // sculpted leaf ball, still swaying / dissolving like foliage
+    const geo = grass ? grassTuftGeometry(3) : sculpted ? propGeometry('bush', { width: 1.95 }) : bushGeometry(7);
     const tiles = [];
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) if (this.grid[j][i] === 'B') tiles.push([i, j]);
     const { mat, depth } = grass
       ? foliageMaterials({ vertexColors: true, roughness: 0.9, side: THREE.DoubleSide }, { leaves: false, upNormal: true })
-      : foliageMaterials({ vertexColors: true, roughness: 0.72 }, { snow: !!this.map.snow });
+      : sculpted
+        ? foliageMaterials({ map: propMap('bush'), roughness: 0.75 }, { snow: !!this.map.snow, leaves: false })
+        : foliageMaterials({ vertexColors: true, roughness: 0.72 }, { snow: !!this.map.snow });
     const [bh, bs, bl] = this.map.bush;
     const mesh = new THREE.InstancedMesh(geo, mat, tiles.length);
     mesh.customDepthMaterial = depth;
@@ -274,7 +292,7 @@ export class Arena {
       const sc = 1 + this.rand() * 0.12;
       _m.compose(_v, _q, _s.set(sc, sc * (0.92 + this.rand() * 0.16), sc));
       mesh.setMatrixAt(k, _m);
-      mesh.setColorAt(k, _c.setHSL(bh + this.rand() * 0.04, bs, bl + this.rand() * 0.2));
+      mesh.setColorAt(k, sculpted ? _c.setHSL(0, 0, 0.88 + this.rand() * 0.14) : _c.setHSL(bh + this.rand() * 0.04, bs, bl + this.rand() * 0.2));
     });
     mesh.castShadow = mesh.receiveShadow = true;
     mesh.computeBoundingSphere();
@@ -304,9 +322,11 @@ export class Arena {
   }
 
   buildCrates() {
+    const sculpted = hasProp('crate') ? propGeometry('crate', { width: 1.75 }) : null;
     const body = new RoundedBoxGeometry(1.7, 1.45, 1.7, 2, 0.12);
     body.translate(0, 0.725, 0);
     const band = new THREE.BoxGeometry(1.76, 0.16, 1.76);
+    if (sculpted) sculpted.computeBoundingBox();
     const gem = new THREE.BoxGeometry(0.5, 0.5, 0.5);
     const bandMat = new THREE.MeshStandardMaterial({ color: 0x5b3419, roughness: 0.7 });
     const gemMat = new THREE.MeshStandardMaterial({ color: 0x3dff7a, emissive: 0x22ff66, emissiveIntensity: 1.1, roughness: 0.3 });
@@ -315,7 +335,7 @@ export class Arena {
       const g = new THREE.Group();
       this.center(i, j, g.position);
       const map = tex('wood', 1, 1);
-      const mat = new THREE.MeshStandardMaterial({
+      const mat = sculpted ? propMaterial('crate').clone() : new THREE.MeshStandardMaterial({ // own copy: hit flash
         color: map ? 0xffffff : 0xc27c3e, roughness: 0.75, map, normalMap: tex('wood_n', 1, 1),
       });
       const add = (geo, m, y) => {
@@ -323,10 +343,14 @@ export class Arena {
         o.position.y = y; o.castShadow = o.receiveShadow = true;
         g.add(o); return o;
       };
-      add(body, mat, 0);
-      add(band, bandMat, 0.32);
-      add(band, bandMat, 1.12);
-      const gm = add(gem, gemMat, 1.55);
+      if (sculpted) add(sculpted, mat, 0);
+      else {
+        add(body, mat, 0);
+        add(band, bandMat, 0.32);
+        add(band, bandMat, 1.12);
+      }
+      const top = sculpted ? sculpted.boundingBox?.max.y ?? 1.5 : 1.45;
+      const gm = add(gem, gemMat, top + 0.1);
       gm.rotation.set(Math.PI / 4, Math.PI / 4, 0);
       g.rotation.y = (this.rand() - 0.5) * 0.3;
       this.group.add(g);
@@ -338,8 +362,15 @@ export class Arena {
     const kit = this.lanternKit = lanternKit();
     this.halos = new THREE.Group(); // additive sprites, kept out of the AO pre-pass (see main.js)
     this.group.add(this.halos);
+    // sculpted lantern: tall on its own tile, small on top of the outer walls
+    const sculpted = hasProp('lantern');
+    this.lampGlow = { value: 0 };
+    const lampMat = sculpted ? sculptedLanternMaterial(propMaterial('lantern'), this.lampGlow) : null;
+    const lampGeo = sculpted ? { tall: propGeometry('lantern', { height: 2.4 }), small: propGeometry('lantern', { height: 1.3 }) } : null;
     const place = (x, baseY, z, pedestal) => {
-      const L = makeLantern(kit, pedestal);
+      const L = sculpted
+        ? makeSculptedLantern(kit, pedestal ? lampGeo.tall : lampGeo.small, lampMat, pedestal ? 2.4 : 1.3)
+        : makeLantern(kit, pedestal);
       L.group.position.set(x, baseY, z);
       L.group.rotation.y = this.rand() * Math.PI * 2;
       this.group.add(L.group);
@@ -371,21 +402,36 @@ export class Arena {
     }
     const barkMat = new THREE.MeshStandardMaterial({ color: 0x7a4e2e, roughness: 0.9, vertexColors: true });
     const plainMat = new THREE.MeshStandardMaterial({ roughness: 0.7, vertexColors: true });
+    // One instanced mesh per 45° sector of the ring: an instanced mesh is culled as a whole, so a
+    // single ring-wide mesh would draw every tree around the arena whenever one is on screen.
     const addInstanced = (geo, mat, pts, depth, tint) => {
-      const mesh = new THREE.InstancedMesh(geo, mat, pts.length);
-      if (depth) mesh.customDepthMaterial = depth;
-      pts.forEach(([x, z, s, ry, sy], k) => {
-        _q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, ry);
-        _m.compose(_v.set(x, 0, z), _q, _s.set(s, s * sy, s));
-        mesh.setMatrixAt(k, _m);
-        if (tint) mesh.setColorAt(k, tint());
-      });
-      mesh.castShadow = mesh.receiveShadow = true;
-      mesh.computeBoundingSphere();
-      this.group.add(mesh);
+      const sectors = Array.from({ length: 8 }, () => []);
+      for (const p of pts) sectors[Math.floor((Math.atan2(p[1], p[0]) + Math.PI) / (Math.PI * 2) * 8) % 8].push(p);
+      for (const sec of sectors) {
+        if (!sec.length) continue;
+        const mesh = new THREE.InstancedMesh(geo, mat, sec.length);
+        if (depth) mesh.customDepthMaterial = depth;
+        sec.forEach(([x, z, s, ry, sy], k) => {
+          _q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, ry);
+          _m.compose(_v.set(x, 0, z), _q, _s.set(s, s * sy, s));
+          mesh.setMatrixAt(k, _m);
+          if (tint) mesh.setColorAt(k, tint());
+        });
+        mesh.castShadow = mesh.receiveShadow = true;
+        mesh.computeBoundingSphere();
+        this.group.add(mesh);
+      }
     };
+    const FIT = { round: { height: 4.6 }, pine: { height: 5.4 }, dead: { height: 4.4 }, cactus: { height: 2.8 }, cliff: { height: 3.2 } };
     for (const [kind, raw] of Object.entries(byKind)) {
       const pts = raw.map(([x, z, s]) => [x, z, s, this.rand() * 6.28, 0.9 + this.rand() * 0.25]);
+      const name = TREE_PROP[kind] && snowy(TREE_PROP[kind], M.snow);
+      if (name && hasProp(name)) {
+        const tint = () => _c.setHSL(0, 0, 0.88 + this.rand() * 0.16);
+        const big = kind === 'cliff' ? pts.map(([x, z, s, ry]) => [x, z, s * (1.2 + this.rand() * 0.9), ry, 0.8 + this.rand() * 0.5]) : pts;
+        addInstanced(propGeometry(name, FIT[kind]), propMaterial(name), big, propDepth(name), tint);
+        continue;
+      }
       if (kind === 'cactus') { addInstanced(cactusGeometry(4, 2.4), plainMat, pts); continue; }
       if (kind === 'dead') { addInstanced(deadTree(6), plainMat, pts); continue; }
       if (kind === 'cliff') {
@@ -407,8 +453,14 @@ export class Arena {
     const tiles = [];
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) if (this.grid[j][i] === 'K') tiles.push([i, j]);
     if (!tiles.length) return;
-    const mesh = new THREE.InstancedMesh(obstacleGeometry(this.map.obstacle),
-      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: this.map.obstacle !== 'cactus' }), tiles.length);
+    const name = OBSTACLE_PROP[this.map.obstacle] && snowy(OBSTACLE_PROP[this.map.obstacle], this.map.snow);
+    const sculpted = name && hasProp(name);
+    const fit = name === 'cactus' ? { height: 2.3 } : { width: 1.75 };
+    const mesh = sculpted
+      ? new THREE.InstancedMesh(propGeometry(name, fit), propMaterial(name), tiles.length)
+      : new THREE.InstancedMesh(obstacleGeometry(this.map.obstacle),
+        new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: this.map.obstacle !== 'cactus' }), tiles.length);
+    if (sculpted && propDepth(name)) mesh.customDepthMaterial = propDepth(name);
     tiles.forEach(([i, j], k) => {
       this.center(i, j, _v);
       _q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, this.rand() * 6.28);
@@ -525,6 +577,7 @@ export class Arena {
     const lk = this.lanternKit;
     lk.mat.glass.emissiveIntensity = (0.5 + 2.3 * this.night) * (0.9 + 0.1 * Math.sin(t * 11));
     lk.mat.wax.emissiveIntensity = 0.2 + 0.6 * this.night;
+    this.lampGlow.value = (0.25 + 2.2 * this.night) * (0.9 + 0.1 * Math.sin(t * 11));
   }
 
   emit(pool, night) {

@@ -64,6 +64,44 @@ function mergeSimple(geos) {
   return g;
 }
 
+// Sculpted lantern (props.js): one textured mesh; its painted windows light up at night through
+// `glow` (0..1+, driven by arena.js). The flame meshes stay inside the lamp box so arena.js can keep
+// animating them, the halo and the point light sit at the box.
+export function sculptedLanternMaterial(base, glow) {
+  const m = base.clone();
+  m.onBeforeCompile = (sh, r) => {
+    base.onBeforeCompile(sh, r);
+    sh.uniforms.uGlow = glow;
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uGlow;')
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+{
+  // warm, bright texels = the lit windows
+  float lit = smoothstep( 0.5, 0.8, diffuseColor.r ) * smoothstep( 0.12, 0.35, diffuseColor.r - diffuseColor.b );
+  totalEmissiveRadiance += diffuseColor.rgb * lit * uGlow;
+}`);
+  };
+  m.customProgramCacheKey = () => 'lantern-glow';
+  return m;
+}
+
+export function makeSculptedLantern(kit, geometry, material, height) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(geometry, material);
+  body.castShadow = body.receiveShadow = true;
+  g.add(body);
+  const y = height * 0.72; // centre of the lamp box
+  const flame = new THREE.Mesh(kit.geo.flame, kit.mat.fire); flame.position.y = y - 0.12; flame.visible = false;
+  const core = new THREE.Mesh(kit.geo.core, kit.mat.core); core.position.y = y - 0.12; core.visible = false;
+  g.add(flame, core);
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: kit.haloTex, color: 0xffb070, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false,
+  }));
+  halo.position.y = y;
+  halo.scale.setScalar(2.2);
+  return { group: g, flame, core, halo, lightY: y };
+}
+
 // pedestal: free-standing stone lamp post (on 'T' tiles); otherwise a short iron post for wall tops.
 export function makeLantern(kit, pedestal) {
   const { geo, mat } = kit;

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { radialTexture } from './materials.js';
 import { buildModel as buildSculpted, OUTLINES } from './models.js';
+import { hasFigurine, buildFigurine } from './figurines.js';
 
 export const TYPES = {
   blaster: {
@@ -81,6 +82,16 @@ let BLOB_MAT = null;
 let ICE_MAT = null;
 
 
+// Weapon arm angle (rotation about x, negative = forward/up) while aiming, from the recoil (1 right
+// after a shot, fading to 0): guns kick up, bombs are cocked overhead then flung forward, the staff
+// thrusts, Volt pushes both palms out.
+const RAISE = {
+  gun: r => -1.25 + r * 0.55,
+  throw: r => -2.6 + r * 1.8,
+  staff: r => -0.55 - r * 0.6,
+  cast: r => -1.35 + r * 0.35,
+};
+
 const lerpAngle = (a, b, t) => {
   let d = (b - a) % (Math.PI * 2);
   if (d > Math.PI) d -= Math.PI * 2;
@@ -94,7 +105,7 @@ export class Brawler {
     this.type = TYPES[typeKey];
     this.name = name;
     this.isPlayer = isPlayer;
-    this.model = buildSculpted(this.type);
+    this.model = hasFigurine(typeKey) ? buildFigurine(typeKey) : buildSculpted(this.type);
     this.blinkT = 1 + Math.random() * 3;
     this.root = new THREE.Group();
     this.root.add(this.model.root);
@@ -215,7 +226,61 @@ export class Brawler {
   animate(dt, t, speedFrac) {
     const m = this.model;
     this.walkAmp += ((speedFrac > 0.15 ? 1 : 0) - this.walkAmp) * (1 - Math.exp(-10 * dt));
-    this.walkPhase += dt * 12 * Math.max(speedFrac, 0.2);
+    this.walkPhase += dt * 11 * Math.max(speedFrac, 0.2);
+    this.recoil = Math.max(0, this.recoil - dt * 6);
+    if (m.figurine) this.poseFigurine(t);
+    else this.poseRig(dt, t);
+
+    // spawn pop + hit squash
+    this.spawnT = Math.min(1, this.spawnT + dt * 3);
+    const pop = this.spawnT < 1 ? 1 + Math.sin(this.spawnT * Math.PI) * 0.25 : 1;
+    const sq = this.flash * 0.08;
+    m.root.scale.set(pop * (1 + sq), this.spawnT * pop * (1 - sq), pop * (1 + sq));
+
+    if (this.flash > 0) {
+      this.flash = Math.max(0, this.flash - dt * 7);
+      const f = this.flash * 0.9;
+      for (const mat of m.mats) if (!mat.userData.glow) mat.emissive.setRGB(f, f * 0.9, f * 0.9);
+      if (this.flash === 0) this.coldShown = -1; // let the frost tint repaint
+    }
+  }
+
+  // Figurine on its fitted skeleton (figurines.js). Walk cycle, phase ph:
+  //   thighs swing (left forward when sin > 0), the knee folds while its leg travels forward and is
+  //   straight on contact; the pelvis is highest at mid-stance, twists with the forward leg and dips
+  //   on the swing side; the chest counter-twists, arms swing against the legs with soft elbows.
+  // Aiming lifts the weapon arm(s) (RAISE), each shot kicks it back. Idle: breathing, weight shift,
+  // looking around.
+  poseFigurine(t) {
+    const m = this.model, k = m.bones, a = this.walkAmp, idle = 1 - a, ph = this.walkPhase;
+    const s = Math.sin(ph), c = Math.cos(ph), bob = 0.5 + 0.5 * Math.cos(2 * ph);
+    const breath = Math.sin(t * 2.4), shift = Math.sin(t * 0.9);
+    k.thighL.rotation.set(-s * 0.6 * a, 0, 0.03);
+    k.thighR.rotation.set(s * 0.6 * a, 0, -0.03);
+    k.shinL.rotation.x = Math.max(0, c) * 1.0 * a;
+    k.shinR.rotation.x = Math.max(0, -c) * 1.0 * a;
+    k.hips.position.y = k.hips.userData.rest.y + (bob - 0.6) * 0.07 * a;
+    k.hips.position.x = k.hips.userData.rest.x + shift * 0.015 * idle;
+    k.hips.rotation.set(0.04 * a, -s * 0.16 * a, -c * 0.07 * a + shift * 0.02 * idle);
+    k.spine.rotation.set(0.1 * a - this.recoil * 0.12, s * 0.24 * a, c * 0.05 * a);
+    k.spine.scale.set(1 + breath * 0.012 * idle, 1 + breath * 0.022 * idle, 1);
+    k.head.rotation.set(-0.08 * a + Math.cos(2 * ph) * 0.035 * a, -s * 0.12 * a + idle * Math.sin(t * 0.8) * 0.22, -c * 0.04 * a);
+    const aim = Math.min(1, Math.max(0, this.aimHold * 3) + this.recoil);
+    const aimL = m.weapon !== 'R' ? aim : 0, aimR = m.weapon !== 'L' ? aim : 0;
+    const raised = (RAISE[m.style] || RAISE.gun)(this.recoil);
+    const L = THREE.MathUtils.lerp;
+    // left arm goes back while the left leg is forward; elbows bend more on the forward swing
+    // (z first: A-pose arms are brought down to the sides, then swung / raised about x)
+    k.armL.rotation.set(L(s * 0.55 * a, raised, aimL), 0, 0.1 - m.lower.L + breath * 0.025 * idle);
+    k.armR.rotation.set(L(-s * 0.55 * a, raised, aimR), 0, -0.1 + m.lower.R - breath * 0.025 * idle);
+    k.foreL.rotation.x = L(-0.15 - (0.2 + Math.max(0, -s) * 0.45) * a, -0.1, aimL);
+    k.foreR.rotation.x = L(-0.15 - (0.2 + Math.max(0, s) * 0.45) * a, -0.1, aimR);
+    const st = (bob - 0.5) * 0.04 * a + this.recoil * 0.03;
+    m.body.scale.set(1 - st * 0.5, 1 + st, 1 - st * 0.5);
+  }
+
+  poseRig(dt, t) {
+    const m = this.model;
     const s = Math.sin(this.walkPhase), a = this.walkAmp;
     m.legL.rotation.x = s * 0.8 * a;
     m.legR.rotation.x = -s * 0.8 * a;
@@ -230,22 +295,8 @@ export class Brawler {
       if (this.blinkT < 0) this.blinkT = 2 + Math.random() * 3.5;
       m.eyes.scale.y = this.blinkT < 0.12 ? 0.12 : 1;
     }
-    this.recoil = Math.max(0, this.recoil - dt * 6);
     m.armR.rotation.x = -1.35 + this.recoil * 0.55;
     if (m.twoHanded) m.armL.rotation.x = -1.35 + this.recoil * 0.4;
-
-    // spawn pop + hit squash
-    this.spawnT = Math.min(1, this.spawnT + dt * 3);
-    const pop = this.spawnT < 1 ? 1 + Math.sin(this.spawnT * Math.PI) * 0.25 : 1;
-    const sq = this.flash * 0.08;
-    m.root.scale.set(pop * (1 + sq), this.spawnT * pop * (1 - sq), pop * (1 + sq));
-
-    if (this.flash > 0) {
-      this.flash = Math.max(0, this.flash - dt * 7);
-      const f = this.flash * 0.9;
-      for (const mat of m.mats) if (!mat.userData.glow) mat.emissive.setRGB(f, f * 0.9, f * 0.9);
-      if (this.flash === 0) this.coldShown = -1; // let the frost tint repaint
-    }
   }
 
   // Frozen: an ice block around the brawler. Slowed: a frosty tint.
@@ -270,6 +321,7 @@ export class Brawler {
     this.g.scene.remove(this.root);
     this.g.fx.remove(this.ring, this.blob);
     for (const m of this.model.mats) m.dispose();
+    if (this.model.skeleton) this.model.skeleton.dispose(); // bone texture
     this.model.root.traverse(o => { if (o.isMesh && o.userData.baked) o.geometry.dispose(); if (o.userData.outline) OUTLINES.delete(o); }); // outlines share the geometry
     this.ring.material.dispose();
   }

@@ -20,6 +20,8 @@ import { shared } from './materials.js';
 import { settings, set as setSetting, onChange } from './settings.js';
 import { Menus } from './menu.js';
 import { OUTLINES } from './models.js';
+import { preloadFigurines } from './figurines.js';
+import { preloadProps } from './props.js';
 import { enableCartoonShading, cartoonGradePass } from './cartoon.js';
 import { PAD } from './input.js';
 import './style.css';
@@ -440,7 +442,7 @@ const unlockAudio = () => { initAudio(); if ($('#hud').classList.contains('hidde
 addEventListener('pointerdown', unlockAudio, { once: true });
 addEventListener('keydown', unlockAudio, { once: true });
 
-await loadTextures(renderer);
+await Promise.all([loadTextures(renderer), preloadFigurines(Object.keys(TYPES), renderer), preloadProps(renderer)]);
 for (const k of Object.keys(settings)) applySetting(k);
 lighting.setPreset(settings.tod === 'cycle' ? 2 : +settings.tod, true);
 attract();
@@ -448,7 +450,7 @@ attract();
 const invited = new URLSearchParams(location.search).get('room');
 if (invited) { openLobby(); $('#code').value = invited.toUpperCase(); }
 
-renderer.setAnimationLoop(ts => {
+function frame(ts) {
   timer.update(ts);
   const dt = Math.min(timer.getDelta(), 0.05);
   renderer.info.reset();
@@ -476,10 +478,14 @@ renderer.setAnimationLoop(ts => {
       <span>${PRESETS[Math.floor(lighting.t) % 4].name} → ${PRESETS[(Math.floor(lighting.t) + 1) % 4].name} ${(lighting.t % 1 * 100).toFixed(0)}%</span>`;
     fpsAcc = 0; fpsN = 0; statT = 0;
   }
-});
+}
+renderer.setAnimationLoop(frame);
 
 // The game owns a render loop + WebGL context, so never hot-swap modules in place.
 if (import.meta.hot) import.meta.hot.on('vite:beforeUpdate', () => location.reload());
 
 // Dev-only handle for poking at the scene from the console (stripped from production builds).
-if (import.meta.env.DEV) window.__arena = { game, lighting, lights, renderer, composer, scene, camera, menus, input, settings };
+if (import.meta.env.DEV) {
+  window.__arena = { game, lighting, lights, renderer, composer, scene, camera, menus, input, settings, frame, timer };
+  import('./devtools.js').then(m => m.installDevtools(window.__arena));
+}
