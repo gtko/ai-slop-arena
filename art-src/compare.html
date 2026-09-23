@@ -1,0 +1,39 @@
+<!doctype html>
+<html><head><meta charset="utf-8" /><title>compare figurines</title>
+<style>body { margin: 0; background: #2a2340; } canvas { display: block; }</style></head>
+<body>
+<!-- dev only (vite serves /art-src/compare.html): current figurines (top) vs HQ regeneration (bottom) -->
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+const W = 780, H = 560;
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+r.setSize(W, H); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.NeutralToneMapping;
+document.body.appendChild(r.domElement);
+const s = new THREE.Scene(); s.background = new THREE.Color(0x2a2340);
+s.add(new THREE.HemisphereLight(0xffffff, 0x554477, 1.8));
+const d = new THREE.DirectionalLight(0xffffff, 2.4); d.position.set(2, 4, 5); s.add(d);
+const cam = new THREE.PerspectiveCamera(24, W / H, 0.1, 100);
+const focus = new URLSearchParams(location.search).get('focus'); // index of one pair to zoom on
+if (focus === null) { cam.position.set(0, 2.6, 26); cam.lookAt(0, 2.6, 0); }
+else { const fx = (+focus - 2) * 3; cam.position.set(fx, 2.35, 15); cam.lookAt(fx, 2.35, 0); }
+const L = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+const keys = ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt'];
+const yaw = +(new URLSearchParams(location.search).get('yaw') || 0.35);
+async function place(url, x, y) {
+  const g = (await L.loadAsync(url)).scene;
+  g.traverse(o => { if (o.isMesh) { o.material.metalness = 0; o.material.roughness = 0.6; } });
+  const box = new THREE.Box3().setFromObject(g), size = box.getSize(new THREE.Vector3()), k = 2.3 / size.y;
+  g.scale.setScalar(k);
+  g.position.set(-(box.min.x + box.max.x) / 2 * k, -box.min.y * k, -(box.min.z + box.max.z) / 2 * k);
+  const pivot = new THREE.Group(); pivot.add(g); pivot.rotation.y = yaw; pivot.position.set(x, y, 0); s.add(pivot);
+}
+await Promise.all(keys.flatMap((k, i) => [
+  place(`/assets/models/${k}.glb?v=${Date.now()}`, (i - 2) * 3, 2.8),
+  place(`/art-src/glb/hq_opt/${k}.glb?v=${Date.now()}`, (i - 2) * 3, -0.4),
+]));
+r.render(s, cam);
+window.done = true;
+</script>
+</body></html>

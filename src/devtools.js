@@ -92,6 +92,57 @@ export function installDevtools(A) {
       return { crotch: f(J.crotch), knee: f(J.knee), neck: f(J.neck), shoulder: f(J.shoulderY), elbow: f(J.elbow), cut: J.cutFaces, L: prof(J.edge.L), R: prof(J.edge.R) };
     },
     info: figurineInfo, // raw template (geo, joints) of a figurine
+
+    // Film from the renderer at a fixed size (independent of the window), saving JPEG frames through
+    // the dev server's /__capture endpoint (vite.config.js) into .ai3d/capture/<dir>/.
+    //   shots: [{ map, tod, warm, frames, camera(cam, u, game), setup(game) }]
+    async film(shots, { w = 1920, h = 1080, fps = 30, dir = 'trailer', quality = 0.9, offset = 0 } = {}) {
+      A.renderer.setAnimationLoop(null);
+      A.timer.disconnect();
+      ts = Math.max(ts, performance.now());
+      document.querySelectorAll('.overlay, #hud').forEach(el => el.classList.add('hidden'));
+      dev.frameSize(w, h);
+      let n = offset; // first frame number (re-recording a shot in place)
+      for (const shot of shots) {
+        if (shot.map) { A.game.newMatch({ mapKey: shot.map }); }
+        if (shot.tod !== undefined) A.lighting.setPreset(shot.tod, true);
+        shot.setup?.(A.game);
+        // the shot's camera already runs while the simulation warms up (u = 0)
+        A.game.cinematic = (cam, dt) => shot.camera(cam, 0, A.game, dt);
+        for (let i = 0; i < (shot.warm || 0); i++) { ts += 1000 / fps; A.frame(ts); }
+        for (let f = 0; f < shot.frames; f++) {
+          const u = shot.frames > 1 ? f / (shot.frames - 1) : 0;
+          A.game.cinematic = (cam, dt) => shot.camera(cam, u, A.game, dt);
+          ts += 1000 / fps;
+          A.frame(ts);
+          await dev.save(`${dir}/f${String(n++).padStart(5, '0')}.jpg`, quality);
+        }
+      }
+      A.game.cinematic = null;
+      return n;
+    },
+    frameSize(w, h) {
+      A.renderer.setPixelRatio(1);
+      A.renderer.setSize(w, h, false);
+      A.composer.setPixelRatio(1);
+      A.composer.setSize(w, h);
+      A.camera.aspect = w / h;
+      A.camera.updateProjectionMatrix();
+    },
+    // the drawing buffer is still valid right after A.frame() in the same task
+    save(path, quality = 0.9) {
+      return new Promise(resolve => A.renderer.domElement.toBlob(blob =>
+        fetch(`/__capture/${path}`, { method: 'POST', body: blob }).then(resolve), 'image/jpeg', quality));
+    },
+    // one still: set up, warm the simulation, frame with camera(cam, 0, game), save
+    async still(path, shot, { w = 1600, h = 900 } = {}) {
+      await dev.film([{ ...shot, frames: 1 }], { w, h, dir: '_still' });
+      A.game.cinematic = cam => shot.camera(cam, 0, A.game);
+      ts += 1000 / 30;
+      A.frame(ts);
+      A.game.cinematic = null;
+      return dev.save(path, 0.92);
+    },
     errors: [],
   };
   const oe = console.error;

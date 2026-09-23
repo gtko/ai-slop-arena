@@ -4,9 +4,12 @@ A top-down, Brawl Stars–style Showdown in three.js, built to show off real-tim
 Eight brawlers, five maps with live weather, bushes, destructible walls, power-cube crates and closing
 poison gas. The last one standing wins. Play solo against bots or online with friends (bots fill empty slots).
 
+The home page (`index.html`, "/") is an animated showcase site with a live 3D turntable of the figurines;
+the game itself is `play.html` ("/play"), which opens on a loading screen while models and textures stream in.
+
 ```bash
 npm install
-npm run dev          # the game, on http://localhost:5173
+npm run dev          # site on http://localhost:5173, game on http://localhost:5173/play.html
 npm run dev:server   # multiplayer rooms (Cloudflare Worker + Durable Objects, local), on :8787
 npm run deploy       # build and deploy everything to Cloudflare
 ```
@@ -92,7 +95,10 @@ Everything under `public/assets/` was generated, and the game falls back to proc
 - `tex/`: seamless painted textures (sand, brick, stone, wood, grass) from OpenRouter (Gemini 2.5 Flash Image),
   prompted as flat albedo with no baked lighting so the dynamic lights do the shading. Each `*_n.png` is a
   tileable normal map derived from it, so torches, projectiles and the head-lamp pick up the brick and plank relief.
-- `ui/`: brawler portraits for the menu cards (background removed).
+- `ui/`: brawler portraits for the menu cards, action poses with the background removed (`art-src/ai3d/cutout.py`).
+- `models/`: the brawler figurines and `models/decor/` the 15 decor props, generated on this machine's GPU from
+  style-matched reference art (Hunyuan3D-2 shape + paint, see `art-src/ai3d/README.md`), then budgeted with
+  `art-src/optimize_models.py`. The figurines are rigged at load time (`src/figurines.js`).
 - `sfx/`, `music/`: ElevenLabs sound generation: 17 one-shots, day/night ambience loops, and lobby/battle loops.
   The ElevenLabs Music API needs a paid plan, so the two music tracks are 22 s loops from the sound-effect model.
 
@@ -112,7 +118,11 @@ src/
   materials.js  shader patches (rim, foliage sway + dither, water) and procedural textures
   arena.js      map layout, instanced walls/bushes/water, crates, torches, collision and line-of-sight
   effects.js    LightPool + instanced particles, flashes, shockwaves, scorch decals
-  brawler.js    brawler types, procedural models, movement and animation
+  brawler.js    brawler types, movement and animation (figurine walk / aim, procedural rig fallback)
+  figurines.js  GLB figurines: auto-rig (joint fit, arm cutting, skin weights), weapon axes, materials
+  props.js      decor GLBs (walls, trees, rocks, crates, bushes, lanterns), instancing helpers
+  devtools.js   dev-only console helpers (manual stepping, poses, weight view)
+  site/         landing page script + styles (hero 3D turntable, cards, reveals)
   combat.js     bullets, bursts, lobbed bombs, explosions
   ai.js         A* pathfinding and bot behaviour
   poison.js     shrinking gas
@@ -124,7 +134,7 @@ src/
   weather.js    rain + lightning, snow, sandstorm, fog + fireflies
   water.js      water basins (clear / swamp) and the ice field
   foliage.js    bushes, trees, pines, cacti, dead trees, obstacles
-  lantern.js    lantern model
+  lantern.js    lantern model (procedural, or the sculpted prop with glowing windows)
   net.js        WebSocket client for the rooms
 worker/
   index.js      Cloudflare Worker + Room Durable Object (multiplayer relay)

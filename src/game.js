@@ -626,6 +626,8 @@ export class Game {
   /* ------------------------------ camera + lights ------------------------------ */
 
   updateCamera(dt) {
+    // scripted camera (trailer / screenshots from devtools): replaces the follow camera
+    if (this.cinematic) { this.cinematic(this.camera, dt); return; }
     let tgt = this.camTarget;
     if (!tgt || !tgt.alive) {
       if (!this.player || !this.player.alive) {

@@ -29,4 +29,4 @@ if args[:1] == ['--decor']:
 else:
     keys = args or [os.path.basename(p)[:-4] for p in glob.glob('art-src/glb/*.glb')]
     for key in keys:
-        run(f'art-src/glb/{key}.glb', f'public/assets/models/{key}.glb', 0.6, 0.0008, 1024)
+        run(f'art-src/glb/{key}.glb', f'public/assets/models/{key}.glb', 0.35, 0.0008, 1024)  # HQ sources: 60k -> ~20k

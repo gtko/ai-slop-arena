@@ -397,7 +397,10 @@ export class Arena {
       if (this.rand() < (out === 1 ? 0.75 : 0.45)) {
         this.center(i, j, _v);
         const kind = pick();
-        (byKind[kind] ||= []).push([_v.x + (this.rand() - 0.5) * 1.4, _v.z + (this.rand() - 0.5) * 1.4, 0.8 + this.rand() * 0.5]);
+        // the camera looks from the south: tall props on the first southern rows would stand
+        // between it and the players, so they are kept low there
+        const low = j >= N && j <= N + 1 ? 0.45 : 1;
+        (byKind[kind] ||= []).push([_v.x + (this.rand() - 0.5) * 1.4, _v.z + (this.rand() - 0.5) * 1.4, (0.8 + this.rand() * 0.5) * low]);
       }
     }
     const barkMat = new THREE.MeshStandardMaterial({ color: 0x7a4e2e, roughness: 0.9, vertexColors: true });

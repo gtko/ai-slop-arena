@@ -15,13 +15,13 @@ import { MAPS } from './maps.js';
 import { Net, randomCode } from './net.js';
 import { VisionFog } from './visionfog.js';
 import { initAudio, playMusic, setAmbience, sfx, toggleMute, setVolume, setMuted, setTrack, settings as audio } from './audio.js';
-import { loadTextures, ASSET_BASE } from './assets.js';
+import { loadTextures, ASSET_BASE, TEX_FILES } from './assets.js';
 import { shared } from './materials.js';
 import { settings, set as setSetting, onChange } from './settings.js';
 import { Menus } from './menu.js';
 import { OUTLINES } from './models.js';
 import { preloadFigurines } from './figurines.js';
-import { preloadProps } from './props.js';
+import { preloadProps, PROPS } from './props.js';
 import { enableCartoonShading, cartoonGradePass } from './cartoon.js';
 import { PAD } from './input.js';
 import './style.css';
@@ -442,7 +442,36 @@ const unlockAudio = () => { initAudio(); if ($('#hud').classList.contains('hidde
 addEventListener('pointerdown', unlockAudio, { once: true });
 addEventListener('keydown', unlockAudio, { once: true });
 
-await Promise.all([loadTextures(renderer), preloadFigurines(Object.keys(TYPES), renderer), preloadProps(renderer)]);
+// Boot screen: one tick per texture, figurine and decor model.
+const TIPS = [
+  'Hide in bushes to vanish from enemy sight — until they get close.',
+  'Break crates for power cubes: each one makes you stronger.',
+  'The gas closes in after the timer: keep moving toward the centre.',
+  'Frostbite slows, Volt chains lightning, Bomber lobs over walls.',
+  'Press T to change the time of day. Lanterns light up at night.',
+  'Share a room code to play online with friends.',
+];
+{
+  const total = TEX_FILES + Object.keys(TYPES).length + PROPS.length;
+  let done = 0, tip = Math.floor(Math.random() * TIPS.length);
+  $('#ldTip').textContent = TIPS[tip];
+  const tipTimer = setInterval(() => { tip = (tip + 1) % TIPS.length; $('#ldTip').textContent = TIPS[tip]; }, 3200);
+  const tick = step => () => {
+    done++;
+    const pct = Math.round(done / total * 100);
+    $('#ldFill').style.width = `${pct}%`;
+    $('#ldPct').textContent = `${pct}%`;
+    $('#ldStep').textContent = step;
+  };
+  await Promise.all([
+    loadTextures(renderer, tick('Painting the ground…')),
+    preloadFigurines(Object.keys(TYPES), renderer, tick('Rigging the brawlers…')),
+    preloadProps(renderer, tick('Placing the decor…')),
+  ]);
+  clearInterval(tipTimer);
+  $('#ldStep').textContent = 'Ready!';
+  setTimeout(() => $('#loader').classList.add('done'), 250);
+}
 for (const k of Object.keys(settings)) applySetting(k);
 lighting.setPreset(settings.tod === 'cycle' ? 2 : +settings.tod, true);
 attract();

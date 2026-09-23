@@ -4,6 +4,7 @@ import * as THREE from 'three';
 export const ASSET_BASE = import.meta.env.BASE_URL + 'assets/';
 
 const TEX_NAMES = ['sand', 'brick', 'stone', 'wood', 'grass', 'snow', 'forest', 'mud', 'clay', 'mossbrick', 'icestone'];
+export const TEX_FILES = TEX_NAMES.length * 2; // colour + normal map each
 const loaded = {};
 
 function load(url) {
@@ -14,7 +15,7 @@ function load(url) {
 }
 
 // Resolve once every texture is in (or missing). Callers fall back to procedural art on null.
-export async function loadTextures(renderer) {
+export async function loadTextures(renderer, onItem = () => {}) {
   const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   const prep = (t, srgb) => {
     if (!t) return t;
@@ -24,8 +25,8 @@ export async function loadTextures(renderer) {
     return t;
   };
   await Promise.all(TEX_NAMES.flatMap(n => [
-    load(`${ASSET_BASE}tex/${n}.jpg`).then(t => { loaded[n] = prep(t, true); }),
-    load(`${ASSET_BASE}tex/${n}_n.png`).then(t => { loaded[n + '_n'] = prep(t, false); }),
+    load(`${ASSET_BASE}tex/${n}.jpg`).then(t => { loaded[n] = prep(t, true); onItem(); }),
+    load(`${ASSET_BASE}tex/${n}_n.png`).then(t => { loaded[n + '_n'] = prep(t, false); onItem(); }),
   ]));
 }
 

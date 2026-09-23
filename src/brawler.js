@@ -92,6 +92,9 @@ const RAISE = {
   cast: r => -1.35 + r * 0.35,
 };
 
+const AXIS_X = new THREE.Vector3(1, 0, 0);
+const _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion();
+
 const lerpAngle = (a, b, t) => {
   let d = (b - a) % (Math.PI * 2);
   if (d > Math.PI) d -= Math.PI * 2;
@@ -269,12 +272,24 @@ export class Brawler {
     const aimL = m.weapon !== 'R' ? aim : 0, aimR = m.weapon !== 'L' ? aim : 0;
     const raised = (RAISE[m.style] || RAISE.gun)(this.recoil);
     const L = THREE.MathUtils.lerp;
-    // left arm goes back while the left leg is forward; elbows bend more on the forward swing
-    // (z first: A-pose arms are brought down to the sides, then swung / raised about x)
-    k.armL.rotation.set(L(s * 0.45 * a, raised, aimL), 0, 0.1 - m.lower.L + breath * 0.025 * idle);
-    k.armR.rotation.set(L(-s * 0.45 * a, raised, aimR), 0, -0.1 + m.lower.R - breath * 0.025 * idle);
-    k.foreL.rotation.x = L(-0.15 - (0.2 + Math.max(0, -s) * 0.45) * a, -0.1, aimL);
-    k.foreR.rotation.x = L(-0.15 - (0.2 + Math.max(0, s) * 0.45) * a, -0.1, aimR);
+    // Arms blend between the rig's hang and aim orientations (figurines.js armPoses): the swing is
+    // applied on top, about the shoulder's side axis. Guns swing less (carried low and ready), the
+    // left arm goes back while the left leg is forward, elbows straighten to aim.
+    for (const [side, sign, amt] of [['L', 1, aimL], ['R', -1, aimR]]) {
+      const P = m.arm[side], bone = k['arm' + side];
+      const armed = amt > 0 || (m.weapon === 'both' || m.weapon === side);
+      const swing = sign * s * a * (armed && m.style === 'gun' ? 0.18 : 0.42) + breath * 0.02 * idle;
+      _qa.setFromAxisAngle(AXIS_X, swing).multiply(P.hang);
+      if (amt > 0) {
+        // guns and fists: weapon axis straight ahead, kicked up by the recoil; bombs and staff:
+        // the old raise about the shoulder axis on top of the hang
+        if (P.aim) _qb.setFromAxisAngle(AXIS_X, -this.recoil * 0.45).multiply(P.aim);
+        else _qb.setFromAxisAngle(AXIS_X, raised).multiply(P.hang);
+        _qa.slerp(_qb, amt);
+      }
+      bone.quaternion.copy(_qa);
+      k['fore' + side].rotation.x = L(-0.12 - (0.15 + Math.max(0, -sign * s) * 0.35) * a, 0, amt);
+    }
     const st = (bob - 0.5) * 0.04 * a + this.recoil * 0.03;
     m.body.scale.set(1 - st * 0.5, 1 + st, 1 - st * 0.5);
   }

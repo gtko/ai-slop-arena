@@ -34,13 +34,14 @@ const B = Object.fromEntries(BONES.map((n, i) => [n, i]));
 const templates = new Map(); // type key -> { geo, map, joints, gain }
 let loading = null;
 
-export function preloadFigurines(keys, renderer) {
+export function preloadFigurines(keys, renderer, onItem = () => {}) {
   if (loading) return loading;
   const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
   const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   loading = Promise.all(keys.map(key => loader.loadAsync(`${ASSET_BASE}models/${key}.glb`)
     .then(gltf => templates.set(key, prepare(key, gltf.scene, aniso)))
-    .catch(e => { if (!/404|Not Found|Unexpected token/.test(String(e))) console.warn('figurine', key, e); })));
+    .catch(e => { if (!/404|Not Found|Unexpected token/.test(String(e))) console.warn('figurine', key, e); })
+    .finally(onItem)));
   return loading;
 }
 
@@ -399,8 +400,37 @@ function autoRig(geo, over) {
   };
   J.L = side('L', 1);
   J.R = side('R', -1);
+
+  // Weapon axis per arm: principal direction of the forearm + hand + weapon, pointing to the far
+  // end (the barrel tip is the point furthest from the elbow). The animation aims this axis.
+  for (const s of ['L', 'R']) {
+    const elbow = J[s].fore, pts = [];
+    for (let i = 0; i < n; i++) if (label[ids[i]] === B['fore' + s]) pts.push(new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)));
+    J[s].armAxis = J[s].fore.clone().sub(J[s].arm).normalize();
+    J[s].weaponAxis = pts.length > 20 ? principalAxis(pts, elbow) : J[s].armAxis.clone();
+  }
   J.labels = { ids, label }; // debug view
   return J;
+}
+
+function principalAxis(pts, from) {
+  const c = new THREE.Vector3();
+  pts.forEach(p => c.add(p));
+  c.divideScalar(pts.length);
+  // covariance + power iteration
+  let xx = 0, xy = 0, xz = 0, yy = 0, yz = 0, zz = 0;
+  for (const p of pts) {
+    const x = p.x - c.x, y = p.y - c.y, z = p.z - c.z;
+    xx += x * x; xy += x * y; xz += x * z; yy += y * y; yz += y * z; zz += z * z;
+  }
+  const v = new THREE.Vector3(1, -1, 0.5).normalize(), t = new THREE.Vector3();
+  for (let k = 0; k < 30; k++) {
+    t.set(xx * v.x + xy * v.y + xz * v.z, xy * v.x + yy * v.y + yz * v.z, xz * v.x + yz * v.y + zz * v.z);
+    v.copy(t).normalize();
+  }
+  let far = 0;
+  for (const p of pts) { const d = t.subVectors(p, from).dot(v); if (Math.abs(d) > Math.abs(far)) far = d; }
+  return far < 0 ? v.negate() : v;
 }
 
 function makeSkeleton(J) {
@@ -487,6 +517,26 @@ export function buildFigurine(key) {
   body.add(mesh, line);
   const bones = Object.fromEntries(skeleton.bones.map(b => [b.name, b]));
   return { figurine: true, root, body, mesh, skeleton, bones, weapon: T.joints.weapon, style: T.joints.style, mats: [mat],
-    // how far each arm must come down from its sculpted pose to hang at the side (A-pose models)
-    lower: { L: Math.max(0, T.joints.L.armAngle - 0.18), R: Math.max(0, T.joints.R.armAngle - 0.18) } };
+    arm: T.armPose || (T.armPose = armPoses(T.joints)) };
+}
+
+// Rest and aim orientations of each upper arm (bind space = model space, the bones start unrotated),
+// as quaternions the animation blends between:
+//   hang  walking pose: guns carried low and forward, the staff kept upright, empty hands at the sides
+//   aim   the weapon axis turned to point straight ahead (guns, Volt's fists)
+function armPoses(J) {
+  const out = {};
+  const armed = s => J.weapon === 'both' || J.weapon === s;
+  for (const [s, side] of [['L', 1], ['R', -1]]) {
+    const A = J[s], q = (from, to) => new THREE.Quaternion().setFromUnitVectors(from, to.normalize());
+    let hang;
+    if (armed(s) && J.style === 'gun') hang = q(A.weaponAxis, new THREE.Vector3(side * 0.12, -0.75, 0.65));
+    else if (armed(s) && J.style === 'staff') hang = q(A.armAxis, new THREE.Vector3(side * 0.45, -0.9, 0.1));
+    else hang = q(A.armAxis, new THREE.Vector3(side * 0.18, -1, 0.08));
+    const aim = armed(s) && (J.style === 'gun' || J.style === 'cast')
+      ? q(J.style === 'gun' ? A.weaponAxis : A.armAxis, new THREE.Vector3(side * 0.06, -0.06, 1))
+      : null;
+    out[s] = { hang, aim };
+  }
+  return out;
 }

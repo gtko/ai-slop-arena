@@ -16,12 +16,13 @@ export const PROPS = [
 const SWAY = new Set(['tree_round', 'tree_pine', 'tree_pine_snow', 'tree_dead', 'bush', 'cactus']);
 const loaded = new Map(); // name -> { geo, size, mat, depth }
 
-export function preloadProps(renderer) {
+export function preloadProps(renderer, onItem = () => {}) {
   const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
   const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   return Promise.all(PROPS.map(name => loader.loadAsync(`${ASSET_BASE}models/decor/${name}.glb`)
     .then(gltf => loaded.set(name, prepare(name, gltf.scene, aniso)))
-    .catch(() => { /* not generated yet: procedural fallback */ })));
+    .catch(() => { /* not generated yet: procedural fallback */ })
+    .finally(onItem)));
 }
 
 export const hasProp = name => loaded.has(name);

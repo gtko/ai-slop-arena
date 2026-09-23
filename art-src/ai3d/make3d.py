@@ -60,12 +60,15 @@ def main():
     # picks are suspected of the NaNs. PyTorch's own convolution kernels are used instead.
     torch.backends.cudnn.enabled = False
     force = '--force' in sys.argv
-    args = [a for a in sys.argv[1:] if a != '--force']
+    # --hq: full (non-distilled) shape and paint models, 50 sculpting steps, finer grid: slower,
+    # more faithful to the reference art (used for the characters)
+    hq = '--hq' in sys.argv
+    args = [a for a in sys.argv[1:] if a not in ('--force', '--hq')]
     group, names = args[0], args[1:]
     src_dir = os.path.join(ROOT, 'art-src', group)
     chars = group.startswith('chibi')
-    out_dir = os.path.join(ROOT, 'art-src', 'glb', 'hy' if chars else group)  # characters: compare before replacing
-    tmp_dir = os.path.join(ROOT, '.ai3d', 'shapes', group.replace('/', '_'))
+    out_dir = os.path.join(ROOT, 'art-src', 'glb', ('hq' if hq else 'hy') if chars else group)  # characters: compare before replacing
+    tmp_dir = os.path.join(ROOT, '.ai3d', 'shapes', group.replace('/', '_') + ('_hq' if hq else ''))
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(tmp_dir, exist_ok=True)
     names = names or sorted(f[:-4] for f in os.listdir(src_dir) if f.endswith('.png'))
@@ -92,9 +95,10 @@ def main():
 
     # phase 1: shapes (untextured meshes + background-free images cached in .ai3d/shapes)
     t0 = time.time()
-    shape = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained('tencent/Hunyuan3D-2', subfolder='hunyuan3d-dit-v2-0-turbo',
+    shape = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained('tencent/Hunyuan3D-2', subfolder='hunyuan3d-dit-v2-0' if hq else 'hunyuan3d-dit-v2-0-turbo',
                                                              use_safetensors=True, device='cuda')
-    shape.enable_flashvdm()
+    if not hq:
+        shape.enable_flashvdm()
     rembg = BackgroundRemover()
     print(f'shape model ready in {time.time() - t0:.0f}s', flush=True)
     for name in todo:
@@ -105,11 +109,11 @@ def main():
         try:
             image = Image.open(os.path.join(src_dir, f'{name}.png'))
             image = rembg(image.convert('RGB')) if image.mode != 'RGBA' else image
-            mesh = shape(image=image, num_inference_steps=5, octree_resolution=380, num_chunks=200000,
+            mesh = shape(image=image, num_inference_steps=50 if hq else 5, octree_resolution=512 if hq else 380, num_chunks=200000,
                          generator=torch.manual_seed(1234), output_type='trimesh')[0]
             mesh = FloaterRemover()(mesh)
             mesh = DegenerateFaceRemover()(mesh)
-            mesh = FaceReducer()(mesh, max_facenum=FACES['chibi' if chars else 'decor'])
+            mesh = FaceReducer()(mesh, max_facenum=60000 if hq else FACES['chibi' if chars else 'decor'])
             ext = sorted(mesh.extents)
             if ext[0] < ext[2] * 0.08:  # a garbage latent decodes to a flat slab across the grid
                 raise RuntimeError(f'flat shape {ext}')
@@ -133,7 +137,7 @@ def main():
     _load = diffusers.DiffusionPipeline.from_pretrained.__func__
     diffusers.DiffusionPipeline.from_pretrained = classmethod(lambda cls, *a, **k: _load(cls, *a, **{'trust_remote_code': True, **k}))
     from hy3dgen.texgen import Hunyuan3DPaintPipeline
-    paint = Hunyuan3DPaintPipeline.from_pretrained('tencent/Hunyuan3D-2', subfolder='hunyuan3d-paint-v2-0-turbo')
+    paint = Hunyuan3DPaintPipeline.from_pretrained('tencent/Hunyuan3D-2', subfolder='hunyuan3d-paint-v2-0' if hq else 'hunyuan3d-paint-v2-0-turbo')
     print(f'texture models ready in {time.time() - t0:.0f}s', flush=True)
     for name in todo:
         mesh_path, img_path = os.path.join(tmp_dir, f'{name}.glb'), os.path.join(tmp_dir, f'{name}.png')

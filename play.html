@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI SLOP ARENA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <canvas id="c" tabindex="0"></canvas>
+
+  <!-- boot screen: shown until textures, figurines and decor models are in (main.js) -->
+  <div id="loader">
+    <div class="ld-title outline"><span>AI SLOP</span><b>ARENA</b></div>
+    <div class="ld-crew">
+      <img src="/assets/ui/blaster.png" alt="" /><img src="/assets/ui/gunslinger.png" alt="" /><img src="/assets/ui/bomber.png" alt="" /><img src="/assets/ui/frostbite.png" alt="" /><img src="/assets/ui/volt.png" alt="" />
+    </div>
+    <div class="ld-bar"><i id="ldFill"></i></div>
+    <div class="ld-info"><b id="ldPct">0%</b><span id="ldStep">Warming up the arena…</span></div>
+    <p class="ld-tip" id="ldTip"></p>
+  </div>
+
+  <div id="hud" class="hidden">
+    <div id="bars"></div>
+    <div id="floaters"></div>
+    <div id="vignette"></div>
+    <div id="flash"></div>
+    <div id="top">
+      <div class="pill"><b id="aliveCount">8</b><small>BRAWLERS LEFT</small></div>
+      <div class="pill poison" id="poisonPill"><small>GAS IN</small><b id="poisonTime">0:28</b></div>
+    </div>
+    <div id="cubes"><span class="cube"></span><b id="cubeCount">0</b></div>
+    <div id="super">
+      <svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="44" /><circle class="fg" id="superArc" cx="50" cy="50" r="44" /></svg>
+      <span>SUPER</span>
+      <small>RMB · SPACE</small>
+    </div>
+    <div id="keys"><b>WASD</b> move · <b>Mouse</b> aim · <b>Hold LMB</b> attack · <b>RMB / Space</b> super · <b>T</b> time of day · <b>Esc</b> pause · <b>M</b> mute · 🎮 supported</div>
+  </div>
+
+  <aside id="panel" class="panel">
+    <header><span>Lighting &amp; Shadows</span><button id="panelToggle" aria-label="Collapse panel">▾</button></header>
+    <div class="body">
+      <div class="lbl">Time of day <kbd>T</kbd></div>
+      <div class="seg">
+        <button data-tod="0">Morning</button><button data-tod="1">Noon</button><button data-tod="2">Sunset</button><button data-tod="3">Night</button>
+      </div>
+      <label class="row"><input type="checkbox" id="cycle" /> Animated day / night cycle</label>
+
+      <div class="lbl">Sun shadow map</div>
+      <select id="shadowQ">
+        <option value="0">Off</option><option value="1024">1024²</option><option value="2048" selected>2048²</option><option value="4096">4096²</option>
+      </select>
+      <div class="lbl">Filter</div>
+      <select id="shadowF">
+        <option value="pcf" selected>PCF · Vogel disk + noise</option><option value="vsm">VSM · blurred moments</option><option value="basic">Hard · unfiltered</option>
+      </select>
+      <div class="lbl">Softness <output id="softOut">3</output></div>
+      <input type="range" id="soft" min="0" max="8" step="0.5" value="3" />
+      <label class="row"><input type="checkbox" id="follow" checked /> Fit frustum to camera</label>
+      <label class="row"><input type="checkbox" id="snap" checked /> Texel snapping (no shimmer)</label>
+      <label class="row"><input type="checkbox" id="frustum" /> Show shadow frustum</label>
+
+      <div class="lbl">Post &amp; lights</div>
+      <label class="row"><input type="checkbox" id="ao" checked /> Ambient occlusion (GTAO)</label>
+      <label class="row"><input type="checkbox" id="aoView" /> View AO buffer only</label>
+      <label class="row"><input type="checkbox" id="bloom" checked /> HDR bloom</label>
+      <label class="row"><input type="checkbox" id="dyn" checked /> Dynamic point lights</label>
+      <div class="lbl">Exposure <output id="expOut">1.00</output></div>
+      <input type="range" id="exp" min="0.5" max="1.8" step="0.05" value="1" />
+      <div id="stats"></div>
+    </div>
+  </aside>
+
+  <div id="sound">
+    <button id="soundBtn" class="icon-btn" aria-label="Sound settings" aria-expanded="false" title="Sound (M to mute)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M4 9h4l5-4v14l-5-4H4z" />
+        <path class="wave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" />
+        <path class="cross" d="M16 9l6 6M22 9l-6 6" /></svg>
+    </button>
+    <div id="soundPanel" class="pop hidden" role="dialog" aria-label="Sound settings">
+      <header><span>Sound</span><button id="soundClose" aria-label="Close">✕</button></header>
+      <div class="body">
+        <div class="vol"><span>Master</span><input type="range" min="0" max="100" data-ch="master" /><output></output></div>
+        <div class="vol"><span>Music</span><input type="range" min="0" max="100" data-ch="music" /><output></output></div>
+        <div class="vol"><span>Effects</span><input type="range" min="0" max="100" data-ch="sfx" /><output></output></div>
+        <div class="vol"><span>Ambience</span><input type="range" min="0" max="100" data-ch="amb" /><output></output></div>
+        <div class="lbl">Music track</div>
+        <div class="seg" id="trackSeg">
+          <button data-track="auto">Auto</button><button data-track="menu">Lobby</button><button data-track="battle">Battle</button><button data-track="off">Off</button>
+        </div>
+        <label class="row"><input type="checkbox" id="muteAll" /> Mute everything <kbd>M</kbd></label>
+        <button id="soundTest" class="test">▶ Test effects</button>
+        <p class="note">Ambience follows the time of day: birds by day, crickets and torches at night.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="menu" class="overlay">
+    <div class="menu-card">
+      <h1>AI SLOP<span>ARENA</span></h1>
+      <p class="tag">Showdown · 8 brawlers · 5 maps with live weather · last one standing wins</p>
+      <div id="cards"></div>
+      <div class="lbl-row">Map</div>
+      <div id="maps" class="maps"></div>
+      <div class="row-btns left">
+        <button id="play" class="big">SOLO</button>
+        <button id="multi" class="big alt">MULTIPLAYER</button>
+        <button id="optionsBtn" class="ghost">OPTIONS</button>
+      </div>
+      <p class="hint">Keyboard + mouse or gamepad · <kbd>Esc</kbd> / Start pauses · <kbd>T</kbd> time of day</p>
+    </div>
+  </div>
+
+  <div id="lobby" class="overlay hidden">
+    <div class="menu-card lobby">
+      <h2 class="lobby-title">Online</h2>
+      <div id="lobbyJoin">
+        <label class="field"><span>Your name</span><input id="nick" maxlength="14" autocomplete="nickname" placeholder="Brawler" /></label>
+        <div class="row-btns left">
+          <button id="create" class="big">CREATE ROOM</button>
+        </div>
+        <div class="join-row">
+          <input id="code" maxlength="6" placeholder="CODE" autocomplete="off" spellcheck="false" />
+          <button id="join" class="ghost">JOIN</button>
+        </div>
+        <p class="hint">Rooms hold up to 8 players; bots fill the empty spots.</p>
+      </div>
+      <div id="lobbyRoom" class="hidden">
+        <div class="room-head">
+          <div><small>ROOM CODE</small><b id="roomCode">----</b></div>
+          <button id="copyLink" class="ghost small">Copy invite link</button>
+        </div>
+        <ul id="players" class="players"></ul>
+        <div class="lbl-row">Your brawler</div>
+        <div id="lobbyCards" class="mini-cards"></div>
+        <div class="lbl-row">Map <small id="mapNote"></small></div>
+        <div id="lobbyMaps" class="maps"></div>
+        <div class="row-btns left">
+          <button id="start" class="big">START</button>
+          <span id="waiting" class="hint hidden">Waiting for the host to start…</span>
+        </div>
+      </div>
+      <p id="lobbyStatus" class="status"></p>
+      <button id="lobbyBack" class="ghost small back">← Back</button>
+    </div>
+  </div>
+
+  <div id="options" class="overlay hidden">
+    <div class="opt-card">
+      <header class="opt-head">
+        <h2>OPTIONS</h2>
+        <nav id="optTabs" class="opt-tabs"></nav>
+      </header>
+      <div id="optBody" class="opt-body"></div>
+      <p id="optHint" class="opt-hint"></p>
+      <footer class="opt-foot">
+        <span class="hints"><kbd>↑↓</kbd> select · <kbd>←→</kbd> change · <kbd>Q</kbd><kbd>E</kbd> / LB RB tabs · <kbd>Esc</kbd> / B back</span>
+        <span><button id="optReset" class="ghost small">Reset tab</button><button id="optClose" class="big small-big">BACK</button></span>
+      </footer>
+    </div>
+  </div>
+
+  <div id="pause" class="overlay hidden">
+    <div class="pause-card">
+      <h2>PAUSED</h2>
+      <button data-act="resume" class="big">RESUME</button>
+      <button data-act="options" class="ghost">OPTIONS</button>
+      <button data-act="quit" class="ghost">QUIT TO MENU</button>
+      <p id="pauseNote" class="hint"></p>
+    </div>
+  </div>
+
+  <div id="fpsBadge" class="hidden"></div>
+
+  <div id="result" class="overlay hidden">
+    <div class="menu-card result">
+      <h2 id="resTitle">#1</h2>
+      <p id="resSub"></p>
+      <div class="row-btns" id="soloBtns"><button id="again" class="big">PLAY AGAIN</button><button id="toMenu" class="ghost">MENU</button></div>
+      <div class="row-btns hidden" id="onlineBtns"><button id="spectate" class="ghost">SPECTATE</button><span class="hint">Back to the room when the match ends…</span></div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
