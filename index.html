@@ -20,6 +20,7 @@
       <a href="#arenes">Arènes</a>
       <a href="#features">Features</a>
       <a href="#controles">Contrôles</a>
+      <a href="#apropos">À propos</a>
     </nav>
     <a class="btn btn-play btn-sm" href="/play.html">Jouer</a>
   </header>
@@ -85,7 +86,7 @@
     </div>
     <div class="rows">
       <article class="row reveal">
-        <figure class="shot"><img src="/assets/site/feat_light.jpg" alt="Lanternes allumées de nuit dans Rainy Grove" loading="lazy" /></figure>
+        <figure class="shot"><img src="/assets/site/feat_light.jpg" alt="Oasis au coucher du soleil, ombres rasantes" loading="lazy" /></figure>
         <div class="txt">
           <span class="num">01</span>
           <h3>Lumières & ombres en temps réel</h3>
@@ -121,6 +122,20 @@
           <p>Personnages et décors modélisés en local à partir d'illustrations, puis rigués et animés automatiquement : marche, visée, recul, respiration. Chaque brawler a son arme, et elle vise vraiment là où tu tires.</p>
         </div>
       </article>
+      <article class="row reveal">
+        <figure class="shot slides" id="todSlides">
+          <img src="/assets/site/tod_0.jpg" alt="Rainy Grove le matin" loading="lazy" class="on" />
+          <img src="/assets/site/tod_1.jpg" alt="Rainy Grove à midi" loading="lazy" />
+          <img src="/assets/site/tod_2.jpg" alt="Rainy Grove au coucher du soleil" loading="lazy" />
+          <img src="/assets/site/tod_3.jpg" alt="Rainy Grove de nuit, lanternes allumées" loading="lazy" />
+        </figure>
+        <div class="txt">
+          <span class="num">05</span>
+          <h3>Un cycle jour / nuit</h3>
+          <p>Matin doré, plein midi, coucher de soleil orangé, nuit bleutée où seules les lanternes et les tirs éclairent l'arène. Choisis ton heure dans les options, ou appuie sur T en pleine partie.</p>
+          <div class="chips tod" id="todChips"><span class="on">🌅 Matin</span><span>☀️ Midi</span><span>🌇 Coucher</span><span>🌙 Nuit</span></div>
+        </div>
+      </article>
     </div>
     <div class="tiles">
       <article class="tile reveal"><div class="ico">🎮</div><div><h3>Manette & clavier</h3><p>Manette prise en charge nativement avec vibrations, raccourcis clavier configurables.</p></div></article>
@@ -141,6 +156,37 @@
       <div class="ctrl"><div class="keys"><kbd class="wide">Espace</kbd></div><span>Super</span></div>
       <div class="ctrl"><div class="keys"><kbd>T</kbd></div><span>Moment de la journée</span></div>
       <div class="ctrl"><div class="keys"><kbd class="wide">🎮 Manette</kbd></div><span>Stick gauche / droit, gâchettes</span></div>
+    </div>
+  </section>
+
+  <!-- ============================== about ============================== -->
+  <section class="section" id="apropos">
+    <div class="section-head reveal">
+      <span class="kicker">À propos</span>
+      <h2>Comment ce jeu a été fait</h2>
+    </div>
+    <div class="about">
+      <div class="about-text reveal">
+        <p>AI SLOP ARENA est un projet perso réalisé en <b>deux jours</b>, du 22 au 24 septembre 2026, en binôme avec une IA. Je décrivais ce que je voulais, <b>Claude Code</b> (l'agent de développement d'Anthropic) écrivait le code, générait les assets et testait le jeu dans le navigateur, et je corrigeais le tir à chaque itération.</p>
+        <p>Le nom est un clin d'œil assumé : presque tout ici a été produit avec de l'IA. Les figurines et les décors ont été modélisés <b>en local, sur ma carte graphique</b>, à partir d'illustrations générées dans le même style, puis rigués et animés automatiquement par le jeu au chargement. La bande-annonce est enregistrée directement depuis le moteur.</p>
+        <div class="timeline">
+          <div><b>Jour 1</b><span>Le moteur : arène three.js, lumières et ombres en temps réel, 5 arènes et leur météo, bots, multijoueur en ligne sur Cloudflare.</span></div>
+          <div><b>Jour 2</b><span>Les figurines : personnages et décors en 3D générés en local, rig et animations automatiques, écran de chargement, ce site et sa bande-annonce.</span></div>
+        </div>
+      </div>
+      <aside class="about-side reveal">
+        <ul class="facts">
+          <li><b>2</b><span>jours</span></li>
+          <li><b>≈ 7 800</b><span>lignes de JavaScript</span></li>
+          <li><b>20</b><span>modèles 3D générés en local</span></li>
+        </ul>
+        <h3>Technos</h3>
+        <div class="stack">
+          <span>three.js · WebGL</span><span>JavaScript · Vite</span><span>Cloudflare Workers</span><span>Durable Objects</span>
+          <span>Hunyuan3D-2 (local, GPU AMD · ROCm)</span><span>Gemini · OpenRouter</span><span>Lyria (musique)</span><span>ElevenLabs (sons)</span><span>ffmpeg</span><span>Claude Code</span>
+        </div>
+        <a class="btn btn-ghost btn-src" href="https://github.com/gtko/ai-slop-arena">Voir le code source</a>
+      </aside>
     </div>
   </section>
 

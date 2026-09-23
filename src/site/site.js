@@ -101,13 +101,16 @@ for (const card of document.querySelectorAll('.card')) {
   card.addEventListener('pointerleave', () => { card.style.transform = ''; });
 }
 
-// weather screenshots cross-fade
-const slides = document.querySelectorAll('#weatherSlides img');
-if (slides.length > 1 && !reduced) {
+// screenshot cross-fades (weather, time of day); chips, when present, follow the current slide
+function crossfade(slidesSel, chipsSel, period) {
+  const slides = document.querySelectorAll(slidesSel), chips = chipsSel ? document.querySelectorAll(chipsSel) : [];
+  if (slides.length < 2 || reduced) return;
   let k = 0;
   setInterval(() => {
-    slides[k].classList.remove('on');
+    slides[k].classList.remove('on'); chips[k]?.classList.remove('on');
     k = (k + 1) % slides.length;
-    slides[k].classList.add('on');
-  }, 4200);
+    slides[k].classList.add('on'); chips[k]?.classList.add('on');
+  }, period);
 }
+crossfade('#weatherSlides img', null, 4200);
+crossfade('#todSlides img', '#todChips span', 3000);

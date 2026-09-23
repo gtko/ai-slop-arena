@@ -14,19 +14,28 @@ function look(cam, x, y, z, tx, ty, tz) {
 }
 
 // follow one brawler (re-picked if it dies), preferring figurines in the thick of the fight
-// Brawlers near the arena's edges drag the outer decor into frame (the camera looks down from the
-// south), so the fight is picked among brawlers well inside, and dropped if it drifts to an edge.
+// One brawler per shot, picked once well inside the arena where the fight is thickest, and kept:
+// the camera never cuts between brawlers. If it dies, the camera eases to the nearest survivor.
 const inside = b => Math.abs(b.pos.x) < 8 && b.pos.z > -14 && b.pos.z < 2;
 function follower() {
   let tgt = null;
   return game => {
-    if (!tgt || !tgt.alive || !inside(tgt)) {
+    if (!tgt) {
       const alive = game.brawlers.filter(b => b.alive);
       const pool = alive.filter(inside).length ? alive.filter(inside) : alive;
       tgt = pool.sort((a, b) => crowd(game, b) - crowd(game, a))[0] || null;
+    } else if (!tgt.alive) {
+      const f = game.camFocus;
+      tgt = game.brawlers.filter(b => b.alive).sort((a, b) => a.pos.distanceTo(f) - b.pos.distanceTo(f))[0] || tgt;
     }
     return tgt;
   };
+}
+// for stills: the busiest brawler well inside the arena at this very moment
+function pickNow(game) {
+  const alive = game.brawlers.filter(b => b.alive);
+  const pool = alive.filter(inside).length ? alive.filter(inside) : alive;
+  return pool.sort((a, b) => crowd(game, b) - crowd(game, a))[0];
 }
 function crowd(game, b) {
   return game.brawlers.filter(o => o !== b && o.alive && o.pos.distanceTo(b.pos) < 9).length;
@@ -39,11 +48,12 @@ function tile(game, ch) {
 
 // The in-game camera (same offset, same smoothing as Game.updateCamera, minus the menu's side shift),
 // following `tgt`, with an optional push-in (zoom < 1 brings the camera closer along its axis).
-function gameCam(cam, game, tgt, dt, zoom = 1) {
+function gameCam(cam, game, tgt, dt, zoom = 1, speed = 1.4) {
   const HALF = 25, p = tgt.pos;
   const x = Math.min(HALF - 9, Math.max(-(HALF - 9), p.x)), z = Math.min(HALF - 6, Math.max(-(HALF - 11), p.z));
-  game.camFocus.x += (x - game.camFocus.x) * (1 - Math.exp(-2.2 * (dt || 1 / 30)));
-  game.camFocus.z += (z - game.camFocus.z) * (1 - Math.exp(-2.2 * (dt || 1 / 30)));
+  const k = 1 - Math.exp(-speed * (dt || 1 / 30));
+  game.camFocus.x += (x - game.camFocus.x) * k;
+  game.camFocus.z += (z - game.camFocus.z) * k;
   game.camFocus.y = 0;
   cam.position.copy(game.camFocus).addScaledVector(game.camOffset, zoom);
   cam.lookAt(game.camFocus.x, 0.5, game.camFocus.z);
@@ -66,12 +76,11 @@ export function trailerShots() {
     };
   };
   return [
-    shot('oasis', 1, 120),
-    shot('grove', 3, 110),
-    shot('frost', 1, 105),
-    shot('dunes', 2, 105, { setup: game => game.weather?.setDensity?.(0.6) }),
-    shot('marsh', 1, 100),
-    shot('oasis', 2, 120),
+    shot('oasis', 1, 150),
+    shot('grove', 3, 150),
+    shot('frost', 0, 150),
+    shot('dunes', 2, 150, { setup: game => game.weather?.setDensity?.(0.6) }),
+    shot('marsh', 1, 150),
   ];
 }
 
@@ -91,6 +100,35 @@ export async function redoShots(indices) {
 }
 
 // One wide establishing shot per arena, for the site's arena cards (1280x800)
+export async function recordMarshCard() {
+  const f = follower();
+  return dev().still('site/map_marsh.jpg', {
+    map: 'marsh', tod: 1, warm: 200,
+    camera: (cam, u, game) => { const b = pickNow(game); game.camTarget = b; game.camFocus.set(b.pos.x, 0, b.pos.z); gameCam(cam, game, b, 1, 0.92); },
+  }, { w: 1280, h: 800 });
+}
+
+// Day / night cycle: one frozen scene rendered at the four times of day
+export async function recordDayNight() {
+  const d = dev(), A = window.__arena, f = follower();
+  let tgt = null;
+  await d.film([{ map: 'grove', tod: 1, warm: 220, frames: 1,
+    camera: (cam, u, game) => { tgt = tgt || f(game); game.camFocus.set(tgt.pos.x, 0, tgt.pos.z); gameCam(cam, game, tgt, 1, 0.9); } }],
+  { w: 1600, h: 900, dir: '_still' });
+  A.game.brains.clear();
+  for (const b of A.game.brawlers) b.vel.set(0, 0, 0);
+  A.game.weather?.setDensity?.(0);
+  for (const tod of [0, 1, 2, 3]) {
+    A.lighting.setPreset(tod, true);
+    for (let i = 0; i < 20; i++) d.run(1); // let lights, lanterns and ambience settle
+    A.game.cinematic = (cam, dt) => gameCam(cam, A.game, tgt, 1, 0.9);
+    d.run(1);
+    await d.save(`site/tod_${tod}.jpg`, 0.92);
+  }
+  A.game.cinematic = null;
+  return 'ok';
+}
+
 export async function recordMapStills() {
   const d = dev();
   const shots = { oasis: [1, 0.35], dunes: [1, -0.4], grove: [1, 0.5], frost: [1, -0.3], marsh: [1, 0.2] };
@@ -115,10 +153,10 @@ export async function recordStills(only) {
   let lantern = null;
   const f = follower();
   const want = n => !only || only.includes(n);
+  // light & shadow: Oasis at sunset in the game's own view, long raking shadows
   if (want('feat_light')) await d.still('site/feat_light.jpg', {
-    map: 'grove', tod: 3, warm: 160,
-    setup: game => { lantern = tile(game, 'T'); },
-    camera: cam => look(cam, lantern.x + 5, 6, lantern.z + 8, lantern.x, 1, lantern.z),
+    map: 'oasis', tod: 2, warm: 200,
+    camera: (cam, u, game) => { const b = pickNow(game); game.camFocus.set(b.pos.x, 0, b.pos.z); gameCam(cam, game, b, 1, 0.82); },
   });
   if (want('feat_weather')) await d.still('site/feat_weather.jpg', {
     map: 'frost', tod: 1, warm: 160,
@@ -139,7 +177,7 @@ export async function recordStills(only) {
   });
   // the five figurines side by side, frozen
   if (want('feat_figurines')) await d.still('site/feat_figurines.jpg', {
-    tod: 1, warm: 4,
+    tod: 1, warm: 40, // the spawn pop squashes them for the first ~10 frames
     setup: game => {
       const roster = [...lineup, ...lineup.slice(0, 3)].map((type, k) => ({ id: 'b' + k, name: type, type, human: false, spawn: k }));
       game.newMatch({ mapKey: 'oasis', roster });
