@@ -114,3 +114,24 @@ function crossfade(slidesSel, chipsSel, period) {
 }
 crossfade('#weatherSlides img', null, 4200);
 crossfade('#todSlides img', '#todChips span', 3000);
+
+// the prompts list: a short peek that unfolds to its full height, and folds back
+const prompts = $('#prompts');
+if (prompts) {
+  const body = prompts.querySelector('.prompts-body'), btn = prompts.querySelector('.prompts-toggle'), label = btn.textContent;
+  btn.addEventListener('click', () => {
+    const open = !prompts.classList.contains('open');
+    body.style.maxHeight = `${body.scrollHeight}px`;
+    if (!open) {
+      body.offsetHeight; // commit the full height so the fold animates from it
+      body.style.maxHeight = '';
+      if (prompts.getBoundingClientRect().top < 0) prompts.scrollIntoView();
+    }
+    prompts.classList.toggle('open', open);
+    btn.textContent = open ? 'Replier' : label;
+    btn.setAttribute('aria-expanded', open);
+  });
+  body.addEventListener('transitionend', e => {
+    if (e.target === body && e.propertyName === 'max-height' && prompts.classList.contains('open')) body.style.maxHeight = 'none';
+  });
+}
