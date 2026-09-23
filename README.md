@@ -48,11 +48,11 @@ Every prompt, with its timestamp, is listed on the [website](https://ai-slop-are
 
 <table>
   <tr>
-    <td align="center" valign="bottom" width="20%"><img src="public/assets/ui/blaster.png" alt="Blaster" width="150"><br><b>Blaster</b><br><sub>Shotgun</sub></td>
-    <td align="center" valign="bottom" width="20%"><img src="public/assets/ui/gunslinger.png" alt="Gunslinger" width="150"><br><b>Gunslinger</b><br><sub>Sharpshooter</sub></td>
-    <td align="center" valign="bottom" width="20%"><img src="public/assets/ui/bomber.png" alt="Bomber" width="150"><br><b>Bomber</b><br><sub>Thrower</sub></td>
-    <td align="center" valign="bottom" width="20%"><img src="public/assets/ui/frostbite.png" alt="Frostbite" width="150"><br><b>Frostbite</b><br><sub>Ice mage</sub></td>
-    <td align="center" valign="bottom" width="20%"><img src="public/assets/ui/volt.png" alt="Volt" width="150"><br><b>Volt</b><br><sub>Electric robot</sub></td>
+    <td align="center" valign="bottom" width="20%"><img src="public/assets/ui/blaster.png" alt="Blaster" height="170"><br><b>Blaster</b><br><sub>Shotgun</sub></td>
+    <td align="center" valign="bottom" width="20%"><img src="public/assets/ui/gunslinger.png" alt="Gunslinger" height="170"><br><b>Gunslinger</b><br><sub>Sharpshooter</sub></td>
+    <td align="center" valign="bottom" width="20%"><img src="public/assets/ui/bomber.png" alt="Bomber" height="170"><br><b>Bomber</b><br><sub>Thrower</sub></td>
+    <td align="center" valign="bottom" width="20%"><img src="public/assets/ui/frostbite.png" alt="Frostbite" height="170"><br><b>Frostbite</b><br><sub>Ice mage</sub></td>
+    <td align="center" valign="bottom" width="20%"><img src="public/assets/ui/volt.png" alt="Volt" height="170"><br><b>Volt</b><br><sub>Electric robot</sub></td>
   </tr>
 </table>
 
