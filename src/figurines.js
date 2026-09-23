@@ -214,8 +214,14 @@ function fillProfile(e) {
 // (A-pose arms, raised weapons). Upper arm vs forearm is decided later, by distance along the arm.
 function labelVertex(J, x, y) {
   const side = x >= 0 ? 'L' : 'R', out = Math.abs(x) - J.edge[side][binOf(y)];
+  if (y <= J.neck && out > 0.004 * H && (y < J.shoulderY + 0.02 * H || out > 0.08 * H)) return B['arm' + side];
+  return labelBody(J, x, y);
+}
+
+// the same without arms: head, legs, pelvis, chest
+function labelBody(J, x, y) {
+  const side = x >= 0 ? 'L' : 'R';
   if (y > J.neck) return B.head;
-  if (out > 0.004 * H && (y < J.shoulderY + 0.02 * H || out > 0.08 * H)) return B['arm' + side];
   if (y < J.crotch) return y < J.knee ? B['shin' + side] : B['thigh' + side];
   return y < J.crotch + 0.08 * H ? B.hips : B.spine;
 }
@@ -257,8 +263,11 @@ function autoRig(geo, over) {
     if (id === undefined) { id = keys.size; keys.set(key, id); }
     ids[i] = id;
   }
-  const m = keys.size, label = new Uint8Array(m);
-  for (let i = 0; i < n; i++) label[ids[i]] = labelVertex(J, pos.getX(i), pos.getY(i));
+  const m = keys.size, label = new Uint8Array(m), wx = new Float32Array(m), wy = new Float32Array(m);
+  for (let i = 0; i < n; i++) {
+    label[ids[i]] = labelVertex(J, pos.getX(i), pos.getY(i));
+    wx[ids[i]] = pos.getX(i); wy[ids[i]] = pos.getY(i);
+  }
   splitArms(J, pos, n, ids, label);
 
   // cut: drop faces joining an arm to anything but the torso at the shoulder, or leg to leg low down
@@ -297,6 +306,16 @@ function autoRig(geo, over) {
       }
       sizes.push(size);
     }
+    // False arms: an arm is hung from the shoulder, so an arm-labelled piece that never gets near
+    // shoulder height is really part of a leg or the torso (a strap or pouch fooled the edge test)
+    const armTop = new Float32Array(sizes.length).fill(-Infinity);
+    for (let v = 0; v < m; v++) if (armSide(label[v])) armTop[comp[v]] = Math.max(armTop[comp[v]], wy[v]);
+    let fixedArms = false;
+    for (let v = 0; v < m; v++) {
+      if (!armSide(label[v]) || armTop[comp[v]] > J.shoulderY - 0.12 * H) continue;
+      label[v] = labelBody(J, wx[v], wy[v]);
+      fixedArms = true;
+    }
     const votes = new Map(); // small component -> {label: count} across cut faces
     for (const t of across) for (const u of t) {
       if (sizes[comp[u]] > m * 0.02) continue;
@@ -306,7 +325,7 @@ function autoRig(geo, over) {
         votes.set(comp[u], v);
       }
     }
-    if (!votes.size) break;
+    if (!votes.size && !fixedArms) break;
     const relabel = new Map([...votes].map(([c, v]) => [c, [...v].sort((p, q) => q[1] - p[1])[0][0]]));
     for (let v = 0; v < m; v++) if (relabel.has(comp[v])) label[v] = relabel.get(comp[v]);
   }
@@ -370,11 +389,12 @@ function autoRig(geo, over) {
     }
     if (k) elbow.divideScalar(k);
     else elbow.set(A.sx * 1.2, J.elbow, 0);
+    const armAngle = Math.atan2(Math.abs(elbow.x - A.sx), Math.max(J.shoulderY - elbow.y, 1e-3));
     return {
       thigh: thigh.setY(J.crotch), shin: shin.setY(J.knee),
       arm: new THREE.Vector3(A.sx, J.shoulderY, elbow.z),
       fore: elbow,
-      armAngle: A.angle,
+      armAngle,
     };
   };
   J.L = side('L', 1);

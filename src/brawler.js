@@ -255,10 +255,10 @@ export class Brawler {
     const m = this.model, k = m.bones, a = this.walkAmp, idle = 1 - a, ph = this.walkPhase;
     const s = Math.sin(ph), c = Math.cos(ph), bob = 0.5 + 0.5 * Math.cos(2 * ph);
     const breath = Math.sin(t * 2.4), shift = Math.sin(t * 0.9);
-    k.thighL.rotation.set(-s * 0.6 * a, 0, 0.03);
-    k.thighR.rotation.set(s * 0.6 * a, 0, -0.03);
-    k.shinL.rotation.x = Math.max(0, c) * 1.0 * a;
-    k.shinR.rotation.x = Math.max(0, -c) * 1.0 * a;
+    k.thighL.rotation.set(-s * 0.5 * a, 0, 0.03);
+    k.thighR.rotation.set(s * 0.5 * a, 0, -0.03);
+    k.shinL.rotation.x = Math.max(0, c) * 0.75 * a;
+    k.shinR.rotation.x = Math.max(0, -c) * 0.75 * a;
     k.hips.position.y = k.hips.userData.rest.y + (bob - 0.6) * 0.07 * a;
     k.hips.position.x = k.hips.userData.rest.x + shift * 0.015 * idle;
     k.hips.rotation.set(0.04 * a, -s * 0.16 * a, -c * 0.07 * a + shift * 0.02 * idle);
@@ -271,8 +271,8 @@ export class Brawler {
     const L = THREE.MathUtils.lerp;
     // left arm goes back while the left leg is forward; elbows bend more on the forward swing
     // (z first: A-pose arms are brought down to the sides, then swung / raised about x)
-    k.armL.rotation.set(L(s * 0.55 * a, raised, aimL), 0, 0.1 - m.lower.L + breath * 0.025 * idle);
-    k.armR.rotation.set(L(-s * 0.55 * a, raised, aimR), 0, -0.1 + m.lower.R - breath * 0.025 * idle);
+    k.armL.rotation.set(L(s * 0.45 * a, raised, aimL), 0, 0.1 - m.lower.L + breath * 0.025 * idle);
+    k.armR.rotation.set(L(-s * 0.45 * a, raised, aimR), 0, -0.1 + m.lower.R - breath * 0.025 * idle);
     k.foreL.rotation.x = L(-0.15 - (0.2 + Math.max(0, -s) * 0.45) * a, -0.1, aimL);
     k.foreR.rotation.x = L(-0.15 - (0.2 + Math.max(0, s) * 0.45) * a, -0.1, aimR);
     const st = (bob - 0.5) * 0.04 * a + this.recoil * 0.03;

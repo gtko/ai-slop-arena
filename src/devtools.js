@@ -58,6 +58,7 @@ export function installDevtools(A) {
       c.position.set(p.x + Math.sin(yaw) * dist, dist * h + 1.1, p.z + Math.cos(yaw) * dist);
       c.lookAt(p.x, 1.1, p.z);
       A.composer.render();
+      document.body.style.outline = document.body.style.outline ? '' : '0px solid transparent'; // forces a composite so screenshots refresh
       return 'ok';
     },
     pose(phase = 0, amp = 0, aim = 0, recoil = 0, facing = 0.9, yaw = 1.6, dist = 4.5, h = 0.3) {
@@ -90,6 +91,7 @@ export function installDevtools(A) {
       const f = v => +(v / 2.5).toFixed(3), prof = e => Array.from(e).filter((_, b) => b % 4 === 0 && b < 64).map(f).join(' ');
       return { crotch: f(J.crotch), knee: f(J.knee), neck: f(J.neck), shoulder: f(J.shoulderY), elbow: f(J.elbow), cut: J.cutFaces, L: prof(J.edge.L), R: prof(J.edge.R) };
     },
+    info: figurineInfo, // raw template (geo, joints) of a figurine
     errors: [],
   };
   const oe = console.error;

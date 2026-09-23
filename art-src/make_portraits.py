@@ -1,17 +1,18 @@
-"""Menu portraits from the chibi cutouts. Uses art-src/chibi/cut_apose/<key>.png (RGBA, background
-removed by the local pipeline) when present, else art-src/chibi/cut/<key>.png (TRELLIS: character
+"""Menu portraits from the chibi cutouts. Uses art-src/chibi/cut_action/<key>.png (action pose, ai3d/cutout.py)
+or cut_apose/<key>.png (RGBA, background removed by the local pipeline) when present, else art-src/chibi/cut/<key>.png (TRELLIS: character
 premultiplied on black). Usage: python art-src/make_portraits.py blaster bomber ..."""
 import os
 import sys
 from PIL import Image, ImageDraw, ImageFilter
 
 for key in sys.argv[1:]:
-    if os.path.exists(f'art-src/chibi/cut_apose/{key}.png'):
-        im = Image.open(f'art-src/chibi/cut_apose/{key}.png').convert('RGBA')
+    cut = next((f'art-src/chibi/{d}/{key}.png' for d in ('cut_action', 'cut_apose') if os.path.exists(f'art-src/chibi/{d}/{key}.png')), None)
+    if cut:
+        im = Image.open(cut).convert('RGBA')
         im = im.crop(im.getchannel('A').point(lambda v: 255 if v > 8 else 0).getbbox())
         im = im.resize((round(im.width * 512 / im.height), 512), Image.LANCZOS)
         im.save(f'public/assets/ui/{key}.png', optimize=True)
-        print(key, im.size, 'A-pose')
+        print(key, im.size, cut)
         continue
     im = Image.open(f'art-src/chibi/cut/{key}.png').convert('RGB')
     w, h = im.size
