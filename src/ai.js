@@ -47,6 +47,12 @@ export function findPath(arena, poison, si, sj, gi, gj) {
 }
 
 const _v = new THREE.Vector3();
+// distance from point p to the segment a-b on the ground plane
+const segDist = (p, a, b) => {
+  const dx = b.x - a.x, dz = b.z - a.z, l2 = dx * dx + dz * dz || 1;
+  const k = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.z - a.z) * dz) / l2));
+  return Math.hypot(p.x - (a.x + dx * k), p.z - (a.z + dz * k));
+};
 const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
 
 export class BotBrain {
@@ -64,7 +70,11 @@ export class BotBrain {
     this.strafeT = 0;
     this.fireCd = 0.6 + Math.random();
     this.seen = 0;
-    this.skill = 0.45 + Math.random() * 0.4;
+    // 0 (clumsy) .. 1 (sharp): from the roster (makeRoster, set from the players' level), else random.
+    this.skill = bot.skill ?? 0.45 + Math.random() * 0.4;
+    // Opening grace: for the first seconds of a match bots loot instead of hunting, so nobody gets
+    // jumped at spawn. They still fight back if hit. Staggered so they do not all wake up at once.
+    this.graceUntil = 7 + Math.random() * 4;
     this.crate = null;
     this.stuck = 0;
     this.last = bot.pos.clone();
@@ -86,10 +96,13 @@ export class BotBrain {
   decide() {
     const g = this.g, b = this.b, T = b.type, A = g.arena, P = g.poison;
     let best = null, bestS = Infinity;
+    const provoked = b.lastHurt > 0 && g.time - b.lastHurt < 4;
+    const calm = g.time < this.graceUntil && !provoked;
+    const sight = 13 + this.skill * 9; // sharper bots notice targets from further away
     for (const o of g.brawlers) {
-      if (o === b || !o.alive) continue;
+      if (calm || o === b || !o.alive) continue;
       const d = o.pos.distanceTo(b.pos);
-      if (d > 20 || !g.canSee(b, o)) continue;
+      if (d > sight || !g.canSee(b, o)) continue;
       const s = d + (o.hp / o.maxHp) * 4 - (o === this.target ? 2 : 0);
       if (s < bestS) { bestS = s; best = o; }
     }
@@ -108,7 +121,7 @@ export class BotBrain {
 
     if (best) {
       const d = best.pos.distanceTo(b.pos), hpF = b.hp / b.maxHp;
-      if (hpF < 0.3 && best.hp > b.hp && d < T.range * 1.3) {
+      if (this.skill > 0.3 && hpF < 0.3 && best.hp > b.hp && d < T.range * 1.3) { // clumsy bots never back off
         this.mode = 'retreat';
         _v.subVectors(b.pos, best.pos).setY(0).normalize().multiplyScalar(9).add(b.pos);
         const s = P.safeHalf - 2;
@@ -166,7 +179,8 @@ export class BotBrain {
       const d = Math.hypot(tx, tz) + 1e-4;
       if (this.strafeT <= 0) { this.strafeT = 0.5 + Math.random() * 1.3; if (Math.random() < 0.6) this.strafeDir *= -1; }
       const radial = THREE.MathUtils.clamp((d - this.want) / 2.5, -1, 1);
-      move.set(-tz / d * this.strafeDir * 0.85 + tx / d * radial, 0, tx / d * this.strafeDir * 0.85 + tz / d * radial);
+      const side = 0.35 + this.skill * 0.6; // sharp bots dodge sideways, clumsy ones mostly stand and shoot
+      move.set(-tz / d * this.strafeDir * side + tx / d * radial, 0, tx / d * this.strafeDir * side + tz / d * radial);
       if (A.blocksMoveAt(b.pos.x + move.x * 1.2, b.pos.z + move.z * 1.2)) { this.strafeDir *= -1; move.x *= -1; move.z *= -1; }
     } else if (this.path.length) {
       while (this.path.length && Math.hypot(this.path[0].x - b.pos.x, this.path[0].z - b.pos.z) < 0.6) this.path.shift();
@@ -198,24 +212,26 @@ export class BotBrain {
       this.seen += dt;
       const d = tgt.pos.distanceTo(b.pos);
       const range = T.key === 'blaster' ? 8.6 : T.range * 0.95;
-      if (d > range || this.seen < 0.9 - this.skill * 0.45) return;
+      if (d > range || this.seen < 1.3 - this.skill * 1.0) return; // reaction time: ~1.2 s .. 0.3 s
       if (T.key !== 'bomber' && !A.los(b.pos.x, b.pos.z, tgt.pos.x, tgt.pos.z)) return;
       const travel = d / T.projSpeed;
-      const lead = 0.25 + this.skill * 0.6;
-      const err = (0.26 * (1 - this.skill) + 0.06) * gauss();
+      const lead = this.skill * this.skill * 1.0;                          // clumsy bots aim where you are
+      const err = (0.5 * (1 - this.skill) ** 1.5 + 0.04) * gauss();      // radians: ~0.4 (clumsy) .. 0.05 (sharp)
       let px = tgt.pos.x + tgt.vel.x * travel * lead, pz = tgt.pos.z + tgt.vel.z * travel * lead;
       let dx = px - b.pos.x, dz = pz - b.pos.z;
       const a = Math.atan2(dx, dz) + err, l = Math.hypot(dx, dz);
       dx = Math.sin(a) * l; dz = Math.cos(a) * l;
       const point = _v.set(b.pos.x + dx, 0, b.pos.z + dz);
       const superRange = T.key === 'frostbite' ? 4.5 : range * 0.9;
-      if (b.superCharge >= 1 && d < superRange && Math.random() < 0.5) {
+      if (b.superCharge >= 1 && d < superRange && Math.random() < 0.2 + this.skill * 0.5) {
         g.tryAttack(b, dx, dz, point, true);
       } else if (this.fireCd <= 0 && b.ammo >= 1) {
-        if (g.tryAttack(b, dx, dz, point, false)) this.fireCd = 0.55 + Math.random() * 1.1 * (1.3 - this.skill);
+        if (g.tryAttack(b, dx, dz, point, false)) this.fireCd = 0.45 + Math.random() * 1.5 * (1.25 - this.skill);
       }
     } else if (this.crate && this.fireCd <= 0 && b.ammo >= 2) {
       const cp = this.crate.group.position, d = cp.distanceTo(b.pos);
+      // opening grace: no crate shots that could hit someone standing in the way or next to it
+      if (g.time < this.graceUntil && g.brawlers.some(o => o !== b && o.alive && segDist(o.pos, b.pos, cp) < 2.4)) return;
       if (d < T.range * 0.9 && (T.key === 'bomber' || A.los(b.pos.x, b.pos.z, cp.x, cp.z, 1.1))) {
         if (g.tryAttack(b, cp.x - b.pos.x, cp.z - b.pos.z, cp, false)) this.fireCd = 0.5 + Math.random() * 0.5;
       }

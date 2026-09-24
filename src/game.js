@@ -20,17 +20,23 @@ const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.f
 
 // Who plays where: humans first, bots fill up to 8. The host builds this and sends it to
 // every client so all browsers create the same brawlers on the same spawns.
-export function makeRoster(humans = []) {
+// level (0..1, see skill.js): the bots' skill is a mix around it, some weaker, some sharper.
+export function makeRoster(humans = [], { level = 0.45 } = {}) {
   const spawns = shuffle([0, 1, 2, 3, 4, 5, 6, 7]);
   const names = shuffle(NAMES.slice());
   const roster = humans.slice(0, 8).map((h, k) => ({ id: h.id, name: h.name, type: h.type, human: true, spawn: spawns[k] }));
+  const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
   for (let k = roster.length; k < 8; k++) {
-    roster.push({ id: 'bot' + k, name: names[k], type: TYPE_KEYS[Math.floor(Math.random() * TYPE_KEYS.length)], human: false, spawn: spawns[k] });
+    const skill = Math.round(Math.min(0.97, Math.max(0.05, 0.12 + level * 0.8 + gauss() * 0.2)) * 100) / 100;
+    roster.push({ id: 'bot' + k, name: names[k], type: TYPE_KEYS[Math.floor(Math.random() * TYPE_KEYS.length)], human: false, spawn: spawns[k], skill });
   }
   return roster;
 }
 export const randomMap = () => MAP_KEYS[Math.floor(Math.random() * MAP_KEYS.length)];
 const r2 = v => Math.round(v * 100) / 100;
+// Spawn shield: nobody can hurt anybody during the first seconds of a match (bots also stay calm
+// for 7-11 s, see ai.js), so nobody gets jumped at spawn. Crates still break.
+export const SPAWN_SHIELD = 5;
 
 export class Game {
   constructor({ scene, camera, lighting, lights, hud, input }) {
@@ -110,6 +116,7 @@ export class Game {
       const b = new Brawler(this, r.type, { name: isPlayer ? t('hud.you') : r.name, isPlayer });
       b.id = r.id;
       b.human = r.human;
+      if (r.skill !== undefined) b.skill = r.skill;
       b.pos.copy(this.arena.spawns[r.spawn % this.arena.spawns.length]);
       b.net.set(b.pos.x, b.pos.z);
       b.facing = Math.atan2(-b.pos.x, -b.pos.z);
@@ -186,7 +193,7 @@ export class Game {
   }
 
   applyKnock(o, x, z) {
-    if (!this.authority) return;
+    if (!this.authority || this.shielded) return;
     if (o.netDriven) {
       this.ev({ e: 'knock', id: o.id, x: r2(x), z: r2(z) }); // remote players move themselves
       if (o.guard) o.guard.knock = Math.max(o.guard.knock, Math.hypot(x, z) * 0.6 + 1.5); // allow the push
@@ -194,8 +201,11 @@ export class Game {
     else o.knock.set(x, 0, z);
   }
 
+  get shielded() { return this.mode === 'play' && this.time < SPAWN_SHIELD; }
+
   damage(target, amount, source, fromSuper = false) {
     if (!target.alive || !this.authority) return;
+    if (this.shielded && source && source !== target) return;
     amount = Math.round(amount);
     target.hp -= amount;
     target.lastHurt = this.time;

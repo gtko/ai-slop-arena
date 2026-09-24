@@ -61,5 +61,31 @@ await test('inputs are sanitised and rate-limited', () => {
   assert.ok(a.remoteIn.s < 60, 'flood not limited');
 });
 
+await test('nobody is hurt during the opening seconds (spawn shield + calm bots)', () => {
+  for (const map of ['oasis', 'dunes', 'grove', 'frost', 'marsh']) {
+    for (let k = 0; k < 4; k++) {
+      const { m, out, g } = match(map, ['alice']);
+      while (g.time < 6.5) m.advance(0.05);
+      const hits = out.all.filter(msg => msg.t === 'ev').flatMap(msg => msg.list).filter(e => e.e === 'dmg' && e.s && e.s !== e.id);
+      const early = hits.filter(e => e.id === 'alice');
+      assert.equal(early.length, 0, `alice hit in the first 6.5 s on ${map}`);
+    }
+  }
+});
+
+await test('sharper bots beat clumsy ones (adaptive difficulty has teeth)', () => {
+  let sharp = 0;
+  for (let i = 0; i < 16; i++) {
+    const roster = makeRoster([], { level: 0.5 });
+    roster.forEach((r, k) => { r.skill = k < 4 ? 0.15 : 0.9; });
+    const { m, g } = (() => { const x = match('oasis', []); return x; })();
+    g.newMatch({ mapKey: ['oasis', 'dunes', 'grove', 'frost', 'marsh'][i % 5], roster, localId: null, headless: true, net: null });
+    while (g.brawlers.filter(b => b.alive).length > 1 && g.time < 240) m.advance(0.05);
+    const w = g.brawlers.find(b => b.alive);
+    if (w && w.skill >= 0.9) sharp++;
+  }
+  assert.ok(sharp >= 10, `sharp bots won only ${sharp}/16`);
+});
+
 if (failed) { console.error(`\n${failed} test(s) failed`); process.exit(1); }
 console.log('\nall server tests passed');

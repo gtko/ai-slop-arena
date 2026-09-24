@@ -23,7 +23,7 @@ export const DEFAULTS = {
   preset: 'auto', ...QUALITY.high, autoTier: null, autoMax: null, autoScale: 0, gpu: '',
   fitFrustum: true, texelSnap: true, showFrustum: false, aoView: false, dynLights: true,
   art: 'cartoon', tod: '2', exposure: 1, shake: true, fps: false, debugPanel: false,
-  deadzone: 0.18, vibration: true, lang: 'auto',
+  deadzone: 0.18, vibration: true, lang: 'auto', bots: 'auto',
   binds: { ...DEFAULT_BINDS },
 };
 
