@@ -436,7 +436,9 @@ function startOnline(mapKey, roster, role) {
   $('#lobby').classList.add('hidden');
   $('#result').classList.add('hidden');
   hud.show(true);
-  game.newMatch({ mapKey, roster, localId: net.id, net: { role, send: msg => net.send(msg) } });
+  // sendTo: per-player snapshots (only what each one can see); the Steam P2P host has it.
+  const sendTo = role === 'host' && net.sendTo ? (id, msg) => net.sendTo(id, msg) : null;
+  game.newMatch({ mapKey, roster, localId: net.id, net: { role, send: msg => net.send(msg), sendTo } });
   const me = roster.find(r => r.id === net.id);
   achievements.matchStart({ mapKey, brawler: me ? me.type : chosen, online: true, humans: roster.filter(r => r.human).length });
   canvas.focus();

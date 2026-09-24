@@ -77,7 +77,8 @@ export class Game {
   /* ------------------------------ match setup ------------------------------ */
 
   // opts: { mapKey, roster, localId, net }. No localId = attract mode (bots only, menu backdrop).
-  newMatch({ mapKey = 'oasis', roster = null, localId = null, net = null } = {}) {
+  // headless: the authoritative server (worker/ -> src/server/sim.js), a real match with no local player.
+  newMatch({ mapKey = 'oasis', roster = null, localId = null, net = null, headless = false } = {}) {
     for (const b of this.brawlers) b.dispose();
     this.brawlers = [];
     this.brains.clear();
@@ -99,7 +100,8 @@ export class Game {
     this.arena = new Arena(this.scene, MAPS[this.mapKey]);
     this.weather = this.lighting.weather = new Weather(this, MAPS[this.mapKey].weather);
     this.weather.setDensity(this.weatherDensity ?? 1);
-    this.poison = new Poison(this, localId ? {} : { startAt: 18, interval: 6 });
+    const real = !!localId || headless;
+    this.poison = new Poison(this, real ? {} : { startAt: 18, interval: 6 });
     this.visionRadius = MAPS[this.mapKey].vision || 0;
     roster = roster || makeRoster([]);
     this.player = null;
@@ -118,7 +120,8 @@ export class Game {
       // Positions of everything we do not simulate come from the network.
       if (net && !isPlayer && (net.role === 'client' || r.human)) b.netDriven = true;
     }
-    this.mode = localId ? 'play' : 'attract';
+    this.mode = real ? 'play' : 'attract';
+    this.fixSeen = 0;
     this.state = 'playing';
     this.time = 0;
     this.resultT = -1;
@@ -184,7 +187,10 @@ export class Game {
 
   applyKnock(o, x, z) {
     if (!this.authority) return;
-    if (o.netDriven) this.ev({ e: 'knock', id: o.id, x: r2(x), z: r2(z) }); // remote players move themselves
+    if (o.netDriven) {
+      this.ev({ e: 'knock', id: o.id, x: r2(x), z: r2(z) }); // remote players move themselves
+      if (o.guard) o.guard.knock = Math.max(o.guard.knock, Math.hypot(x, z) * 0.6 + 1.5); // allow the push
+    }
     else o.knock.set(x, 0, z);
   }
 
@@ -317,12 +323,42 @@ export class Game {
 
   /* ------------------------------ network ------------------------------ */
 
-  // host <- client input (movement is client-authoritative, everything else is ours)
+  // host <- client input. Players move themselves (smooth on their screen), but the host checks
+  // every step: too fast, through a wall, out of the arena or while frozen is refused, and the
+  // player is snapped back (see `me` in the snapshots). Aim and fire are sanitised; attacks go
+  // through tryAttack like everyone else's (ammo, cooldown, super charge).
   onInput(m) {
     const b = this.byId.get(m.from);
-    if (!b || !this.authority) return;
-    b.remoteIn = m;
-    if (b.alive) b.net.set(m.x, m.z);
+    if (!b || !this.authority || !b.netDriven) return;
+    const now = this.time;
+    const g = b.guard || (b.guard = { win: now, n: 0, moveT: now, knock: 0, fix: 0, strikes: 0 });
+    if (now - g.win >= 1) { g.win = now; g.n = 0; }
+    if (++g.n > 45) return; // flood: clients send 20 per second
+    const num = (v, d) => (Number.isFinite(v) ? v : d);
+    let ax = num(m.ax, 0), az = num(m.az, 1);
+    const al = Math.hypot(ax, az) || 1;
+    ax /= al; az /= al;
+    const reach = b.type.range + 2;
+    let px = num(m.px, b.pos.x), pz = num(m.pz, b.pos.z);
+    const pd = Math.hypot(px - b.pos.x, pz - b.pos.z);
+    if (pd > reach) { px = b.pos.x + (px - b.pos.x) / pd * reach; pz = b.pos.z + (pz - b.pos.z) / pd * reach; }
+    b.remoteIn = { ax, az, px, pz, f: m.f ? 1 : 0, s: Math.max(0, Math.min(1e6, Math.floor(num(m.s, 0)))) };
+    if (b.alive) this.checkMove(b, num(m.x, b.net.x), num(m.z, b.net.y), now);
+  }
+
+  checkMove(b, x, z, now) {
+    const g = b.guard;
+    const dt = Math.min(0.6, Math.max(0.03, now - g.moveT));
+    g.moveT = now;
+    const allowed = b.type.speed * 1.35 * dt + 0.4 + g.knock;
+    g.knock = Math.max(0, g.knock - 4 * dt);
+    const d = Math.hypot(x - b.net.x, z - b.net.y);
+    const ok = d <= allowed && (b.freezeT <= 0 || d < 0.3)
+      && Math.abs(x) < HALF && Math.abs(z) < HALF && !this.arena.blocksMoveAt(x, z);
+    if (ok) { b.net.set(x, z); return; }
+    g.fix++;                    // the next snapshot tells that player to snap back
+    g.strikes++;
+    if (this.onCheat) this.onCheat(b, 'move', d, allowed);
   }
 
   // A client left mid-match: its brawler keeps fighting as a bot.
@@ -342,11 +378,20 @@ export class Game {
       if (this.outbox.length) { N.send({ t: 'ev', list: this.outbox }); this.outbox = []; }
       if (this.netT <= 0) {
         this.netT = 1 / 15;
-        N.send({
-          t: 'snap', pt: r2(this.poison.timer),
-          b: this.brawlers.filter(b => b.alive).map(b => [b.id, r2(b.pos.x), r2(b.pos.z), r2(b.facing), Math.round(b.hp), b.maxHp,
-            r2(b.ammo), r2(b.superCharge), b.cubes, (b.revealT > 0 ? 2 : 0) | (b.slowT > 0 ? 4 : 0) | (b.freezeT > 0 ? 8 : 0)]),
-        });
+        const alive = this.brawlers.filter(b => b.alive), pt = r2(this.poison.timer);
+        const row = b => [b.id, r2(b.pos.x), r2(b.pos.z), r2(b.facing), Math.round(b.hp), b.maxHp,
+          r2(b.ammo), r2(b.superCharge), b.cubes, (b.revealT > 0 ? 2 : 0) | (b.slowT > 0 ? 4 : 0) | (b.freezeT > 0 ? 8 : 0)];
+        if (N.sendTo) {
+          // One snapshot per player with only what that player can see: brawlers hidden in a bush
+          // or behind the fog are simply not sent, so no client can reveal them. Knocked-out
+          // players spectate and get everything.
+          for (const v of this.brawlers) {
+            if (!v.human || v === this.player) continue;
+            const seen = v.alive ? alive.filter(b => b === v || this.canSee(v, b)) : alive;
+            const g = v.guard;
+            N.sendTo(v.id, { t: 'snap', pt, b: seen.map(row), me: v.alive && g ? [r2(v.net.x), r2(v.net.y), g.fix] : undefined });
+          }
+        } else N.send({ t: 'snap', pt, b: alive.map(row) });
       }
     } else if (this.player && this.player.alive && this.netT <= 0) {
       this.netT = 1 / 20;
@@ -360,15 +405,26 @@ export class Game {
   applySnap(m) {
     if (this.authority || this.state === 'idle') return;
     this.poison.timer = m.pt;
+    const seen = new Set();
     for (const [id, x, z, f, hp, maxHp, ammo, sup, cubes, flags] of m.b) {
       const b = this.byId.get(id);
       if (!b || !b.alive) continue;
+      seen.add(b);
       b.hp = hp; b.maxHp = maxHp; b.ammo = ammo; b.superCharge = sup; b.cubes = cubes;
       b.revealT = flags & 2 ? 0.3 : 0;
       // status effects are decided by the host; our own brawler needs them too (we move it locally)
       b.slowT = flags & 4 ? 0.2 : Math.min(b.slowT, 0);
       b.freezeT = flags & 8 ? 0.2 : Math.min(b.freezeT, 0);
       if (b !== this.player) { b.net.set(x, z); b.netFacing = f; }
+    }
+    // Brawlers the host left out are hidden from us (bush / fog): keep them invisible.
+    for (const b of this.brawlers) b.netHidden = b !== this.player && !seen.has(b);
+    // The host refused one of our moves (too fast, through a wall...): snap back to where it says.
+    const P = this.player;
+    if (m.me && P && P.alive && m.me[2] !== this.fixSeen) {
+      this.fixSeen = m.me[2];
+      P.pos.set(m.me[0], P.pos.y, m.me[1]);
+      P.vel.set(0, 0, 0);
     }
   }
 
@@ -411,6 +467,12 @@ export class Game {
   }
 
   /* ------------------------------ per frame ------------------------------ */
+
+  // Authoritative server: rules only, no camera, lights, effects or HUD.
+  serverStep(dt) {
+    const t = (this.time += dt);
+    if (this.state === 'playing' || this.state === 'over') this.step(dt, t);
+  }
 
   update(dt) {
     const t = (this.time += dt);
@@ -589,7 +651,7 @@ export class Game {
     for (const b of this.brawlers) {
       if (!b.alive) { b.visibleToPlayer = false; continue; }
       const viewer = P && P.alive ? P : (this.visionRadius ? this.camTarget : null);
-      const v = !viewer || b === viewer || this.canSee(viewer, b);
+      const v = !b.netHidden && (!viewer || b === viewer || this.canSee(viewer, b));
       if (v !== b.visibleToPlayer) b.setVisible(v);
       b.visibleToPlayer = v;
     }
