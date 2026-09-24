@@ -105,10 +105,10 @@ jobs:
           # Hand-written notes with graphics (docs/releases/<tag>.md, see CHANGELOG.md) when there are
           # some, otherwise GitHub's generated list of changes.
           NOTES=(--generate-notes)
-          [ -f "docs/releases/$TAG.md" ] && NOTES=(--notes-file "docs/releases/$TAG.md")
+          if [ -f "docs/releases/$TAG.md" ]; then NOTES=(--notes-file "docs/releases/$TAG.md"); fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" out/* --clobber
-            [ -f "docs/releases/$TAG.md" ] && gh release edit "$TAG" --notes-file "docs/releases/$TAG.md"
+            if [ -f "docs/releases/$TAG.md" ]; then gh release edit "$TAG" --notes-file "docs/releases/$TAG.md"; fi
           else
             gh release create "$TAG" out/* --title "AI SLOP ARENA $TAG" "${NOTES[@]}" --target "$GITHUB_SHA"
           fi
