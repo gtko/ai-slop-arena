@@ -4,7 +4,7 @@
   "description": "Top-down brawler: 8 brawlers, 5 arenas with live weather, last one standing wins.",
   "author": "gtko",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "type": "module",
   "main": "electron/main.cjs",
   "steam": {
@@ -16,6 +16,8 @@
     "build": "vite build && vite build --mode server",
     "preview": "npm run build && wrangler dev --port 8787",
     "deploy": "npm run build && wrangler deploy",
+    "test": "vite build --mode server && node tests/server.test.mjs && node tests/i18n.test.mjs",
+    "check:prod": "node scripts/check-prod.mjs",
     "desktop": "vite build && electron .",
     "desktop:dev": "electron . --dev-server=http://localhost:5173/play.html",
     "dist:steam": "vite build && electron-builder --win --x64 --dir",

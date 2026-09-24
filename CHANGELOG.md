@@ -3,6 +3,15 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.5.0](docs/releases/v0.5.0.md): Find a match
+
+<a href="docs/releases/v0.5.0.md"><img src="docs/releases/img/v0.5.0-banner.png" alt="v0.5.0: find a match" width="100%"></a>
+
+- 🔎 Cross-platform matchmaking: one queue for web, Steam, Epic, Android and iOS; bots after 5 minutes.
+- 🛡️ Matches run on our server: every move checked, no wallhacks, cheaters kicked.
+- ⚖️ Report and remove players; automatic bans as a share of matches played.
+- ⚠️ Online play needs this version (older ones are asked to update).
+
 ## [v0.4.0](docs/releases/v0.4.0.md): Auto graphics
 
 <a href="docs/releases/v0.4.0.md"><img src="docs/releases/img/v0.4.0-banner.png" alt="v0.4.0: auto graphics" width="100%"></a>

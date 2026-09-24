@@ -382,10 +382,96 @@ def v040():
     img.convert('RGB').save(os.path.join(OUT, 'v0.4.0-general.png'), optimize=True)
 
 
+# ------------------------------ v0.5.0: online, for real ------------------------------
+
+def v050():
+    banner('v0.5.0', 'FIND A MATCH', 'One queue for every platform, server-run matches, fair bans.',
+           [('🔎', 'Cross-platform queue'), ('🤖', 'Bots after 5 min'), ('🛡️', 'Anti-cheat'), ('⚖️', 'Fair reports')],
+           'v0.5.0-banner.png', ('bomber', 'volt', 'gunslinger'))
+
+    # matchmaking: the queue screen + its three rules
+    W, H = 1600, 720
+    img = background(W, H, glow=(0.3, 0.4))
+    d = ImageDraw.Draw(img)
+    outlined(d, (70, 40), 'ONE QUEUE, EVERY PLATFORM', display(56), YELLOW)
+    qx, qy, qw, qh = 70, 150, 700, 500
+    card(img, (qx, qy, qx + qw, qy + qh), fill=(28, 22, 44, 250), outline=(80, 70, 120), radius=28)
+    for k in range(3):
+        cx = qx + qw // 2 - 36 + k * 36
+        d.ellipse((cx - 10, qy + 50 - (10 if k == 1 else 0) - 10, cx + 10, qy + 50 - (10 if k == 1 else 0) + 10), fill=YELLOW)
+    d.text((qx + qw // 2, qy + 90), 'Searching for players…', font=display(40), fill=TEXT, anchor='ma')
+    d.text((qx + qw // 2, qy + 160), '5 / 8 players in the queue', font=body(28, 'Black'), fill=TEXT, anchor='ma')
+    bx0, bx1, by = qx + 120, qx + qw - 120, qy + 215
+    d.rounded_rectangle((bx0, by, bx1, by + 22), 11, fill=(34, 29, 51), outline=INK, width=3)
+    d.rounded_rectangle((bx0 + 3, by + 3, bx0 + 3 + (bx1 - bx0 - 6) * 5 // 8, by + 19), 8, fill=YELLOW)
+    d.text((qx + qw // 2, qy + 265), 'Waiting for 0:42 · bots fill the match in 4:18', font=body(24, 'Bold'), fill=MUTED, anchor='ma')
+    x = qx + 150
+    for ic, n in [('🌐', 2), ('🎮', 1), ('🛒', 1), ('🤖', 1)]:
+        d.text((x, qy + 330), ic, font=emoji(34), embedded_color=True, anchor='lm')
+        d.text((x + 46, qy + 330), str(n), font=body(28, 'Black'), fill=TEXT, anchor='lm')
+        x += 110
+    pw = pill(img, (qx + 110, qy + 395), 'PLAY NOW WITH BOTS', display(28), YELLOW, pad=(24, 12), radius=16)
+    pill(img, (qx + 110 + pw + 16, qy + 395), 'CANCEL', display(28), (48, 38, 90, 255), color=TEXT, pad=(24, 12), radius=16)
+    rules = [('🎉', '8 players', 'the match starts right away'),
+             ('⏱️', '5 minutes', 'whoever is queued plays, bots fill the empty slots'),
+             ('⚡', 'Play now', 'skip the wait: a match with bots, instantly')]
+    rx = qx + qw + 60
+    for k, (ic, title, text) in enumerate(rules):
+        ry = qy + k * 170
+        card(img, (rx, ry, W - 70, ry + 150), radius=24)
+        d.text((rx + 34, ry + 75), ic, font=emoji(52), embedded_color=True, anchor='lm')
+        d.text((rx + 120, ry + 26), title, font=display(40), fill=YELLOW)
+        for li, line in enumerate(wrap(d, text, body(24, 'Bold'), W - 70 - rx - 150)[:2]):
+            d.text((rx + 122, ry + 80 + li * 30), line, font=body(24, 'Bold'), fill=TEXT)
+    img.convert('RGB').save(os.path.join(OUT, 'v0.5.0-matchmaking.png'), optimize=True)
+
+    # the server runs the match + moderation
+    W, H = 1600, 780
+    img = background(W, H, glow=(0.5, 0.35))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 36), 'THE SERVER RUNS THE MATCH', display(56), YELLOW, anchor='ma')
+    plats = [('🌐', 'Web'), ('🎮', 'Steam'), ('🛒', 'Epic'), ('🤖', 'Android'), ('🍏', 'iOS')]
+    for k, (ic, name) in enumerate(plats):
+        y = 140 + k * 82
+        card(img, (70, y, 330, y + 64), radius=18)
+        d.text((100, y + 32), ic, font=emoji(34), embedded_color=True, anchor='lm')
+        d.text((150, y + 32), name, font=display(30), fill=TEXT, anchor='lm')
+    d.text((395, 300), '→', font=sym(70), fill=YELLOW, anchor='mm')
+    d.text((395, 360), 'inputs', font=body(22, 'Black'), fill=MUTED, anchor='mm')
+    d.text((395, 385), 'only', font=body(22, 'Black'), fill=MUTED, anchor='mm')
+    sx0, sx1 = 460, 1140
+    card(img, (sx0, 130, sx1, 540), fill=(40, 30, 78, 250), outline=YELLOW, radius=30)
+    d.text((sx0 + 36, 158), '☁️', font=emoji(46), embedded_color=True)
+    d.text((sx0 + 104, 160), 'Our server', font=display(42), fill=TEXT)
+    checks = ['Every move is checked: speed, walls, frozen', 'You only receive what you can see',
+              'Hits, KOs and cubes follow the rules', 'Impossible moves: kicked automatically',
+              'Old versions are asked to update']
+    for k, c in enumerate(checks):
+        y = 250 + k * 56
+        d.text((sx0 + 40, y), '✔', font=sym(28), fill=YELLOW)
+        d.text((sx0 + 84, y), c, font=body(26, 'Bold'), fill=TEXT)
+    d.text((1205, 300), '→', font=sym(70), fill=YELLOW, anchor='mm')
+    d.text((1205, 360), 'your', font=body(22, 'Black'), fill=MUTED, anchor='mm')
+    d.text((1205, 385), 'view', font=body(22, 'Black'), fill=MUTED, anchor='mm')
+    card(img, (1270, 200, 1530, 470), radius=24)
+    d.text((1400, 250), '🌫️', font=emoji(64), embedded_color=True, anchor='mm')
+    for li, line in enumerate(['Hidden in a bush', 'or in the fog?', 'Not sent at all.']):
+        d.text((1400, 320 + li * 40), line, font=body(24, 'ExtraBold'), fill=TEXT, anchor='mm')
+    # moderation band
+    by = 580
+    card(img, (70, by, W - 70, by + 160), fill=(255, 210, 63, 255), outline=INK, radius=30)
+    d.text((110, by + 80), '⚖️', font=emoji(64), embedded_color=True, anchor='lm')
+    d.text((210, by + 26), 'Report · Remove · Fair bans', font=display(44), fill=INK)
+    d.text((212, by + 92), 'Banned only if reported in at least 30% of 10+ matches, by 4+ different players.',
+           font=body(26, 'Bold'), fill=INK)
+    img.convert('RGB').save(os.path.join(OUT, 'v0.5.0-server.png'), optimize=True)
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     v020()
     v030()
     v040()
+    v050()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')
