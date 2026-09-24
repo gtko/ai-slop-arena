@@ -17,6 +17,8 @@ permissions:
 
 env:
   TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  # optional: with it, every build uploads its source maps to Sentry (vite.config.js)
+  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
 jobs:
   windows:

@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve, dirname } from 'node:path';
-import { mkdirSync, writeFileSync, rmSync, renameSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync, renameSync, readFileSync } from 'node:fs';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 
 // Dev server only: POST /__capture/<path> saves the body under .ai3d/capture/<path>. devtools.js
 // uses it to record trailer frames and screenshots straight from the renderer (never built).
@@ -52,13 +53,27 @@ const serverBuild = {
   },
 };
 
+// Crash reports readable in Sentry: with SENTRY_AUTH_TOKEN set (a Sentry "organization token"), the
+// build makes source maps, uploads them for this release (src/telemetry.js) and deletes them, so
+// players never download them. Without the token the build is unchanged.
+const { version } = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8'));
+const SOURCE_MAPS = !!process.env.SENTRY_AUTH_TOKEN;
+const sourceMaps = out => SOURCE_MAPS ? [sentryVitePlugin({
+  org: 'odykit', project: 'ai-slop-arena', url: 'https://de.sentry.io/',
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  release: { name: `ai-slop-arena@${version}` },
+  sourcemaps: { filesToDeleteAfterUpload: [`${out}/**/*.map`] },
+  telemetry: false,
+})] : [];
+
 // Two pages: the landing site (index.html, "/") and the game (play.html, "/play").
 export default defineConfig(({ mode }) => mode === 'server' ? serverBuild : mode === 'app' ? {
-  plugins: [appBuild],
-  build: { outDir: 'dist-app', rollupOptions: { input: { play: resolve(__dirname, 'play.html') } } },
+  plugins: [appBuild, ...sourceMaps('dist-app')],
+  build: { outDir: 'dist-app', sourcemap: SOURCE_MAPS ? 'hidden' : false, rollupOptions: { input: { play: resolve(__dirname, 'play.html') } } },
 } : {
-  plugins: [capture],
+  plugins: [capture, ...sourceMaps('dist')],
   build: {
+    sourcemap: SOURCE_MAPS ? 'hidden' : false,
     rollupOptions: {
       input: {
         site: resolve(__dirname, 'index.html'),
