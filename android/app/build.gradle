@@ -14,7 +14,7 @@ android {
     namespace = "ch.gtko.aisloparena"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "ch.gtko.aisloparena"
+        applicationId "com.aislop.arena" // the Google Play package (permanent); the Java namespace stays ch.gtko.aisloparena
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode vMajor * 10000 + vMinor * 100 + vPatch
