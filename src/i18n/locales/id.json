@@ -45,6 +45,7 @@
   "menu.solo": "SOLO",
   "menu.multi": "MULTIPLAYER",
   "menu.options": "OPSI",
+  "menu.achievements": "PENCAPAIAN",
   "menu.quit": "KELUAR",
   "menu.hint": "Keyboard + mouse atau gamepad · <kbd>Esc</kbd> / Start jeda · <kbd>T</kbd> waktu",
   "card.stat": "HP {hp} · Jarak {range}",

@@ -45,6 +45,7 @@
   "menu.solo": "ΣΟΛΟ",
   "menu.multi": "ΠΟΛΛΟΙ ΠΑΙΚΤΕΣ",
   "menu.options": "ΡΥΘΜΙΣΕΙΣ",
+  "menu.achievements": "ΕΠΙΤΕΥΓΜΑΤΑ",
   "menu.quit": "ΕΞΟΔΟΣ",
   "menu.hint": "Πληκτρολόγιο + ποντίκι ή χειριστήριο · <kbd>Esc</kbd> / Start παύση · <kbd>T</kbd> ώρα της ημέρας",
   "card.stat": "HP {hp} · Εμβέλεια {range}",

@@ -45,6 +45,7 @@
   "menu.solo": "SOLO",
   "menu.multi": "MULTIPLAYER",
   "menu.options": "OPȚIUNI",
+  "menu.achievements": "REALIZĂRI",
   "menu.quit": "IEȘIRE",
   "menu.hint": "Tastatură + mouse sau gamepad · <kbd>Esc</kbd> / Start pauză · <kbd>T</kbd> momentul zilei",
   "card.stat": "HP {hp} · Rază {range}",

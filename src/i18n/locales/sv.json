@@ -45,6 +45,7 @@
   "menu.solo": "SOLO",
   "menu.multi": "FLERSPELARE",
   "menu.options": "ALTERNATIV",
+  "menu.achievements": "PRESTATIONER",
   "menu.quit": "AVSLUTA",
   "menu.hint": "Tangentbord + mus eller handkontroll · <kbd>Esc</kbd> / Start pausar · <kbd>T</kbd> tid på dygnet",
   "card.stat": "HP {hp} · Räckvidd {range}",

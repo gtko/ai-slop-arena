@@ -45,6 +45,7 @@
   "menu.solo": "SOLO",
   "menu.multi": "MULTIJOGADOR",
   "menu.options": "OPÇÕES",
+  "menu.achievements": "CONQUISTAS",
   "menu.quit": "SAIR",
   "menu.hint": "Teclado + mouse ou controle · <kbd>Esc</kbd> / Start pausa · <kbd>T</kbd> hora do dia",
   "card.stat": "Vida {hp} · Alcance {range}",

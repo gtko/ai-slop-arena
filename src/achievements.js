@@ -2,10 +2,11 @@ import { steam } from './platform.js';
 import { MAPS } from './maps.js';
 import { TYPES } from './brawler.js';
 
-// Steam achievements + stats. Progress is always kept locally (so it survives playing without
-// Steam and nothing is lost before the Steamworks backend is set up) and mirrored to Steam.
-// The API names below must match the achievements and stats declared on the Steamworks partner
-// site: see steam/README.md for the exact list to paste in.
+// Achievements + stats. Progress is always kept locally (so it survives playing offline and
+// nothing is lost before a store backend is set up) and mirrored to Steam (desktop) or Google
+// Play Games (Android, src/playgames.js). The API names below must match the achievements and
+// stats declared on the Steamworks partner site (steam/README.md); Play Games finds its ids from
+// the English names (play/README.md).
 
 export const ACHIEVEMENTS = {
   FIRST_KO: { name: 'First Blood', desc: 'Knock out a brawler.' },
@@ -33,16 +34,19 @@ const TYPE_BITS = Object.keys(TYPES);
 const all = list => (1 << list.length) - 1;
 
 let match = null; // per-match counters
+// Where progress is mirrored: { achieve(id), setStats(stats) }. Steam from the start, Play Games
+// once it answered (connect()).
+const sinks = steam ? [steam] : [];
 
 function unlock(id) {
   if (!ACHIEVEMENTS[id]) return;
   if (!prog.unlocked[id]) { prog.unlocked[id] = Date.now(); save(); }
-  if (steam) steam.achieve(id); // idempotent; also re-syncs anything earned offline
+  for (const s of sinks) s.achieve(id); // idempotent; also re-syncs anything earned offline
 }
 
 function pushStats() {
   save();
-  if (steam) steam.setStats(prog.stats);
+  for (const s of sinks) s.setStats(prog.stats);
 }
 
 export const achievements = {
@@ -86,10 +90,15 @@ export const achievements = {
   },
   end() { match = null; },
   // Re-send everything earned so far (first launch with Steam, or after playing offline).
-  sync() {
-    if (!steam) return;
-    for (const id of Object.keys(prog.unlocked)) steam.achieve(id);
-    steam.setStats(prog.stats);
+  sync(only = sinks) {
+    for (const s of only) {
+      for (const id of Object.keys(prog.unlocked)) s.achieve(id);
+      s.setStats(prog.stats);
+    }
+  },
+  connect(sink) {
+    sinks.push(sink);
+    this.sync([sink]);
   },
   get progress() { return prog; },
 };

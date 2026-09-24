@@ -45,6 +45,7 @@
   "menu.solo": "СОЛО",
   "menu.multi": "МУЛЬТИПЛЕЄР",
   "menu.options": "НАЛАШТУВАННЯ",
+  "menu.achievements": "ДОСЯГНЕННЯ",
   "menu.quit": "ВИХІД",
   "menu.hint": "Клавіатура + миша або геймпад · <kbd>Esc</kbd> / Start — пауза · <kbd>T</kbd> час доби",
   "card.stat": "ОЗ {hp} · Дальність {range}",

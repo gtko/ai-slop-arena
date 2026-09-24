@@ -45,6 +45,7 @@
   "menu.solo": "SOLO",
   "menu.multi": "MEHRSPIELER",
   "menu.options": "OPTIONEN",
+  "menu.achievements": "ERFOLGE",
   "menu.quit": "BEENDEN",
   "menu.hint": "Tastatur + Maus oder Gamepad · <kbd>Esc</kbd> / Start pausiert · <kbd>T</kbd> Tageszeit",
   "card.stat": "LP {hp} · Reichweite {range}",

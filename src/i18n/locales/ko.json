@@ -45,6 +45,7 @@
   "menu.solo": "솔로",
   "menu.multi": "멀티플레이",
   "menu.options": "옵션",
+  "menu.achievements": "업적",
   "menu.quit": "종료",
   "menu.hint": "키보드+마우스 또는 게임패드 · <kbd>Esc</kbd> / Start 일시정지 · <kbd>T</kbd> 시간대",
   "card.stat": "HP {hp} · 사거리 {range}",

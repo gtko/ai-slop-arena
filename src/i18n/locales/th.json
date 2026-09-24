@@ -45,6 +45,7 @@
   "menu.solo": "เดี่ยว",
   "menu.multi": "ผู้เล่นหลายคน",
   "menu.options": "ตัวเลือก",
+  "menu.achievements": "ความสำเร็จ",
   "menu.quit": "ออก",
   "menu.hint": "คีย์บอร์ด + เมาส์ หรือจอย · <kbd>Esc</kbd> / Start หยุดเกม · <kbd>T</kbd> ช่วงเวลา",
   "card.stat": "HP {hp} · ระยะ {range}",

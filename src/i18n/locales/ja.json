@@ -45,6 +45,7 @@
   "menu.solo": "ソロ",
   "menu.multi": "マルチプレイ",
   "menu.options": "オプション",
+  "menu.achievements": "実績",
   "menu.quit": "終了",
   "menu.hint": "キーボード＋マウス / ゲームパッド対応 · <kbd>Esc</kbd> / Start でポーズ · <kbd>T</kbd> 時間帯",
   "card.stat": "HP {hp} · 射程 {range}",

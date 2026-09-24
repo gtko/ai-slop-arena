@@ -45,6 +45,7 @@
   "menu.solo": "SÓLO",
   "menu.multi": "MULTIPLAYER",
   "menu.options": "NASTAVENÍ",
+  "menu.achievements": "ÚSPĚCHY",
   "menu.quit": "KONEC",
   "menu.hint": "Klávesnice + myš nebo gamepad · <kbd>Esc</kbd> / Start pauza · <kbd>T</kbd> denní doba",
   "card.stat": "HP {hp} · Dosah {range}",
