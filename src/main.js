@@ -15,7 +15,7 @@ import { MAPS } from './maps.js';
 import { Net, randomCode, serverError } from './net.js';
 import { SteamNet } from './steamnet.js';
 import { Matchmaking } from './matchmaking.js';
-import { isDesktop, isPackagedApp, isNativeApp, desktop, steam, steamInfo, epic, presence, WEB_ORIGIN, serverOrigin, clientId } from './platform.js';
+import { isDesktop, isPackagedApp, isNativeApp, desktop, steam, steamInfo, epic, presence, platformName, WEB_ORIGIN, serverOrigin, clientId } from './platform.js';
 import { achievements } from './achievements.js';
 import { botLevel, recordResult } from './skill.js';
 import { installBugReport, openBugReport } from './bugreport.js';
@@ -246,6 +246,18 @@ if (isNativeApp) {
 }
 
 $('#optionsBtn').addEventListener('click', () => { sfx('click'); menus.openOptions('#menu'); });
+// Android app: achievements mirrored to Google Play Games, and a button for Play's achievements screen.
+if (platformName === 'android') {
+  import('./playgames.js').then(m => m.setupPlayGames()).then(play => {
+    if (!play) return;
+    achievements.connect(play);
+    $('#achBtn').classList.remove('hidden');
+    $('#achBtn').addEventListener('click', () => {
+      sfx('click');
+      play.open(() => achievements.sync([play])).catch(e => console.warn('[play games]', e));
+    });
+  }).catch(e => console.warn('[play games]', e));
+}
 
 let chosen = localStorage.getItem('iaslop-brawler') || 'blaster';
 let chosenMap = 'random';

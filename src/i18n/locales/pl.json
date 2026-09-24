@@ -45,6 +45,7 @@
   "menu.solo": "SOLO",
   "menu.multi": "MULTIPLAYER",
   "menu.options": "OPCJE",
+  "menu.achievements": "OSIĄGNIĘCIA",
   "menu.quit": "WYJDŹ",
   "menu.hint": "Klawiatura + mysz lub pad · <kbd>Esc</kbd> / Start pauzuje · <kbd>T</kbd> pora dnia",
   "card.stat": "PŻ {hp} · Zasięg {range}",

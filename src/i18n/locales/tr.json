@@ -45,6 +45,7 @@
   "menu.solo": "TEKLİ",
   "menu.multi": "ÇOK OYUNCULU",
   "menu.options": "SEÇENEKLER",
+  "menu.achievements": "BAŞARIMLAR",
   "menu.quit": "ÇIKIŞ",
   "menu.hint": "Klavye + fare veya oyun kumandası · <kbd>Esc</kbd> / Start duraklatır · <kbd>T</kbd> günün saati",
   "card.stat": "Can {hp} · Menzil {range}",

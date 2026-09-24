@@ -45,6 +45,7 @@
   "menu.solo": "EGYJÁTÉKOS",
   "menu.multi": "TÖBBJÁTÉKOS",
   "menu.options": "BEÁLLÍTÁSOK",
+  "menu.achievements": "TELJESÍTMÉNYEK",
   "menu.quit": "KILÉPÉS",
   "menu.hint": "Billentyűzet + egér vagy kontroller · <kbd>Esc</kbd> / Start szünet · <kbd>T</kbd> napszak",
   "card.stat": "ÉP {hp} · Hatótáv {range}",

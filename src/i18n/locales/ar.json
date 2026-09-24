@@ -45,6 +45,7 @@
   "menu.solo": "فردي",
   "menu.multi": "جماعي",
   "menu.options": "الخيارات",
+  "menu.achievements": "الإنجازات",
   "menu.quit": "خروج",
   "menu.hint": "لوحة المفاتيح + الفأرة أو يد التحكم · <kbd>Esc</kbd> / Start للإيقاف · <kbd>T</kbd> وقت اليوم",
   "card.stat": "HP {hp} · المدى {range}",

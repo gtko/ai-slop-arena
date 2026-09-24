@@ -45,6 +45,7 @@
   "menu.solo": "SOLO",
   "menu.multi": "FLERSPILLER",
   "menu.options": "INNSTILLINGER",
+  "menu.achievements": "PRESTASJONER",
   "menu.quit": "AVSLUTT",
   "menu.hint": "Tastatur + mus eller kontroller · <kbd>Esc</kbd> / Start pauser · <kbd>T</kbd> tid på døgnet",
   "card.stat": "HP {hp} · Rekkevidde {range}",

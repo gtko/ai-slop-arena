@@ -45,6 +45,7 @@
   "menu.solo": "CHƠI ĐƠN",
   "menu.multi": "NHIỀU NGƯỜI",
   "menu.options": "TÙY CHỌN",
+  "menu.achievements": "THÀNH TỰU",
   "menu.quit": "THOÁT",
   "menu.hint": "Bàn phím + chuột hoặc tay cầm · <kbd>Esc</kbd> / Start tạm dừng · <kbd>T</kbd> thời điểm",
   "card.stat": "HP {hp} · Tầm {range}",

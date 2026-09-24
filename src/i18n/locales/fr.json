@@ -45,6 +45,7 @@
   "menu.solo": "SOLO",
   "menu.multi": "MULTIJOUEUR",
   "menu.options": "OPTIONS",
+  "menu.achievements": "SUCCÈS",
   "menu.quit": "QUITTER",
   "menu.hint": "Clavier + souris ou manette · <kbd>Esc</kbd> / Start : pause · <kbd>T</kbd> moment de la journée",
   "card.stat": "PV {hp} · Portée {range}",

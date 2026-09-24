@@ -45,6 +45,7 @@
   "menu.solo": "单人",
   "menu.multi": "多人",
   "menu.options": "设置",
+  "menu.achievements": "成就",
   "menu.quit": "退出",
   "menu.hint": "键鼠或手柄 · <kbd>Esc</kbd> / Start 暂停 · <kbd>T</kbd> 时段",
   "card.stat": "HP {hp} · 射程 {range}",

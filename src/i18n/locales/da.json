@@ -45,6 +45,7 @@
   "menu.solo": "SOLO",
   "menu.multi": "MULTIPLAYER",
   "menu.options": "INDSTILLINGER",
+  "menu.achievements": "PRÆSTATIONER",
   "menu.quit": "AFSLUT",
   "menu.hint": "Tastatur + mus eller controller · <kbd>Esc</kbd> / Start pauser · <kbd>T</kbd> tidspunkt",
   "card.stat": "HP {hp} · Rækkevidde {range}",

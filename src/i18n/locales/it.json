@@ -45,6 +45,7 @@
   "menu.solo": "SOLO",
   "menu.multi": "MULTIGIOCATORE",
   "menu.options": "OPZIONI",
+  "menu.achievements": "OBIETTIVI",
   "menu.quit": "ESCI",
   "menu.hint": "Tastiera + mouse o controller · <kbd>Esc</kbd> / Start mette in pausa · <kbd>T</kbd> ora del giorno",
   "card.stat": "PS {hp} · Gittata {range}",

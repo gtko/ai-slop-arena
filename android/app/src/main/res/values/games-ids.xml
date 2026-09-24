@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Google Play Games Services ids. Replace this whole file with the one from Play Console
+     (Play Games Services > Setup and management > Configuration > Get resources, Android):
+     see play/README.md. While app_id is empty, Play Games stays off. -->
+<resources>
+  <string name="app_id" translatable="false"></string>
+  <string name="package_name" translatable="false">ch.gtko.aisloparena</string>
+  <string name="achievement_first_blood" translatable="false"></string>
+  <string name="achievement_last_one_standing" translatable="false"></string>
+  <string name="achievement_rampage" translatable="false"></string>
+  <string name="achievement_power_hungry" translatable="false"></string>
+  <string name="achievement_crowd_pleaser" translatable="false"></string>
+  <string name="achievement_squad_up" translatable="false"></string>
+  <string name="achievement_world_tour" translatable="false"></string>
+  <string name="achievement_jack_of_all_slops" translatable="false"></string>
+  <string name="achievement_veteran" translatable="false"></string>
+  <string name="achievement_centurion" translatable="false"></string>
+</resources>

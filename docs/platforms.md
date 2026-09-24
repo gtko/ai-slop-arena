@@ -26,6 +26,8 @@ and `ios/` (`npm run app:build` = build + `cap sync`).
   aim, release = fire), super button, pause button. Gamepads work too.
 - Phones start on the Low graphics preset; landscape only, full screen, notch-safe HUD.
 - Icons and splash screens come from `assets/` (`npx capacitor-assets generate`).
+- Android: achievements on Google Play Games (sign-in, the Steam achievements, an *ACHIEVEMENTS*
+  button in the menu): setup in [play/README.md](../play/README.md).
 
 **Android**: needs JDK 21 and the Android SDK (Android Studio installs both).
 `npm run android:apk` builds a debug APK in `android/app/build/outputs/apk/debug/`;

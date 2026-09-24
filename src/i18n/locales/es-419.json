@@ -45,6 +45,7 @@
   "menu.solo": "SOLO",
   "menu.multi": "MULTIJUGADOR",
   "menu.options": "OPCIONES",
+  "menu.achievements": "LOGROS",
   "menu.quit": "SALIR",
   "menu.hint": "Teclado + mouse o control · <kbd>Esc</kbd> / Start pausa · <kbd>T</kbd> hora del día",
   "card.stat": "PV {hp} · Alcance {range}",

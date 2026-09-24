@@ -45,6 +45,7 @@
   "menu.solo": "YKSIN",
   "menu.multi": "MONINPELI",
   "menu.options": "ASETUKSET",
+  "menu.achievements": "SAAVUTUKSET",
   "menu.quit": "LOPETA",
   "menu.hint": "Näppäimistö + hiiri tai ohjain · <kbd>Esc</kbd> / Start tauko · <kbd>T</kbd> vuorokaudenaika",
   "card.stat": "HP {hp} · Kantama {range}",

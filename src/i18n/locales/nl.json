@@ -45,6 +45,7 @@
   "menu.solo": "SOLO",
   "menu.multi": "MULTIPLAYER",
   "menu.options": "OPTIES",
+  "menu.achievements": "PRESTATIES",
   "menu.quit": "AFSLUITEN",
   "menu.hint": "Toetsenbord + muis of controller · <kbd>Esc</kbd> / Start pauzeert · <kbd>T</kbd> tijdstip",
   "card.stat": "HP {hp} · Bereik {range}",

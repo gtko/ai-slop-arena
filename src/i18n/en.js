@@ -53,6 +53,7 @@ export default {
   'menu.solo': 'SOLO',
   'menu.multi': 'MULTIPLAYER',
   'menu.options': 'OPTIONS',
+  'menu.achievements': 'ACHIEVEMENTS',
   'menu.quit': 'QUIT',
   'menu.hint': 'Keyboard + mouse or gamepad · <kbd>Esc</kbd> / Start pauses · <kbd>T</kbd> time of day',
   'card.stat': 'HP {hp} · Range {range}',
@@ -322,7 +323,7 @@ export default {
   'presence.room': 'In a room',
   'presence.online': 'Brawling online',
 
-  // Steam achievements (the game shows these only through Steam; see steam/README.md)
+  // Achievements (shown by Steam and Google Play Games; see steam/README.md, play/README.md)
   'ach.FIRST_KO': 'First Blood',
   'ach.FIRST_KO.desc': 'Knock out a brawler.',
   'ach.FIRST_WIN': 'Last One Standing',
