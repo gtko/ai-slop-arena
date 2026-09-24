@@ -70,6 +70,9 @@ npm run check:prod    # site serves this build, rooms accept the protocol, refus
 ```
 
 - A Cloudflare `500 / code 10013` is transient: run `npx wrangler deploy` again.
+- The new version takes ~30 s to reach every edge: wait before `check:prod`, and re-run it once
+  before investigating a failure (an old page bundle or a missing room welcome right after the
+  deploy is just propagation).
 - Deploy **before** tagging: the apps built by the tag talk to the live server.
 - Secrets (e.g. `ADMIN_TOKEN`) are the user's: never create or print them.
 
