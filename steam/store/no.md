@@ -57,7 +57,7 @@ Navnet er ærlig. AI SLOP ARENA ble bygget på to kvelder av Claude Opus 5.5, en
 [*]5 brawlere, hver med et hovedangrep og en super.
 [*]5 arenaer med vær som endrer hvordan du spiller: is, tåke, sandstorm, regn.
 [*]Lys og skygger i sanntid, døgnrytme, bloom og ambient occlusion.
-[*]10 Steam-prestasjoner.
+[*]15 Steam-prestasjoner.
 [*]Mus og tastatur eller håndkontroll, tastene kan endres.
 [*]Grafikknivåer fra Lav til Ultra: går fint på beskjedne PC-er.
 [/list]
@@ -85,6 +85,11 @@ Alt innholdet i spillet (kode, grafikk, 3D-modeller, musikk, lydeffekter) ble ge
 | `JACK_OF_ALL` | Altmulig-slopper | Vinn en kamp med hver av de fem brawlerne. |
 | `VETERAN` | Veteran | Spill 25 kamper. |
 | `CENTURION` | Centurion | Slå ut 100 brawlere. |
+| `PODIUM` | På pallen | Avslutt en kamp blant de 3 beste. |
+| `SUPER_KO` | Superavslutning | Slå ut en brawler med superen din. |
+| `NIGHT_OWL` | Nattugle | Vinn en kamp om natten. |
+| `CRATE_CRUSHER` | Kasseknuser | Knus 50 kasser. |
+| `CHAMPION` | Mester | Vinn 10 kamper. |
 
 ## Systemkrav (Windows)
 

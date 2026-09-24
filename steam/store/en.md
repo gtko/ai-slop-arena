@@ -58,7 +58,7 @@ The name is honest. AI SLOP ARENA was built in two evenings by Claude Opus 5.5, 
 [*]5 brawlers, each with a main attack and a super.
 [*]5 arenas with weather that changes how you play: ice, fog, sandstorm, rain.
 [*]Real-time lighting and shadows, day/night cycle, bloom and ambient occlusion.
-[*]10 Steam achievements.
+[*]15 Steam achievements.
 [*]Mouse and keyboard or gamepad, rebindable keys.
 [*]Graphics presets from Low to Ultra: runs on modest PCs.
 [/list]
@@ -86,6 +86,11 @@ All of the game's content (code, art, 3D models, music, sound effects) was gener
 | `JACK_OF_ALL` | Jack of All Slops | Win a match with each of the five brawlers. |
 | `VETERAN` | Veteran | Play 25 matches. |
 | `CENTURION` | Centurion | Knock out 100 brawlers. |
+| `PODIUM` | Podium Finish | Finish a match in the top 3. |
+| `SUPER_KO` | Super Finish | Knock out a brawler with your super. |
+| `NIGHT_OWL` | Night Owl | Win a match at night. |
+| `CRATE_CRUSHER` | Crate Crusher | Break 50 crates. |
+| `CHAMPION` | Champion | Win 10 matches. |
 
 ## System requirements (Windows)
 

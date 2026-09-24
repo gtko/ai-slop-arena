@@ -735,9 +735,14 @@ installBugReport({
 });
 $('#resBug').addEventListener('click', () => openBugReport());
 
-game.onFeat = (kind, n) => { if (kind === 'ko') achievements.ko(); else achievements.cubes(n); };
+game.onFeat = (kind, n) => {
+  if (kind === 'ko') achievements.ko();
+  else if (kind === 'superko') achievements.superKo();
+  else if (kind === 'crate') achievements.crate();
+  else achievements.cubes(n);
+};
 game.onResult = (rank, won) => {
-  achievements.result(rank, won);
+  achievements.result(rank, won, { night: lighting.night >= 0.5 });
   // hidden level: the bots of the next solo / private match follow it (never shown)
   recordResult(rank, won);
   resultShown = true;

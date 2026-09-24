@@ -57,7 +57,7 @@ Der Name ist ehrlich gemeint. AI SLOP ARENA wurde an zwei Abenden von Claude Opu
 [*]5 Brawler, jeder mit Hauptangriff und Super.
 [*]5 Arenen, deren Wetter das Spiel verändert: Eis, Nebel, Sandsturm, Regen.
 [*]Echtzeit-Beleuchtung und -Schatten, Tag-Nacht-Zyklus, Bloom und Ambient Occlusion.
-[*]10 Steam-Errungenschaften.
+[*]15 Steam-Errungenschaften.
 [*]Maus und Tastatur oder Controller, frei belegbare Tasten.
 [*]Grafik-Presets von Niedrig bis Ultra: läuft auch auf einfachen PCs.
 [/list]
@@ -85,6 +85,11 @@ Alle Inhalte des Spiels (Code, Grafik, 3D-Modelle, Musik, Soundeffekte) wurden v
 | `JACK_OF_ALL` | Hans Dampf in allen Slops | Gewinne ein Match mit jedem der fünf Brawler. |
 | `VETERAN` | Veteran | Spiele 25 Matches. |
 | `CENTURION` | Zenturio | Knocke 100 Brawler aus. |
+| `PODIUM` | Aufs Treppchen | Beende ein Match unter den Top 3. |
+| `SUPER_KO` | Super-Finish | Knocke einen Brawler mit deinem Super aus. |
+| `NIGHT_OWL` | Nachteule | Gewinne ein Match bei Nacht. |
+| `CRATE_CRUSHER` | Kistenknacker | Zerstöre 50 Kisten. |
+| `CHAMPION` | Champion | Gewinne 10 Matches. |
 
 ## Systemanforderungen (Windows)
 

@@ -69,7 +69,7 @@ export class Game {
     this.restartT = -1;
     this.onResult = null;
     this.onMatchEnd = null;
-    this.onFeat = null;       // (kind, value): the local player's KOs and cubes, for achievements
+    this.onFeat = null;       // (kind, value): the local player's KOs, super KOs, crates and cubes, for achievements
     this.net = null;          // null = solo, else { role: 'host' | 'client', send(msg) }
     this.outbox = [];
     this.netT = 0;
@@ -216,7 +216,7 @@ export class Game {
     }
     this.ev({ e: 'dmg', id: target.id, a: amount, s: source ? source.id : null });
     this.damageFx(target, amount, source);
-    if (target.hp <= 0) this.kill(target, source);
+    if (target.hp <= 0) this.kill(target, source, fromSuper);
   }
 
   damageFx(target, amount, source) {
@@ -230,18 +230,18 @@ export class Game {
     else if (source && source.isPlayer) sfx('hit');
   }
 
-  kill(b, killer) {
+  kill(b, killer, bySuper = false) {
     if (!b.alive) return;
     b.rank = this.brawlers.filter(o => o.alive && o !== b).length + 1;
     const n = Math.max(1, b.cubes), x = b.pos.x, z = b.pos.z;
-    this.killFx(b, killer);
+    this.killFx(b, killer, bySuper);
     if (!this.authority) return;
     for (let k = 0; k < n; k++) this.dropCube(x, z, k, n);
-    this.ev({ e: 'kill', id: b.id, by: killer ? killer.id : null, rank: b.rank });
+    this.ev({ e: 'kill', id: b.id, by: killer ? killer.id : null, rank: b.rank, sup: bySuper ? 1 : 0 });
     this.checkEnd();
   }
 
-  killFx(b, killer) {
+  killFx(b, killer, bySuper = false) {
     b.alive = false;
     b.hp = 0;
     b.burst.length = 0;
@@ -250,7 +250,7 @@ export class Game {
     this.shakeAt(b.pos.x, b.pos.z, 0.3);
     sfx('death', this.volumeAt(b.pos.x, b.pos.z));
     if (this.camTarget === b && killer && killer.alive) this.camTarget = killer;
-    if (killer && killer === this.player && b !== killer && this.onFeat) this.onFeat('ko');
+    if (killer && killer === this.player && b !== killer && this.onFeat) { this.onFeat('ko'); if (bySuper) this.onFeat('superko'); }
     if (b === this.player) { this.state = 'over'; this.resultT = 1.6; }
   }
 
@@ -283,14 +283,15 @@ export class Game {
     this.ev({ e: 'wall', i, j });
   }
 
-  damageCrate(i, j, dmg) {
+  damageCrate(i, j, dmg, by = null) {
     if (!this.authority || !this.arena.hitCrate(i, j, dmg)) return;
-    this.crateFx(i, j);
+    this.crateFx(i, j, by);
     this.dropCube(_v.x, _v.z, 0, 1);
-    this.ev({ e: 'crate', i, j });
+    this.ev({ e: 'crate', i, j, by: by ? by.id : null });
   }
 
-  crateFx(i, j) {
+  crateFx(i, j, by = null) {
+    if (by && by === this.player && this.onFeat) this.onFeat('crate');
     const c = this.arena.center(i, j, _v);
     this.effects.debrisBurst(c.x, 0.3, c.z, WOOD, 16, 0.38, 6);
     this.effects.dust(c.x, c.z, 8, 0xc9a070, 1.2);
@@ -466,7 +467,7 @@ export class Game {
         case 'kill':
           if (!b) break;
           b.rank = e.rank;
-          if (b.alive) this.killFx(b, this.byId.get(e.by));
+          if (b.alive) this.killFx(b, this.byId.get(e.by), !!e.sup);
           break;
         case 'win':
           if (b) { b.rank = 1; if (b === this.player) { this.state = 'over'; this.resultT = 1.2; } }
@@ -474,7 +475,7 @@ export class Game {
         case 'knock': if (b === this.player) b.knock.set(e.x, 0, e.z); break;
         case 'zap': this.effects.arc(e.pts, new THREE.Color(3.2, 4.2, 5.2)); break;
         case 'wall': this.breakWall(e.i, e.j, true); break;
-        case 'crate': if (this.arena.hitCrate(e.i, e.j, 1e9)) this.crateFx(e.i, e.j); break;
+        case 'crate': if (this.arena.hitCrate(e.i, e.j, 1e9)) this.crateFx(e.i, e.j, this.byId.get(e.by)); break;
         case 'item': this.spawnItem(e.id, e.x, e.z, e.tx, e.tz); break;
         case 'pick': {
           const it = this.items.find(o => o.id === e.item), by = this.byId.get(e.by);

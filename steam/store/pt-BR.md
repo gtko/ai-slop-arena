@@ -57,7 +57,7 @@ O nome é sincero. AI SLOP ARENA foi criado em duas noites pelo Claude Opus 5.5,
 [*]5 lutadores, cada um com um ataque principal e um super.
 [*]5 arenas com clima que muda seu jeito de jogar: gelo, neblina, tempestade de areia, chuva.
 [*]Iluminação e sombras em tempo real, ciclo dia/noite, bloom e oclusão de ambiente.
-[*]10 conquistas Steam.
+[*]15 conquistas Steam.
 [*]Mouse e teclado ou controle, teclas personalizáveis.
 [*]Predefinições gráficas de Baixo a Ultra: roda em PCs modestos.
 [/list]
@@ -85,6 +85,11 @@ Todo o conteúdo do jogo (código, arte, modelos 3D, música, efeitos sonoros) f
 | `JACK_OF_ALL` | Faz-Tudo do Slop | Vença uma partida com cada um dos cinco lutadores. |
 | `VETERAN` | Veterano | Jogue 25 partidas. |
 | `CENTURION` | Centurião | Elimine 100 lutadores. |
+| `PODIUM` | No pódio | Termine uma partida no top 3. |
+| `SUPER_KO` | Super golpe final | Elimine um lutador com seu super. |
+| `NIGHT_OWL` | Coruja noturna | Vença uma partida à noite. |
+| `CRATE_CRUSHER` | Quebra-caixas | Quebre 50 caixas. |
+| `CHAMPION` | Campeão | Vença 10 partidas. |
 
 ## Requisitos de sistema (Windows)
 

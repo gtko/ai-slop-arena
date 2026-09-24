@@ -46,9 +46,15 @@ started outside Steam relaunches itself through Steam.
    | `JACK_OF_ALL` | Jack of All Slops | Win a match with each of the five brawlers. |
    | `VETERAN` | Veteran | Play 25 matches. |
    | `CENTURION` | Centurion | Knock out 100 brawlers. |
+   | `PODIUM` | Podium Finish | Finish a match in the top 3. |
+   | `SUPER_KO` | Super Finish | Knock out a brawler with your super. |
+   | `NIGHT_OWL` | Night Owl | Win a match at night. |
+   | `CRATE_CRUSHER` | Crate Crusher | Break 50 crates. |
+   | `CHAMPION` | Champion | Win 10 matches. |
 
-2. **Stats** (INT, set by client): `MATCHES`, `WINS`, `KOS`, `MAPS_MASK`, `WINS_MASK`.
-   Optionally tie `VETERAN` to `MATCHES` (25) and `CENTURION` to `KOS` (100) to show progress bars.
+2. **Stats** (INT, set by client): `MATCHES`, `WINS`, `KOS`, `MAPS_MASK`, `WINS_MASK`, `CRATES`.
+   Optionally tie `VETERAN` to `MATCHES` (25), `CENTURION` to `KOS` (100), `CRATE_CRUSHER` to
+   `CRATES` (50) and `CHAMPION` to `WINS` (10) to show progress bars.
 3. **Achievement translations**: `node steam/gen-loc.mjs` writes `steam/achievements_loc.vdf` (all 30
    languages, from `src/i18n/locales`); import it on the Achievements page. Its tokens assume the
    achievements were created in the order of the table above (NEW_ACHIEVEMENT_1_0, 1_1...):

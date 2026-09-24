@@ -57,7 +57,7 @@ A név őszinte. Az AI SLOP ARENA-t két este alatt készítette el a Claude Opu
 [*]5 harcos, mindegyik saját fő támadással és szuperrel.
 [*]5 aréna, ahol az időjárás megváltoztatja a játékot: jég, köd, homokvihar, eső.
 [*]Valós idejű fények és árnyékok, napszakváltás, bloom és ambient occlusion.
-[*]10 Steam-teljesítmény.
+[*]15 Steam-teljesítmény.
 [*]Egér és billentyűzet vagy kontroller, átállítható billentyűk.
 [*]Grafikai profilok Alacsonytól Ultráig: szerényebb PC-ken is fut.
 [/list]
@@ -85,6 +85,11 @@ A játék teljes tartalma (kód, grafika, 3D modellek, zene, hangeffektusok) a m
 | `JACK_OF_ALL` | Slop-ezermester | Nyerj egy meccset mind az öt harcossal. |
 | `VETERAN` | Veterán | Játssz 25 meccset. |
 | `CENTURION` | Centurió | Üss ki 100 harcost. |
+| `PODIUM` | Dobogós | Végezz a legjobb 3 között egy meccsen. |
+| `SUPER_KO` | Szuper befejezés | Üss ki egy harcost a szuper képességeddel. |
+| `NIGHT_OWL` | Éjjeli bagoly | Nyerj meg egy meccset éjszaka. |
+| `CRATE_CRUSHER` | Ládatörő | Törj össze 50 ládát. |
+| `CHAMPION` | Bajnok | Nyerj meg 10 meccset. |
 
 ## Rendszerkövetelmények (Windows)
 

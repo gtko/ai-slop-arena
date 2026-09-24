@@ -57,7 +57,7 @@ Nimi on rehellinen. AI SLOP ARENA rakennettiin kahdessa illassa, ja sen teki Cla
 [*]5 tappelijaa, joilla jokaisella on perushyökkäys ja super.
 [*]5 areenaa, joiden sää muuttaa pelaamista: jäätä, sumua, hiekkamyrskyä, sadetta.
 [*]Reaaliaikainen valaistus ja varjot, vuorokausirytmi, bloom ja ambient occlusion.
-[*]10 Steam-saavutusta.
+[*]15 Steam-saavutusta.
 [*]Hiiri ja näppäimistö tai peliohjain, näppäimet voi määrittää uudelleen.
 [*]Grafiikan laatuasetukset Matalasta Ultraan: pyörii vaatimattomillakin tietokoneilla.
 [/list]
@@ -85,6 +85,11 @@ Kaikki pelin sisältö (koodi, grafiikka, 3D-mallit, musiikki, äänitehosteet) 
 | `JACK_OF_ALL` | Kaiken slopin mestari | Voita ottelu jokaisella viidellä tappelijalla. |
 | `VETERAN` | Veteraani | Pelaa 25 ottelua. |
 | `CENTURION` | Sadanpäämies | Tyrmää 100 tappelijaa. |
+| `PODIUM` | Palkintopallilla | Sijoitu ottelussa kolmen parhaan joukkoon. |
+| `SUPER_KO` | Superlopetus | Tyrmää tappelija superillasi. |
+| `NIGHT_OWL` | Yökyöpeli | Voita ottelu yöllä. |
+| `CRATE_CRUSHER` | Laatikkomurskaaja | Riko 50 laatikkoa. |
+| `CHAMPION` | Mestari | Voita 10 ottelua. |
 
 ## Järjestelmävaatimukset (Windows)
 

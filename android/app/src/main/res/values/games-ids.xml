@@ -15,4 +15,9 @@
   <string name="achievement_jack_of_all_slops" translatable="false"></string>
   <string name="achievement_veteran" translatable="false"></string>
   <string name="achievement_centurion" translatable="false"></string>
+  <string name="achievement_podium_finish" translatable="false"></string>
+  <string name="achievement_super_finish" translatable="false"></string>
+  <string name="achievement_night_owl" translatable="false"></string>
+  <string name="achievement_crate_crusher" translatable="false"></string>
+  <string name="achievement_champion" translatable="false"></string>
 </resources>

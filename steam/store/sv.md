@@ -57,7 +57,7 @@ Namnet är ärligt. AI SLOP ARENA byggdes på två kvällar av Claude Opus 5.5, 
 [*]5 brawlers, alla med en huvudattack och en super.
 [*]5 arenor med väder som ändrar hur du spelar: is, dimma, sandstorm, regn.
 [*]Ljus och skuggor i realtid, dygnscykel, bloom och ambient occlusion.
-[*]10 Steam-prestationer.
+[*]15 Steam-prestationer.
 [*]Mus och tangentbord eller handkontroll, valfri tangentbindning.
 [*]Grafikförval från Låg till Ultra: flyter på enklare datorer.
 [/list]
@@ -85,6 +85,11 @@ Allt innehåll i spelet (kod, grafik, 3D-modeller, musik, ljudeffekter) generera
 | `JACK_OF_ALL` | Slop-Tusenkonstnär | Vinn en match med var och en av de fem brawlers. |
 | `VETERAN` | Veteran | Spela 25 matcher. |
 | `CENTURION` | Centurion | Slå ut 100 brawlers. |
+| `PODIUM` | Pallplats | Sluta topp 3 i en match. |
+| `SUPER_KO` | Superavslut | Slå ut en brawler med din super. |
+| `NIGHT_OWL` | Nattuggla | Vinn en match på natten. |
+| `CRATE_CRUSHER` | Lådkrossare | Krossa 50 lådor. |
+| `CHAMPION` | Mästare | Vinn 10 matcher. |
 
 ## Systemkrav (Windows)
 

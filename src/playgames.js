@@ -9,7 +9,7 @@ const Play = registerPlugin('PlayGames');
 // > achievement_jack_of_all_slops), which is what Play's games-ids.xml contains.
 const key = id => 'achievement_' + ACHIEVEMENTS[id].name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 // Incremental on Play: progress bars follow these stats, and reaching the total unlocks them.
-const STEPS = { VETERAN: 'MATCHES', CENTURION: 'KOS' };
+const STEPS = { VETERAN: 'MATCHES', CENTURION: 'KOS', CRATE_CRUSHER: 'CRATES', CHAMPION: 'WINS' };
 
 // Resolves to an achievements sink, or null when Play Games is not set up in this build.
 export async function setupPlayGames() {

@@ -167,7 +167,7 @@ export class Combat {
           }
         } else if (c === 'C') {
           dead = true;
-          g.damageCrate(ti, tj, B.dmg * B.owner.dmgMul);
+          g.damageCrate(ti, tj, B.dmg * B.owner.dmgMul, B.owner);
           g.effects.hit(B.x, BULLET_Y, B.z, B.col);
         }
         if (dead) break;
@@ -245,7 +245,7 @@ export class Combat {
       if (ch !== 'C' && ch !== '#') continue;
       A.center(i, j, c);
       if (Math.hypot(c.x - x, c.z - z) > R + 0.9) continue;
-      if (ch === 'C') g.damageCrate(i, j, B.dmg * B.owner.dmgMul);
+      if (ch === 'C') g.damageCrate(i, j, B.dmg * B.owner.dmgMul, B.owner);
       else if (B.sup) g.breakWall(i, j);
     }
     const wet = A.isWaterAt(x, z);
@@ -325,7 +325,7 @@ export class Combat {
         }
         const ti = A.toTile(S.x), tj = A.toTile(S.z);
         if (A.get(ti, tj) === '#') g.breakWall(ti, tj);
-        if (A.get(ti, tj) === 'C') g.damageCrate(ti, tj, 900);
+        if (A.get(ti, tj) === 'C') g.damageCrate(ti, tj, 900, S.owner);
       }
       const fx = g.effects;
       fx.bolt(S.x, S.z, BOLT);

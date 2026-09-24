@@ -58,7 +58,7 @@ El nombre es honesto. AI SLOP ARENA fue creado en dos noches por Claude Opus 5.5
 [*]5 brawlers, cada uno con un ataque principal y un súper.
 [*]5 arenas cuyo clima cambia tu forma de jugar: hielo, niebla, tormenta de arena, lluvia.
 [*]Iluminación y sombras en tiempo real, ciclo de día y noche, bloom y oclusión ambiental.
-[*]10 logros de Steam.
+[*]15 logros de Steam.
 [*]Ratón y teclado o mando, teclas configurables.
 [*]Ajustes gráficos de Bajo a Ultra: funciona en PC modestos.
 [/list]
@@ -86,6 +86,11 @@ Todo el contenido del juego (código, gráficos, modelos 3D, música, efectos de
 | `JACK_OF_ALL` | Aprendiz de todo, maestro del slop | Gana una partida con cada uno de los cinco brawlers. |
 | `VETERAN` | Veterano | Juega 25 partidas. |
 | `CENTURION` | Centurión | Elimina a 100 brawlers. |
+| `PODIUM` | En el podio | Termina una partida entre los 3 primeros. |
+| `SUPER_KO` | Súper remate | Elimina a un brawler con tu súper. |
+| `NIGHT_OWL` | Ave nocturna | Gana una partida de noche. |
+| `CRATE_CRUSHER` | Rompecajas | Rompe 50 cajas. |
+| `CHAMPION` | Campeón | Gana 10 partidas. |
 
 ## Requisitos del sistema (Windows)
 

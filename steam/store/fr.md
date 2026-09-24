@@ -57,7 +57,7 @@ Le nom est honnête. AI SLOP ARENA a été créé en deux soirées par Claude Op
 [*]5 brawlers, chacun avec une attaque principale et un super.
 [*]5 arènes dont la météo change votre façon de jouer : glace, brouillard, tempête de sable, pluie.
 [*]Éclairage et ombres en temps réel, cycle jour/nuit, bloom et occlusion ambiante.
-[*]10 succès Steam.
+[*]15 succès Steam.
 [*]Clavier et souris ou manette, touches reconfigurables.
 [*]Préréglages graphiques de Bas à Ultra : tourne sur des PC modestes.
 [/list]
@@ -85,6 +85,11 @@ Tout le contenu du jeu (code, graphismes, modèles 3D, musique, bruitages) a ét
 | `JACK_OF_ALL` | Touche-à-tout du Slop | Gagner une partie avec chacun des cinq brawlers. |
 | `VETERAN` | Vétéran | Jouer 25 parties. |
 | `CENTURION` | Centurion | Mettre K.O. 100 brawlers. |
+| `PODIUM` | Sur le podium | Finir une partie dans le top 3. |
+| `SUPER_KO` | Coup de grâce | Mettre un brawler K.O. avec son super. |
+| `NIGHT_OWL` | Oiseau de nuit | Gagner une partie de nuit. |
+| `CRATE_CRUSHER` | Casse-caisses | Casser 50 caisses. |
+| `CHAMPION` | Champion | Gagner 10 parties. |
 
 ## Configuration requise (Windows)
 

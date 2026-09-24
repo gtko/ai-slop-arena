@@ -57,7 +57,7 @@ De naam liegt niet. AI SLOP ARENA is in twee avonden gebouwd door Claude Opus 5.
 [*]5 brawlers, elk met een hoofdaanval en een super.
 [*]5 arena's met weer dat je speelstijl verandert: ijs, mist, zandstorm, regen.
 [*]Realtime belichting en schaduwen, dag-nachtcyclus, bloom en ambient occlusion.
-[*]10 Steam-prestaties.
+[*]15 Steam-prestaties.
 [*]Muis en toetsenbord of controller, aanpasbare toetsen.
 [*]Grafische presets van Laag tot Ultra: draait op bescheiden pc's.
 [/list]
@@ -85,6 +85,11 @@ Alle content van de game (code, graphics, 3D-modellen, muziek, geluidseffecten) 
 | `JACK_OF_ALL` | Manusje-van-alle-Slop | Win een potje met elk van de vijf brawlers. |
 | `VETERAN` | Veteraan | Speel 25 potjes. |
 | `CENTURION` | Centurio | Schakel 100 brawlers uit. |
+| `PODIUM` | Op het podium | Eindig een potje in de top 3. |
+| `SUPER_KO` | Superafmaker | Schakel een brawler uit met je super. |
+| `NIGHT_OWL` | Nachtuil | Win een potje in het donker. |
+| `CRATE_CRUSHER` | Kratkraker | Sloop 50 kratten. |
+| `CHAMPION` | Kampioen | Win 10 potjes. |
 
 ## Systeemvereisten (Windows)
 
