@@ -474,7 +474,26 @@ export class Game {
     const I = this.input, p = this.player;
     I.move(p.moveIntent);
 
-    if (I.usingPad) {
+    if (I.usingTouch && I.touch) {
+      // touch: the attack / super stick aims while dragged; a tap aims at the nearest enemy
+      const T = I.touch;
+      if (T.autoAim) {
+        T.autoAim = false;
+        const foe = this.nearestFoe(p);
+        if (foe) {
+          const dx = foe.pos.x - p.pos.x, dz = foe.pos.z - p.pos.z, l = Math.hypot(dx, dz) || 1;
+          this.aimDir.set(dx / l, 0, dz / l);
+          this.aimDist = Math.min(l, p.type.range);
+        }
+      } else if ((T.aiming || T.superAiming) && T.aim.lengthSq() > 0.02) {
+        this.aimDir.set(T.aim.x, 0, T.aim.y).normalize();
+        this.aimDist = 2 + Math.min(1, T.aim.length()) * (p.type.range - 2);
+      } else if (p.moveIntent.lengthSq() > 0.05 && !I.attackHeld) {
+        this.aimDir.copy(p.moveIntent).normalize();
+        this.aimDist = p.type.range * 0.7;
+      }
+      this.aimPoint.set(p.pos.x + this.aimDir.x * this.aimDist, 0.8, p.pos.z + this.aimDir.z * this.aimDist);
+    } else if (I.usingPad) {
       // twin-stick: right stick aims, its tilt sets the throw distance for lobbed attacks
       const r = I.stickR;
       if (r.lengthSq() > 0.09) {
@@ -504,6 +523,17 @@ export class Game {
       if (superPressed) this.tryAttack(p, this.aimDir.x, this.aimDir.z, this.aimPoint, true);
     }
     this.superAiming = ready && I.superAimHeld;
+  }
+
+  // Closest enemy the player can see (touch auto-aim), preferring ones in range.
+  nearestFoe(p) {
+    let best = null, bd = Infinity;
+    for (const b of this.brawlers) {
+      if (b === p || !b.alive || !this.canSee(p, b)) continue;
+      const d = Math.hypot(b.pos.x - p.pos.x, b.pos.z - p.pos.z);
+      if (d < bd) { bd = d; best = b; }
+    }
+    return best;
   }
 
   separate() {
@@ -625,6 +655,9 @@ export class Game {
       this.aimTarget.position.set(p.pos.x + dir.x * d, 0.065, p.pos.z + dir.z * d);
       this.aimTarget.scale.setScalar(sup ? 3.6 : 2.2);
     }
+    // Touch: like Brawl Stars, the aim only shows while a stick is being dragged.
+    const I = this.input;
+    if (I.usingTouch && I.touch && !I.touch.aiming && !I.touch.superAiming) this.aim.visible = this.aimTarget.visible = false;
   }
 
   /* ------------------------------ camera + lights ------------------------------ */

@@ -21,26 +21,31 @@ export class Input {
     this.stickR = new THREE.Vector2();
     this.usingPad = false;
     this.captureKey = null; // set by the options menu while rebinding a key
+    this.touch = null;      // filled by TouchControls (touch.js) on touch screens
+    this.usingTouch = false;
 
     addEventListener('keydown', e => {
       if (this.captureKey) return;
       if (e.code === 'Tab' || e.code === 'Space') e.preventDefault();
       if (!e.repeat) this.pressed.add(e.code);
       this.keys.add(e.code);
-      this.usingPad = false;
+      this.usingPad = this.usingTouch = false;
     });
     addEventListener('keyup', e => this.keys.delete(e.code));
     addEventListener('blur', () => { this.keys.clear(); this.lmb = this.rmb = false; });
     el.addEventListener('pointermove', e => {
+      if (e.pointerType === 'touch') return; // touch screens use the virtual sticks
       this.ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
-      if (Math.abs(e.movementX) + Math.abs(e.movementY) > 2) this.usingPad = false;
+      if (Math.abs(e.movementX) + Math.abs(e.movementY) > 2) this.usingPad = this.usingTouch = false;
     });
     el.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'touch') return;
       if (e.button === 0) this.lmb = true;
       if (e.button === 2) this.rmb = true;
-      this.usingPad = false;
+      this.usingPad = this.usingTouch = false;
     });
     addEventListener('pointerup', e => {
+      if (e.pointerType === 'touch') return;
       if (e.button === 0) this.lmb = false;
       if (e.button === 2) { if (this.rmb) this.rmbReleased = true; this.rmb = false; }
     });
@@ -83,7 +88,7 @@ export class Input {
     };
     if (stick(this.stickL, gp.axes[0], gp.axes[1])) active = true;
     if (stick(this.stickR, gp.axes[2], gp.axes[3])) active = true;
-    if (active) this.usingPad = true;
+    if (active) { this.usingPad = true; this.usingTouch = false; }
   }
 
   padHeld(i) { return this.btn[i]; }
@@ -104,16 +109,21 @@ export class Input {
       + (this.btn[PAD.RIGHT] ? 1 : 0) - (this.btn[PAD.LEFT] ? 1 : 0) + this.stickL.x;
     const z = (this.held('down') || this.down('ArrowDown') ? 1 : 0) - (this.held('up') || this.down('ArrowUp') ? 1 : 0)
       + (this.btn[PAD.DOWN] ? 1 : 0) - (this.btn[PAD.UP] ? 1 : 0) + this.stickL.y;
-    out.set(x, 0, z);
+    const T = this.touch;
+    out.set(x + (T ? T.move.x : 0), 0, z + (T ? T.move.y : 0));
     if (out.lengthSq() > 1) out.normalize();
     return out;
   }
 
-  get attackHeld() { return this.lmb || this.btn[PAD.RT]; }
-  get superAimHeld() { return this.rmb || this.btn[PAD.LT]; }
+  get attackHeld() { return this.lmb || this.btn[PAD.RT] || (!!this.touch && this.touch.fireUntil > performance.now()); }
+  get superAimHeld() { return this.rmb || this.btn[PAD.LT] || (!!this.touch && this.touch.superAiming); }
   get superFired() {
-    return this.hitAction('super') || this.rmbReleased || this.padHit(PAD.RB) || this.padReleased(PAD.LT);
+    return this.hitAction('super') || this.rmbReleased || this.padHit(PAD.RB) || this.padReleased(PAD.LT) || (!!this.touch && this.touch.superFired);
   }
 
-  endFrame() { this.pressed.clear(); this.rmbReleased = false; }
+  endFrame() {
+    this.pressed.clear();
+    this.rmbReleased = false;
+    if (this.touch) this.touch.superFired = false;
+  }
 }

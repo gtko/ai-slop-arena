@@ -17,6 +17,7 @@ import { SteamNet } from './steamnet.js';
 import { isDesktop, desktop, steam, steamInfo, presence, WEB_ORIGIN } from './platform.js';
 import { achievements } from './achievements.js';
 import { t, translateDom } from './i18n/index.js';
+import { TouchControls, isTouchDevice } from './touch.js';
 import { VisionFog } from './visionfog.js';
 import { initAudio, playMusic, setAmbience, sfx, toggleMute, setVolume, setMuted, setTrack, settings as audio } from './audio.js';
 import { loadTextures, ASSET_BASE, TEX_FILES } from './assets.js';
@@ -218,6 +219,10 @@ const menus = new Menus({
   onPause: p => { game.paused = p; },
   onQuit: () => { if (game.net) { net.close(); history.replaceState(null, '', location.pathname); } toMenu(); },
 });
+// Phones and tablets: virtual sticks + pause button (touch.js).
+const touch = isTouchDevice ? new TouchControls(input, { onPause: () => { if (!menus.paused && game.mode === 'play') menus.openPause(); } }) : null;
+if (touch) touch.setSuperLabel(t('hud.super'));
+
 $('#optionsBtn').addEventListener('click', () => { sfx('click'); menus.openOptions('#menu'); });
 
 let chosen = localStorage.getItem('iaslop-brawler') || 'blaster';
@@ -543,6 +548,7 @@ function frame(ts) {
   if (input.padHit(PAD.Y)) nextTimeOfDay();
   if (input.padHit(PAD.BACK)) setSetting('debugPanel', !settings.debugPanel);
   game.update(dt);
+  if (touch) touch.update(game.player);
   // Sun direction/colour in view space for the foliage rim + translucency term.
   shared.sunDirView.value.copy(lighting.sunDir).transformDirection(camera.matrixWorldInverse);
   shared.sunColor.value.copy(lighting.sun.color).multiplyScalar(lighting.sun.intensity);

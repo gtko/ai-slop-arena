@@ -11,7 +11,6 @@
   "tip.tod": "Appuie sur T pour changer le moment de la journée. Les lanternes s'allument la nuit.",
   "tip.online": "Partage un code de salon pour jouer en ligne avec tes amis.",
   "tip.steam": "Invite des amis Steam depuis le salon en ligne, ou rejoins-les depuis ta liste d'amis.",
-
   "hud.left": "BRAWLERS RESTANTS",
   "hud.gasIn": "GAZ DANS",
   "hud.gasGrows": "LE GAZ AVANCE",
@@ -21,7 +20,7 @@
   "hud.keys": "<b>WASD</b> déplacement · <b>Souris</b> visée · <b>Clic gauche maintenu</b> attaque · <b>Clic droit / Espace</b> super · <b>T</b> moment de la journée · <b>Esc</b> pause · <b>M</b> muet · 🎮 compatible",
   "hud.you": "TOI",
   "hud.power": "+PUISSANCE",
-
+  "mobile.rotate": "Tourne ton téléphone à l’horizontale",
   "sound.title": "Son",
   "sound.button": "Son (M pour couper)",
   "sound.master": "Général",
@@ -37,7 +36,6 @@
   "sound.test": "▶ Tester les effets",
   "sound.note": "L'ambiance suit le moment de la journée : oiseaux le jour, grillons et torches la nuit.",
   "common.close": "Fermer",
-
   "menu.tag": "Survivant · 8 brawlers · 5 cartes à météo dynamique · le dernier debout gagne",
   "menu.map": "Carte",
   "menu.solo": "SOLO",
@@ -46,7 +44,6 @@
   "menu.quit": "QUITTER",
   "menu.hint": "Clavier + souris ou manette · <kbd>Esc</kbd> / Start : pause · <kbd>T</kbd> moment de la journée",
   "card.stat": "PV {hp} · Portée {range}",
-
   "brawler.blaster.role": "Fusil à pompe",
   "brawler.blaster.desc": "Salve de 5 plombs à courte portée. Super : une large déflagration qui repousse les ennemis et pulvérise les murs.",
   "brawler.gunslinger.role": "Tireur d'élite",
@@ -57,7 +54,6 @@
   "brawler.frostbite.desc": "Tire 3 éclats de glace qui ralentissent les ennemis. Super : une nova de givre qui gèle tous ceux qui l'entourent.",
   "brawler.volt.role": "Robot électrique",
   "brawler.volt.desc": "Tire un orbe électrique dont l'éclair rebondit sur 2 ennemis proches. Super : invoque un orage qui brise les murs.",
-
   "map.random": "Aléatoire",
   "map.random.tag": "Surprends-moi",
   "map.oasis": "Oasis",
@@ -70,7 +66,6 @@
   "map.frost.tag": "Neige · glace glissante",
   "map.marsh": "Marais brumeux",
   "map.marsh.tag": "Brouillard · vision réduite",
-
   "lobby.title": "En ligne",
   "lobby.name": "Ton pseudo",
   "lobby.steamName": "Nom Steam",
@@ -102,7 +97,6 @@
   "lobby.createCross": "SALON CROSS-PLAY",
   "lobby.crossHint": "Les salons cross-play sont aussi ouverts aux joueurs sur navigateur : partage le code ou le lien.",
   "lobby.crossBadge": "CROSS-PLAY",
-
   "err.unreachable": "Impossible de joindre le serveur",
   "err.full": "Le salon est plein",
   "err.notFound": "Aucun salon {code} trouvé",
@@ -110,13 +104,11 @@
   "err.left": "Tu as quitté le salon",
   "err.notOurs": "Ce n'est pas un salon AI SLOP ARENA",
   "err.noSteam": "Steam n'est pas lancé",
-
   "pause.title": "PAUSE",
   "pause.resume": "REPRENDRE",
   "pause.options": "OPTIONS",
   "pause.quit": "RETOUR AU MENU",
   "pause.online": "Partie en ligne : le jeu continue.",
-
   "result.victory": "VICTOIRE !",
   "result.rank": "#{rank}",
   "result.won": "Dernier brawler debout.",
@@ -128,7 +120,6 @@
   "result.menu": "MENU",
   "result.spectate": "OBSERVER",
   "result.backSoon": "Retour au salon à la fin de la partie…",
-
   "opt.title": "OPTIONS",
   "opt.footer": "<kbd>↑↓</kbd> choisir · <kbd>←→</kbd> modifier · <kbd>Q</kbd><kbd>E</kbd> / LB RB onglets · <kbd>Esc</kbd> / B retour",
   "opt.resetTab": "Réinitialiser l'onglet",
@@ -230,12 +221,10 @@
   "opt.pause": "Pause",
   "opt.menus": "Menus",
   "opt.pad.menus": "Croix / stick · A valider · B retour · LB / RB onglets",
-
   "presence.menu": "Dans le menu",
   "presence.solo": "En solo sur {map}",
   "presence.room": "Dans un salon",
   "presence.online": "Se bagarre en ligne",
-
   "ach.FIRST_KO": "Premier sang",
   "ach.FIRST_KO.desc": "Mettre un brawler K.O.",
   "ach.FIRST_WIN": "Le dernier debout",

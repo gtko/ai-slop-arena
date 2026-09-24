@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> 移动 · <b>鼠标</b> 瞄准 · <b>按住左键</b> 攻击 · <b>右键 / 空格</b> 超级技能 · <b>T</b> 时段 · <b>Esc</b> 暂停 · <b>M</b> 静音 · 🎮 支持手柄",
   "hud.you": "你",
   "hud.power": "+能量",
+  "mobile.rotate": "请把手机横过来",
   "sound.title": "声音",
   "sound.button": "声音（按 M 静音）",
   "sound.master": "主音量",

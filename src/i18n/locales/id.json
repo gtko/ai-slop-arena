@@ -11,7 +11,6 @@
   "tip.tod": "Tekan T untuk mengganti waktu. Lentera menyala saat malam.",
   "tip.online": "Bagikan kode room untuk main online bareng teman.",
   "tip.steam": "Undang teman Steam dari lobi online, atau gabung ke mereka dari daftar teman.",
-
   "hud.left": "BRAWLER TERSISA",
   "hud.gasIn": "GAS DALAM",
   "hud.gasGrows": "GAS MELUAS",
@@ -21,7 +20,7 @@
   "hud.keys": "<b>WASD</b> gerak · <b>Mouse</b> bidik · <b>Tahan klik kiri</b> serang · <b>Klik kanan / Space</b> super · <b>T</b> waktu · <b>Esc</b> jeda · <b>M</b> bisu · 🎮 didukung",
   "hud.you": "KAMU",
   "hud.power": "+POWER",
-
+  "mobile.rotate": "Putar ponselmu ke posisi mendatar",
   "sound.title": "Suara",
   "sound.button": "Suara (M untuk bisu)",
   "sound.master": "Utama",
@@ -37,7 +36,6 @@
   "sound.test": "▶ Tes efek",
   "sound.note": "Suara suasana mengikuti waktu: burung saat siang, jangkrik dan obor saat malam.",
   "common.close": "Tutup",
-
   "menu.tag": "Showdown · 8 brawler · 5 peta dengan cuaca dinamis · yang terakhir bertahan menang",
   "menu.map": "Peta",
   "menu.solo": "SOLO",
@@ -46,7 +44,6 @@
   "menu.quit": "KELUAR",
   "menu.hint": "Keyboard + mouse atau gamepad · <kbd>Esc</kbd> / Start jeda · <kbd>T</kbd> waktu",
   "card.stat": "HP {hp} · Jarak {range}",
-
   "brawler.blaster.role": "Shotgun",
   "brawler.blaster.desc": "Tembakan sebar 5 peluru jarak dekat. Super: ledakan lebar yang menghempas musuh dan menghancurkan tembok.",
   "brawler.gunslinger.role": "Penembak jitu",
@@ -57,7 +54,6 @@
   "brawler.frostbite.desc": "Menembakkan 3 serpihan es yang memperlambat musuh. Super: gelombang es di sekitarnya yang membekukan semua yang dekat.",
   "brawler.volt.role": "Robot listrik",
   "brawler.volt.desc": "Menembakkan bola listrik yang petirnya menyambar 2 musuh terdekat. Super: memanggil badai petir yang menghancurkan tembok.",
-
   "map.random": "Acak",
   "map.random.tag": "Kejutkan aku",
   "map.oasis": "Oasis",
@@ -70,7 +66,6 @@
   "map.frost.tag": "Salju turun · es licin",
   "map.marsh": "Rawa Berkabut",
   "map.marsh.tag": "Kabut · pandangan terbatas",
-
   "lobby.title": "Online",
   "lobby.name": "Namamu",
   "lobby.steamName": "Nama Steam",
@@ -102,7 +97,6 @@
   "lobby.createCross": "ROOM CROSS-PLAY",
   "lobby.crossHint": "Room cross-play juga terbuka untuk pemain browser: bagikan kode atau tautannya.",
   "lobby.crossBadge": "CROSS-PLAY",
-
   "err.unreachable": "Tidak bisa terhubung ke server",
   "err.full": "Room penuh",
   "err.notFound": "Room {code} tidak ditemukan",
@@ -110,22 +104,21 @@
   "err.left": "Keluar dari room",
   "err.notOurs": "Itu bukan room AI SLOP ARENA",
   "err.noSteam": "Steam tidak berjalan",
-
   "pause.title": "JEDA",
   "pause.resume": "LANJUT",
   "pause.options": "OPSI",
   "pause.quit": "KE MENU",
   "pause.online": "Match online: game tetap berjalan.",
-
   "result.victory": "MENANG!",
   "result.rank": "#{rank}",
   "result.won": "Brawler terakhir yang bertahan.",
-  "result.lost": { "other": "Kamu tumbang. Tersisa {n} brawler." },
+  "result.lost": {
+    "other": "Kamu tumbang. Tersisa {n} brawler."
+  },
   "result.again": "MAIN LAGI",
   "result.menu": "MENU",
   "result.spectate": "TONTON",
   "result.backSoon": "Kembali ke room saat match selesai…",
-
   "opt.title": "OPSI",
   "opt.footer": "<kbd>↑↓</kbd> pilih · <kbd>←→</kbd> ubah · <kbd>Q</kbd><kbd>E</kbd> / LB RB tab · <kbd>Esc</kbd> / B kembali",
   "opt.resetTab": "Reset tab",
@@ -227,12 +220,10 @@
   "opt.pause": "Jeda",
   "opt.menus": "Menu",
   "opt.pad.menus": "D-pad / stik · A pilih · B kembali · LB / RB tab",
-
   "presence.menu": "Di menu",
   "presence.solo": "Solo di {map}",
   "presence.room": "Di dalam room",
   "presence.online": "Baku hantam online",
-
   "ach.FIRST_KO": "Darah Pertama",
   "ach.FIRST_KO.desc": "KO satu brawler.",
   "ach.FIRST_WIN": "Yang Terakhir Berdiri",

@@ -25,8 +25,12 @@ export const DEFAULTS = {
   binds: { ...DEFAULT_BINDS },
 };
 
+// Phones and tablets start on the low preset (the player can raise it in Options).
+const MOBILE = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
+
 function load() {
   const s = structuredClone(DEFAULTS);
+  if (MOBILE) Object.assign(s, QUALITY.low, { preset: 'low' });
   try {
     const saved = JSON.parse(localStorage.getItem(STORE) || '{}');
     Object.assign(s, saved);

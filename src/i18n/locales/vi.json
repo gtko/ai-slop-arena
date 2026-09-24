@@ -11,7 +11,6 @@
   "tip.tod": "Nhấn T để đổi thời điểm trong ngày. Đèn lồng sẽ sáng vào ban đêm.",
   "tip.online": "Chia sẻ mã phòng để chơi online cùng bạn bè.",
   "tip.steam": "Mời bạn bè Steam từ sảnh online, hoặc tham gia phòng của họ từ danh sách bạn bè.",
-
   "hud.left": "ĐẤU SĨ CÒN LẠI",
   "hud.gasIn": "KHÍ ĐỘC SAU",
   "hud.gasGrows": "KHÍ ĐỘC LAN",
@@ -21,7 +20,7 @@
   "hud.keys": "<b>WASD</b> di chuyển · <b>Chuột</b> ngắm · <b>Giữ chuột trái</b> tấn công · <b>Chuột phải / Space</b> siêu chiêu · <b>T</b> thời điểm · <b>Esc</b> tạm dừng · <b>M</b> tắt tiếng · hỗ trợ 🎮",
   "hud.you": "BẠN",
   "hud.power": "+SỨC MẠNH",
-
+  "mobile.rotate": "Xoay ngang điện thoại",
   "sound.title": "Âm thanh",
   "sound.button": "Âm thanh (M để tắt)",
   "sound.master": "Tổng",
@@ -37,7 +36,6 @@
   "sound.test": "▶ Thử hiệu ứng",
   "sound.note": "Âm thanh môi trường theo thời điểm: chim hót ban ngày, dế kêu và đuốc cháy ban đêm.",
   "common.close": "Đóng",
-
   "menu.tag": "Đấu sinh tồn · 8 đấu sĩ · 5 bản đồ có thời tiết động · người trụ lại cuối cùng thắng",
   "menu.map": "Bản đồ",
   "menu.solo": "CHƠI ĐƠN",
@@ -46,7 +44,6 @@
   "menu.quit": "THOÁT",
   "menu.hint": "Bàn phím + chuột hoặc tay cầm · <kbd>Esc</kbd> / Start tạm dừng · <kbd>T</kbd> thời điểm",
   "card.stat": "HP {hp} · Tầm {range}",
-
   "brawler.blaster.role": "Súng hoa cải",
   "brawler.blaster.desc": "Bắn tỏa 5 viên đạn ở tầm gần. Siêu chiêu: vụ nổ rộng hất văng kẻ địch và phá tường.",
   "brawler.gunslinger.role": "Xạ thủ",
@@ -57,7 +54,6 @@
   "brawler.frostbite.desc": "Bắn 3 mảnh băng làm chậm kẻ địch. Siêu chiêu: vụ nổ băng quanh mình đóng băng mọi kẻ ở gần.",
   "brawler.volt.role": "Robot điện",
   "brawler.volt.desc": "Bắn quả cầu điện với tia sét lan sang 2 kẻ địch gần đó. Siêu chiêu: gọi bão sét phá nát tường.",
-
   "map.random": "Ngẫu nhiên",
   "map.random.tag": "Bất ngờ đi",
   "map.oasis": "Ốc Đảo",
@@ -70,7 +66,6 @@
   "map.frost.tag": "Tuyết rơi · băng trơn",
   "map.marsh": "Đầm Sương Mù",
   "map.marsh.tag": "Sương mù · tầm nhìn hạn chế",
-
   "lobby.title": "Online",
   "lobby.name": "Tên của bạn",
   "lobby.steamName": "Tên Steam",
@@ -102,7 +97,6 @@
   "lobby.createCross": "PHÒNG CHƠI CHÉO",
   "lobby.crossHint": "Phòng chơi chéo mở cho cả người chơi trên trình duyệt: chia sẻ mã hoặc link.",
   "lobby.crossBadge": "CHƠI CHÉO",
-
   "err.unreachable": "Không thể kết nối máy chủ",
   "err.full": "Phòng đã đầy",
   "err.notFound": "Không tìm thấy phòng {code}",
@@ -110,22 +104,21 @@
   "err.left": "Đã rời phòng",
   "err.notOurs": "Đây không phải phòng AI SLOP ARENA",
   "err.noSteam": "Steam chưa được mở",
-
   "pause.title": "TẠM DỪNG",
   "pause.resume": "TIẾP TỤC",
   "pause.options": "TÙY CHỌN",
   "pause.quit": "VỀ MENU",
   "pause.online": "Trận online: trò chơi vẫn tiếp diễn.",
-
   "result.victory": "CHIẾN THẮNG!",
   "result.rank": "#{rank}",
   "result.won": "Đấu sĩ cuối cùng trụ lại.",
-  "result.lost": { "other": "Bạn đã bị hạ gục. Còn {n} đấu sĩ trụ lại." },
+  "result.lost": {
+    "other": "Bạn đã bị hạ gục. Còn {n} đấu sĩ trụ lại."
+  },
   "result.again": "CHƠI LẠI",
   "result.menu": "MENU",
   "result.spectate": "XEM TRẬN",
   "result.backSoon": "Sẽ về phòng khi trận kết thúc…",
-
   "opt.title": "TÙY CHỌN",
   "opt.footer": "<kbd>↑↓</kbd> chọn · <kbd>←→</kbd> đổi · <kbd>Q</kbd><kbd>E</kbd> / LB RB thẻ · <kbd>Esc</kbd> / B quay lại",
   "opt.resetTab": "Đặt lại thẻ",
@@ -227,12 +220,10 @@
   "opt.pause": "Tạm dừng",
   "opt.menus": "Menu",
   "opt.pad.menus": "D-pad / cần · A chọn · B quay lại · LB / RB thẻ",
-
   "presence.menu": "Đang ở menu",
   "presence.solo": "Chơi đơn tại {map}",
   "presence.room": "Đang trong phòng",
   "presence.online": "Đang quẩy online",
-
   "ach.FIRST_KO": "Máu Đầu",
   "ach.FIRST_KO.desc": "Hạ gục một đấu sĩ.",
   "ach.FIRST_WIN": "Người Trụ Lại Cuối Cùng",

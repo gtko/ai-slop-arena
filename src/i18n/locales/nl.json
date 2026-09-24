@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> bewegen · <b>Muis</b> richten · <b>LMK ingedrukt</b> aanvallen · <b>RMK / Spatie</b> super · <b>T</b> tijdstip · <b>Esc</b> pauze · <b>M</b> dempen · 🎮 ondersteund",
   "hud.you": "JIJ",
   "hud.power": "+KRACHT",
+  "mobile.rotate": "Draai je telefoon op zijn kant",
   "sound.title": "Geluid",
   "sound.button": "Geluid (M om te dempen)",
   "sound.master": "Algemeen",

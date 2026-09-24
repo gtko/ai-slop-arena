@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> liiku · <b>Hiiri</b> tähtää · <b>Pidä VHP</b> hyökkää · <b>OHP / Välilyönti</b> super · <b>T</b> vuorokaudenaika · <b>Esc</b> tauko · <b>M</b> mykistä · 🎮 tuettu",
   "hud.you": "SINÄ",
   "hud.power": "+VOIMA",
+  "mobile.rotate": "Käännä puhelin vaakatasoon",
   "sound.title": "Ääni",
   "sound.button": "Ääni (M mykistää)",
   "sound.master": "Pää",

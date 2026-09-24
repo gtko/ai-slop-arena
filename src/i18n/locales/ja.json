@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> 移動 · <b>マウス</b> 照準 · <b>左クリック長押し</b> 攻撃 · <b>右クリック / スペース</b> スーパー · <b>T</b> 時間帯 · <b>Esc</b> ポーズ · <b>M</b> ミュート · 🎮 対応",
   "hud.you": "あなた",
   "hud.power": "+パワー",
+  "mobile.rotate": "スマホを横向きにしてね",
   "sound.title": "サウンド",
   "sound.button": "サウンド（Mでミュート）",
   "sound.master": "マスター",

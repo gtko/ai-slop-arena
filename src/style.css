@@ -282,3 +282,44 @@ button:focus-visible, .map:focus-visible, .card:focus-visible { outline: 4px sol
 @keyframes ld-stripes { to { background-position: 40px 0; } }
 @media (max-width: 600px) { .ld-crew img { height: 70px; } .ld-crew { height: 80px; } }
 @media (prefers-reduced-motion: reduce) { #loader::before, .ld-crew img, .ld-bar i { animation: none; } }
+
+/* ------------------------------ touch screens (touch.js) ------------------------------ */
+body.touch, body.touch #c { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+body.touch #keys, body.touch #super { display: none; }
+#touch { position: absolute; inset: 0; pointer-events: none; }
+#touch .t-zone { position: absolute; left: 0; top: 0; bottom: 0; width: 50%; pointer-events: auto; }
+#touch .t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%;
+  background: rgba(255,255,255,0.1); border: 3px solid rgba(255,255,255,0.35); pointer-events: none; }
+#touch .t-stick i, #touch .t-btn i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%;
+  background: rgba(255,255,255,0.85); box-shadow: 0 3px 0 rgba(0,0,0,0.35); }
+#touch .t-btn { position: absolute; border-radius: 50%; pointer-events: auto; touch-action: none; border: 3px solid var(--ink, #16121f);
+  box-shadow: 0 5px 0 rgba(0,0,0,0.45); }
+#touch .t-attack { width: 118px; height: 118px; right: calc(34px + env(safe-area-inset-right)); bottom: calc(34px + env(safe-area-inset-bottom));
+  background: radial-gradient(circle at 50% 35%, #ffe066, #ffb300 70%); }
+#touch .t-attack i { background: rgba(22,18,31,0.55); }
+#touch .t-super { width: 86px; height: 86px; right: calc(168px + env(safe-area-inset-right)); bottom: calc(118px + env(safe-area-inset-bottom));
+  background: conic-gradient(#ffd23f calc(var(--charge, 0) * 360deg), rgba(40,32,60,0.85) 0); opacity: 0.6; filter: grayscale(0.6); transition: opacity 0.2s, filter 0.2s; }
+#touch .t-super.ready { opacity: 1; filter: none; animation: superPulse 1.1s ease-in-out infinite; }
+#touch .t-super i { width: 40px; height: 40px; margin: -20px 0 0 -20px; background: rgba(22,18,31,0.6); }
+#touch .t-super b { position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px; text-align: center; font-size: 11px; letter-spacing: 1px; color: #fff; text-shadow: 0 1px 2px #000; }
+#touch .t-btn.held { transform: scale(1.08); }
+#touch .t-pause { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); width: 46px; height: 46px; pointer-events: auto;
+  display: flex; gap: 7px; align-items: center; justify-content: center; border-radius: 14px; border: 3px solid #16121f; background: rgba(40,32,60,0.8); }
+#touch .t-pause span { width: 6px; height: 18px; border-radius: 2px; background: #fff; }
+@keyframes superPulse { 50% { box-shadow: 0 5px 0 rgba(0,0,0,0.45), 0 0 26px 6px rgba(255,210,63,0.7); } }
+/* the HUD keeps clear of notches */
+body.touch #top { top: calc(10px + env(safe-area-inset-top)); }
+/* menus scroll instead of overflowing small landscape screens */
+body.touch .overlay { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+@media (max-height: 500px) {
+  body.touch .menu-card, body.touch .opt-card { transform-origin: top center; zoom: 0.78; }
+}
+
+/* portrait phone: ask for landscape */
+#rotate { display: none; }
+@media (orientation: portrait) and (pointer: coarse) {
+  #rotate { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;
+    background: #16121f; color: #fff; font-family: 'Lilita One', sans-serif; font-size: 26px; text-align: center; padding: 20px; }
+  #rotate .phone { width: 56px; height: 96px; border: 5px solid #ffd23f; border-radius: 12px; animation: rotatePhone 2s ease-in-out infinite; }
+}
+@keyframes rotatePhone { 0%, 25% { transform: rotate(0); } 55%, 100% { transform: rotate(-90deg); } }

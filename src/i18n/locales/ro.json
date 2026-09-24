@@ -11,7 +11,6 @@
   "tip.tod": "Apasă T ca să schimbi momentul zilei. Noaptea se aprind felinarele.",
   "tip.online": "Împarte un cod de cameră ca să joci online cu prietenii.",
   "tip.steam": "Invită prieteni Steam din lobby-ul online sau alătură-te lor din lista de prieteni.",
-
   "hud.left": "LUPTĂTORI RĂMAȘI",
   "hud.gasIn": "GAZ ÎN",
   "hud.gasGrows": "GAZUL CREȘTE",
@@ -21,7 +20,7 @@
   "hud.keys": "<b>WASD</b> mișcare · <b>Mouse</b> țintire · <b>Ține clic stânga</b> atac · <b>Clic dreapta / Space</b> super · <b>T</b> momentul zilei · <b>Esc</b> pauză · <b>M</b> fără sunet · 🎮 compatibil",
   "hud.you": "TU",
   "hud.power": "+PUTERE",
-
+  "mobile.rotate": "Rotește telefonul pe orizontală",
   "sound.title": "Sunet",
   "sound.button": "Sunet (M = mut)",
   "sound.master": "General",
@@ -37,7 +36,6 @@
   "sound.test": "▶ Testează efectele",
   "sound.note": "Ambianța urmează momentul zilei: păsări ziua, greieri și torțe noaptea.",
   "common.close": "Închide",
-
   "menu.tag": "Confruntare · 8 luptători · 5 hărți cu vreme live · ultimul rămas în picioare câștigă",
   "menu.map": "Hartă",
   "menu.solo": "SOLO",
@@ -46,7 +44,6 @@
   "menu.quit": "IEȘIRE",
   "menu.hint": "Tastatură + mouse sau gamepad · <kbd>Esc</kbd> / Start pauză · <kbd>T</kbd> momentul zilei",
   "card.stat": "HP {hp} · Rază {range}",
-
   "brawler.blaster.role": "Pușcă",
   "brawler.blaster.desc": "Salvă de 5 alice de aproape. Super: o explozie largă care aruncă inamicii înapoi și sparge zidurile.",
   "brawler.gunslinger.role": "Țintaș",
@@ -57,7 +54,6 @@
   "brawler.frostbite.desc": "Trage 3 cioburi de gheață care încetinesc inamicii. Super: un val de ger în jurul lui care îi îngheață pe toți cei din apropiere.",
   "brawler.volt.role": "Robot electric",
   "brawler.volt.desc": "Trage o sferă electrică al cărei fulger sare la 2 inamici apropiați. Super: cheamă o furtună de fulgere care spulberă zidurile.",
-
   "map.random": "Aleatoriu",
   "map.random.tag": "Surprinde-mă",
   "map.oasis": "Oaza",
@@ -70,7 +66,6 @@
   "map.frost.tag": "Ninsoare · gheață alunecoasă",
   "map.marsh": "Mlaștina cețoasă",
   "map.marsh.tag": "Ceață · vizibilitate redusă",
-
   "lobby.title": "Online",
   "lobby.name": "Numele tău",
   "lobby.steamName": "Nume Steam",
@@ -102,7 +97,6 @@
   "lobby.createCross": "CAMERĂ CROSS-PLAY",
   "lobby.crossHint": "Camerele cross-play sunt deschise și jucătorilor din browser: împarte codul sau linkul.",
   "lobby.crossBadge": "CROSS-PLAY",
-
   "err.unreachable": "Serverul nu poate fi contactat",
   "err.full": "Camera e plină",
   "err.notFound": "Camera {code} nu a fost găsită",
@@ -110,13 +104,11 @@
   "err.left": "Ai părăsit camera",
   "err.notOurs": "Aceasta nu e o cameră AI SLOP ARENA",
   "err.noSteam": "Steam nu rulează",
-
   "pause.title": "PAUZĂ",
   "pause.resume": "CONTINUĂ",
   "pause.options": "OPȚIUNI",
   "pause.quit": "IEȘI ÎN MENIU",
   "pause.online": "Meci online: jocul continuă.",
-
   "result.victory": "VICTORIE!",
   "result.rank": "#{rank}",
   "result.won": "Ultimul luptător în picioare.",
@@ -129,7 +121,6 @@
   "result.menu": "MENIU",
   "result.spectate": "PRIVEȘTE",
   "result.backSoon": "Revii în cameră când se termină meciul…",
-
   "opt.title": "OPȚIUNI",
   "opt.footer": "<kbd>↑↓</kbd> selectează · <kbd>←→</kbd> modifică · <kbd>Q</kbd><kbd>E</kbd> / LB RB file · <kbd>Esc</kbd> / B înapoi",
   "opt.resetTab": "Resetează fila",
@@ -231,12 +222,10 @@
   "opt.pause": "Pauză",
   "opt.menus": "Meniuri",
   "opt.pad.menus": "D-pad / stick · A selectează · B înapoi · LB / RB file",
-
   "presence.menu": "În meniu",
   "presence.solo": "Solo pe {map}",
   "presence.room": "Într-o cameră",
   "presence.online": "Se bate online",
-
   "ach.FIRST_KO": "Primul sânge",
   "ach.FIRST_KO.desc": "Elimină un luptător.",
   "ach.FIRST_WIN": "Ultimul rămas",

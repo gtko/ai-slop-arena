@@ -28,6 +28,7 @@ export default {
   'hud.keys': '<b>WASD</b> move · <b>Mouse</b> aim · <b>Hold LMB</b> attack · <b>RMB / Space</b> super · <b>T</b> time of day · <b>Esc</b> pause · <b>M</b> mute · 🎮 supported',
   'hud.you': 'YOU',
   'hud.power': '+POWER',
+  'mobile.rotate': 'Turn your phone sideways',
 
   // sound pop-up
   'sound.title': 'Sound',

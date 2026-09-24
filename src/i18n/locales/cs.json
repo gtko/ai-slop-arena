@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> pohyb · <b>Myš</b> míření · <b>Drž LTM</b> útok · <b>PTM / Mezerník</b> super · <b>T</b> denní doba · <b>Esc</b> pauza · <b>M</b> ztlumit · 🎮 podporován",
   "hud.you": "TY",
   "hud.power": "+SÍLA",
+  "mobile.rotate": "Otoč telefon na šířku",
   "sound.title": "Zvuk",
   "sound.button": "Zvuk (M ztlumí)",
   "sound.master": "Hlavní",

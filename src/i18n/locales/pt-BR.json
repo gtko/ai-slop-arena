@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> mover · <b>Mouse</b> mirar · <b>Segurar botão esq.</b> atacar · <b>Botão dir. / Espaço</b> super · <b>T</b> hora do dia · <b>Esc</b> pausa · <b>M</b> mudo · 🎮 compatível",
   "hud.you": "VOCÊ",
   "hud.power": "+PODER",
+  "mobile.rotate": "Gire o celular na horizontal",
   "sound.title": "Som",
   "sound.button": "Som (M para silenciar)",
   "sound.master": "Geral",

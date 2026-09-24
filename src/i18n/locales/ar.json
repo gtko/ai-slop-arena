@@ -11,7 +11,6 @@
   "tip.tod": "اضغط T لتغيير وقت اليوم. الفوانيس تضيء ليلًا.",
   "tip.online": "شارك رمز الغرفة لتلعب مع أصدقائك عبر الإنترنت.",
   "tip.steam": "ادعُ أصدقاءك على Steam من ردهة اللعب الجماعي، أو انضم إليهم من قائمة الأصدقاء.",
-
   "hud.left": "المقاتلون المتبقون",
   "hud.gasIn": "الغاز بعد",
   "hud.gasGrows": "الغاز يتمدد",
@@ -21,7 +20,7 @@
   "hud.keys": "<b>WASD</b> تحرك · <b>الفأرة</b> صوّب · <b>استمر بالنقر الأيسر</b> هاجم · <b>النقر الأيمن / Space</b> الخارقة · <b>T</b> وقت اليوم · <b>Esc</b> إيقاف مؤقت · <b>M</b> كتم · 🎮 مدعومة",
   "hud.you": "أنت",
   "hud.power": "+قوة",
-
+  "mobile.rotate": "أدِر هاتفك أفقيًا",
   "sound.title": "الصوت",
   "sound.button": "الصوت (M للكتم)",
   "sound.master": "الرئيسي",
@@ -37,7 +36,6 @@
   "sound.test": "▶ اختبر المؤثرات",
   "sound.note": "الأجواء تتبع وقت اليوم: عصافير نهارًا، وصراصير ومشاعل ليلًا.",
   "common.close": "إغلاق",
-
   "menu.tag": "مواجهة · 8 مقاتلين · 5 خرائط بطقس حي · آخر من يصمد يفوز",
   "menu.map": "الخريطة",
   "menu.solo": "فردي",
@@ -46,7 +44,6 @@
   "menu.quit": "خروج",
   "menu.hint": "لوحة المفاتيح + الفأرة أو يد التحكم · <kbd>Esc</kbd> / Start للإيقاف · <kbd>T</kbd> وقت اليوم",
   "card.stat": "HP {hp} · المدى {range}",
-
   "brawler.blaster.role": "بندقية رش",
   "brawler.blaster.desc": "رشقة قريبة من 5 كريات. الخارقة: انفجار واسع يدفع الأعداء بعيدًا ويحطم الجدران.",
   "brawler.gunslinger.role": "قنّاص",
@@ -57,7 +54,6 @@
   "brawler.frostbite.desc": "يطلق 3 شظايا جليدية تُبطئ الأعداء. الخارقة: موجة صقيع حوله تجمّد كل من يقترب.",
   "brawler.volt.role": "روبوت كهربائي",
   "brawler.volt.desc": "يطلق كرة كهربائية يقفز برقها إلى عدوّين قريبين. الخارقة: يستدعي عاصفة برق تحطم الجدران.",
-
   "map.random": "عشوائي",
   "map.random.tag": "فاجئني",
   "map.oasis": "الواحة",
@@ -70,7 +66,6 @@
   "map.frost.tag": "تساقط ثلوج · جليد زلق",
   "map.marsh": "المستنقع الضبابي",
   "map.marsh.tag": "ضباب · رؤية محدودة",
-
   "lobby.title": "عبر الإنترنت",
   "lobby.name": "اسمك",
   "lobby.steamName": "اسم Steam",
@@ -102,7 +97,6 @@
   "lobby.createCross": "غرفة لعب مشترك",
   "lobby.crossHint": "غرف اللعب المشترك مفتوحة للاعبي المتصفح أيضًا: شارك الرمز أو الرابط.",
   "lobby.crossBadge": "لعب مشترك",
-
   "err.unreachable": "تعذّر الوصول إلى الخادم",
   "err.full": "الغرفة ممتلئة",
   "err.notFound": "لا توجد غرفة بالرمز {code}",
@@ -110,13 +104,11 @@
   "err.left": "غادرت الغرفة",
   "err.notOurs": "هذه ليست غرفة AI SLOP ARENA",
   "err.noSteam": "Steam غير مُشغَّل",
-
   "pause.title": "متوقف مؤقتًا",
   "pause.resume": "استئناف",
   "pause.options": "الخيارات",
   "pause.quit": "العودة للقائمة",
   "pause.online": "مباراة عبر الإنترنت: اللعبة مستمرة.",
-
   "result.victory": "فوز!",
   "result.rank": "#{rank}",
   "result.won": "آخر مقاتل صامد.",
@@ -132,7 +124,6 @@
   "result.menu": "القائمة",
   "result.spectate": "مشاهدة",
   "result.backSoon": "العودة إلى الغرفة عند انتهاء المباراة…",
-
   "opt.title": "الخيارات",
   "opt.footer": "<kbd>↑↓</kbd> تحديد · <kbd>←→</kbd> تغيير · <kbd>Q</kbd><kbd>E</kbd> / LB RB التبويبات · <kbd>Esc</kbd> / B رجوع",
   "opt.resetTab": "إعادة ضبط التبويب",
@@ -234,12 +225,10 @@
   "opt.pause": "إيقاف مؤقت",
   "opt.menus": "القوائم",
   "opt.pad.menus": "أزرار الاتجاه / العصا · A تحديد · B رجوع · LB / RB التبويبات",
-
   "presence.menu": "في القائمة",
   "presence.solo": "لعب فردي في {map}",
   "presence.room": "في غرفة",
   "presence.online": "يتقاتل عبر الإنترنت",
-
   "ach.FIRST_KO": "الدم الأول",
   "ach.FIRST_KO.desc": "أقصِ مقاتلًا.",
   "ach.FIRST_WIN": "آخر الصامدين",

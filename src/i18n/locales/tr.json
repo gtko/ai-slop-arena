@@ -11,7 +11,6 @@
   "tip.tod": "Günün saatini değiştirmek için T'ye bas. Gece fenerler yanar.",
   "tip.online": "Arkadaşlarınla çevrimiçi oynamak için bir oda kodu paylaş.",
   "tip.steam": "Çevrimiçi lobiden Steam arkadaşlarını davet et ya da arkadaş listenden onlara katıl.",
-
   "hud.left": "KALAN SAVAŞÇI",
   "hud.gasIn": "GAZA KALAN",
   "hud.gasGrows": "GAZ YAYILIYOR",
@@ -21,7 +20,7 @@
   "hud.keys": "<b>WASD</b> hareket · <b>Fare</b> nişan · <b>Sol tık basılı</b> saldırı · <b>Sağ tık / Boşluk</b> süper · <b>T</b> günün saati · <b>Esc</b> duraklat · <b>M</b> sessiz · 🎮 desteklenir",
   "hud.you": "SEN",
   "hud.power": "+GÜÇ",
-
+  "mobile.rotate": "Telefonunu yatay çevir",
   "sound.title": "Ses",
   "sound.button": "Ses (M ile sessize al)",
   "sound.master": "Ana",
@@ -37,7 +36,6 @@
   "sound.test": "▶ Efektleri dene",
   "sound.note": "Ortam sesi günün saatine uyar: gündüz kuşlar, gece cırcır böcekleri ve meşaleler.",
   "common.close": "Kapat",
-
   "menu.tag": "Hesaplaşma · 8 savaşçı · canlı hava durumlu 5 harita · ayakta kalan son kişi kazanır",
   "menu.map": "Harita",
   "menu.solo": "TEKLİ",
@@ -46,7 +44,6 @@
   "menu.quit": "ÇIKIŞ",
   "menu.hint": "Klavye + fare veya oyun kumandası · <kbd>Esc</kbd> / Start duraklatır · <kbd>T</kbd> günün saati",
   "card.stat": "Can {hp} · Menzil {range}",
-
   "brawler.blaster.role": "Pompalı",
   "brawler.blaster.desc": "Yakın mesafeye 5 saçmalı geniş atış. Süper: düşmanları geri savuran ve duvarları yıkan geniş bir patlama.",
   "brawler.gunslinger.role": "Nişancı",
@@ -57,7 +54,6 @@
   "brawler.frostbite.desc": "Düşmanları yavaşlatan 3 buz parçası fırlatır. Süper: yakınındaki herkesi donduran bir ayaz dalgası.",
   "brawler.volt.role": "Elektrikli robot",
   "brawler.volt.desc": "Şimşeği yakındaki 2 düşmana sıçrayan bir elektrik küresi atar. Süper: duvarları paramparça eden bir şimşek fırtınası çağırır.",
-
   "map.random": "Rastgele",
   "map.random.tag": "Şaşırt beni",
   "map.oasis": "Vaha",
@@ -70,7 +66,6 @@
   "map.frost.tag": "Kar yağışı · kaygan buz",
   "map.marsh": "Sisli Bataklık",
   "map.marsh.tag": "Sis · kısıtlı görüş",
-
   "lobby.title": "Çevrimiçi",
   "lobby.name": "Adın",
   "lobby.steamName": "Steam adı",
@@ -102,7 +97,6 @@
   "lobby.createCross": "ÇAPRAZ OYUN ODASI",
   "lobby.crossHint": "Çapraz oyun odaları tarayıcıdan oynayanlara da açık: kodu ya da bağlantıyı paylaş.",
   "lobby.crossBadge": "ÇAPRAZ OYUN",
-
   "err.unreachable": "Sunucuya ulaşılamadı",
   "err.full": "Oda dolu",
   "err.notFound": "{code} odası bulunamadı",
@@ -110,13 +104,11 @@
   "err.left": "Odadan ayrıldın",
   "err.notOurs": "Bu bir AI SLOP ARENA odası değil",
   "err.noSteam": "Steam çalışmıyor",
-
   "pause.title": "DURAKLATILDI",
   "pause.resume": "DEVAM ET",
   "pause.options": "SEÇENEKLER",
   "pause.quit": "MENÜYE DÖN",
   "pause.online": "Çevrimiçi maç: oyun devam ediyor.",
-
   "result.victory": "ZAFER!",
   "result.rank": "#{rank}",
   "result.won": "Ayakta kalan son savaşçı.",
@@ -128,7 +120,6 @@
   "result.menu": "MENÜ",
   "result.spectate": "İZLE",
   "result.backSoon": "Maç bitince odaya dönülecek…",
-
   "opt.title": "SEÇENEKLER",
   "opt.footer": "<kbd>↑↓</kbd> seç · <kbd>←→</kbd> değiştir · <kbd>Q</kbd><kbd>E</kbd> / LB RB sekmeler · <kbd>Esc</kbd> / B geri",
   "opt.resetTab": "Sekmeyi sıfırla",
@@ -230,12 +221,10 @@
   "opt.pause": "Duraklat",
   "opt.menus": "Menüler",
   "opt.pad.menus": "Yön tuşları / analog · A seç · B geri · LB / RB sekmeler",
-
   "presence.menu": "Menüde",
   "presence.solo": "{map} haritasında tekli",
   "presence.room": "Bir odada",
   "presence.online": "Çevrimiçi kapışıyor",
-
   "ach.FIRST_KO": "İlk Kan",
   "ach.FIRST_KO.desc": "Bir savaşçıyı nakavt et.",
   "ach.FIRST_WIN": "Ayakta Kalan Son Kişi",

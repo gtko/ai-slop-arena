@@ -11,7 +11,6 @@
   "tip.tod": "Premi T per cambiare l'ora del giorno. Di notte si accendono le lanterne.",
   "tip.online": "Condividi un codice stanza per giocare online con gli amici.",
   "tip.steam": "Invita gli amici di Steam dalla lobby online, o unisciti a loro dalla tua lista amici.",
-
   "hud.left": "BRAWLER RIMASTI",
   "hud.gasIn": "GAS TRA",
   "hud.gasGrows": "IL GAS AVANZA",
@@ -21,7 +20,7 @@
   "hud.keys": "<b>WASD</b> muoviti · <b>Mouse</b> mira · <b>Tieni premuto SX</b> attacca · <b>DX / Spazio</b> super · <b>T</b> ora del giorno · <b>Esc</b> pausa · <b>M</b> muto · 🎮 supportato",
   "hud.you": "TU",
   "hud.power": "+POTENZA",
-
+  "mobile.rotate": "Ruota il telefono in orizzontale",
   "sound.title": "Audio",
   "sound.button": "Audio (M per silenziare)",
   "sound.master": "Generale",
@@ -37,7 +36,6 @@
   "sound.test": "▶ Prova effetti",
   "sound.note": "L'ambiente segue l'ora del giorno: uccellini di giorno, grilli e torce di notte.",
   "common.close": "Chiudi",
-
   "menu.tag": "Sopravvivenza · 8 brawler · 5 mappe con meteo dinamico · vince l'ultimo in piedi",
   "menu.map": "Mappa",
   "menu.solo": "SOLO",
@@ -46,7 +44,6 @@
   "menu.quit": "ESCI",
   "menu.hint": "Tastiera + mouse o controller · <kbd>Esc</kbd> / Start mette in pausa · <kbd>T</kbd> ora del giorno",
   "card.stat": "PS {hp} · Gittata {range}",
-
   "brawler.blaster.role": "Fucile a pompa",
   "brawler.blaster.desc": "Rosa di 5 pallini a corto raggio. Super: un'ampia esplosione che respinge i nemici e sfonda i muri.",
   "brawler.gunslinger.role": "Tiratore scelto",
@@ -57,7 +54,6 @@
   "brawler.frostbite.desc": "Spara 3 schegge di ghiaccio che rallentano i nemici. Super: una nova gelida attorno a sé che congela chiunque sia vicino.",
   "brawler.volt.role": "Robot elettrico",
   "brawler.volt.desc": "Spara una sfera elettrica il cui fulmine rimbalza su 2 nemici vicini. Super: evoca una tempesta di fulmini che frantuma i muri.",
-
   "map.random": "Casuale",
   "map.random.tag": "Sorprendimi",
   "map.oasis": "Oasi",
@@ -70,7 +66,6 @@
   "map.frost.tag": "Nevicata · ghiaccio scivoloso",
   "map.marsh": "Palude nebbiosa",
   "map.marsh.tag": "Nebbia · visibilità ridotta",
-
   "lobby.title": "Online",
   "lobby.name": "Il tuo nome",
   "lobby.steamName": "Nome Steam",
@@ -102,7 +97,6 @@
   "lobby.createCross": "STANZA CROSS-PLAY",
   "lobby.crossHint": "Le stanze cross-play sono aperte anche a chi gioca da browser: condividi il codice o il link.",
   "lobby.crossBadge": "CROSS-PLAY",
-
   "err.unreachable": "Impossibile raggiungere il server",
   "err.full": "La stanza è piena",
   "err.notFound": "Nessuna stanza {code} trovata",
@@ -110,13 +104,11 @@
   "err.left": "Hai lasciato la stanza",
   "err.notOurs": "Questa non è una stanza di AI SLOP ARENA",
   "err.noSteam": "Steam non è in esecuzione",
-
   "pause.title": "PAUSA",
   "pause.resume": "RIPRENDI",
   "pause.options": "OPZIONI",
   "pause.quit": "TORNA AL MENU",
   "pause.online": "Partita online: il gioco continua.",
-
   "result.victory": "VITTORIA!",
   "result.rank": "#{rank}",
   "result.won": "Ultimo brawler in piedi.",
@@ -128,7 +120,6 @@
   "result.menu": "MENU",
   "result.spectate": "GUARDA",
   "result.backSoon": "Si torna alla stanza a fine partita…",
-
   "opt.title": "OPZIONI",
   "opt.footer": "<kbd>↑↓</kbd> seleziona · <kbd>←→</kbd> modifica · <kbd>Q</kbd><kbd>E</kbd> / LB RB schede · <kbd>Esc</kbd> / B indietro",
   "opt.resetTab": "Ripristina scheda",
@@ -230,12 +221,10 @@
   "opt.pause": "Pausa",
   "opt.menus": "Menu",
   "opt.pad.menus": "Croce / levetta · A seleziona · B indietro · LB / RB schede",
-
   "presence.menu": "Nel menu",
   "presence.solo": "In solitaria su {map}",
   "presence.room": "In una stanza",
   "presence.online": "Fa a botte online",
-
   "ach.FIRST_KO": "Primo sangue",
   "ach.FIRST_KO.desc": "Metti KO un brawler.",
   "ach.FIRST_WIN": "L'ultimo rimasto",
