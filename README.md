@@ -135,6 +135,19 @@ npm run deploy       # build and deploy everything to Cloudflare
 The home page (`index.html`, "/") is the showcase site with the trailer; the game itself is `play.html` ("/play"),
 which opens on a loading screen while the models and textures stream in.
 
+### Desktop + Steam
+
+The same game also runs as a desktop app (Electron) with Steam achievements, friend invites,
+"Join game" from the friends list and Steam P2P multiplayer (no server needed). Cross-play rooms
+let Steam and browser players meet, and the game is translated into all 30 Steam languages:
+
+```bash
+npm run desktop      # build and open the desktop app (start Steam first for the Steam features)
+npm run dist:steam   # packaged Windows build in release/win-unpacked, ready for SteamPipe
+```
+
+See [steam/README.md](steam/README.md) for the achievements to declare and how to upload a build.
+
 ## Controls
 
 | Input | Action |

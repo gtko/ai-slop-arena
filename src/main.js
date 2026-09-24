@@ -13,6 +13,10 @@ import { TYPES } from './brawler.js';
 import { makeRoster, randomMap } from './game.js';
 import { MAPS } from './maps.js';
 import { Net, randomCode } from './net.js';
+import { SteamNet } from './steamnet.js';
+import { isDesktop, desktop, steam, steamInfo, presence, WEB_ORIGIN } from './platform.js';
+import { achievements } from './achievements.js';
+import { t, translateDom } from './i18n/index.js';
 import { VisionFog } from './visionfog.js';
 import { initAudio, playMusic, setAmbience, sfx, toggleMute, setVolume, setMuted, setTrack, settings as audio } from './audio.js';
 import { loadTextures, ASSET_BASE, TEX_FILES } from './assets.js';
@@ -25,6 +29,8 @@ import { preloadProps, PROPS } from './props.js';
 import { enableCartoonShading, cartoonGradePass } from './cartoon.js';
 import { PAD } from './input.js';
 import './style.css';
+
+translateDom();
 
 const $ = s => document.querySelector(s);
 const CARTOON = settings.art === 'cartoon';
@@ -92,6 +98,7 @@ addEventListener('resize', () => {
 /* ------------------------------ settings -> engine ------------------------------ */
 
 const BASE_DPR = Math.min(devicePixelRatio, 1.5);
+const BOOT_LANG = settings.lang; // the page is translated once, a change reloads it
 function applySetting(k) {
   const v = settings[k];
   switch (k) {
@@ -125,6 +132,7 @@ function applySetting(k) {
     case 'fps': $('#fpsBadge').classList.toggle('hidden', !v); break;
     case 'debugPanel': $('#panel').classList.toggle('off', !v); break;
     case 'art': if ((v === 'cartoon') !== CARTOON) setTimeout(() => location.reload(), 150); break;
+    case 'lang': if (v !== BOOT_LANG) setTimeout(() => location.reload(), 150); break;
   }
   syncPanel();
 }
@@ -223,8 +231,8 @@ for (const T of Object.values(TYPES)) {
   c.className = 'card' + (T.key === chosen ? ' on' : '');
   c.dataset.key = T.key;
   const hex = '#' + T.palette.main.toString(16).padStart(6, '0');
-  c.innerHTML = `<span class="portrait" style="--c:${hex}"><img src="${portrait(T.key)}" alt="" onerror="this.remove()"></span><b>${T.name}</b><em>${T.role}</em>
-    <p>${T.desc}</p><span class="stat">HP ${T.hp} · Range ${T.range}</span>`;
+  c.innerHTML = `<span class="portrait" style="--c:${hex}"><img src="${portrait(T.key)}" alt="" onerror="this.remove()"></span><b>${T.name}</b><em>${t(`brawler.${T.key}.role`)}</em>
+    <p>${t(`brawler.${T.key}.desc`)}</p><span class="stat">${t('card.stat', { hp: T.hp, range: T.range })}</span>`;
   c.addEventListener('click', () => { sfx('click'); pickBrawler(T.key); });
   cards.appendChild(c);
 }
@@ -249,8 +257,8 @@ function buildMaps(root, onPick) {
     m.addEventListener('click', () => { sfx('click'); onPick(key); });
     root.appendChild(m);
   };
-  add('random', 'Random', 'Surprise me', '#6a5acd', '#2b2244', '🎲');
-  for (const [key, M] of Object.entries(MAPS)) add(key, M.name, M.tag, M.swatch[0], M.swatch[1], MAP_ICON[M.weather]);
+  add('random', t('map.random'), t('map.random.tag'), '#6a5acd', '#2b2244', '🎲');
+  for (const [key, M] of Object.entries(MAPS)) add(key, t(`map.${key}`), t(`map.${key}.tag`), M.swatch[0], M.swatch[1], MAP_ICON[M.weather]);
 }
 const syncMaps = (root, key) => root.querySelectorAll('.map').forEach(m => m.classList.toggle('on', m.dataset.map === key));
 buildMaps($('#maps'), key => { chosenMap = key; syncMaps($('#maps'), key); });
@@ -268,11 +276,14 @@ function play() {
   hud.show(true);
   const mapKey = resolveMap(chosenMap);
   playMusic('m_' + mapKey);
-  game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: 'YOU', type: chosen }]), localId: 'me' });
+  game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: t('hud.you'), type: chosen }]), localId: 'me' });
+  achievements.matchStart({ mapKey, brawler: chosen });
+  presence(t('presence.solo', { map: t(`map.${mapKey}`) }));
   canvas.focus();
 }
-function attract() { game.newMatch({ mapKey: randomMap() }); }
+function attract() { achievements.end(); game.newMatch({ mapKey: randomMap() }); }
 function toMenu() {
+  if (!net.connected) presence(t('presence.menu'));
   $('#result').classList.add('hidden');
   $('#lobby').classList.add('hidden');
   $('#menu').classList.remove('hidden');
@@ -285,12 +296,27 @@ $('#play').addEventListener('click', play);
 $('#again').addEventListener('click', play);
 $('#toMenu').addEventListener('click', toMenu);
 
-/* ---- online (Cloudflare Durable Object rooms, see worker/index.js) ---- */
+/* ---- online: Steam lobbies + P2P on desktop (steamnet.js), else Cloudflare rooms (worker/index.js) ---- */
 
-const net = new Net();
+// On Steam there are two kinds of rooms: Steam lobbies (P2P, friends list, invites) and
+// cross-play rooms on the website's relay, which browser players can join with the same code.
+const webNet = new Net();
+const steamNet = steam ? new SteamNet(steam, steamInfo) : null;
+let net = steamNet || webNet;
+const onNet = (type, fn) => { webNet.on(type, fn); if (steamNet) steamNet.on(type, fn); };
+const use = target => { if (net !== target && net.connected) net.close(); net = target; };
 let lobbyMap = 'random';
 const nick = $('#nick');
 nick.value = localStorage.getItem('iaslop-name') || '';
+if (steam) {
+  // Your Steam name is your name; rooms are Steam lobbies your friends can join.
+  nick.value = steamInfo.name;
+  nick.disabled = true;
+  nick.previousElementSibling.textContent = t('lobby.steamName');
+  $('#lobbyJoin .hint').textContent = t('lobby.steamHint');
+  $('#createWeb').classList.remove('hidden');
+  $('#crossHint').classList.remove('hidden');
+}
 const status = msg => { $('#lobbyStatus').textContent = msg || ''; };
 
 function openLobby() {
@@ -303,30 +329,42 @@ function openLobby() {
 function showRoomView(inRoom) {
   $('#lobbyJoin').classList.toggle('hidden', inRoom);
   $('#lobbyRoom').classList.toggle('hidden', !inRoom);
+  // Steam lobby: overlay invite. Cross-play / browser room: copy the web link.
+  $('#copyLink').textContent = net === steamNet ? t('lobby.inviteSteam') : t('lobby.copyLink');
+  $('#crossBadge').classList.toggle('hidden', !(steamNet && net === webNet));
 }
-async function joinRoom(code) {
-  const name = nick.value.trim() || 'Brawler';
-  try { localStorage.setItem('iaslop-name', name); } catch { /* ignore */ }
-  status('Connecting…');
+// code: a room code to join (on Steam: a Steam lobby first, then a cross-play room);
+// on Steam, no code creates a lobby (or a cross-play room with web), lobbyId joins a friend's one.
+async function joinRoom(code, lobbyId = null, web = false) {
+  const name = nick.value.trim() || t('lobby.namePlaceholder');
+  try { if (!steam) localStorage.setItem('iaslop-name', name); } catch { /* ignore */ }
+  status(t('lobby.connecting'));
   try {
-    await net.connect(code, name, chosen);
+    if (lobbyId) { use(steamNet); await net.joinLobby(lobbyId, name, chosen); }
+    else if (steamNet && !code && !web) { use(steamNet); await net.create(name, chosen); }
+    else if (web) { use(webNet); await net.connect(randomCode(), name, chosen); }
+    else if (steamNet && await steam.findLobby(code)) { use(steamNet); await net.connect(code, name, chosen); }
+    else { use(webNet); await net.connect(code, name, chosen); }
+    if (net === webNet) presence(t('presence.room'));
     status('');
     sfx('join');
-    history.replaceState(null, '', `?room=${net.code}`);
+    if (!isDesktop) history.replaceState(null, '', `?room=${net.code}`);
     showRoomView(true);
   } catch (e) {
-    status(`${e.message}. Is the room server running? (npm run dev:server)`);
+    status(steam || !import.meta.env.DEV ? `${e.message}.` : `${e.message}. Is the room server running? (npm run dev:server)`);
   }
 }
 $('#multi').addEventListener('click', openLobby);
-$('#create').addEventListener('click', () => joinRoom(randomCode()));
-$('#join').addEventListener('click', () => { const c = $('#code').value.trim().toUpperCase(); if (c.length >= 4) joinRoom(c); else status('Enter a 4-letter room code.'); });
+$('#create').addEventListener('click', () => joinRoom(steam ? null : randomCode()));
+$('#createWeb').addEventListener('click', () => joinRoom(null, null, true));
+$('#join').addEventListener('click', () => { const c = $('#code').value.trim().toUpperCase(); if (c.length >= 4) joinRoom(c); else status(t('lobby.enterCode')); });
 $('#code').addEventListener('keydown', e => { if (e.code === 'Enter') $('#join').click(); e.stopPropagation(); });
 nick.addEventListener('keydown', e => e.stopPropagation());
 $('#lobbyBack').addEventListener('click', () => { net.close(); history.replaceState(null, '', location.pathname); status(''); toMenu(); });
 $('#copyLink').addEventListener('click', async () => {
-  const link = `${location.origin}${location.pathname}?room=${net.code}`;
-  try { await navigator.clipboard.writeText(link); status('Invite link copied!'); } catch { status(link); }
+  if (net === steamNet) { net.invite(); return; } // Steam overlay invite dialog
+  const link = isDesktop ? `${WEB_ORIGIN}/play?room=${net.code}` : `${location.origin}${location.pathname}?room=${net.code}`;
+  try { await navigator.clipboard.writeText(link); status(t('lobby.linkCopied')); } catch { status(link); }
 });
 
 // brawler picker inside the room
@@ -347,18 +385,18 @@ buildMaps($('#lobbyMaps'), key => {
 });
 
 let lastCount = 0;
-net.on('room', m => {
+onNet('room', m => {
   $('#roomCode').textContent = net.code;
   const ul = $('#players');
   ul.innerHTML = '';
   for (const p of m.players) {
     const li = document.createElement('li');
-    li.innerHTML = `<img src="${portrait(p.brawler)}" alt=""><span class="${p.id === net.id ? 'you' : ''}"></span>${p.host ? '<span class="crown">HOST</span>' : ''}`;
-    li.children[1].textContent = p.id === net.id ? `${p.name} (you)` : p.name;
+    li.innerHTML = `<img src="${portrait(p.brawler)}" alt=""><span class="${p.id === net.id ? 'you' : ''}"></span>${p.host ? `<span class="crown">${t('lobby.host')}</span>` : ''}`;
+    li.children[1].textContent = p.id === net.id ? t('lobby.you', { name: p.name }) : p.name;
     ul.appendChild(li);
   }
   for (let k = m.players.length; k < 8; k++) {
-    const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'Bot'; ul.appendChild(li);
+    const li = document.createElement('li'); li.className = 'empty'; li.textContent = t('lobby.bot'); ul.appendChild(li);
   }
   if (m.players.length > lastCount && lastCount) sfx('join');
   lastCount = m.players.length;
@@ -366,10 +404,10 @@ net.on('room', m => {
   lobbyMap = m.map || lobbyMap;
   syncMaps($('#lobbyMaps'), lobbyMap);
   $('#lobbyMaps').querySelectorAll('.map').forEach(b => { b.disabled = !host; });
-  $('#mapNote').textContent = host ? '(you pick)' : '(host picks)';
+  $('#mapNote').textContent = host ? t('lobby.youPick') : t('lobby.hostPicks');
   $('#start').classList.toggle('hidden', !host);
   $('#waiting').classList.toggle('hidden', host);
-  $('#waiting').textContent = m.inMatch ? 'Match in progress, you will join the next one…' : 'Waiting for the host to start…';
+  $('#waiting').textContent = m.inMatch ? t('lobby.inProgress') : t('lobby.waiting');
   // host ended the match -> everyone back to the room
   if (!m.inMatch && game.net) backToRoom();
 });
@@ -380,6 +418,8 @@ function startOnline(mapKey, roster, role) {
   $('#result').classList.add('hidden');
   hud.show(true);
   game.newMatch({ mapKey, roster, localId: net.id, net: { role, send: msg => net.send(msg) } });
+  const me = roster.find(r => r.id === net.id);
+  achievements.matchStart({ mapKey, brawler: me ? me.type : chosen, online: true, humans: roster.filter(r => r.human).length });
   canvas.focus();
 }
 $('#start').addEventListener('click', () => {
@@ -390,13 +430,13 @@ $('#start').addEventListener('click', () => {
   net.send({ t: 'start', map: mapKey, roster });
   startOnline(mapKey, roster, 'host');
 });
-net.on('start', m => startOnline(m.map, m.roster, 'client'));
-net.on('in', m => game.onInput(m));
-net.on('snap', m => game.applySnap(m));
-net.on('ev', m => game.applyEvents(m.list));
-net.on('left', m => game.onLeft(m.id));
-net.on('hostLeft', () => { backToRoom(); status('The host left, the match was cancelled.'); });
-net.on('closed', () => { if (game.net) backToRoom(); showRoomView(false); status('Disconnected from the room.'); });
+onNet('start', m => startOnline(m.map, m.roster, 'client'));
+onNet('in', m => game.onInput(m));
+onNet('snap', m => game.applySnap(m));
+onNet('ev', m => game.applyEvents(m.list));
+onNet('left', m => game.onLeft(m.id));
+onNet('hostLeft', () => { backToRoom(); status(t('lobby.hostLeft')); });
+onNet('closed', () => { if (game.net) backToRoom(); showRoomView(false); status(t('lobby.disconnected')); });
 
 function backToRoom() {
   $('#result').classList.add('hidden');
@@ -409,12 +449,14 @@ function backToRoom() {
 game.onMatchEnd = () => { if (game.net && game.net.role === 'host') net.send({ t: 'end' }); else backToRoom(); };
 $('#spectate').addEventListener('click', () => $('#result').classList.add('hidden'));
 
+game.onFeat = (kind, n) => { if (kind === 'ko') achievements.ko(); else achievements.cubes(n); };
 game.onResult = (rank, won) => {
+  achievements.result(rank, won);
   playMusic(null);
   sfx(won ? 'victory' : 'defeat');
-  $('#resTitle').textContent = won ? 'VICTORY!' : `#${rank}`;
+  $('#resTitle').textContent = won ? t('result.victory') : t('result.rank', { rank });
   $('#resTitle').className = won ? 'win' : '';
-  $('#resSub').textContent = won ? 'Last brawler standing.' : `You were knocked out. ${rank - 1} brawler${rank - 1 === 1 ? '' : 's'} left standing.`;
+  $('#resSub').textContent = won ? t('result.won') : t('result.lost', { n: rank - 1 });
   $('#soloBtns').classList.toggle('hidden', !!game.net);
   $('#onlineBtns').classList.toggle('hidden', !game.net);
   $('#result').classList.remove('hidden');
@@ -443,14 +485,7 @@ addEventListener('pointerdown', unlockAudio, { once: true });
 addEventListener('keydown', unlockAudio, { once: true });
 
 // Boot screen: one tick per texture, figurine and decor model.
-const TIPS = [
-  'Hide in bushes to vanish from enemy sight — until they get close.',
-  'Break crates for power cubes: each one makes you stronger.',
-  'The gas closes in after the timer: keep moving toward the centre.',
-  'Frostbite slows, Volt chains lightning, Bomber lobs over walls.',
-  'Press T to change the time of day. Lanterns light up at night.',
-  'Share a room code to play online with friends.',
-];
+const TIPS = ['tip.bushes', 'tip.crates', 'tip.gas', 'tip.brawlers', 'tip.tod', steam ? 'tip.steam' : 'tip.online'].map(k => t(k));
 {
   const total = TEX_FILES + Object.keys(TYPES).length + PROPS.length;
   let done = 0, tip = Math.floor(Math.random() * TIPS.length);
@@ -464,12 +499,12 @@ const TIPS = [
     $('#ldStep').textContent = step;
   };
   await Promise.all([
-    loadTextures(renderer, tick('Painting the ground…')),
-    preloadFigurines(Object.keys(TYPES), renderer, tick('Rigging the brawlers…')),
-    preloadProps(renderer, tick('Placing the decor…')),
+    loadTextures(renderer, tick(t('loader.ground'))),
+    preloadFigurines(Object.keys(TYPES), renderer, tick(t('loader.brawlers'))),
+    preloadProps(renderer, tick(t('loader.decor'))),
   ]);
   clearInterval(tipTimer);
-  $('#ldStep').textContent = 'Ready!';
+  $('#ldStep').textContent = t('loader.ready');
   setTimeout(() => $('#loader').classList.add('done'), 250);
 }
 for (const k of Object.keys(settings)) applySetting(k);
@@ -478,6 +513,26 @@ attract();
 // invite links: ?room=CODE opens the lobby straight away
 const invited = new URLSearchParams(location.search).get('room');
 if (invited) { openLobby(); $('#code').value = invited.toUpperCase(); }
+
+// Steam: accepting an invite or clicking "Join game" on a friend, before launch or while playing.
+if (steam) {
+  const joinFriend = id => {
+    if (!id || id === steamNet.steamLobby) return;
+    if (menus.paused) menus.closePause();
+    if (net.connected) net.close();
+    toMenu();
+    openLobby();
+    joinRoom(null, id);
+  };
+  steam.onJoinRequested(() => steam.takePendingLobby().then(joinFriend));
+  steam.takePendingLobby().then(joinFriend);
+  achievements.sync();
+  presence(t('presence.menu'));
+}
+if (isDesktop) {
+  $('#quitBtn').classList.remove('hidden');
+  $('#quitBtn').addEventListener('click', () => desktop.quit());
+}
 
 function frame(ts) {
   timer.update(ts);

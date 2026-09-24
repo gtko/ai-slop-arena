@@ -21,7 +21,7 @@ export const DEFAULTS = {
   preset: 'high', ...QUALITY.high,
   fitFrustum: true, texelSnap: true, showFrustum: false, aoView: false, dynLights: true,
   art: 'cartoon', tod: '2', exposure: 1, shake: true, fps: false, debugPanel: false,
-  deadzone: 0.18, vibration: true,
+  deadzone: 0.18, vibration: true, lang: 'auto',
   binds: { ...DEFAULT_BINDS },
 };
 

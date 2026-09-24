@@ -9,6 +9,7 @@ import { shared } from './materials.js';
 import { sfx } from './audio.js';
 import { MAPS, MAP_KEYS } from './maps.js';
 import { Weather } from './weather.js';
+import { t } from './i18n/index.js';
 
 const NAMES = ['Bolt', 'Nova', 'Rex', 'Juno', 'Pix', 'Kai', 'Moxie', 'Zed', 'Luna', 'Taro', 'Fizz', 'Oona', 'Brick', 'Echo'];
 const TYPE_KEYS = Object.keys(TYPES);
@@ -62,6 +63,7 @@ export class Game {
     this.restartT = -1;
     this.onResult = null;
     this.onMatchEnd = null;
+    this.onFeat = null;       // (kind, value): the local player's KOs and cubes, for achievements
     this.net = null;          // null = solo, else { role: 'host' | 'client', send(msg) }
     this.outbox = [];
     this.netT = 0;
@@ -103,7 +105,7 @@ export class Game {
     this.player = null;
     for (const r of roster) {
       const isPlayer = r.id === localId;
-      const b = new Brawler(this, r.type, { name: isPlayer ? 'YOU' : r.name, isPlayer });
+      const b = new Brawler(this, r.type, { name: isPlayer ? t('hud.you') : r.name, isPlayer });
       b.id = r.id;
       b.human = r.human;
       b.pos.copy(this.arena.spawns[r.spawn % this.arena.spawns.length]);
@@ -232,6 +234,7 @@ export class Game {
     this.shakeAt(b.pos.x, b.pos.z, 0.3);
     sfx('death', this.volumeAt(b.pos.x, b.pos.z));
     if (this.camTarget === b && killer && killer.alive) this.camTarget = killer;
+    if (killer && killer === this.player && b !== killer && this.onFeat) this.onFeat('ko');
     if (b === this.player) { this.state = 'over'; this.resultT = 1.6; }
   }
 
@@ -307,7 +310,8 @@ export class Game {
     this.effects.flash(it.x, 1.2, it.z, 0.3, 1, 0.45, 20, 6, 0.3);
     if (b.isPlayer) {
       sfx('pickup');
-      this.hud.floater(this.camera, b.pos.x, 3.4, b.pos.z, '+POWER', 'power');
+      this.hud.floater(this.camera, b.pos.x, 3.4, b.pos.z, t('hud.power'), 'power');
+      if (this.onFeat) this.onFeat('cubes', b.cubes);
     }
   }
 

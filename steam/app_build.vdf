@@ -1,0 +1,19 @@
+"AppBuild"
+{
+	"AppID"	"480"	// your app id
+	"Desc"	"AI SLOP ARENA desktop build"
+	"ContentRoot"	"..\release\win-unpacked\"
+	"BuildOutput"	".\output\"
+	"Depots"
+	{
+		"481"	// your Windows depot id
+		{
+			"FileMapping"
+			{
+				"LocalPath"	"*"
+				"DepotPath"	"."
+				"recursive"	"1"
+			}
+		}
+	}
+}

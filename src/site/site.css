@@ -34,6 +34,18 @@ kbd { font-family: var(--display); }
   background-size: 260% 100%; animation: shine 5.5s ease-in-out infinite; pointer-events: none; }
 .btn-ghost { padding: 14px 28px; font-size: 22px; color: var(--text); background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.3); backdrop-filter: blur(6px); }
 .btn-ghost:hover { background: rgba(255,255,255,0.13); }
+/* Steam: its own blues, so it reads as "the Steam version" next to the yellow play button */
+.btn-steam { color: #fff; background: linear-gradient(180deg, #2a5f8a, #1b3a57 55%, #13263a); box-shadow: 0 6px 0 #0b1726, 0 12px 30px rgba(40, 120, 200, 0.25); }
+.btn-steam:hover { box-shadow: 0 8px 0 #0b1726, 0 16px 40px rgba(60, 150, 230, 0.4); }
+.btn-steam:active { box-shadow: 0 2px 0 #0b1726; }
+.btn-lg { padding: 12px 26px 12px 20px; text-align: left; }
+.btn-lg b { display: block; font-weight: 400; font-size: 30px; line-height: 1; }
+.btn-lg small { display: block; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.75; margin-top: 4px; }
+.steam-ico { width: 32px; height: 32px; flex: none; fill: currentColor; }
+.steam-ico.sm { width: 18px; height: 18px; }
+.steam-title { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.steam-ico.xl { width: 0.9em; height: 0.9em; color: #66c0f4; }
+.nav-cta { display: flex; gap: 10px; }
 
 /* ------------------------------ nav ------------------------------ */
 .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; display: flex; align-items: center; gap: 28px; padding: 14px clamp(16px, 4vw, 48px);
@@ -216,6 +228,19 @@ kbd { font-family: var(--display); }
 .final { position: relative; padding: 130px 20px 150px; text-align: center; overflow: hidden;
   background: radial-gradient(ellipse at 50% 100%, #54399e, var(--deep) 55%, var(--night)); }
 .final h2 { margin-bottom: 34px; }
+.final-cta { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 22px; }
+
+/* ------------------------------ steam ------------------------------ */
+.steam { background: radial-gradient(ellipse at 50% 0%, rgba(42, 95, 138, 0.35), transparent 60%), var(--night); }
+.steam-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; max-width: 1180px; margin: 0 auto; }
+.steam-grid article { padding: 26px 26px 22px; border-radius: var(--radius); background: linear-gradient(180deg, rgba(42, 95, 138, 0.22), rgba(255,255,255,0.03));
+  border: 1px solid rgba(120, 180, 240, 0.2); }
+.steam-grid i { font-style: normal; font-size: 30px; }
+.steam-grid h3 { margin: 10px 0 8px; font-family: var(--display); font-weight: 400; font-size: 26px; }
+.steam-grid p { margin: 0; color: var(--muted); line-height: 1.55; }
+.steam-grid b { color: #fff; }
+.steam-grid kbd { padding: 1px 7px; border-radius: 6px; background: rgba(255,255,255,0.12); font-size: 14px; }
+.steam-cta { display: flex; justify-content: center; margin-top: 44px; }
 .final-crew { display: flex; justify-content: center; align-items: flex-end; gap: 14px; margin-bottom: 30px; height: 190px; }
 .final-crew img { height: 170px; filter: drop-shadow(0 8px 0 rgba(0,0,0,0.3)); animation: float 5s ease-in-out infinite; }
 .foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 26px clamp(16px, 5vw, 70px); color: var(--muted); font-size: 14px; border-top: 1px solid rgba(255,255,255,0.08); }
@@ -236,6 +261,7 @@ kbd { font-family: var(--display); }
 
 /* ------------------------------ responsive ------------------------------ */
 @media (max-width: 1100px) {
+  .steam-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cards { grid-template-columns: repeat(3, 1fr); }
   .controls { grid-template-columns: repeat(2, 1fr); }
   .hero-inner { grid-template-columns: 1fr; }
@@ -243,6 +269,8 @@ kbd { font-family: var(--display); }
   .cta, .stats { justify-content: center; }
 }
 @media (max-width: 860px) {
+  .steam-grid { grid-template-columns: minmax(0, 1fr); }
+  .nav-cta .btn-steam { display: none; }
   .nav nav { display: none; }
   .nav .btn-sm { margin-left: auto; }
   .row, .row.flip { grid-template-columns: 1fr; }

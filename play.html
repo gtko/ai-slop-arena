@@ -18,7 +18,7 @@
       <img src="/assets/ui/blaster.png" alt="" /><img src="/assets/ui/gunslinger.png" alt="" /><img src="/assets/ui/bomber.png" alt="" /><img src="/assets/ui/frostbite.png" alt="" /><img src="/assets/ui/volt.png" alt="" />
     </div>
     <div class="ld-bar"><i id="ldFill"></i></div>
-    <div class="ld-info"><b id="ldPct">0%</b><span id="ldStep">Warming up the arena…</span></div>
+    <div class="ld-info"><b id="ldPct">0%</b><span id="ldStep" data-i18n="loader.warmup">Warming up the arena…</span></div>
     <p class="ld-tip" id="ldTip"></p>
   </div>
 
@@ -28,16 +28,16 @@
     <div id="vignette"></div>
     <div id="flash"></div>
     <div id="top">
-      <div class="pill"><b id="aliveCount">8</b><small>BRAWLERS LEFT</small></div>
-      <div class="pill poison" id="poisonPill"><small>GAS IN</small><b id="poisonTime">0:28</b></div>
+      <div class="pill"><b id="aliveCount">8</b><small data-i18n="hud.left">BRAWLERS LEFT</small></div>
+      <div class="pill poison" id="poisonPill"><small data-i18n="hud.gasIn">GAS IN</small><b id="poisonTime">0:28</b></div>
     </div>
     <div id="cubes"><span class="cube"></span><b id="cubeCount">0</b></div>
     <div id="super">
       <svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="44" /><circle class="fg" id="superArc" cx="50" cy="50" r="44" /></svg>
-      <span>SUPER</span>
-      <small>RMB · SPACE</small>
+      <span data-i18n="hud.super">SUPER</span>
+      <small data-i18n="hud.superKeys">RMB · SPACE</small>
     </div>
-    <div id="keys"><b>WASD</b> move · <b>Mouse</b> aim · <b>Hold LMB</b> attack · <b>RMB / Space</b> super · <b>T</b> time of day · <b>Esc</b> pause · <b>M</b> mute · 🎮 supported</div>
+    <div id="keys" data-i18n-html="hud.keys"><b>WASD</b> move · <b>Mouse</b> aim · <b>Hold LMB</b> attack · <b>RMB / Space</b> super · <b>T</b> time of day · <b>Esc</b> pause · <b>M</b> mute · 🎮 supported</div>
   </div>
 
   <aside id="panel" class="panel">
@@ -75,25 +75,25 @@
   </aside>
 
   <div id="sound">
-    <button id="soundBtn" class="icon-btn" aria-label="Sound settings" aria-expanded="false" title="Sound (M to mute)">
+    <button id="soundBtn" class="icon-btn" aria-label="Sound settings" aria-expanded="false" title="Sound (M to mute)" data-i18n-title="sound.button" data-i18n-aria="sound.title">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M4 9h4l5-4v14l-5-4H4z" />
         <path class="wave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" />
         <path class="cross" d="M16 9l6 6M22 9l-6 6" /></svg>
     </button>
     <div id="soundPanel" class="pop hidden" role="dialog" aria-label="Sound settings">
-      <header><span>Sound</span><button id="soundClose" aria-label="Close">✕</button></header>
+      <header><span data-i18n="sound.title">Sound</span><button id="soundClose" aria-label="Close" data-i18n-aria="common.close">✕</button></header>
       <div class="body">
-        <div class="vol"><span>Master</span><input type="range" min="0" max="100" data-ch="master" /><output></output></div>
-        <div class="vol"><span>Music</span><input type="range" min="0" max="100" data-ch="music" /><output></output></div>
-        <div class="vol"><span>Effects</span><input type="range" min="0" max="100" data-ch="sfx" /><output></output></div>
-        <div class="vol"><span>Ambience</span><input type="range" min="0" max="100" data-ch="amb" /><output></output></div>
-        <div class="lbl">Music track</div>
+        <div class="vol"><span data-i18n="sound.master">Master</span><input type="range" min="0" max="100" data-ch="master" /><output></output></div>
+        <div class="vol"><span data-i18n="sound.music">Music</span><input type="range" min="0" max="100" data-ch="music" /><output></output></div>
+        <div class="vol"><span data-i18n="sound.effects">Effects</span><input type="range" min="0" max="100" data-ch="sfx" /><output></output></div>
+        <div class="vol"><span data-i18n="sound.ambience">Ambience</span><input type="range" min="0" max="100" data-ch="amb" /><output></output></div>
+        <div class="lbl" data-i18n="sound.track">Music track</div>
         <div class="seg" id="trackSeg">
-          <button data-track="auto">Auto</button><button data-track="menu">Lobby</button><button data-track="battle">Battle</button><button data-track="off">Off</button>
+          <button data-track="auto" data-i18n="sound.auto">Auto</button><button data-track="menu" data-i18n="sound.lobby">Lobby</button><button data-track="battle" data-i18n="sound.battle">Battle</button><button data-track="off" data-i18n="sound.off">Off</button>
         </div>
-        <label class="row"><input type="checkbox" id="muteAll" /> Mute everything <kbd>M</kbd></label>
-        <button id="soundTest" class="test">▶ Test effects</button>
-        <p class="note">Ambience follows the time of day: birds by day, crickets and torches at night.</p>
+        <label class="row"><input type="checkbox" id="muteAll" /> <span data-i18n="sound.muteAll">Mute everything</span> <kbd>M</kbd></label>
+        <button id="soundTest" class="test" data-i18n="sound.test">▶ Test effects</button>
+        <p class="note" data-i18n="sound.note">Ambience follows the time of day: birds by day, crickets and torches at night.</p>
       </div>
     </div>
   </div>
@@ -101,74 +101,77 @@
   <div id="menu" class="overlay">
     <div class="menu-card">
       <h1>AI SLOP<span>ARENA</span></h1>
-      <p class="tag">Showdown · 8 brawlers · 5 maps with live weather · last one standing wins</p>
+      <p class="tag" data-i18n="menu.tag">Showdown · 8 brawlers · 5 maps with live weather · last one standing wins</p>
       <div id="cards"></div>
-      <div class="lbl-row">Map</div>
+      <div class="lbl-row" data-i18n="menu.map">Map</div>
       <div id="maps" class="maps"></div>
       <div class="row-btns left">
-        <button id="play" class="big">SOLO</button>
-        <button id="multi" class="big alt">MULTIPLAYER</button>
-        <button id="optionsBtn" class="ghost">OPTIONS</button>
+        <button id="play" class="big" data-i18n="menu.solo">SOLO</button>
+        <button id="multi" class="big alt" data-i18n="menu.multi">MULTIPLAYER</button>
+        <button id="optionsBtn" class="ghost" data-i18n="menu.options">OPTIONS</button>
+        <button id="quitBtn" class="ghost hidden" data-i18n="menu.quit">QUIT</button>
       </div>
-      <p class="hint">Keyboard + mouse or gamepad · <kbd>Esc</kbd> / Start pauses · <kbd>T</kbd> time of day</p>
+      <p class="hint" data-i18n-html="menu.hint">Keyboard + mouse or gamepad · <kbd>Esc</kbd> / Start pauses · <kbd>T</kbd> time of day</p>
     </div>
   </div>
 
   <div id="lobby" class="overlay hidden">
     <div class="menu-card lobby">
-      <h2 class="lobby-title">Online</h2>
+      <h2 class="lobby-title" data-i18n="lobby.title">Online</h2>
       <div id="lobbyJoin">
-        <label class="field"><span>Your name</span><input id="nick" maxlength="14" autocomplete="nickname" placeholder="Brawler" /></label>
+        <label class="field"><span data-i18n="lobby.name">Your name</span><input id="nick" maxlength="14" autocomplete="nickname" placeholder="Brawler" data-i18n-placeholder="lobby.namePlaceholder" /></label>
         <div class="row-btns left">
-          <button id="create" class="big">CREATE ROOM</button>
+          <button id="create" class="big" data-i18n="lobby.create">CREATE ROOM</button>
+          <button id="createWeb" class="ghost hidden" data-i18n="lobby.createCross">CROSS-PLAY ROOM</button>
         </div>
         <div class="join-row">
-          <input id="code" maxlength="6" placeholder="CODE" autocomplete="off" spellcheck="false" />
-          <button id="join" class="ghost">JOIN</button>
+          <input id="code" maxlength="6" placeholder="CODE" data-i18n-placeholder="lobby.code" autocomplete="off" spellcheck="false" />
+          <button id="join" class="ghost" data-i18n="lobby.join">JOIN</button>
         </div>
-        <p class="hint">Rooms hold up to 8 players; bots fill the empty spots.</p>
+        <p class="hint" data-i18n="lobby.hint">Rooms hold up to 8 players; bots fill the empty spots.</p>
+        <p id="crossHint" class="hint hidden" data-i18n="lobby.crossHint">Cross-play rooms are open to browser players too: share the code or the link.</p>
       </div>
       <div id="lobbyRoom" class="hidden">
         <div class="room-head">
-          <div><small>ROOM CODE</small><b id="roomCode">----</b></div>
-          <button id="copyLink" class="ghost small">Copy invite link</button>
+          <div><small data-i18n="lobby.roomCode">ROOM CODE</small><b id="roomCode">----</b> <small id="crossBadge" class="hidden" data-i18n="lobby.crossBadge">CROSS-PLAY</small></div>
+          <button id="copyLink" class="ghost small" data-i18n="lobby.copyLink">Copy invite link</button>
         </div>
         <ul id="players" class="players"></ul>
-        <div class="lbl-row">Your brawler</div>
+        <div class="lbl-row" data-i18n="lobby.yourBrawler">Your brawler</div>
         <div id="lobbyCards" class="mini-cards"></div>
-        <div class="lbl-row">Map <small id="mapNote"></small></div>
+        <div class="lbl-row"><span data-i18n="menu.map">Map</span> <small id="mapNote"></small></div>
         <div id="lobbyMaps" class="maps"></div>
         <div class="row-btns left">
-          <button id="start" class="big">START</button>
-          <span id="waiting" class="hint hidden">Waiting for the host to start…</span>
+          <button id="start" class="big" data-i18n="lobby.start">START</button>
+          <span id="waiting" class="hint hidden" data-i18n="lobby.waiting">Waiting for the host to start…</span>
         </div>
       </div>
       <p id="lobbyStatus" class="status"></p>
-      <button id="lobbyBack" class="ghost small back">← Back</button>
+      <button id="lobbyBack" class="ghost small back" data-i18n="lobby.back">← Back</button>
     </div>
   </div>
 
   <div id="options" class="overlay hidden">
     <div class="opt-card">
       <header class="opt-head">
-        <h2>OPTIONS</h2>
+        <h2 data-i18n="opt.title">OPTIONS</h2>
         <nav id="optTabs" class="opt-tabs"></nav>
       </header>
       <div id="optBody" class="opt-body"></div>
       <p id="optHint" class="opt-hint"></p>
       <footer class="opt-foot">
-        <span class="hints"><kbd>↑↓</kbd> select · <kbd>←→</kbd> change · <kbd>Q</kbd><kbd>E</kbd> / LB RB tabs · <kbd>Esc</kbd> / B back</span>
-        <span><button id="optReset" class="ghost small">Reset tab</button><button id="optClose" class="big small-big">BACK</button></span>
+        <span class="hints" data-i18n-html="opt.footer"><kbd>↑↓</kbd> select · <kbd>←→</kbd> change · <kbd>Q</kbd><kbd>E</kbd> / LB RB tabs · <kbd>Esc</kbd> / B back</span>
+        <span><button id="optReset" class="ghost small" data-i18n="opt.resetTab">Reset tab</button><button id="optClose" class="big small-big" data-i18n="opt.back">BACK</button></span>
       </footer>
     </div>
   </div>
 
   <div id="pause" class="overlay hidden">
     <div class="pause-card">
-      <h2>PAUSED</h2>
-      <button data-act="resume" class="big">RESUME</button>
-      <button data-act="options" class="ghost">OPTIONS</button>
-      <button data-act="quit" class="ghost">QUIT TO MENU</button>
+      <h2 data-i18n="pause.title">PAUSED</h2>
+      <button data-act="resume" class="big" data-i18n="pause.resume">RESUME</button>
+      <button data-act="options" class="ghost" data-i18n="pause.options">OPTIONS</button>
+      <button data-act="quit" class="ghost" data-i18n="pause.quit">QUIT TO MENU</button>
       <p id="pauseNote" class="hint"></p>
     </div>
   </div>
@@ -179,8 +182,8 @@
     <div class="menu-card result">
       <h2 id="resTitle">#1</h2>
       <p id="resSub"></p>
-      <div class="row-btns" id="soloBtns"><button id="again" class="big">PLAY AGAIN</button><button id="toMenu" class="ghost">MENU</button></div>
-      <div class="row-btns hidden" id="onlineBtns"><button id="spectate" class="ghost">SPECTATE</button><span class="hint">Back to the room when the match ends…</span></div>
+      <div class="row-btns" id="soloBtns"><button id="again" class="big" data-i18n="result.again">PLAY AGAIN</button><button id="toMenu" class="ghost" data-i18n="result.menu">MENU</button></div>
+      <div class="row-btns hidden" id="onlineBtns"><button id="spectate" class="ghost" data-i18n="result.spectate">SPECTATE</button><span class="hint" data-i18n="result.backSoon">Back to the room when the match ends…</span></div>
     </div>
   </div>
 

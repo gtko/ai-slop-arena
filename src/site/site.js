@@ -1,4 +1,5 @@
 import './site.css';
+import { steam } from '../../package.json';
 
 // Landing page: brawler cards, arena captures, feature rows, scroll reveals and a few subtle motions
 // (trailer parallax, weather cross-fade). No 3D here: the trailer is recorded from the game itself.
@@ -29,6 +30,18 @@ const still = n => `${BASE}assets/site/${n}.jpg`;
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ------------------------------ content ------------------------------ */
+
+// Steam store page: package.json `steam.appId`. 480 is Valve's test app, so until the real app id
+// is in, the buttons scroll to the Steam section and say "coming soon".
+const STEAM_APP = steam && steam.appId !== 480 ? steam.appId : null;
+if (STEAM_APP) {
+  for (const a of document.querySelectorAll('[data-steam-link]')) {
+    a.href = `https://store.steampowered.com/app/${STEAM_APP}/`;
+    a.target = '_blank';
+    a.rel = 'noopener';
+  }
+  for (const s of document.querySelectorAll('[data-steam-label]')) s.textContent = 'Disponible maintenant';
+}
 
 $('#cards').innerHTML = BRAWLERS.map(b => `
   <article class="card reveal" style="--c:${b.color}">

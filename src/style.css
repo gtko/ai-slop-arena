@@ -167,9 +167,11 @@ kbd { font-family: var(--display); font-size: 12px; padding: 1px 6px; border-rad
 .maps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
 .map { position: relative; padding: 0; height: 64px; border-radius: 12px; border: 3px solid var(--ink); cursor: pointer; overflow: hidden;
   background: linear-gradient(135deg, var(--a), var(--b)); box-shadow: 0 4px 0 rgba(0,0,0,0.45); color: #fff; text-align: left; font: inherit; }
-.map b { position: absolute; left: 7px; bottom: 16px; font-family: var(--display); font-weight: 400; font-size: 13px; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; line-height: 1; }
-.map em { position: absolute; left: 7px; bottom: 4px; font-style: normal; font-size: 9px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px #000; }
-.map i { position: absolute; right: 6px; top: 4px; font-style: normal; font-size: 16px; }
+/* name + tag stacked from the bottom, so taller scripts (Arabic, Thai...) never overlap */
+.map { display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; padding: 0 7px 4px; text-align: start; }
+.map b { max-width: 100%; font-family: var(--display); font-weight: 400; font-size: 13px; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; line-height: 1.15; }
+.map em { max-width: 100%; font-style: normal; font-size: 9px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px #000; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map i { position: absolute; inset-inline-end: 6px; top: 4px; font-style: normal; font-size: 16px; }
 .map.on { outline: 3px solid var(--yellow); }
 .map:disabled { cursor: default; opacity: 0.85; }
 .map:disabled:not(.on) { filter: saturate(0.4) brightness(0.7); }

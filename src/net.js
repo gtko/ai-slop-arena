@@ -1,9 +1,13 @@
+import { WEB_ORIGIN } from './platform.js';
+import { t } from './i18n/index.js';
+
 // Thin WebSocket client for the Cloudflare room relay (worker/index.js).
 // Same origin in production (wss://<site>/ws/CODE); in `npm run dev` Vite runs on 5173 while
-// `npm run dev:server` (wrangler) runs the rooms on 8787.
+// `npm run dev:server` (wrangler) runs the rooms on 8787. The Steam build uses steamnet.js instead.
 
 export function serverBase() {
   const { protocol, hostname, port, host } = location;
+  if (protocol === 'app:') return WEB_ORIGIN.replace(/^https:/, 'wss:'); // desktop app without Steam
   const ws = protocol === 'https:' ? 'wss:' : 'ws:';
   if (port === '5173') return `${ws}//${hostname}:8787`;
   return `${ws}//${host}`;
@@ -45,11 +49,11 @@ export class Net {
         if (msg.t === 'welcome') { this.id = msg.id; this.code = msg.code; welcomed = true; resolve(this); }
         if (msg.t === 'room') { this.players = msg.players; this.inMatch = msg.inMatch; this.map = msg.map; }
         if (msg.t === 'pong') this.rtt = performance.now() - msg.at;
-        if (msg.t === 'error' && !welcomed) reject(new Error(msg.msg));
+        if (msg.t === 'error' && !welcomed) reject(new Error(msg.msg === 'Room is full' ? t('err.full') : msg.msg));
         this.emit(msg.t, msg);
       };
-      ws.onclose = () => { if (!welcomed) reject(new Error('Could not reach the server')); this.emit('closed', {}); };
-      ws.onerror = () => { if (!welcomed) reject(new Error('Could not reach the server')); };
+      ws.onclose = () => { if (!welcomed) reject(new Error(t('err.unreachable'))); this.emit('closed', {}); };
+      ws.onerror = () => { if (!welcomed) reject(new Error(t('err.unreachable'))); };
       this.pingTimer = setInterval(() => this.send({ t: 'ping', at: performance.now() }), 2000);
     });
   }

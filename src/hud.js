@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { t } from './i18n/index.js';
 
 const $ = s => document.querySelector(s);
 const _v = new THREE.Vector3();
@@ -28,7 +29,7 @@ export class Hud {
       const el = document.createElement('div');
       el.className = 'ov ' + (b === player ? 'me' : 'foe');
       el.innerHTML = `
-        <div class="ov-name">${b === player ? 'YOU' : b.name}<span class="ov-cubes"></span></div>
+        <div class="ov-name">${b === player ? t('hud.you') : b.name}<span class="ov-cubes"></span></div>
         <div class="ov-hp"><div class="ov-lag"></div><div class="ov-fill"></div><span class="ov-num"></span></div>
         ${b === player ? '<div class="ov-ammo"><i><b></b></i><i><b></b></i><i><b></b></i></div>' : ''}`;
       this.bars.appendChild(el);
@@ -73,8 +74,8 @@ export class Hud {
     if (P) {
       const n = P.nextIn;
       this.poisonPill.classList.toggle('warn', n < 6 && n > 0);
-      this.poisonEl.textContent = n === Infinity ? 'MAX' : `${Math.floor(Math.max(0, n) / 60)}:${String(Math.ceil(Math.max(0, n)) % 60).padStart(2, '0')}`;
-      this.poisonPill.querySelector('small').textContent = P.level === 0 ? 'GAS IN' : 'GAS GROWS';
+      this.poisonEl.textContent = n === Infinity ? t('hud.max') : `${Math.floor(Math.max(0, n) / 60)}:${String(Math.ceil(Math.max(0, n)) % 60).padStart(2, '0')}`;
+      this.poisonPill.querySelector('small').textContent = P.level === 0 ? t('hud.gasIn') : t('hud.gasGrows');
     }
     const p = game.player;
     if (p) {

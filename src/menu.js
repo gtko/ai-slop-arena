@@ -1,6 +1,7 @@
 import { settings, set, applyQuality, bind, resetBinds, resetGroup, keyName, DEFAULTS } from './settings.js';
 import { settings as audio, setVolume, setMuted, setTrack, sfx, initAudio } from './audio.js';
 import { PAD } from './input.js';
+import { t, LANGS } from './i18n/index.js';
 
 // Video-game style menus: Options (tabs of rows) + Pause, plus console-like navigation for every
 // overlay in the game: ↑↓ / D-pad / left stick move the focus, ←→ change the focused option,
@@ -9,7 +10,7 @@ import { PAD } from './input.js';
 const $ = s => document.querySelector(s);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
 
-const toggle = (key, label, hint) => ({ label, hint, type: 'choice', opts: [[false, 'Off'], [true, 'On']], get: () => settings[key], set: v => set(key, v) });
+const toggle = (key, label, hint) => ({ label, hint, type: 'choice', opts: [[false, t('opt.off')], [true, t('opt.on')]], get: () => settings[key], set: v => set(key, v) });
 const choice = (key, label, opts, hint) => ({ label, hint, type: 'choice', opts, get: () => settings[key], set: v => set(key, v) });
 const slider = (key, label, min, max, step, fmt, hint) => ({ label, hint, type: 'slider', min, max, step, fmt, get: () => settings[key], set: v => set(key, v) });
 const vol = (ch, label) => ({
@@ -17,85 +18,83 @@ const vol = (ch, label) => ({
   get: () => Math.round(audio[ch] * 100), set: v => { initAudio(); setVolume(ch, v / 100); },
 });
 
-const ACTIONS = [
-  ['up', 'Move up'], ['down', 'Move down'], ['left', 'Move left'], ['right', 'Move right'],
-  ['super', 'Super'], ['tod', 'Next time of day'], ['mute', 'Mute'], ['panel', 'Lighting debug panel'], ['pause', 'Pause / back'],
-];
+const ACTIONS = ['up', 'down', 'left', 'right', 'super', 'tod', 'mute', 'panel', 'pause'];
 
 function tabs(ctx) {
   return {
     graphics: {
-      title: 'Graphics',
+      title: t('opt.tab.graphics'),
       rows: [
-        { label: 'Quality preset', type: 'choice', opts: [['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['ultra', 'Ultra'], ['custom', 'Custom']],
-          get: () => settings.preset, set: v => { if (v !== 'custom') applyQuality(v); }, hint: 'Sets resolution, AA, shadows, AO, bloom and weather at once.' },
-        { section: 'Display' },
-        choice('art', 'Art style', [['cartoon', 'Cartoon'], ['realistic', 'Realistic']], 'Cartoon: soft cel shading and vivid colours. Changing it reloads the game.'),
-        choice('renderScale', 'Render resolution', [[0.5, '50%'], [0.75, '75%'], [1, '100%'], [1.25, '125%'], [1.5, '150%']], 'Lower = faster, higher = sharper.'),
-        choice('msaa', 'Anti-aliasing', [[0, 'Off'], [2, 'MSAA 2x'], [4, 'MSAA 4x']]),
-        slider('exposure', 'Brightness', 0.5, 1.8, 0.05, v => v.toFixed(2)),
-        choice('tod', 'Time of day', [['0', 'Morning'], ['1', 'Noon'], ['2', 'Sunset'], ['3', 'Night'], ['cycle', 'Day / night cycle']]),
-        { section: 'Lighting & shadows' },
-        choice('shadows', 'Shadow quality', [[0, 'Off'], [1024, 'Low'], [2048, 'High'], [4096, 'Ultra']]),
-        choice('shadowFilter', 'Shadow filter', [['pcf', 'Soft (PCF)'], ['vsm', 'Very soft (VSM)'], ['basic', 'Hard']]),
-        slider('softness', 'Shadow softness', 0, 8, 0.5, v => v.toFixed(1)),
-        toggle('ao', 'Ambient occlusion', 'Contact shadows in corners and under objects (GTAO).'),
-        toggle('bloom', 'Bloom', 'Glow around lanterns, projectiles and explosions.'),
-        toggle('dynLights', 'Dynamic lights', 'Projectiles, torches and explosions light the scene.'),
-        choice('weather', 'Weather particles', [[0.35, 'Low'], [0.7, 'Medium'], [1, 'High']]),
-        { section: 'Gameplay & interface' },
-        toggle('shake', 'Camera shake'),
-        toggle('fps', 'FPS counter'),
-        { section: 'Advanced' },
-        toggle('fitFrustum', 'Camera-fitted shadows', 'Sharper shadows: the shadow map only covers what you see.'),
-        toggle('texelSnap', 'Shadow texel snapping', 'Stops shadow edges shimmering while the camera moves.'),
-        toggle('showFrustum', 'Show shadow frustum'),
-        toggle('aoView', 'View AO buffer only'),
-        toggle('debugPanel', 'Lighting debug panel'),
+        { label: t('opt.preset'), type: 'choice', opts: [['low', t('opt.low')], ['medium', t('opt.medium')], ['high', t('opt.high')], ['ultra', t('opt.ultra')], ['custom', t('opt.custom')]],
+          get: () => settings.preset, set: v => { if (v !== 'custom') applyQuality(v); }, hint: t('opt.preset.hint') },
+        { section: t('opt.sec.display') },
+        choice('art', t('opt.art'), [['cartoon', t('opt.art.cartoon')], ['realistic', t('opt.art.realistic')]], t('opt.art.hint')),
+        choice('renderScale', t('opt.renderScale'), [[0.5, '50%'], [0.75, '75%'], [1, '100%'], [1.25, '125%'], [1.5, '150%']], t('opt.renderScale.hint')),
+        choice('msaa', t('opt.msaa'), [[0, t('opt.off')], [2, 'MSAA 2x'], [4, 'MSAA 4x']]),
+        slider('exposure', t('opt.brightness'), 0.5, 1.8, 0.05, v => v.toFixed(2)),
+        choice('tod', t('opt.tod'), [['0', t('opt.tod.morning')], ['1', t('opt.tod.noon')], ['2', t('opt.tod.sunset')], ['3', t('opt.tod.night')], ['cycle', t('opt.tod.cycle')]]),
+        { section: t('opt.sec.lighting') },
+        choice('shadows', t('opt.shadows'), [[0, t('opt.off')], [1024, t('opt.low')], [2048, t('opt.high')], [4096, t('opt.ultra')]]),
+        choice('shadowFilter', t('opt.shadowFilter'), [['pcf', t('opt.shadowFilter.pcf')], ['vsm', t('opt.shadowFilter.vsm')], ['basic', t('opt.shadowFilter.basic')]]),
+        slider('softness', t('opt.softness'), 0, 8, 0.5, v => v.toFixed(1)),
+        toggle('ao', t('opt.ao'), t('opt.ao.hint')),
+        toggle('bloom', t('opt.bloom'), t('opt.bloom.hint')),
+        toggle('dynLights', t('opt.dynLights'), t('opt.dynLights.hint')),
+        choice('weather', t('opt.weather'), [[0.35, t('opt.low')], [0.7, t('opt.medium')], [1, t('opt.high')]]),
+        { section: t('opt.sec.gameplay') },
+        choice('lang', t('opt.language'), [['auto', t('opt.language.auto')], ...LANGS.map(([code, name]) => [code, name])], t('opt.language.hint')),
+        toggle('shake', t('opt.shake')),
+        toggle('fps', t('opt.fps')),
+        { section: t('opt.sec.advanced') },
+        toggle('fitFrustum', t('opt.fitFrustum'), t('opt.fitFrustum.hint')),
+        toggle('texelSnap', t('opt.texelSnap'), t('opt.texelSnap.hint')),
+        toggle('showFrustum', t('opt.showFrustum')),
+        toggle('aoView', t('opt.aoView')),
+        toggle('debugPanel', t('opt.debugPanel')),
       ],
       reset: () => applyQuality('high') || resetGroup(['exposure', 'tod', 'shake', 'fps', 'fitFrustum', 'texelSnap', 'showFrustum', 'aoView', 'debugPanel', 'dynLights']),
     },
     audio: {
-      title: 'Audio',
+      title: t('opt.tab.audio'),
       rows: [
-        vol('master', 'Master volume'),
-        vol('music', 'Music'),
-        vol('sfx', 'Sound effects'),
-        vol('amb', 'Ambience & weather'),
-        { label: 'Music track', type: 'choice', opts: [['auto', 'Auto'], ['menu', 'Lobby'], ['battle', 'Battle'], ['off', 'Off']],
+        vol('master', t('opt.vol.master')),
+        vol('music', t('opt.vol.music')),
+        vol('sfx', t('opt.vol.sfx')),
+        vol('amb', t('opt.vol.amb')),
+        { label: t('opt.track'), type: 'choice', opts: [['auto', t('sound.auto')], ['menu', t('sound.lobby')], ['battle', t('sound.battle')], ['off', t('opt.off')]],
           get: () => audio.track, set: v => { initAudio(); setTrack(v); } },
-        { label: 'Mute everything', type: 'choice', opts: [[false, 'Off'], [true, 'On']], get: () => audio.muted, set: v => setMuted(v) },
-        { label: 'Test sound effects', type: 'button', text: '▶ Play', run: () => { initAudio(); ['shotgun', 'shot', 'boom', 'pickup'].forEach((n, i) => setTimeout(() => sfx(n), i * 280)); } },
+        { label: t('opt.muteAll'), type: 'choice', opts: [[false, t('opt.off')], [true, t('opt.on')]], get: () => audio.muted, set: v => setMuted(v) },
+        { label: t('opt.testSfx'), type: 'button', text: t('opt.play'), run: () => { initAudio(); ['shotgun', 'shot', 'boom', 'pickup'].forEach((n, i) => setTimeout(() => sfx(n), i * 280)); } },
       ],
       reset: () => { setVolume('master', 1); setVolume('music', 0.8); setVolume('sfx', 1); setVolume('amb', 0.8); setTrack('auto'); setMuted(false); },
     },
     controls: {
-      title: 'Controls',
+      title: t('opt.tab.controls'),
       rows: [
-        { section: 'Keyboard (select a row, then press the new key)' },
-        ...ACTIONS.map(([a, label]) => ({ label, type: 'key', action: a })),
-        { section: 'Mouse (fixed)' },
-        { label: 'Aim', type: 'info', text: 'Mouse cursor' },
-        { label: 'Attack', type: 'info', text: 'Left click (hold)' },
-        { label: 'Super', type: 'info', text: 'Right click: hold to aim, release to fire' },
-        { label: 'Reset key bindings', type: 'button', text: 'Reset', run: () => resetBinds() },
+        { section: t('opt.sec.keyboard') },
+        ...ACTIONS.map(a => ({ label: t(`opt.act.${a}`), type: 'key', action: a })),
+        { section: t('opt.sec.mouse') },
+        { label: t('opt.aim'), type: 'info', text: t('opt.mouse.aim') },
+        { label: t('opt.attack'), type: 'info', text: t('opt.mouse.attack') },
+        { label: t('opt.super'), type: 'info', text: t('opt.mouse.super') },
+        { label: t('opt.resetKeys'), type: 'button', text: t('opt.reset'), run: () => resetBinds() },
       ],
       reset: () => resetBinds(),
     },
     gamepad: {
-      title: 'Gamepad',
+      title: t('opt.tab.gamepad'),
       rows: [
-        { label: 'Controller', type: 'info', text: () => (ctx.input.padName ? ctx.input.padName.replace(/\(.*?\)/g, '').trim().slice(0, 40) : 'None detected: press any button') },
-        slider('deadzone', 'Stick dead zone', 0.05, 0.4, 0.01, v => `${Math.round(v * 100)}%`),
-        toggle('vibration', 'Vibration'),
-        { section: 'Layout' },
-        { label: 'Move', type: 'info', text: 'Left stick / D-pad' },
-        { label: 'Aim', type: 'info', text: 'Right stick (tilt = throw distance)' },
-        { label: 'Attack', type: 'info', text: 'RT (hold)' },
-        { label: 'Super', type: 'info', text: 'RB, or hold LT to aim and release' },
-        { label: 'Time of day', type: 'info', text: 'Y' },
-        { label: 'Pause', type: 'info', text: 'Start' },
-        { label: 'Menus', type: 'info', text: 'D-pad / stick · A select · B back · LB / RB tabs' },
+        { label: t('opt.controller'), type: 'info', text: () => (ctx.input.padName ? ctx.input.padName.replace(/\(.*?\)/g, '').trim().slice(0, 40) : t('opt.noController')) },
+        slider('deadzone', t('opt.deadzone'), 0.05, 0.4, 0.01, v => `${Math.round(v * 100)}%`),
+        toggle('vibration', t('opt.vibration')),
+        { section: t('opt.sec.layout') },
+        { label: t('opt.move'), type: 'info', text: t('opt.pad.move') },
+        { label: t('opt.aim'), type: 'info', text: t('opt.pad.aim') },
+        { label: t('opt.attack'), type: 'info', text: t('opt.pad.attack') },
+        { label: t('opt.super'), type: 'info', text: t('opt.pad.super') },
+        { label: t('opt.tod'), type: 'info', text: 'Y' },
+        { label: t('opt.pause'), type: 'info', text: 'Start' },
+        { label: t('opt.menus'), type: 'info', text: t('opt.pad.menus') },
       ],
       reset: () => resetGroup(['deadzone', 'vibration']),
     },
@@ -125,8 +124,8 @@ export class Menus {
   buildTabs() {
     const nav = $('#optTabs');
     nav.innerHTML = '';
-    for (const [k, t] of Object.entries(this.tabs)) {
-      const b = el('button', 'opt-tab', t.title);
+    for (const [k, tab] of Object.entries(this.tabs)) {
+      const b = el('button', 'opt-tab', tab.title);
       b.dataset.tab = k;
       b.addEventListener('click', () => { sfx('click'); this.setTab(k); });
       nav.appendChild(b);
@@ -198,7 +197,7 @@ export class Menus {
     }
     if (r.type === 'key') {
       const listening = this.capture === r.action;
-      return el('span', 'opt-key' + (listening ? ' listening' : ''), listening ? 'Press a key… (Esc cancels)' : `<kbd>${keyName(settings.binds[r.action])}</kbd>`);
+      return el('span', 'opt-key' + (listening ? ' listening' : ''), listening ? t('opt.pressKey') : `<kbd>${keyName(settings.binds[r.action])}</kbd>`);
     }
     if (r.type === 'button') {
       const b = el('button', 'opt-btn', r.text);
@@ -252,7 +251,7 @@ export class Menus {
 
   openPause() {
     $('#pause').classList.remove('hidden');
-    $('#pauseNote').textContent = this.ctx.isOnline() ? 'Online match: the game keeps running.' : '';
+    $('#pauseNote').textContent = this.ctx.isOnline() ? t('pause.online') : '';
     this.ctx.onPause(true);
     this.focusFirst($('#pause'));
   }

@@ -1,20 +1,51 @@
 {
   "name": "ai-slop-arena",
+  "productName": "AI SLOP ARENA",
+  "description": "Top-down brawler: 8 brawlers, 5 arenas with live weather, last one standing wins.",
+  "author": "gtko",
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "electron/main.cjs",
+  "steam": {
+    "appId": 480
+  },
   "scripts": {
     "dev": "vite",
     "dev:server": "wrangler dev --port 8787",
     "build": "vite build",
     "preview": "vite build && wrangler dev --port 8787",
-    "deploy": "vite build && wrangler deploy"
+    "deploy": "vite build && wrangler deploy",
+    "desktop": "vite build && electron .",
+    "desktop:dev": "electron . --dev-server=http://localhost:5173/play.html",
+    "dist:steam": "vite build && electron-builder --win --x64 --dir",
+    "dist:steam:linux": "vite build && electron-builder --linux --x64 --dir"
   },
   "dependencies": {
-    "three": "^0.186.0"
+    "steamworks.js": "^0.4.0"
   },
   "devDependencies": {
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
+    "three": "^0.186.0",
     "vite": "^8.3.0",
     "wrangler": "^4.136.3"
+  },
+  "build": {
+    "appId": "ch.gtko.aisloparena",
+    "productName": "AI SLOP ARENA",
+    "executableName": "AISlopArena",
+    "directories": { "output": "release" },
+    "files": [
+      "package.json",
+      "electron/**",
+      "dist/**",
+      "!dist/index.html",
+      "!dist/assets/site/**",
+      "!dist/assets/site-*.js"
+    ],
+    "asarUnpack": ["node_modules/steamworks.js/**"],
+    "win": { "icon": "electron/icon.ico", "target": "dir" },
+    "linux": { "icon": "electron/icon.png", "target": "dir", "category": "Game" }
   }
 }

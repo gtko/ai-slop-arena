@@ -20,9 +20,13 @@
       <a href="#arenes">Arènes</a>
       <a href="#features">Features</a>
       <a href="#controles">Contrôles</a>
+      <a href="#steam">Steam</a>
       <a href="#apropos">À propos</a>
     </nav>
-    <a class="btn btn-play btn-sm" href="/play.html">Jouer</a>
+    <div class="nav-cta">
+      <a class="btn btn-steam btn-sm" data-steam-link href="#steam"><svg class="steam-ico sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z" /></svg>Steam</a>
+      <a class="btn btn-play btn-sm" href="/play.html">Jouer</a>
+    </div>
   </header>
 
   <!-- ============================== hero ============================== -->
@@ -30,12 +34,12 @@
     <div class="sky"><i class="sun"></i><i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i></div>
     <div class="hero-inner">
       <div class="hero-copy">
-        <span class="badge reveal">Gratuit · dans le navigateur · sans installation</span>
+        <span class="badge reveal">Gratuit · dans le navigateur ou sur Steam · 30 langues</span>
         <h1 class="title reveal"><span>AI SLOP</span><b>ARENA</b></h1>
         <p class="lead reveal">Combats en arène survoltés : choisis ton brawler, cache-toi dans les hautes herbes, casse les caisses et sois le dernier debout pendant que le gaz se referme.</p>
         <div class="cta reveal">
-          <a class="btn btn-play btn-xl" href="/play.html"><span>JOUER</span><small>maintenant</small></a>
-          <a class="btn btn-ghost" href="#features">Découvrir</a>
+          <a class="btn btn-play btn-xl" href="/play.html"><span>JOUER</span><small>dans le navigateur</small></a>
+          <a class="btn btn-steam btn-lg" data-steam-link href="#steam"><svg class="steam-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z" /></svg><span><b>STEAM</b><small data-steam-label>Bientôt disponible</small></span></a>
         </div>
         <ul class="stats reveal">
           <li><b data-count="5">0</b><span>brawlers</span></li>
@@ -111,7 +115,7 @@
         <div class="txt">
           <span class="num">03</span>
           <h3>Showdown à 8, en ligne</h3>
-          <p>Crée une salle, partage le code ou le lien d'invitation et affronte tes amis ; des bots complètent la partie. Casse des caisses pour des cubes de puissance, tends des embuscades dans les buissons, fuis le gaz. Un seul survivant.</p>
+          <p>Crée une salle, partage le code ou le lien d'invitation et affronte tes amis, qu'ils jouent dans le navigateur ou sur Steam ; des bots complètent la partie. Casse des caisses pour des cubes de puissance, tends des embuscades dans les buissons, fuis le gaz. Un seul survivant.</p>
         </div>
       </article>
       <article class="row flip reveal">
@@ -156,6 +160,26 @@
       <div class="ctrl"><div class="keys"><kbd class="wide">Espace</kbd></div><span>Super</span></div>
       <div class="ctrl"><div class="keys"><kbd>T</kbd></div><span>Moment de la journée</span></div>
       <div class="ctrl"><div class="keys"><kbd class="wide">🎮 Manette</kbd></div><span>Stick gauche / droit, gâchettes</span></div>
+    </div>
+  </section>
+
+  <!-- ============================== steam ============================== -->
+  <section class="section steam" id="steam">
+    <div class="section-head reveal">
+      <span class="kicker">Version PC</span>
+      <h2 class="steam-title"><svg class="steam-ico xl" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z" /></svg>Aussi sur Steam</h2>
+      <p>Le même jeu, en application pour Windows et Linux : plein écran, overlay Steam et tout ce qui va avec un compte Steam.</p>
+    </div>
+    <div class="steam-grid reveal">
+      <article><i>🏆</i><h3>Succès Steam</h3><p>Dix succès à débloquer, de « First Blood » à « Centurion » (100 K.O.). Ceux gagnés hors ligne se débloquent au prochain lancement.</p></article>
+      <article><i>👥</i><h3>Amis Steam</h3><p>Invite tes amis depuis l'overlay, ou rejoins leur partie en un clic depuis ta liste d'amis, même jeu fermé.</p></article>
+      <article><i>📡</i><h3>Réseau Steam</h3><p>Les salles Steam passent par les relais de Steam, en P2P : pas de port à ouvrir, pas de serveur. Si l'hôte part, un autre joueur prend le relais.</p></article>
+      <article><i>🔀</i><h3>Cross-play avec le navigateur</h3><p>Crée une <b>salle cross-play</b> depuis Steam et partage son code : les joueurs du site la rejoignent comme n'importe quelle salle. Et un joueur Steam peut entrer dans une salle web avec son code.</p></article>
+      <article><i>🌍</i><h3>30 langues</h3><p>Toutes les langues de Steam, du français au japonais en passant par l'arabe. Le jeu suit la langue choisie dans Steam, ou celle du navigateur.</p></article>
+      <article><i>🎮</i><h3>Manette & Steam Deck</h3><p>Menus et combats entièrement jouables à la manette, plein écran avec <kbd>F11</kbd> ou <kbd>Alt</kbd>+<kbd>Entrée</kbd>.</p></article>
+    </div>
+    <div class="steam-cta reveal">
+      <a class="btn btn-steam btn-lg" data-steam-link href="#steam"><svg class="steam-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z" /></svg><span><b>VOIR SUR STEAM</b><small data-steam-label>Bientôt disponible</small></span></a>
     </div>
   </section>
 
@@ -259,12 +283,15 @@
   <section class="final">
     <div class="final-crew" id="crew"></div>
     <h2 class="reveal">Prêt à entrer dans l'arène ?</h2>
-    <a class="btn btn-play btn-xl reveal" href="/play.html"><span>JOUER</span><small>c'est gratuit</small></a>
+    <div class="final-cta reveal">
+      <a class="btn btn-play btn-xl" href="/play.html"><span>JOUER</span><small>c'est gratuit</small></a>
+      <a class="btn btn-steam btn-lg" data-steam-link href="#steam"><svg class="steam-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z" /></svg><span><b>STEAM</b><small data-steam-label>Bientôt disponible</small></span></a>
+    </div>
   </section>
 
   <footer class="foot">
     <span><b>AI SLOP</b> ARENA</span>
-    <span>three.js · Cloudflare · figurines générées localement</span>
+    <span>three.js · Cloudflare · Steamworks · figurines générées localement</span>
     <a href="https://github.com/gtko/ai-slop-arena">Code source</a>
   </footer>
 
