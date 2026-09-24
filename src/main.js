@@ -495,19 +495,115 @@ onNet('room', m => {
   if (!m.inMatch && game.net) backToRoom();
 });
 
-function startOnline(mapKey, roster, role) {
+/* ---- pre-match loading screen: everyone builds the match, then 3-2-1 together ---- */
+
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+let loadState = null; // { ready: Set, humans: [...], timer } while we (the Steam host) wait for peers
+function showMatchLoad(mapKey, roster) {
+  $('#mlMap').textContent = t(`map.${mapKey}`);
+  $('#mlTag').textContent = t(`map.${mapKey}.tag`);
+  $('#mlCount').textContent = '';
+  const cards = $('#mlCards');
+  cards.innerHTML = '';
+  for (const r of roster) {
+    const T = TYPES[r.type], el = document.createElement('div');
+    el.className = 'ml-card' + (r.human ? '' : ' ready') + (r.id === net.id ? ' me' : '');
+    el.dataset.id = r.id;
+    el.dataset.human = r.human ? '1' : '';
+    el.style.setProperty('--c', '#' + T.palette.main.toString(16).padStart(6, '0'));
+    el.innerHTML = `<span class="ml-ok">✓</span><img src="${portrait(r.type)}" alt=""><div class="ml-name"></div><div class="ml-sub"></div><div class="ml-bar"><i></i></div>`;
+    el.querySelector('.ml-name').textContent = r.id === net.id ? t('lobby.you', { name: r.name }) : r.name;
+    el.querySelector('.ml-sub').textContent = r.human ? `${PLAT_ICON[r.plat] || '🌐'} ${T.name}` : `${t('load.bot')} · ${T.name}`;
+    if (!r.human) el.querySelector('.ml-bar i').style.width = '100%';
+    cards.appendChild(el);
+  }
+  updateLoadStatus();
+  $('#matchload').classList.remove('hidden');
+}
+function setLoadProgress(id, p) {
+  const el = $(`#mlCards [data-id="${CSS.escape(id)}"]`);
+  if (!el) return;
+  el.querySelector('.ml-bar i').style.width = `${p}%`;
+  el.classList.toggle('ready', p >= 100);
+  updateLoadStatus();
+}
+function updateLoadStatus() {
+  const humans = [...document.querySelectorAll('#mlCards .ml-card[data-human="1"]')];
+  $('#mlStatus').textContent = t('load.waiting', { n: humans.filter(c => c.classList.contains('ready')).length, total: humans.length });
+}
+// 3-2-1-FIGHT, then the match runs (the server starts its simulation at the same moment).
+async function countdown(ms) {
+  const el = $('#mlCount');
+  $('#mlStatus').textContent = '';
+  for (let n = Math.round(ms / 1000); n > 0; n--) {
+    el.textContent = n; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+    sfx('click');
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  el.textContent = t('load.fight'); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  sfx('ready');
+  await new Promise(r => setTimeout(r, 450));
+}
+async function goMatch(ms) {
+  if (!game.net || game.state !== 'waiting') return;
+  if (!game.localReady) status(t('load.late')); // still loading: a bot plays for us meanwhile
+  await countdown(ms);
+  if (!game.net) return;
+  $('#matchload').classList.add('hidden');
+  hud.show(true);
+  game.time = 0; // the spawn shield counts from here
+  game.state = 'playing';
+  canvas.focus();
+}
+
+async function startOnline(mapKey, roster, role) {
   playMusic('m_' + mapKey);
   finalMusic = false;
   $('#lobby').classList.add('hidden');
   $('#result').classList.add('hidden');
-  hud.show(true);
+  hud.show(false);
+  showMatchLoad(mapKey, roster);
+  await nextFrame();
   // sendTo: per-player snapshots (only what each one can see); the Steam P2P host has it.
   const sendTo = role === 'host' && net.sendTo ? (id, msg) => net.sendTo(id, msg) : null;
   game.newMatch({ mapKey, roster, localId: net.id, net: { role, send: msg => net.send(msg), sendTo } });
+  game.state = 'waiting'; // nothing moves until everyone is in
+  game.localReady = false;
   const me = roster.find(r => r.id === net.id);
   achievements.matchStart({ mapKey, brawler: me ? me.type : chosen, online: true, humans: roster.filter(r => r.human).length });
-  canvas.focus();
+  net.send({ t: 'lprog', p: 50 });
+  setLoadProgress(net.id, 50);
+  // compile the shaders now rather than stuttering on the first frames of the match
+  try { if (renderer.compileAsync) await renderer.compileAsync(scene, camera); else renderer.compile(scene, camera); } catch { /* fine */ }
+  await nextFrame();
+  if (!game.net) return;
+  game.localReady = true;
+  setLoadProgress(net.id, 100);
+  net.send({ t: 'loaded' });
+  if (role === 'host') { // Steam P2P host: we are the one who waits for everybody
+    loadState = { ready: new Set([net.id]), humans: roster.filter(r => r.human).map(r => r.id) };
+    loadState.timer = setTimeout(() => hostGo(), 25000);
+    hostMaybeGo();
+  }
 }
+function hostMaybeGo() {
+  const present = new Set(net.players.map(p => p.id));
+  if (loadState && loadState.humans.every(id => loadState.ready.has(id) || !present.has(id))) hostGo();
+}
+function hostGo() {
+  if (!loadState) return;
+  clearTimeout(loadState.timer);
+  for (const id of loadState.humans) if (!loadState.ready.has(id)) game.onLeft(id); // bot until they load
+  loadState = null;
+  net.send({ t: 'go', in: 3000 });
+  goMatch(3000);
+}
+onNet('loaded', m => { // Steam host: a peer finished loading
+  setLoadProgress(m.from, 100);
+  if (loadState) { loadState.ready.add(m.from); hostMaybeGo(); } else if (game.net && game.net.role === 'host') game.onRejoin(m.from);
+});
+onNet('lprog', m => setLoadProgress(m.id, m.p));
+onNet('go', m => goMatch(m.in || 3000));
 $('#start').addEventListener('click', () => {
   if (!net.isHost) return;
   sfx('click');
@@ -565,6 +661,8 @@ document.querySelectorAll('#report [data-reason]').forEach(b => b.addEventListen
 
 function backToRoom() {
   $('#result').classList.add('hidden');
+  $('#matchload').classList.add('hidden');
+  loadState = null;
   hud.show(false);
   $('#lobby').classList.remove('hidden');
   showRoomView(net.connected);

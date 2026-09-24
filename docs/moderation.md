@@ -26,6 +26,15 @@ only send inputs; the server plays every hit, knock-out and power cube.
 - Steam lobbies get the same movement checks and per-player snapshots from the host, but a host
   can still cheat there: it is a friends-only mode.
 
+## Match start (loading screen)
+
+Like League of Legends, nobody plays before everybody is in: on `start` every client shows the
+8 participants, builds the match, compiles the shaders and sends `loaded` (progress is shared with
+`lprog`). When every human is ready, or after 25 s, the server sends `go`: 3-2-1-FIGHT on every
+screen, and only then does the simulation (and the 5 s spawn shield) start. A player still loading
+at that point is played by a bot and takes their brawler back as soon as they finish. Steam lobby
+hosts run the same wait. Protocol v3.
+
 ## Matchmaking
 
 One global queue (Matchmaker Durable Object) for web, Steam, Epic, Android and iOS:

@@ -15,11 +15,13 @@ import { rate, tierOf, pickGroup, botLevelFor, START_MMR } from './ranking.js';
 //   /admin/*     moderation API (reports, bans), enabled once the ADMIN_TOKEN secret is set.
 // Steam friend lobbies (src/steamnet.js) stay peer-to-peer: a player hosts, with the same checks.
 
-const PROTOCOL = 2;          // clients send ?v=2; older builds are told to update
+const PROTOCOL = 3;          // clients send ?v=3; older builds are told to update
 const MAX_PLAYERS = 8;
 const CODE = /^[A-Z0-9]{4,6}$/;
 const QUEUE_BOTS_AFTER = 5 * 60 * 1000; // matchmaking: after 5 minutes, bots fill the match
 const MATCHED_WAIT = 15 * 1000;         // a matched room starts when everyone is in, or after 15 s
+const LOAD_WAIT = 25 * 1000;  // the pre-match loading screen waits at most this long for everyone
+const COUNTDOWN = 3000;       // then 3-2-1, and the match starts on every screen at once
 const CHEAT_KICK = 25;                  // refused moves in one match before the player is kicked
 const MSG_PER_SEC = 60;
 
@@ -177,7 +179,7 @@ export class Room extends DurableObject {
       : humans.reduce((sum, p) => sum + (p.lvl ?? 0.45), 0) / humans.length;
     // matchmade matches are ranked: remember who played, rated at the end
     this.ranked = this.preset ? humans.map(p => ({ id: p.id, key: p.cid || p.ip })) : null;
-    const roster = makeRoster(humans.map(p => ({ id: p.id, name: p.name, type: p.brawler })), { level });
+    const roster = makeRoster(humans.map(p => ({ id: p.id, name: p.name, type: p.brawler, plat: p.plat })), { level });
     this.match = new ServerMatch({
       map, roster,
       send: msg => this.broadcast(msg),
@@ -191,16 +193,43 @@ export class Room extends DurableObject {
     this.matchId = `${this.code()}#${Date.now().toString(36)}${this.matchSeq}`;
     // every human's match count: report-based bans are a share of the matches played
     this.env.MOD.getByName('global').played(humans.map(p => p.cid || p.ip), this.matchId);
-    this.broadcast({ t: 'start', map, roster });
+    // Loading screen: every client builds the match and says 'loaded'; we wait for all of them
+    // (or LOAD_WAIT), then count down. The simulation only runs from the end of the countdown.
+    this.loading = { ready: new Set(), humans: humans.map(p => p.id) };
+    this.broadcast({ t: 'start', map, roster, wait: LOAD_WAIT });
     this.broadcastRoom();
-    this.last = Date.now();
-    this.started = Date.now();
-    this.loop = setInterval(() => this.tick(), 50);
+    this.loadTimer = setTimeout(() => this.go(), LOAD_WAIT);
+  }
+
+  // Everyone is in (or the wait is over): late players' brawlers are played by bots until they
+  // finish loading, then 3-2-1 and the match runs.
+  go() {
+    if (!this.match || !this.loading) return;
+    clearTimeout(this.loadTimer);
+    for (const id of this.loading.humans) if (!this.loading.ready.has(id)) this.match.left(id);
+    this.loading = null;
+    this.broadcast({ t: 'go', in: COUNTDOWN });
+    this.goTimer = setTimeout(() => {
+      if (!this.match) return;
+      this.last = Date.now();
+      this.started = Date.now();
+      this.loop = setInterval(() => this.tick(), 50);
+    }, COUNTDOWN);
+  }
+
+  onLoaded(me) {
+    if (!this.match) return;
+    if (this.loading) {
+      this.loading.ready.add(me.id);
+      this.broadcast({ t: 'lprog', id: me.id, p: 100 });
+      const present = this.sockets().map(ws => this.info(ws).id);
+      if (this.loading.humans.every(id => this.loading.ready.has(id) || !present.includes(id))) this.go();
+    } else this.match.rejoin(me.id); // finished loading after the start: take the brawler back
   }
 
   // The match advances by real time, from the loop and from every input that arrives.
   tick() {
-    if (!this.match) return;
+    if (!this.match || !this.loop) return;
     const now = Date.now();
     this.match.advance((now - this.last) / 1000);
     this.last = now;
@@ -209,6 +238,10 @@ export class Room extends DurableObject {
 
   async endMatch() {
     clearInterval(this.loop);
+    clearTimeout(this.loadTimer);
+    clearTimeout(this.goTimer);
+    this.loop = null;
+    this.loading = null;
     const match = this.match;
     this.match = null;
     if (match && this.ranked) await this.rateMatch(match.game, this.ranked);
@@ -264,7 +297,13 @@ export class Room extends DurableObject {
     const me = this.info(ws);
     switch (msg.t) {
       case 'in': // input -> the match (the only thing players send while playing)
-        if (this.match) { this.match.input({ ...msg, from: me.id }); this.tick(); }
+        if (this.match && this.loop) { this.match.input({ ...msg, from: me.id }); this.tick(); }
+        break;
+      case 'lprog': // loading screen progress, shown to everyone
+        if (this.loading && Number.isFinite(msg.p)) this.broadcast({ t: 'lprog', id: me.id, p: Math.max(0, Math.min(99, Math.round(msg.p))) });
+        break;
+      case 'loaded':
+        this.onLoaded(me);
         break;
       case 'pick':
         if (BRAWLERS.has(msg.brawler)) { me.brawler = msg.brawler; ws.serializeAttachment(me); this.broadcastRoom(); }
@@ -313,6 +352,10 @@ export class Room extends DurableObject {
     if (this.match) {
       this.match.left(me.id); // the brawler keeps fighting as a bot
       if (!rest.length) await this.endMatch();
+      else if (this.loading) { // nobody waits for a player who left the loading screen
+        const present = rest.map(s => this.info(s).id);
+        if (this.loading.humans.every(id => this.loading.ready.has(id) || !present.includes(id))) this.go();
+      }
     }
     const players = rest.map(s => this.info(s)).sort((a, b) => a.joined - b.joined)
       .map(({ id, name, brawler, host, plat }) => ({ id, name, brawler, host, plat }));

@@ -116,6 +116,12 @@ export default {
   'lobby.crossHint': 'Cross-play rooms are open to browser players too: share the code or the link.',
   'lobby.crossBadge': 'CROSS-PLAY',
 
+  // pre-match loading screen
+  'load.waiting': '{n} / {total} players ready',
+  'load.bot': 'Bot',
+  'load.fight': 'FIGHT!',
+  'load.late': 'Still loading: a bot plays for you until you are in.',
+
   // matchmaking (one queue for every platform)
   'mm.quick': 'FIND A MATCH',
   'mm.quickHint': 'Cross-platform: web, Steam, Epic, Android and iOS players in one queue.',

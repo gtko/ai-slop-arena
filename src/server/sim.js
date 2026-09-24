@@ -34,5 +34,6 @@ export class ServerMatch {
 
   input(msg) { this.game.onInput(msg); }
   left(id) { this.game.onLeft(id); }
+  rejoin(id) { this.game.onRejoin(id); }
   get ended() { return this.game.ended; }
 }

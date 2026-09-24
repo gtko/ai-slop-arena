@@ -24,7 +24,7 @@ const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.f
 export function makeRoster(humans = [], { level = 0.45 } = {}) {
   const spawns = shuffle([0, 1, 2, 3, 4, 5, 6, 7]);
   const names = shuffle(NAMES.slice());
-  const roster = humans.slice(0, 8).map((h, k) => ({ id: h.id, name: h.name, type: h.type, human: true, spawn: spawns[k] }));
+  const roster = humans.slice(0, 8).map((h, k) => ({ id: h.id, name: h.name, type: h.type, human: true, spawn: spawns[k], plat: h.plat }));
   const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
   for (let k = roster.length; k < 8; k++) {
     const skill = Math.round(Math.min(0.97, Math.max(0.05, 0.12 + level * 0.8 + gauss() * 0.2)) * 100) / 100;
@@ -369,6 +369,15 @@ export class Game {
     g.fix++;                    // the next snapshot tells that player to snap back
     g.strikes++;
     if (this.onCheat) this.onCheat(b, 'move', d, allowed);
+  }
+
+  // A player who was not ready in time (or reconnected) takes their brawler back from the bot.
+  onRejoin(id) {
+    const b = this.byId.get(id);
+    if (!b || !this.authority || b.human || !b.alive) return;
+    b.human = true; b.netDriven = true; b.guard = null; b.remoteIn = null;
+    b.net.set(b.pos.x, b.pos.z);
+    this.brains.delete(b);
   }
 
   // A client left mid-match: its brawler keeps fighting as a bot.

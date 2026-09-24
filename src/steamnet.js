@@ -184,6 +184,8 @@ export class SteamNet {
         break;
       case 'snap':
       case 'ev':
+      case 'go':    // loading screen over: 3-2-1 on every screen
+      case 'lprog': // a player's loading progress
         this.toOthers(msg);
         break;
     }
@@ -242,6 +244,12 @@ export class SteamNet {
         break;
       case 'ping':
         this.sendTo(from, { t: 'pong', at: msg.at });
+        break;
+      case 'lprog': // relay a peer's loading progress to everyone, us included
+        if (p && Number.isFinite(msg.p)) { const m = { t: 'lprog', id: from, p: Math.max(0, Math.min(99, Math.round(msg.p))) }; this.toOthers(m); this.emit('lprog', m); }
+        break;
+      case 'loaded':
+        if (p) { this.toOthers({ t: 'lprog', id: from, p: 100 }); this.emit('loaded', { from }); }
         break;
     }
   }
