@@ -66,7 +66,9 @@ together, and the notes must carry the "update required" warning (old apps are r
 
 ```bash
 npm run deploy        # builds everything, then wrangler deploy
-npm run check:prod    # site serves this build, rooms accept the protocol, refuse old ones, queue answers
+# site serves this build, rooms accept the protocol, refuse old ones, queue answers (retried while
+# the new version propagates; a plain `sleep 30` is blocked by the harness)
+for i in 1 2 3 4 5 6; do if npm run check:prod > "$TEMP/prod.log" 2>&1; then break; fi; sleep 10; done; tail -7 "$TEMP/prod.log"
 ```
 
 - A Cloudflare `500 / code 10013` is transient: run `npx wrangler deploy` again.
