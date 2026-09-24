@@ -33,6 +33,26 @@ One global queue (Matchmaker Durable Object) for web, Steam, Epic, Android and i
 is in the queue plays and **bots fill** the empty slots. "Play now with bots" skips the wait for one
 player. Matched players get a room code and the room starts when everyone is in (or after 15 s).
 
+## Ranking
+
+Every player has two numbers, kept by the server only (`Players` object, maths in `worker/ranking.js`):
+
+| | Hidden **MMR** | Visible **RP** + tier |
+| --- | --- | --- |
+| What for | matchmaking groups close MMRs; the bots of a match are tuned to it | what players see: 🥉 Bronze 0, 🥈 Silver 200, 🥇 Gold 500, 💎 Diamond 900, 🔮 Mythic 1400, 👑 Legend 2000 RP |
+| Moves in | every matchmade match (Elo-style, vs the lobby average; faster for the first 10 matches) | matchmade matches with **2+ humans** only (1st +30 ... 8th -12, never below 0) |
+| Shown | never (admin API only) | online menu, queue screen, result screen |
+
+- Alone with bots ("play now with bots" or the 5-minute fallback), a match is practice: the MMR still
+  adapts (so the bots stay right), the RP do not move, so nobody can farm bots.
+- RP drift toward the MMR: underrated players (RP well below what their MMR suggests) gain 1.5x,
+  overrated ones lose 1.5x.
+- Matchmaking window: MMRs within 150, growing by 2.5 per second of the oldest player's wait; at 5 minutes
+  the closest ones play and bots fill up.
+- The bots' difficulty is never chosen by the player: matchmaking uses the group's MMR, solo and
+  private rooms a hidden level kept on the device (`src/skill.js`) that follows the results.
+- Private rooms and Steam lobbies are unranked.
+
 ## Moderation
 
 - **Report** (⚑ next to a player in the room): cheating / offensive name / bad behaviour.
@@ -64,6 +84,8 @@ npx wrangler secret put ADMIN_TOKEN
 Then, with `Authorization: Bearer <token>`:
 
 ```bash
+# top players (MMR + RP)
+curl -H "Authorization: Bearer $TOKEN" https://ai-slop-arena.gtux-prog.workers.dev/admin/players
 # reported players (grouped, with matches played / reported / reporters over 7 days), bans
 curl -H "Authorization: Bearer $TOKEN" https://ai-slop-arena.gtux-prog.workers.dev/admin/reports
 # ban a device (days: 0 = forever; add "ip": "<ip:...>" from the report to ban the IP too)

@@ -123,6 +123,7 @@
       <div id="lobbyJoin">
         <label class="field"><span data-i18n="lobby.name">Your name</span><input id="nick" maxlength="14" autocomplete="nickname" placeholder="Brawler" data-i18n-placeholder="lobby.namePlaceholder" /></label>
         <div class="quick">
+          <p id="rankBadge" class="rank-badge hidden"></p>
           <button id="quick" class="big" data-i18n="mm.quick">FIND A MATCH</button>
           <p class="hint" data-i18n="mm.quickHint">Cross-platform: web, Steam, Epic, Android and iOS players in one queue.</p>
         </div>
@@ -141,6 +142,7 @@
       <div id="queue" class="hidden">
         <div class="q-spin"><i></i><i></i><i></i></div>
         <h3 data-i18n="mm.searching">Searching for players…</h3>
+        <p id="qRank" class="rank-badge"></p>
         <p class="q-count" id="qCount"></p>
         <div class="q-bar"><i id="qFill"></i></div>
         <p class="q-meta"><span id="qTime"></span> · <span id="qBotsIn"></span></p>
@@ -229,7 +231,7 @@
     <div class="menu-card result">
       <h2 id="resTitle">#1</h2>
       <p id="resSub"></p>
-      <p id="resLevel" class="hint"></p>
+      <p id="resRank" class="res-rank hidden"></p>
       <button id="resBug" class="link" data-i18n="bug.something">Something wrong? Report a bug</button>
       <div class="row-btns" id="soloBtns"><button id="again" class="big" data-i18n="result.again">PLAY AGAIN</button><button id="toMenu" class="ghost" data-i18n="result.menu">MENU</button></div>
       <div class="row-btns hidden" id="onlineBtns"><button id="spectate" class="ghost" data-i18n="result.spectate">SPECTATE</button><span class="hint" data-i18n="result.backSoon">Back to the room when the match ends…</span></div>

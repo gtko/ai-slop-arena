@@ -1,5 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import { ServerMatch, makeRoster, randomMap, BRAWLER_KEYS, MAP_KEYS } from './build/sim.js';
+import { rate, tierOf, pickGroup, botLevelFor, START_MMR } from './ranking.js';
 
 // AI SLOP ARENA — online server.
 //
@@ -10,6 +11,7 @@ import { ServerMatch, makeRoster, randomMap, BRAWLER_KEYS, MAP_KEYS } from './bu
 //   /mm          the Matchmaker (one global object): a cross-platform queue that fills rooms.
 //   /api/report  player reports (also used by Steam P2P lobbies, which have no server of ours).
 //   /api/bug     bug reports from the in-game form (text, technical info, optional screenshot).
+//   /api/rank    a player's visible rank (tier + RP); the hidden MMR never leaves the server.
 //   /admin/*     moderation API (reports, bans), enabled once the ADMIN_TOKEN secret is set.
 // Steam friend lobbies (src/steamnet.js) stay peer-to-peer: a player hosts, with the same checks.
 
@@ -40,6 +42,12 @@ export default {
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
       if (url.pathname === '/api/report' && request.method === 'POST') return cors(await apiReport(request, env));
       if (url.pathname === '/api/bug' && request.method === 'POST') return cors(await apiBug(request, env));
+      if (url.pathname === '/api/rank' && request.method === 'GET') {
+        const raw = (url.searchParams.get('cid') || '').replace(/[^\w-]/g, '').slice(0, 40);
+        if (raw.length < 8) return cors(json({ ok: false }, 400));
+        const p = await env.PLAYERS.getByName('global').get('cid:' + raw);
+        return cors(json({ ok: true, rp: p.rp, tier: tierOf(p.rp), matches: p.matches, wins: p.wins }));
+      }
     }
     if (url.pathname.startsWith('/admin/')) return admin(request, env, url);
     // Everything else is a static asset (the Vite build); unknown paths get a 404 from the asset layer.
@@ -71,7 +79,7 @@ async function identity(request, url) {
 
 const clean = (s, n) => String(s || '').replace(/[^\p{L}\p{N} _\-.!?']/gu, '').slice(0, n).trim();
 const BRAWLERS = new Set(BRAWLER_KEYS);
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'content-type', 'Access-Control-Max-Age': '86400' };
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'content-type', 'Access-Control-Max-Age': '86400' };
 const cors = r => { for (const [k, v] of Object.entries(CORS)) r.headers.set(k, v); return r; };
 const json = (data, status = 200) => new Response(JSON.stringify(data, null, 2), { status, headers: { 'content-type': 'application/json' } });
 
@@ -108,9 +116,9 @@ export class Room extends DurableObject {
   byId(id) { return this.sockets().find(ws => this.info(ws).id === id) || null; }
   code() { return this.roomCode || ''; }
 
-  // Called by the Matchmaker before sending players here.
-  async prepare({ expect, map }) {
-    this.preset = { expect, map: MAP_KEYS.includes(map) ? map : randomMap(), deadline: Date.now() + MATCHED_WAIT };
+  // Called by the Matchmaker before sending players here. level: bot skill for the group's MMR.
+  async prepare({ expect, map, level }) {
+    this.preset = { expect, map: MAP_KEYS.includes(map) ? map : randomMap(), deadline: Date.now() + MATCHED_WAIT, level };
     await this.ctx.storage.put('preset', this.preset);
     await this.ctx.storage.setAlarm(this.preset.deadline);
   }
@@ -163,8 +171,12 @@ export class Room extends DurableObject {
     const humans = this.sockets().map(ws => this.info(ws)).sort((a, b) => a.joined - b.joined);
     if (!humans.length) return;
     const map = MAP_KEYS.includes(mapPick) ? mapPick : randomMap();
-    // bots are a mix around the players' average level
-    const level = humans.reduce((sum, p) => sum + (p.lvl ?? 0.45), 0) / humans.length;
+    // bots are a mix around the players' level: the group's MMR (matchmaking), else what the
+    // players' devices report (private rooms)
+    const level = this.preset && this.preset.level !== undefined ? this.preset.level
+      : humans.reduce((sum, p) => sum + (p.lvl ?? 0.45), 0) / humans.length;
+    // matchmade matches are ranked: remember who played, rated at the end
+    this.ranked = this.preset ? humans.map(p => ({ id: p.id, key: p.cid || p.ip })) : null;
     const roster = makeRoster(humans.map(p => ({ id: p.id, name: p.name, type: p.brawler })), { level });
     this.match = new ServerMatch({
       map, roster,
@@ -197,7 +209,10 @@ export class Room extends DurableObject {
 
   async endMatch() {
     clearInterval(this.loop);
+    const match = this.match;
     this.match = null;
+    if (match && this.ranked) await this.rateMatch(match.game, this.ranked);
+    this.ranked = null;
     if (this.preset) { // a matchmade room becomes a normal room: the first player can start a rematch
       this.preset = null;
       await this.ctx.storage.delete('preset');
@@ -205,6 +220,17 @@ export class Room extends DurableObject {
       if (first) { first[1].host = true; first[0].serializeAttachment(first[1]); }
     }
     this.broadcastRoom();
+  }
+
+  // Ranked result: every human's placement (leavers too: their brawler played on as a bot).
+  async rateMatch(game, players) {
+    const alive = game.brawlers.filter(b => b.alive).length; // still standing at the end (e.g. time limit)
+    const results = players.map(p => { const b = game.byId.get(p.id); return { key: p.key, id: p.id, rank: b ? b.rank || alive : 8 }; });
+    const updates = await this.env.PLAYERS.getByName('global').record(results);
+    for (const u of updates) {
+      const ws = this.byId(u.id);
+      if (ws) ws.send(JSON.stringify({ t: 'ranked', rp: u.rp, delta: u.delta, tier: u.tier, prevTier: u.prevTier, visible: u.visible }));
+    }
   }
 
   // code: 'cheat' (the server caught impossible moves) or 'leader' (the room leader removed them)
@@ -313,9 +339,11 @@ export class Matchmaker extends DurableObject {
     const who = await identity(request, url);
     const ban = await this.env.MOD.getByName('global').isBanned([who.cid, who.ip]);
     if (ban) return refuse(ban, 'banned');
+    const me = await this.env.PLAYERS.getByName('global').get(who.cid || who.ip);
     const [client, server] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ joined: Date.now(), name: clean(url.searchParams.get('name'), 14) || 'Player', ...who });
+    server.serializeAttachment({ joined: Date.now(), name: clean(url.searchParams.get('name'), 14) || 'Player', mmr: me.mmr, ...who });
+    server.send(JSON.stringify({ t: 'rank', rp: me.rp, tier: tierOf(me.rp), matches: me.matches }));
     this.ensureLoop();
     this.tick();
     return new Response(null, { status: 101, webSocket: client });
@@ -326,10 +354,11 @@ export class Matchmaker extends DurableObject {
   async tick() {
     const q = this.queue(), now = Date.now();
     if (!q.length) { clearInterval(this.loop); this.loop = null; return; }
-    if (q.length >= MAX_PLAYERS) return this.makeMatch(q.slice(0, MAX_PLAYERS));
     const oldest = now - this.info(q[0]).joined;
     const botsAfter = +this.env.QUEUE_BOTS_AFTER_MS || QUEUE_BOTS_AFTER; // the env var is for tests only
-    if (oldest >= botsAfter) return this.makeMatch(q.slice(0, MAX_PLAYERS));
+    // players with close hidden MMRs; the allowed gap grows with the wait (ranking.js)
+    const group = pickGroup(q.map(ws => ({ ws, ...this.info(ws) })), now, MAX_PLAYERS, botsAfter);
+    if (group) return this.makeMatch(group.map(p => p.ws));
     const plats = {};
     for (const ws of q) plats[this.info(ws).plat] = (plats[this.info(ws).plat] || 0) + 1;
     for (const ws of q) {
@@ -343,7 +372,8 @@ export class Matchmaker extends DurableObject {
     const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = 'Q';
     for (let i = 0; i < 5; i++) code += A[Math.floor(Math.random() * A.length)];
-    await this.env.ROOMS.getByName(code).prepare({ expect: group.length, map: randomMap() });
+    const mmr = group.reduce((s, ws) => s + (this.info(ws).mmr ?? START_MMR), 0) / group.length;
+    await this.env.ROOMS.getByName(code).prepare({ expect: group.length, map: randomMap(), level: botLevelFor(mmr) });
     for (const ws of group) {
       try { ws.send(JSON.stringify({ t: 'matched', code, players: group.length })); ws.close(1000, 'matched'); } catch { /* left */ }
     }
@@ -357,6 +387,39 @@ export class Matchmaker extends DurableObject {
 
   async webSocketClose(ws) { try { ws.close(1000, 'bye'); } catch { /* closed */ } this.tick(); }
   async webSocketError(ws) { await this.webSocketClose(ws); }
+}
+
+/* ------------------------------ Players (ranking) ------------------------------ */
+
+// Hidden MMR and visible RP per player (device id), see ranking.js. Only the server writes them:
+// ranked results come from matches it ran itself.
+export class Players extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    this.sql = ctx.storage.sql;
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS players (key TEXT PRIMARY KEY, mmr REAL, rp INTEGER, matches INTEGER,
+      wins INTEGER, updated INTEGER)`);
+  }
+
+  get(key) {
+    const row = key && this.sql.exec('SELECT * FROM players WHERE key = ?', key).toArray()[0];
+    return row || { key, mmr: START_MMR, rp: 0, matches: 0, wins: 0 };
+  }
+
+  // results: [{ key, id, rank }] of one matchmade match. Visible RP only move with 2+ humans.
+  record(results) {
+    const visible = results.length >= 2;
+    const players = results.map(r => ({ ...this.get(r.key), key: r.key, rank: r.rank, id: r.id }));
+    const out = rate(players, { visible });
+    return out.map((u, i) => {
+      const before = players[i];
+      this.sql.exec('INSERT OR REPLACE INTO players (key, mmr, rp, matches, wins, updated) VALUES (?,?,?,?,?,?)',
+        u.key, u.mmr, u.rp, u.matches, before.wins + (u.win ? 1 : 0), Date.now());
+      return { ...u, id: before.id, visible };
+    });
+  }
+
+  top(n = 50) { return this.sql.exec('SELECT key, mmr, rp, matches, wins FROM players ORDER BY rp DESC LIMIT ?', n).toArray(); }
 }
 
 /* ------------------------------ Moderation ------------------------------ */
@@ -512,6 +575,7 @@ async function admin(request, env, url) {
   if (!env.ADMIN_TOKEN || request.headers.get('Authorization') !== `Bearer ${env.ADMIN_TOKEN}`) return new Response('Not found', { status: 404 });
   const mod = env.MOD.getByName('global');
   if (url.pathname === '/admin/reports' && request.method === 'GET') return json(await mod.list());
+  if (url.pathname === '/admin/players' && request.method === 'GET') return json(await env.PLAYERS.getByName('global').top(100));
   if (url.pathname === '/admin/bugs' && request.method === 'GET') return json(await mod.bugs(url.searchParams.get('status')));
   const shot = url.pathname.match(/^\/admin\/bugs\/(\d+)\/shot$/);
   if (shot && request.method === 'GET') {

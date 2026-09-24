@@ -10,12 +10,14 @@
     "bindings": [
       { "name": "ROOMS", "class_name": "Room" },
       { "name": "MATCHMAKER", "class_name": "Matchmaker" },
-      { "name": "MOD", "class_name": "Moderation" }
+      { "name": "MOD", "class_name": "Moderation" },
+      { "name": "PLAYERS", "class_name": "Players" }
     ]
   },
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["Room"] },
-    { "tag": "v2", "new_sqlite_classes": ["Matchmaker", "Moderation"] }
+    { "tag": "v2", "new_sqlite_classes": ["Matchmaker", "Moderation"] },
+    { "tag": "v3", "new_sqlite_classes": ["Players"] }
   ],
   "observability": { "enabled": true }
 }

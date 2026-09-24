@@ -57,7 +57,7 @@ async function send() {
   const info = {
     version, platform: platformName, store: appInfo.store, lang, userAgent: navigator.userAgent.slice(0, 200),
     screen: `${innerWidth}x${innerHeight}@${devicePixelRatio}`, gpu: settings.gpu, preset: settings.preset,
-    tier: settings.autoTier, bots: settings.bots, errors: errors.slice(), ...(ctx ? ctx.info() : {}),
+    tier: settings.autoTier, errors: errors.slice(), ...(ctx ? ctx.info() : {}),
   };
   try {
     const r = await fetch(`${serverOrigin()}/api/bug`, {

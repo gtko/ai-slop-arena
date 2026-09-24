@@ -142,6 +142,20 @@ export default {
   'bug.limit': 'You already sent many reports today, thanks!',
   'bug.oops': 'Oops, something went wrong.',
 
+  // rank (matchmaking): visible tier + RP; the hidden MMR is never shown
+  'rank.bronze': 'Bronze',
+  'rank.silver': 'Silver',
+  'rank.gold': 'Gold',
+  'rank.diamond': 'Diamond',
+  'rank.mythic': 'Mythic',
+  'rank.legend': 'Legend',
+  'rank.badge': '{icon} {tier} · {rp} RP',
+  'rank.unranked': 'Unranked: play a matchmaking match to get your rank',
+  'rank.pending': 'Ranked match: your result comes at the end of the match…',
+  'rank.change': '{delta} RP · {icon} {tier} · {rp} RP',
+  'rank.newTier': 'New tier!',
+  'rank.practice': 'Only one human in this match: practice, your rank does not change.',
+
   // moderation
   'mod.report': 'Report',
   'mod.kick': 'Remove from the room',
@@ -177,7 +191,6 @@ export default {
   'result.again': 'PLAY AGAIN',
   'result.menu': 'MENU',
   'result.spectate': 'SPECTATE',
-  'result.level': 'Your level: {level}',
   'result.backSoon': 'Back to the room when the match ends…',
 
   // options screen
@@ -205,11 +218,6 @@ export default {
   'opt.redetect': 'Detect the best settings again',
   'opt.detect': 'Detect',
   'opt.fullscreen': 'Fullscreen',
-  'opt.bots': 'Bots',
-  'opt.bots.auto': 'Adaptive · level {level}',
-  'opt.bots.easy': 'Easy',
-  'opt.bots.hard': 'Hard',
-  'opt.bots.hint': 'Adaptive: bots follow your level, a mix of weaker and sharper ones around it.',
   'opt.language': 'Language',
   'opt.language.auto': 'Automatic',
   'opt.language.hint': 'Changing it reloads the game.',

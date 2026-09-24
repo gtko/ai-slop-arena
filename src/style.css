@@ -366,3 +366,8 @@ body.touch .overlay { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 #bug.overlay, #report.overlay { z-index: 60; }
 .bug-card h2 { font-size: 48px; }
 .bug-card .hint { margin: 0; }
+
+/* ------------------------------ rank ------------------------------ */
+.rank-badge { margin: 0 0 10px; font-family: var(--display); font-size: 22px; color: var(--yellow); text-align: center; }
+.rank-badge.hidden, .res-rank.hidden { display: none; }
+.res-rank { font-family: var(--display); font-size: 24px; color: var(--yellow); margin: 6px 0 0; }

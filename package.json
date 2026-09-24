@@ -16,7 +16,7 @@
     "build": "vite build && vite build --mode server",
     "preview": "npm run build && wrangler dev --port 8787",
     "deploy": "npm run build && wrangler deploy",
-    "test": "vite build --mode server && node tests/server.test.mjs && node tests/i18n.test.mjs",
+    "test": "vite build --mode server && node tests/server.test.mjs && node tests/ranking.test.mjs && node tests/i18n.test.mjs",
     "check:prod": "node scripts/check-prod.mjs",
     "desktop": "vite build && electron .",
     "desktop:dev": "electron . --dev-server=http://localhost:5173/play.html",

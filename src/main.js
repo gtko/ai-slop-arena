@@ -15,7 +15,7 @@ import { MAPS } from './maps.js';
 import { Net, randomCode, serverError } from './net.js';
 import { SteamNet } from './steamnet.js';
 import { Matchmaking } from './matchmaking.js';
-import { isDesktop, isPackagedApp, desktop, steam, steamInfo, epic, presence, WEB_ORIGIN } from './platform.js';
+import { isDesktop, isPackagedApp, desktop, steam, steamInfo, epic, presence, WEB_ORIGIN, serverOrigin, clientId } from './platform.js';
 import { achievements } from './achievements.js';
 import { botLevel, recordResult } from './skill.js';
 import { installBugReport, openBugReport } from './bugreport.js';
@@ -348,6 +348,7 @@ function openLobby() {
   $('#lobby').classList.remove('hidden');
   showRoomView(net.connected);
   playMusic('lobby');
+  loadRank();
 }
 function showRoomView(inRoom) {
   $('#lobbyJoin').classList.toggle('hidden', inRoom || mm.searching);
@@ -392,6 +393,17 @@ $('#lobbyBack').addEventListener('click', () => { mm.cancel(); net.close(); hist
 const mm = new Matchmaking();
 const clock = ms => { const s = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 const PLAT_ICON = { web: '🌐', steam: '🎮', epic: '🛒', android: '🤖', ios: '🍏' };
+// Visible rank (tier + RP) from the server; the hidden MMR never reaches the client.
+const TIER_ICON = { bronze: '🥉', silver: '🥈', gold: '🥇', diamond: '💎', mythic: '🔮', legend: '👑' };
+const rankText = r => (r.matches ? t('rank.badge', { icon: TIER_ICON[r.tier], tier: t(`rank.${r.tier}`), rp: r.rp }) : t('rank.unranked'));
+function showRank(r) {
+  if (!r || r.rp === undefined) return;
+  $('#rankBadge').textContent = $('#qRank').textContent = rankText(r);
+  $('#rankBadge').classList.remove('hidden');
+}
+async function loadRank() {
+  try { const r = await (await fetch(`${serverOrigin()}/api/rank?cid=${clientId()}`)).json(); if (r.ok) showRank(r); } catch { /* offline */ }
+}
 function findMatch() {
   const name = nick.value.trim() || t('lobby.namePlaceholder');
   try { if (!steam) localStorage.setItem('iaslop-name', name); } catch { /* ignore */ }
@@ -407,6 +419,7 @@ function findMatch() {
 $('#quick').addEventListener('click', findMatch);
 $('#qCancel').addEventListener('click', () => { sfx('click'); mm.cancel(); showRoomView(false); presence(t('presence.menu')); });
 $('#qBots').addEventListener('click', () => { sfx('click'); mm.bots(); });
+mm.on('rank', m => showRank(m));
 mm.on('queue', m => {
   $('#qCount').textContent = t('mm.inQueue', { n: m.n, need: m.need });
   $('#qFill').style.width = `${Math.min(100, (m.n / m.need) * 100)}%`;
@@ -524,6 +537,17 @@ onNet('kicked', m => {
   if (net === steamNet) { net.close(); if (game.net) backToRoom(); showRoomView(false); status(kickedText(m)); }
 });
 onNet('reported', m => status(m.ok ? t('mod.reported') : t('err.unreachable')));
+// Ranked match over: RP gained / lost and the new tier (on the result screen and in the room).
+onNet('ranked', m => {
+  const txt = m.visible
+    ? t('rank.change', { delta: (m.delta > 0 ? '+' : '') + m.delta, icon: TIER_ICON[m.tier], tier: t(`rank.${m.tier}`), rp: m.rp })
+      + (m.tier !== m.prevTier ? ' ' + t('rank.newTier') : '')
+    : t('rank.practice');
+  $('#resRank').textContent = txt;
+  $('#resRank').classList.remove('hidden');
+  status(txt);
+  if (m.visible) showRank({ rp: m.rp, tier: m.tier, matches: 1 });
+});
 
 // Report dialog: pick a reason, the server (or /api/report for Steam lobbies) records it.
 let reportTarget = null;
@@ -565,10 +589,11 @@ $('#resBug').addEventListener('click', () => openBugReport());
 game.onFeat = (kind, n) => { if (kind === 'ko') achievements.ko(); else achievements.cubes(n); };
 game.onResult = (rank, won) => {
   achievements.result(rank, won);
-  // the player's level follows the results; the bots of the next match follow it
-  const lv = recordResult(rank, won);
-  $('#resLevel').textContent = settings.bots === 'auto'
-    ? t('result.level', { level: lv.after }) + (lv.after > lv.before ? ' ▲' : lv.after < lv.before ? ' ▼' : '') : '';
+  // hidden level: the bots of the next solo / private match follow it (never shown)
+  recordResult(rank, won);
+  // ranked (matchmaking) result: arrives from the server when the match ends
+  $('#resRank').classList.toggle('hidden', !(game.net && net.matchmade));
+  $('#resRank').textContent = game.net && net.matchmade ? t('rank.pending') : '';
   playMusic(null);
   sfx(won ? 'victory' : 'defeat');
   $('#resTitle').textContent = won ? t('result.victory') : t('result.rank', { rank });
