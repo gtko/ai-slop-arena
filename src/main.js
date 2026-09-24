@@ -14,7 +14,7 @@ import { makeRoster, randomMap } from './game.js';
 import { MAPS } from './maps.js';
 import { Net, randomCode } from './net.js';
 import { SteamNet } from './steamnet.js';
-import { isDesktop, isPackagedApp, desktop, steam, steamInfo, presence, WEB_ORIGIN } from './platform.js';
+import { isDesktop, isPackagedApp, desktop, steam, steamInfo, epic, presence, WEB_ORIGIN } from './platform.js';
 import { achievements } from './achievements.js';
 import { t, translateDom } from './i18n/index.js';
 import { TouchControls, isTouchDevice } from './touch.js';
@@ -312,7 +312,7 @@ const onNet = (type, fn) => { webNet.on(type, fn); if (steamNet) steamNet.on(typ
 const use = target => { if (net !== target && net.connected) net.close(); net = target; };
 let lobbyMap = 'random';
 const nick = $('#nick');
-nick.value = localStorage.getItem('iaslop-name') || '';
+nick.value = localStorage.getItem('iaslop-name') || (epic && epic.name) || ''; // Epic: launcher display name
 if (steam) {
   // Your Steam name is your name; rooms are Steam lobbies your friends can join.
   nick.value = steamInfo.name;

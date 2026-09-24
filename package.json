@@ -20,6 +20,7 @@
     "desktop:dev": "electron . --dev-server=http://localhost:5173/play.html",
     "dist:steam": "vite build && electron-builder --win --x64 --dir",
     "dist:steam:linux": "vite build && electron-builder --linux --x64 --dir",
+    "dist:epic": "vite build && electron-builder --win --x64 --dir --config electron/builder-epic.cjs",
     "app:build": "vite build --mode app && cap sync",
     "android": "npm run app:build && cap open android",
     "android:apk": "npm run app:build && cd android && gradlew assembleDebug",

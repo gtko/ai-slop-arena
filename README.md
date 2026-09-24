@@ -148,6 +148,12 @@ npm run dist:steam   # packaged Windows build in release/win-unpacked, ready for
 
 See [steam/README.md](steam/README.md) for the achievements to declare and how to upload a build.
 
+### Android, iOS and Epic Games Store
+
+The same game ships as Android and iOS apps (Capacitor, with touch controls) and as an Epic Games
+Store build. Every tagged version is built by GitHub Actions and attached to a
+[GitHub release](https://github.com/gtko/ai-slop-arena/releases). Details: [docs/platforms.md](docs/platforms.md).
+
 ## Controls
 
 | Input | Action |

@@ -17,6 +17,11 @@ const { pathToFileURL } = require('node:url');
 
 const pkg = require('../package.json');
 const APP_ID = Number(process.env.STEAM_APP_ID) || pkg.steam.appId;
+// Which store this build is for: 'steam' (default) or 'epic' (npm run dist:epic sets it).
+const STORE = pkg.store || 'steam';
+// The Epic launcher passes the player's display name and language on the command line.
+const argValue = name => { const a = process.argv.find(x => x.toLowerCase().startsWith(`-${name}=`)); return a ? a.slice(name.length + 2) : null; };
+const EPIC = STORE === 'epic' ? { name: argValue('epicusername'), locale: argValue('epiclocale') } : null;
 const DIST = path.join(__dirname, '..', 'dist');
 const devArg = process.argv.find(a => a.startsWith('--dev-server='));
 const DEV_URL = devArg ? devArg.slice('--dev-server='.length) : null;
@@ -25,7 +30,8 @@ const START_URL = DEV_URL || 'app://game/play.html';
 /* ------------------------------ Steam ------------------------------ */
 
 let steamworks = null, steam = null, steamError = null;
-try {
+if (STORE !== 'steam') steamError = `${STORE} build`;
+else try {
   steamworks = require('steamworks.js');
   // A shipped build launched from its folder relaunches itself through Steam (480 = Spacewar test app).
   if (app.isPackaged && APP_ID !== 480 && steamworks.restartAppIfNecessary(APP_ID)) app.exit(0);
@@ -164,6 +170,7 @@ handle('steam:presence', (values = {}) => {
   for (const [k, v] of Object.entries(values)) steam.localplayer.setRichPresence(k, v == null || v === '' ? null : String(v));
 });
 
+handle('app:info', () => ({ store: STORE, version: pkg.version, epic: EPIC }));
 handle('app:fullscreen', v => { if (win) win.setFullScreen(v == null ? !win.isFullScreen() : !!v); return win && win.isFullScreen(); });
 handle('app:quit', () => app.quit());
 

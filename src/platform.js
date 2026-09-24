@@ -11,6 +11,10 @@ export const isPackagedApp = isDesktop || isNativeApp;
 // Public site: the desktop app uses it for the Cloudflare rooms when Steam is not running.
 export const WEB_ORIGIN = 'https://ai-slop-arena.gtux-prog.workers.dev';
 
+// Desktop build: { store: 'steam' | 'epic', version, epic: { name, locale } | null }.
+export const appInfo = desktop ? await desktop.info().catch(() => ({ store: 'steam' })) : { store: 'web' };
+export const epic = appInfo.epic || null;
+
 // { available, id, name, appId, ... } once Steam answered, otherwise { available: false }.
 export const steamInfo = desktop
   ? await desktop.steam.info().catch(e => ({ available: false, error: e.message }))

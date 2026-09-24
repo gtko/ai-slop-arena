@@ -1,6 +1,6 @@
 import en from './en.js';
 import { settings } from '../settings.js';
-import { steamInfo } from '../platform.js';
+import { steamInfo, epic } from '../platform.js';
 
 // Every language Steam supports. [code, native name, Steam API language name]
 export const LANGS = [
@@ -38,8 +38,8 @@ export const LANGS = [
 const CODES = new Set(LANGS.map(l => l[0]));
 const RTL = new Set(['ar']);
 
-// Steam's game language wins (the player picked it in the game's Steam properties), then the
-// browser / OS languages, then English.
+// Steam's game language wins (the player picked it in the game's Steam properties), then the Epic
+// launcher's, then the browser / OS languages, then English.
 function fromBrowser(tag) {
   const t = tag.toLowerCase();
   const [base, region] = t.split('-');
@@ -54,6 +54,10 @@ function detect() {
   if (steamInfo.available && steamInfo.language) {
     const hit = LANGS.find(l => l[2] === steamInfo.language);
     if (hit) return hit[0];
+  }
+  if (epic && epic.locale) { // Epic launcher language, e.g. "fr" or "pt-BR"
+    const code = fromBrowser(epic.locale);
+    if (code) return code;
   }
   for (const tag of navigator.languages || [navigator.language || 'en']) {
     const code = fromBrowser(tag);

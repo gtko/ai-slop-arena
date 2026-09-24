@@ -11,6 +11,7 @@ const subscribe = channel => fn => {
 
 contextBridge.exposeInMainWorld('desktop', {
   platform: process.platform,
+  info: () => call('app:info'),
   quit: () => call('app:quit'),
   fullscreen: v => call('app:fullscreen', v),
   steam: {
