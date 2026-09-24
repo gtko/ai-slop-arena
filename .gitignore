@@ -7,7 +7,7 @@ art-src/old
 
 # raw image-to-3D outputs (85 MB, regenerate with art-src/ai3d); the game ships the optimised copies
 art-src/glb/
-release
+/release
 steam/store/preview.html
 dist-app
 steam/store/trailer.mp4
