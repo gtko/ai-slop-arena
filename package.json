@@ -26,6 +26,7 @@
     "app:build": "vite build --mode app && cap sync",
     "android": "npm run app:build && cap open android",
     "android:apk": "npm run app:build && cd android && gradlew assembleDebug",
+    "android:aab": "npm run app:build && cd android && gradlew bundleRelease",
     "ios": "npm run app:build && cap open ios"
   },
   "dependencies": {

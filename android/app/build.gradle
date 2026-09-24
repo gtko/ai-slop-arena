@@ -1,5 +1,15 @@
 apply plugin: 'com.android.application'
 
+// Version from package.json: "0.6.0" -> versionName 0.6.0, versionCode 600 (major*10000 + minor*100 + patch).
+def pkgVersion = new groovy.json.JsonSlurper().parse(file('../../package.json')).version
+def (vMajor, vMinor, vPatch) = pkgVersion.tokenize('.-')[0..2].collect { it as int }
+
+// Play upload key, kept out of the repo: ~/.android-keys/aisloparena-upload.properties
+// (storeFile, storePassword, keyAlias, keyPassword), or ANDROID_UPLOAD_PROPERTIES pointing to one.
+def uploadProps = new Properties()
+def uploadPropsFile = file(System.getenv('ANDROID_UPLOAD_PROPERTIES') ?: "${System.getProperty('user.home')}/.android-keys/aisloparena-upload.properties")
+if (uploadPropsFile.exists()) uploadPropsFile.withInputStream { uploadProps.load(it) }
+
 android {
     namespace = "ch.gtko.aisloparena"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +17,8 @@ android {
         applicationId "ch.gtko.aisloparena"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode vMajor * 10000 + vMinor * 100 + vPatch
+        versionName pkgVersion
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +26,19 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (uploadProps.storeFile) {
+            upload {
+                storeFile file(uploadProps.storeFile)
+                storePassword uploadProps.storePassword
+                keyAlias uploadProps.keyAlias
+                keyPassword uploadProps.keyPassword
+            }
+        }
+    }
     buildTypes {
         release {
+            if (uploadProps.storeFile) signingConfig signingConfigs.upload
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
