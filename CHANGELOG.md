@@ -3,6 +3,14 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.6.2](docs/releases/v0.6.2.md): 15 achievements
+
+<a href="docs/releases/v0.6.2.md"><img src="docs/releases/img/v0.6.2-banner.png" alt="v0.6.2: 15 achievements" width="100%"></a>
+
+- 🏆 Five new achievements: Podium Finish, Super Finish, Night Owl, Crate Crusher, Champion (15 in all).
+- 🤖 Google Play Games on Android: automatic sign-in, the same achievements, an ACHIEVEMENTS button.
+- 🌍 Every new text in the 30 languages, Steam store pages updated.
+
 ## [v0.6.1](docs/releases/v0.6.1.md): New online menu
 
 <a href="docs/releases/v0.6.1.md"><img src="docs/releases/img/v0.6.1-banner.png" alt="v0.6.1: new online menu" width="100%"></a>

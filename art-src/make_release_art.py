@@ -552,6 +552,48 @@ def v061():
     img.convert('RGB').save(os.path.join(OUT, 'v0.6.1-lobby.png'), optimize=True)
 
 
+def v062():
+    banner('v0.6.2', '15 ACHIEVEMENTS', 'Five new ones, and Google Play Games on Android.',
+           [('🏆', '5 new'), ('🌙', 'Night Owl'), ('📦', 'Crate Crusher'), ('🤖', 'Play Games')],
+           'v0.6.2-banner.png', ('frostbite', 'blaster', 'gunslinger'))
+
+    # every achievement icon, the five new ones highlighted
+    ach = os.path.join(ROOT, 'play', 'achievements')
+    old = [('FIRST_KO', 'First Blood'), ('FIRST_WIN', 'Last One Standing'), ('RAMPAGE', 'Rampage'), ('POWER_HUNGRY', 'Power Hungry'),
+           ('ONLINE_WIN', 'Crowd Pleaser'), ('SQUAD_UP', 'Squad Up'), ('WORLD_TOUR', 'World Tour'), ('JACK_OF_ALL', 'Jack of All Slops'),
+           ('VETERAN', 'Veteran'), ('CENTURION', 'Centurion')]
+    new = [('PODIUM', 'Podium Finish', 'Top 3'), ('SUPER_KO', 'Super Finish', 'KO with a super'), ('NIGHT_OWL', 'Night Owl', 'Win at night'),
+           ('CRATE_CRUSHER', 'Crate Crusher', '50 crates'), ('CHAMPION', 'Champion', '10 wins')]
+    W, H = 1600, 820
+    img = background(W, H, glow=(0.5, 0.35))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 36), '5 NEW ACHIEVEMENTS', display(58), YELLOW, anchor='ma')
+    s, gap = 220, 40
+    x0 = (W - (5 * s + 4 * gap)) // 2
+    for i, (key, name, how) in enumerate(new):
+        x, y = x0 + i * (s + gap), 130
+        card(img, (x - 12, y - 12, x + s + 12, y + s + 110), fill=(255, 210, 63, 255), outline=INK, radius=26)
+        icon = Image.open(os.path.join(ach, key + '.png')).convert('RGBA').resize((s, s), Image.LANCZOS)
+        mask = Image.new('L', (s, s), 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, s, s), 20, fill=255)
+        img.paste(icon, (x, y), mask)
+        d.text((x + s // 2, y + s + 30), name, font=display(30), fill=INK, anchor='mm')
+        d.text((x + s // 2, y + s + 72), how, font=body(24, 'Bold'), fill=INK, anchor='mm')
+    outlined(d, (W // 2, 520), 'PLUS THE TEN YOU KNOW', display(36), TEXT, stroke=5, anchor='ma')
+    s2, gap2 = 110, 26
+    x0 = (W - (10 * s2 + 9 * gap2)) // 2
+    for i, (key, name) in enumerate(old):
+        x, y = x0 + i * (s2 + gap2), 590
+        icon = Image.open(os.path.join(ach, key + '.png')).convert('RGBA').resize((s2, s2), Image.LANCZOS)
+        mask = Image.new('L', (s2, s2), 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, s2, s2), 14, fill=255)
+        img.paste(icon, (x, y), mask)
+        d.rounded_rectangle((x, y, x + s2, y + s2), 14, outline=INK, width=3)
+    d.text((W // 2, 755), 'On Steam and on Google Play Games (Android) · progress earned offline is sent later',
+           font=body(26, 'Bold'), fill=MUTED, anchor='mm')
+    img.convert('RGB').save(os.path.join(OUT, 'v0.6.2-achievements.png'), optimize=True)
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     v020()
@@ -560,5 +602,6 @@ if __name__ == '__main__':
     v050()
     v060()
     v061()
+    v062()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')
