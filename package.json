@@ -19,12 +19,23 @@
     "desktop": "vite build && electron .",
     "desktop:dev": "electron . --dev-server=http://localhost:5173/play.html",
     "dist:steam": "vite build && electron-builder --win --x64 --dir",
-    "dist:steam:linux": "vite build && electron-builder --linux --x64 --dir"
+    "dist:steam:linux": "vite build && electron-builder --linux --x64 --dir",
+    "app:build": "vite build --mode app && cap sync",
+    "android": "npm run app:build && cap open android",
+    "android:apk": "npm run app:build && cd android && gradlew assembleDebug",
+    "ios": "npm run app:build && cap open ios"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/screen-orientation": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.3",
     "steamworks.js": "^0.4.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.2",
     "electron": "^44.4.5",
     "electron-builder": "^26.15.3",
     "three": "^0.186.0",
@@ -35,7 +46,9 @@
     "appId": "ch.gtko.aisloparena",
     "productName": "AI SLOP ARENA",
     "executableName": "AISlopArena",
-    "directories": { "output": "release" },
+    "directories": {
+      "output": "release"
+    },
     "files": [
       "package.json",
       "electron/**",
@@ -44,8 +57,17 @@
       "!dist/assets/site/**",
       "!dist/assets/site-*.js"
     ],
-    "asarUnpack": ["node_modules/steamworks.js/**"],
-    "win": { "icon": "electron/icon.ico", "target": "dir" },
-    "linux": { "icon": "electron/icon.png", "target": "dir", "category": "Game" }
+    "asarUnpack": [
+      "node_modules/steamworks.js/**"
+    ],
+    "win": {
+      "icon": "electron/icon.ico",
+      "target": "dir"
+    },
+    "linux": {
+      "icon": "electron/icon.png",
+      "target": "dir",
+      "category": "Game"
+    }
   }
 }

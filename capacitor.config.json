@@ -1,0 +1,13 @@
+{
+  "appId": "ch.gtko.aisloparena",
+  "appName": "AI SLOP ARENA",
+  "webDir": "dist-app",
+  "backgroundColor": "#16121f",
+  "android": {
+    "backgroundColor": "#16121f"
+  },
+  "ios": {
+    "backgroundColor": "#16121f",
+    "contentInset": "never"
+  }
+}

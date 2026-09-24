@@ -8,3 +8,4 @@ art-src/old
 # raw image-to-3D outputs (85 MB, regenerate with art-src/ai3d); the game ships the optimised copies
 art-src/glb/
 release
+dist-app

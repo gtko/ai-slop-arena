@@ -14,7 +14,7 @@ import { makeRoster, randomMap } from './game.js';
 import { MAPS } from './maps.js';
 import { Net, randomCode } from './net.js';
 import { SteamNet } from './steamnet.js';
-import { isDesktop, desktop, steam, steamInfo, presence, WEB_ORIGIN } from './platform.js';
+import { isDesktop, isPackagedApp, desktop, steam, steamInfo, presence, WEB_ORIGIN } from './platform.js';
 import { achievements } from './achievements.js';
 import { t, translateDom } from './i18n/index.js';
 import { TouchControls, isTouchDevice } from './touch.js';
@@ -353,7 +353,7 @@ async function joinRoom(code, lobbyId = null, web = false) {
     if (net === webNet) presence(t('presence.room'));
     status('');
     sfx('join');
-    if (!isDesktop) history.replaceState(null, '', `?room=${net.code}`);
+    if (!isPackagedApp) history.replaceState(null, '', `?room=${net.code}`);
     showRoomView(true);
   } catch (e) {
     status(steam || !import.meta.env.DEV ? `${e.message}.` : `${e.message}. Is the room server running? (npm run dev:server)`);
@@ -368,7 +368,7 @@ nick.addEventListener('keydown', e => e.stopPropagation());
 $('#lobbyBack').addEventListener('click', () => { net.close(); history.replaceState(null, '', location.pathname); status(''); toMenu(); });
 $('#copyLink').addEventListener('click', async () => {
   if (net === steamNet) { net.invite(); return; } // Steam overlay invite dialog
-  const link = isDesktop ? `${WEB_ORIGIN}/play?room=${net.code}` : `${location.origin}${location.pathname}?room=${net.code}`;
+  const link = isPackagedApp ? `${WEB_ORIGIN}/play?room=${net.code}` : `${location.origin}${location.pathname}?room=${net.code}`;
   try { await navigator.clipboard.writeText(link); status(t('lobby.linkCopied')); } catch { status(link); }
 });
 

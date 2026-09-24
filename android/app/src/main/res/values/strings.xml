@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AI SLOP ARENA</string>
+    <string name="title_activity_main">AI SLOP ARENA</string>
+    <string name="package_name">ch.gtko.aisloparena</string>
+    <string name="custom_url_scheme">ch.gtko.aisloparena</string>
+</resources>

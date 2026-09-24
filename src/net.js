@@ -1,4 +1,4 @@
-import { WEB_ORIGIN } from './platform.js';
+import { WEB_ORIGIN, isPackagedApp } from './platform.js';
 import { t } from './i18n/index.js';
 
 // Thin WebSocket client for the Cloudflare room relay (worker/index.js).
@@ -7,7 +7,7 @@ import { t } from './i18n/index.js';
 
 export function serverBase() {
   const { protocol, hostname, port, host } = location;
-  if (protocol === 'app:') return WEB_ORIGIN.replace(/^https:/, 'wss:'); // desktop app without Steam
+  if (isPackagedApp) return WEB_ORIGIN.replace(/^https:/, 'wss:'); // desktop and mobile apps
   const ws = protocol === 'https:' ? 'wss:' : 'ws:';
   if (port === '5173') return `${ws}//${hostname}:8787`;
   return `${ws}//${host}`;
