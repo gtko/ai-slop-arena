@@ -206,7 +206,16 @@ export class Room extends DurableObject {
   go() {
     if (!this.match || !this.loading) return;
     clearTimeout(this.loadTimer);
-    for (const id of this.loading.humans) if (!this.loading.ready.has(id)) this.match.left(id);
+    const anyReady = this.loading.humans.some(id => this.loading.ready.has(id));
+    // nobody made it (e.g. every player switched away from the app): give them one more wait
+    if (!anyReady && !this.loading.extended) {
+      this.loading.extended = true;
+      this.loadTimer = setTimeout(() => this.go(), LOAD_WAIT);
+      return;
+    }
+    // late players are played by bots until they load; if nobody is ready at all, keep them human
+    // (turning everyone into bots would end the match at once: no human left)
+    if (anyReady) for (const id of this.loading.humans) if (!this.loading.ready.has(id)) this.match.left(id);
     this.loading = null;
     this.broadcast({ t: 'go', in: COUNTDOWN });
     this.goTimer = setTimeout(() => {

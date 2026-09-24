@@ -499,12 +499,13 @@ onNet('room', m => {
   $('#waiting').classList.toggle('hidden', host);
   $('#waiting').textContent = m.inMatch ? t('lobby.inProgress') : m.matchmade ? t('mm.matchmade') : t('lobby.waiting');
   // host ended the match -> everyone back to the room
-  if (!m.inMatch && game.net) backToRoom();
+  if (!m.inMatch && game.net) { if (matchmadeMatch) matchmadeOver(); else backToRoom(); }
 });
 
 /* ---- pre-match loading screen: everyone builds the match, then 3-2-1 together ---- */
 
-const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+// next frame, or 150 ms if nothing renders (app in the background): loading must still finish
+const nextFrame = () => new Promise(r => { requestAnimationFrame(() => r()); setTimeout(r, 150); });
 let loadState = null; // { ready: Set, humans: [...], timer } while we (the Steam host) wait for peers
 function showMatchLoad(mapKey, roster) {
   $('#mlMap').textContent = t(`map.${mapKey}`);
@@ -563,7 +564,37 @@ async function goMatch(ms) {
   canvas.focus();
 }
 
+// A matchmaking match: when it ends we do not go back to that room of strangers, the result screen
+// offers to queue again or to go back to the online menu. (Remembered here: the room stops being
+// "matchmade" on the server the moment the match ends.)
+let matchmadeMatch = false, resultShown = false, rankedText = '';
+function matchmadeOver() {
+  // our own result may not be on screen yet (knocked out while the app was in the background):
+  // fill it from where our brawler finished before leaving the match
+  if (!resultShown) {
+    const P = game.player, alive = game.brawlers.filter(b => b.alive).length;
+    const rank = P ? P.rank || alive || 1 : 1;
+    game.onResult(rank, rank === 1);
+  }
+  matchmadeMatch = false;
+  net.close(); // leave the matchmade room; the server drops it once empty
+  game.net = null;
+  hud.show(false);
+  playMusic('lobby');
+  attract();
+  presence(t('presence.menu'));
+  $('#soloBtns').classList.add('hidden');
+  $('#onlineBtns').classList.add('hidden');
+  $('#mmBtns').classList.remove('hidden');
+  $('#result').classList.remove('hidden');
+}
+$('#mmAgain').addEventListener('click', () => { $('#result').classList.add('hidden'); openLobby(); findMatch(); });
+$('#mmMenu').addEventListener('click', () => { sfx('click'); $('#result').classList.add('hidden'); openLobby(); });
+
 async function startOnline(mapKey, roster, role) {
+  matchmadeMatch = !!net.matchmade;
+  resultShown = false;
+  rankedText = '';
   playMusic('m_' + mapKey);
   finalMusic = false;
   $('#lobby').classList.add('hidden');
@@ -646,6 +677,7 @@ onNet('ranked', m => {
     ? t('rank.change', { delta: (m.delta > 0 ? '+' : '') + m.delta, icon: TIER_ICON[m.tier], tier: t(`rank.${m.tier}`), rp: m.rp })
       + (m.tier !== m.prevTier ? ' ' + t('rank.newTier') : '')
     : t('rank.practice');
+  rankedText = txt;
   $('#resRank').textContent = txt;
   $('#resRank').classList.remove('hidden');
   status(txt);
@@ -696,9 +728,10 @@ game.onResult = (rank, won) => {
   achievements.result(rank, won);
   // hidden level: the bots of the next solo / private match follow it (never shown)
   recordResult(rank, won);
-  // ranked (matchmaking) result: arrives from the server when the match ends
-  $('#resRank').classList.toggle('hidden', !(game.net && net.matchmade));
-  $('#resRank').textContent = game.net && net.matchmade ? t('rank.pending') : '';
+  resultShown = true;
+  // ranked (matchmaking) result: arrives from the server when the match ends (maybe already here)
+  $('#resRank').classList.toggle('hidden', !matchmadeMatch);
+  $('#resRank').textContent = matchmadeMatch ? rankedText || t('rank.pending') : '';
   playMusic(null);
   sfx(won ? 'victory' : 'defeat');
   $('#resTitle').textContent = won ? t('result.victory') : t('result.rank', { rank });
@@ -706,6 +739,9 @@ game.onResult = (rank, won) => {
   $('#resSub').textContent = won ? t('result.won') : t('result.lost', { n: rank - 1 });
   $('#soloBtns').classList.toggle('hidden', !!game.net);
   $('#onlineBtns').classList.toggle('hidden', !game.net);
+  $('#mmBtns').classList.add('hidden');
+  // matchmaking: the ranked result and the next choices come when the whole match is over
+  $('#onlineBtns .hint').textContent = matchmadeMatch ? t('rank.pending') : t('result.backSoon');
   $('#result').classList.remove('hidden');
 };
 
