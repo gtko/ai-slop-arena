@@ -1,0 +1,109 @@
+# Builds every version of the game and attaches them to a GitHub release.
+# Runs on a pushed tag v* (git tag v0.2.0 && git push origin v0.2.0), or by hand from the
+# Actions tab with a tag name (the release is created if it does not exist yet).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag (e.g. v0.2.0)
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  windows:
+    name: Windows (Steam + Epic)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx vite build
+      - run: npx electron-builder --win --x64 --dir --publish never
+      - run: npx electron-builder --win --x64 --dir --publish never --config electron/builder-epic.cjs
+      - name: Zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path release/win-unpacked/* -DestinationPath AISlopArena-steam-windows.zip
+          Compress-Archive -Path release/epic/win-unpacked/* -DestinationPath AISlopArena-epic-windows.zip
+      - uses: actions/upload-artifact@v4
+        with: { name: windows, path: 'AISlopArena-*.zip' }
+
+  linux:
+    name: Linux (Steam) + web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx vite build
+      - run: npx electron-builder --linux --x64 --dir --publish never
+      - run: tar -czf AISlopArena-steam-linux.tar.gz -C release/linux-unpacked .
+      - run: cd dist && zip -qr ../AISlopArena-web.zip .
+      - uses: actions/upload-artifact@v4
+        with: { name: linux, path: 'AISlopArena-*' }
+
+  android:
+    name: Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21, cache: gradle }
+      - run: npm ci
+      - run: npx vite build --mode app && npx cap sync android
+      - name: Debug APK
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk AISlopArena-android.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: android, path: AISlopArena-android.apk }
+
+  ios:
+    name: iOS (simulator)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx vite build --mode app && npx cap sync ios
+      # Unsigned simulator build: proves the project compiles and runs in Xcode's simulator.
+      # A device / App Store build needs the Apple certificates (see docs/platforms.md).
+      - name: Build
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      - run: cd build/Build/Products/Release-iphonesimulator && zip -qry "$GITHUB_WORKSPACE/AISlopArena-ios-simulator.zip" App.app
+      - uses: actions/upload-artifact@v4
+        with: { name: ios, path: AISlopArena-ios-simulator.zip }
+
+  release:
+    name: GitHub release
+    needs: [windows, linux, android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: out, merge-multiple: true }
+      - name: Publish
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          ls -la out
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" out/* --clobber
+          else
+            gh release create "$TAG" out/* --title "AI SLOP ARENA $TAG" --generate-notes --target "$GITHUB_SHA"
+          fi
