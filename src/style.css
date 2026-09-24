@@ -311,9 +311,6 @@ body.touch #keys, body.touch #super { display: none; }
 body.touch #top { top: calc(10px + env(safe-area-inset-top)); }
 /* menus scroll instead of overflowing small landscape screens */
 body.touch .overlay { overflow-y: auto; -webkit-overflow-scrolling: touch; }
-@media (max-height: 500px) {
-  body.touch .menu-card, body.touch .opt-card { transform-origin: top center; zoom: 0.78; }
-}
 
 /* portrait phone: ask for landscape */
 #rotate { display: none; }
@@ -403,4 +400,124 @@ body.touch .overlay { overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .ml-card img { height: 70px; }
   #matchload { gap: 10px; }
   .ml-count { height: 70px; font-size: 70px; line-height: 70px; }
+}
+
+/* ------------------------------ short landscape screens (phones) ------------------------------ */
+/* Everything must fit in ~360-450 px of height with no scrolling: two columns, compact controls. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .overlay { padding: calc(8px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left)); }
+  .big { margin-top: 0; font-size: 21px; padding: 8px 18px; box-shadow: 0 4px 0 var(--ink); }
+  .ghost { margin-top: 0; font-size: 15px; padding: 7px 14px; box-shadow: 0 4px 0 var(--ink); }
+  .hint { margin-top: 6px; font-size: 11px; }
+  .lbl-row { margin: 4px 0 3px; font-size: 10px; }
+  #keys { display: none; }
+
+  /* boot loading screen */
+  #loader { gap: 8px; }
+  .ld-title span { font-size: 46px; }
+  .ld-title b { font-size: 32px; }
+  .ld-crew { height: 76px; }
+  .ld-crew img { height: 70px; }
+  .ld-bar { height: 16px; }
+  .ld-info b { font-size: 20px; }
+  .ld-tip { font-size: 12px; min-height: 2.4em; }
+
+  /* main menu: title + buttons | brawlers + maps */
+  #menu .menu-card { width: 100%; max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: minmax(190px, 0.75fr) 2fr;
+    grid-template-areas: "title cards" "btns cards" "btns maplbl" "btns maps"; grid-template-rows: auto 1fr auto auto; column-gap: 18px; row-gap: 4px; }
+  #menu .menu-card h1 { grid-area: title; font-size: 42px; -webkit-text-stroke: 4px var(--ink); text-shadow: 0 4px 0 var(--ink); }
+  #menu .menu-card h1 span { font-size: 30px; margin-top: 2px; }
+  #menu .tag, #menu .hint { display: none; }
+  #cards { grid-area: cards; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; align-self: end; }
+  .card { padding: 4px 5px 5px; gap: 0; border-radius: 12px; box-shadow: 0 3px 0 rgba(0,0,0,0.45); }
+  .card p, .card .stat { display: none; }
+  .portrait { height: 64px; margin: 0 0 3px; border-width: 2px; }
+  .portrait img { height: 72px; bottom: -4px; }
+  .card b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card em { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #menu .lbl-row { grid-area: maplbl; }
+  #maps { grid-area: maps; }
+  .maps { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
+  .map { height: 42px; border-width: 2px; border-radius: 10px; }
+  .map em { display: none; }
+  .map b { font-size: 11px; }
+  .map i { font-size: 12px; top: 2px; }
+  #menu .row-btns { grid-area: btns; flex-direction: column; align-items: stretch; gap: 8px; justify-content: center; }
+
+  /* online lobby: join view in two columns, room view in two columns */
+  .lobby { width: 100%; max-width: 980px; margin: 0 auto; }
+  .lobby-title { display: none; }
+  #lobby.overlay { padding-top: calc(52px + env(safe-area-inset-top)); } /* clear the sound + back buttons */
+  #lobbyJoin:not(.hidden) { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "name friends" "quick create" "quick join"; column-gap: 20px; row-gap: 6px; align-items: start; }
+  #lobbyJoin .field { grid-area: name; }
+  #lobbyJoin .quick { grid-area: quick; margin: 0; }
+  #lobbyJoin .quick .big { font-size: 24px; padding: 12px 18px; }
+  #lblFriends { grid-area: friends; align-self: end; }
+  #lobbyJoin .row-btns { grid-area: create; }
+  #lobbyJoin .join-row { grid-area: join; margin-top: 0; }
+  #lobbyJoin > .hint { display: none; }
+  .rank-badge { font-size: 16px; margin-bottom: 4px; }
+  .field input, .join-row input { font-size: 16px; padding: 6px 10px; }
+  #lobbyRoom:not(.hidden) { display: grid; grid-template-columns: 1.1fr 1fr; grid-template-areas: "head brawlerlbl" "players brawlers" "players maplbl" "players maps" "players start";
+    grid-template-rows: auto auto auto auto 1fr; column-gap: 16px; row-gap: 4px; }
+  .room-head { grid-area: head; padding: 4px 10px; }
+  .room-head b { font-size: 24px; letter-spacing: 4px; }
+  #players { grid-area: players; margin: 0; gap: 4px; align-content: start; grid-template-columns: 1fr 1fr; }
+  .players li { padding: 3px 8px; font-size: 13px; }
+  .players li img { width: 22px; height: 22px; }
+  #lblBrawler { grid-area: brawlerlbl; }
+  #lobbyCards { grid-area: brawlers; flex-wrap: wrap; gap: 4px; }
+  .mini-cards button { font-size: 12px; padding: 2px 8px 2px 2px; }
+  .mini-cards button img { width: 24px; height: 24px; }
+  #lblMap { grid-area: maplbl; }
+  #lobbyMaps { grid-area: maps; }
+  #lobbyRoom .row-btns { grid-area: start; align-self: start; margin-top: 4px; }
+  .lobby .status { margin: 4px 0 0; font-size: 12px; }
+  #queue h3 { font-size: 24px; margin: 6px 0 2px; }
+  #queue .q-bar { margin: 6px auto; }
+  #queue .q-meta, #queue .q-plats, #queue .q-count { margin: 2px 0; font-size: 13px; }
+
+  /* options: full height, compact rows */
+  .opt-card { height: calc(100vh - 16px); width: 100%; }
+  .opt-head { gap: 12px; padding: 8px 14px 0; }
+  .opt-head h2 { font-size: 26px; }
+  .opt-tab { font-size: 13px; padding: 6px 10px 5px; }
+  .opt-body { padding: 4px 12px; }
+  .opt-row { padding: 4px 8px; gap: 10px; }
+  .opt-label { font-size: 13px; }
+  .opt-choice { min-width: 0; gap: 6px; padding-bottom: 6px; }
+  .opt-choice b { font-size: 14px; min-width: 120px; }
+  .opt-choice .arr { width: 26px; height: 26px; }
+  .opt-slider { min-width: 0; }
+  .opt-slider .bar { width: 150px; }
+  .opt-section { margin: 6px 0 2px; font-size: 12px; }
+  .opt-hint { padding: 4px 14px; font-size: 11px; min-height: 16px; }
+  .opt-foot { padding: 6px 14px 8px; }
+  .opt-foot .hints { display: none; }
+
+  /* pre-match loading screen: the 8 cards on one row, the countdown over them */
+  #matchload { gap: 8px; padding: 10px 14px; }
+  #matchload h2 { font-size: 34px; -webkit-text-stroke: 4px var(--ink); text-shadow: 0 4px 0 var(--ink); }
+  #matchload .ml-head p { font-size: 12px; margin: 0; }
+  .ml-cards { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; width: 100%; max-width: 960px; }
+  .ml-card { border-radius: 12px; border-width: 2px; }
+  .ml-card img { height: 64px; margin-top: 4px; }
+  .ml-card .ml-name { font-size: 11px; padding: 3px 6px 0; }
+  .ml-card .ml-sub { font-size: 9px; padding: 0 6px 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ml-card .ml-ok { width: 18px; height: 18px; font-size: 11px; top: 4px; right: 4px; }
+  .ml-count { position: absolute; inset: 0; height: auto; display: flex; align-items: center; justify-content: center; pointer-events: none; font-size: 110px; }
+
+  /* small dialogs */
+  .pause-card { gap: 7px; width: min(320px, 100%); }
+  .pause-card h2 { font-size: 40px; -webkit-text-stroke: 4px var(--ink); text-shadow: 0 4px 0 var(--ink); margin: 0 0 2px; }
+  .result h2 { font-size: 60px; -webkit-text-stroke: 4px var(--ink); text-shadow: 0 5px 0 var(--ink); }
+  .result p { font-size: 13px; margin: 4px 0; }
+  .res-rank { font-size: 18px; }
+  .bug-card { width: min(600px, 100%); display: grid; grid-template-columns: 1fr 1fr; gap: 5px 10px; }
+  .bug-card > * { grid-column: 1 / -1; }
+  .bug-card h2 { font-size: 30px; margin: 0; }
+  .bug-card textarea { min-height: 58px; height: 58px; }
+  .bug-card #bugPreview { max-height: 56px; margin: 0; }
+  .bug-card p[data-i18n="bug.info"] { display: none; }
+  .bug-card #bugSend, .bug-card #bugCancel { grid-column: auto; margin-top: 2px; }
 }
