@@ -245,6 +245,7 @@ kbd { font-family: var(--display); }
 .final-crew img { height: 170px; filter: drop-shadow(0 8px 0 rgba(0,0,0,0.3)); animation: float 5s ease-in-out infinite; }
 .foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 26px clamp(16px, 5vw, 70px); color: var(--muted); font-size: 14px; border-top: 1px solid rgba(255,255,255,0.08); }
 .foot b { color: var(--yellow); }
+.foot-links { display: flex; flex-wrap: wrap; gap: 18px; }
 
 /* ------------------------------ motion (kept subtle) ------------------------------ */
 .reveal { opacity: 0; transform: translateY(18px); transition: opacity 1s var(--ease), transform 1s var(--ease); }
