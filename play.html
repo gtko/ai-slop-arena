@@ -122,6 +122,11 @@
       <h2 class="lobby-title" data-i18n="lobby.title">Online</h2>
       <div id="lobbyJoin">
         <label class="field"><span data-i18n="lobby.name">Your name</span><input id="nick" maxlength="14" autocomplete="nickname" placeholder="Brawler" data-i18n-placeholder="lobby.namePlaceholder" /></label>
+        <div class="quick">
+          <button id="quick" class="big" data-i18n="mm.quick">FIND A MATCH</button>
+          <p class="hint" data-i18n="mm.quickHint">Cross-platform: web, Steam, Epic, Android and iOS players in one queue.</p>
+        </div>
+        <div class="lbl-row" data-i18n="mm.orFriends">Or play with friends</div>
         <div class="row-btns left">
           <button id="create" class="big" data-i18n="lobby.create">CREATE ROOM</button>
           <button id="createWeb" class="ghost hidden" data-i18n="lobby.createCross">CROSS-PLAY ROOM</button>
@@ -132,6 +137,18 @@
         </div>
         <p class="hint" data-i18n="lobby.hint">Rooms hold up to 8 players; bots fill the empty spots.</p>
         <p id="crossHint" class="hint hidden" data-i18n="lobby.crossHint">Cross-play rooms are open to browser players too: share the code or the link.</p>
+      </div>
+      <div id="queue" class="hidden">
+        <div class="q-spin"><i></i><i></i><i></i></div>
+        <h3 data-i18n="mm.searching">Searching for players…</h3>
+        <p class="q-count" id="qCount"></p>
+        <div class="q-bar"><i id="qFill"></i></div>
+        <p class="q-meta"><span id="qTime"></span> · <span id="qBotsIn"></span></p>
+        <p class="q-plats" id="qPlats"></p>
+        <div class="row-btns">
+          <button id="qBots" class="big small-big" data-i18n="mm.playNow">PLAY NOW WITH BOTS</button>
+          <button id="qCancel" class="ghost" data-i18n="mm.cancel">CANCEL</button>
+        </div>
       </div>
       <div id="lobbyRoom" class="hidden">
         <div class="room-head">
@@ -150,6 +167,17 @@
       </div>
       <p id="lobbyStatus" class="status"></p>
       <button id="lobbyBack" class="ghost small back" data-i18n="lobby.back">← Back</button>
+    </div>
+  </div>
+
+  <div id="report" class="overlay hidden">
+    <div class="pause-card">
+      <h2 data-i18n="mod.report">Report</h2>
+      <p id="reportWho" class="hint"></p>
+      <button data-reason="cheating" class="ghost" data-i18n="mod.reasonCheat">Cheating</button>
+      <button data-reason="offensive name" class="ghost" data-i18n="mod.reasonName">Offensive name</button>
+      <button data-reason="bad behaviour" class="ghost" data-i18n="mod.reasonOther">Bad behaviour</button>
+      <button data-reason="" class="big" data-i18n="mm.cancel">CANCEL</button>
     </div>
   </div>
 

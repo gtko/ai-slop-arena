@@ -1,0 +1,75 @@
+# Online play, anti-cheat and moderation
+
+## Who runs the match
+
+| Room | Runs the match | Players |
+| --- | --- | --- |
+| **Matchmaking** ("Find a match") | our server (Room Durable Object) | every platform, one queue |
+| **Web room** (room code, cross-play room on Steam) | our server | every platform |
+| **Steam lobby** (friends, invites) | the lobby owner, peer-to-peer | Steam only |
+
+On the server, `worker/build/sim.js` is the game itself (`src/game.js` and friends) built headless
+by `vite build --mode server` (`src/server/`): the same rules as the clients, no rendering. Players
+only send inputs; the server plays every hit, knock-out and power cube.
+
+## Anti-cheat
+
+- **Movement**: players move themselves (smooth on their screen), but every step is checked
+  (speed with a margin, walls, arena bounds, frozen, knockback allowance). A refused step snaps
+  the player back. 25 refused steps in a match: kicked (`kicked: cheat`).
+- **Attacks**: go through the host's rules like the bots' (ammo, cooldown, super charge).
+- **Inputs**: rate-limited (45/s per player in the game, 60 messages/s per socket on the server)
+  and sanitised (aim normalised, aim point within reach).
+- **Wallhack**: each player receives only the brawlers they can see; bushes and fog are enforced
+  by the server, not hidden on the client.
+- **Old clients** (protocol < 2) are refused with an "update" message.
+- Steam lobbies get the same movement checks and per-player snapshots from the host, but a host
+  can still cheat there: it is a friends-only mode.
+
+## Matchmaking
+
+One global queue (Matchmaker Durable Object) for web, Steam, Epic, Android and iOS:
+8 players -> match right away; otherwise, once the oldest player has waited **5 minutes**, whoever
+is in the queue plays and **bots fill** the empty slots. "Play now with bots" skips the wait for one
+player. Matched players get a room code and the room starts when everyone is in (or after 15 s).
+
+## Moderation
+
+- **Report** (⚑ next to a player in the room): cheating / offensive name / bad behaviour.
+  Steam lobbies report through `POST /api/report`. At most 20 reports per player per day.
+- **Remove** (✕, room leader only, not in matchmade rooms): the player cannot come back to that room.
+- **Automatic bans**
+  - 3 different players report the same person within 24 h -> that device banned for 24 h;
+  - kicked 3 times for impossible moves within 7 days -> device **and IP** banned for 7 days
+    (only proven cheating bans an IP: IPs are often shared).
+- Players have no account: bans use a random id stored on the device (`cid:`) and, for cheating,
+  a hash of the IP (`ip:`; the IP itself is never stored). Steam lobby reports use `steam:<id>`.
+
+### Admin API
+
+Create the token once (Cloudflare keeps it secret, the API does not exist without it):
+
+```bash
+npx wrangler secret put ADMIN_TOKEN
+```
+
+Then, with `Authorization: Bearer <token>`:
+
+```bash
+# reported players (grouped), bans
+curl -H "Authorization: Bearer $TOKEN" https://ai-slop-arena.gtux-prog.workers.dev/admin/reports
+# ban a device (days: 0 = forever; add "ip": "<ip:...>" from the report to ban the IP too)
+curl -X POST -H "Authorization: Bearer $TOKEN" -d '{"key":"cid:...","days":7,"reason":"cheating"}' https://ai-slop-arena.gtux-prog.workers.dev/admin/ban
+# lift a ban
+curl -X POST -H "Authorization: Bearer $TOKEN" -d '{"key":"cid:..."}' https://ai-slop-arena.gtux-prog.workers.dev/admin/unban
+```
+
+## Testing locally
+
+```bash
+npm run dev          # the game on :5173
+npm run dev:server   # builds worker/build/sim.js, then the server on :8787
+```
+
+`npx wrangler dev --var QUEUE_BOTS_AFTER_MS:6000 --var ADMIN_TOKEN:test` shortens the matchmaking
+wait to 6 s and enables the admin API with the token `test`, for tests only.

@@ -1,14 +1,24 @@
 import { DurableObject } from 'cloudflare:workers';
+import { ServerMatch, makeRoster, randomMap, BRAWLER_KEYS, MAP_KEYS } from './build/sim.js';
 
-// AI SLOP ARENA — multiplayer relay.
+// AI SLOP ARENA — online server.
 //
-// The Worker serves the built game from static assets and routes /ws/<ROOM> to one Durable
-// Object per room. The room is a thin relay: the first player is the host and runs the whole
-// simulation in their browser; other players send inputs to the host, the host broadcasts
-// snapshots and events. The DO only tracks who is in the room, who hosts, and forwards messages.
+// The Worker serves the built site/game from static assets and routes:
+//   /ws/<ROOM>   one Room Durable Object per room: it RUNS the match (src/server/sim.js, the same
+//                game rules as the clients, headless). Players only send their inputs; the room
+//                validates them and sends each player only what that player can see.
+//   /mm          the Matchmaker (one global object): a cross-platform queue that fills rooms.
+//   /api/report  player reports (also used by Steam P2P lobbies, which have no server of ours).
+//   /admin/*     moderation API (reports, bans), enabled once the ADMIN_TOKEN secret is set.
+// Steam friend lobbies (src/steamnet.js) stay peer-to-peer: a player hosts, with the same checks.
 
+const PROTOCOL = 2;          // clients send ?v=2; older builds are told to update
 const MAX_PLAYERS = 8;
 const CODE = /^[A-Z0-9]{4,6}$/;
+const QUEUE_BOTS_AFTER = 5 * 60 * 1000; // matchmaking: after 5 minutes, bots fill the match
+const MATCHED_WAIT = 15 * 1000;         // a matched room starts when everyone is in, or after 15 s
+const CHEAT_KICK = 25;                  // refused moves in one match before the player is kicked
+const MSG_PER_SEC = 60;
 
 export default {
   async fetch(request, env) {
@@ -18,140 +28,410 @@ export default {
       if (request.headers.get('Upgrade') !== 'websocket') return new Response('Expected WebSocket', { status: 426 });
       const code = m[1].toUpperCase();
       if (!CODE.test(code)) return new Response('Bad room code', { status: 400 });
-      return env.ROOMS.getByName(code).fetch(request);
+      return env.ROOMS.getByName(code).fetch(withIdentity(request));
     }
+    if (url.pathname === '/mm') {
+      if (request.headers.get('Upgrade') !== 'websocket') return new Response('Expected WebSocket', { status: 426 });
+      return env.MATCHMAKER.getByName('global').fetch(withIdentity(request));
+    }
+    if (url.pathname === '/api/report' && request.method === 'POST') return apiReport(request, env);
+    if (url.pathname.startsWith('/admin/')) return admin(request, env, url);
     // Everything else is a static asset (the Vite build); unknown paths get a 404 from the asset layer.
     return env.ASSETS.fetch(request);
   },
 };
 
+/* ------------------------------ identity ------------------------------ */
+
+// Players have no account: a random id the client keeps (cid), the platform, and a hash of the IP
+// (never the IP itself) so a ban survives clearing the browser.
+async function ipKey(request) {
+  const ip = request.headers.get('CF-Connecting-IP') || '';
+  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('iaslop:' + ip));
+  return 'ip:' + [...new Uint8Array(h).slice(0, 12)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function withIdentity(request) {
+  const r = new Request(request);
+  r.headers.set('x-iaslop-ip', request.headers.get('CF-Connecting-IP') || '');
+  return r;
+}
+async function identity(request, url) {
+  const raw = (url.searchParams.get('cid') || '').replace(/[^\w-]/g, '').slice(0, 40);
+  const cid = raw.length >= 8 ? 'cid:' + raw : '';
+  const plat = /^(web|steam|epic|android|ios)$/.test(url.searchParams.get('plat')) ? url.searchParams.get('plat') : 'web';
+  const fake = new Request('http://x', { headers: { 'CF-Connecting-IP': request.headers.get('x-iaslop-ip') || '' } });
+  return { cid, plat, ip: await ipKey(fake) };
+}
+
 const clean = (s, n) => String(s || '').replace(/[^\p{L}\p{N} _\-.!?']/gu, '').slice(0, n).trim();
-const BRAWLERS = new Set(['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt']);
+const BRAWLERS = new Set(BRAWLER_KEYS);
+const json = (data, status = 200) => new Response(JSON.stringify(data, null, 2), { status, headers: { 'content-type': 'application/json' } });
+
+// Refuse a WebSocket with a message the client shows ({ t: 'error', code, msg }: the client
+// translates known codes, older clients show msg).
+function refuse(msg, code = '') {
+  const [client, server] = Object.values(new WebSocketPair());
+  server.accept();
+  server.send(JSON.stringify({ t: 'error', code, msg }));
+  server.close(4003, 'refused');
+  return new Response(null, { status: 101, webSocket: client });
+}
+const OUTDATED = 'This version of the game is out of date: refresh the page or update the app.';
+
+/* ------------------------------ Room ------------------------------ */
 
 export class Room extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
-    this.inMatch = false;
-    this.map = 'oasis';
-    // Survive hibernation: room-level state is just "match running?" and the host's map pick.
+    this.match = null;      // ServerMatch while a match runs (in memory: the loop keeps us awake)
+    this.map = 'random';
+    this.kicked = new Set(); // identities kicked from this room
+    this.rate = new Map();   // socket -> { t, n } message counter
     ctx.blockConcurrencyWhile(async () => {
-      this.inMatch = (await ctx.storage.get('inMatch')) || false;
-      this.map = (await ctx.storage.get('map')) || 'oasis';
+      this.map = (await ctx.storage.get('map')) || 'random';
+      this.preset = (await ctx.storage.get('preset')) || null; // matchmade room: { expect, map, deadline }
+      this.kicked = new Set((await ctx.storage.get('kicked')) || []);
     });
   }
 
-  sockets() { return this.ctx.getWebSockets().filter(ws => ws.readyState === WebSocket.OPEN || ws.readyState === 1); }
+  get inMatch() { return !!this.match; }
+  sockets() { return this.ctx.getWebSockets().filter(ws => ws.readyState === 1); }
   info(ws) { return ws.deserializeAttachment() || {}; }
-  host() {
-    const all = this.sockets();
-    return all.find(ws => this.info(ws).host) || null;
+  byId(id) { return this.sockets().find(ws => this.info(ws).id === id) || null; }
+  code() { return this.roomCode || ''; }
+
+  // Called by the Matchmaker before sending players here.
+  async prepare({ expect, map }) {
+    this.preset = { expect, map: MAP_KEYS.includes(map) ? map : randomMap(), deadline: Date.now() + MATCHED_WAIT };
+    await this.ctx.storage.put('preset', this.preset);
+    await this.ctx.storage.setAlarm(this.preset.deadline);
+  }
+
+  async alarm() {
+    if (this.preset && !this.inMatch && this.sockets().length) this.startMatch(this.preset.map);
   }
 
   async fetch(request) {
     const url = new URL(request.url);
-    const players = this.sockets();
-    const pair = new WebSocketPair();
-    const [client, server] = Object.values(pair);
+    this.roomCode = url.pathname.split('/').pop().toUpperCase();
+    if (+url.searchParams.get('v') !== PROTOCOL) return refuse(OUTDATED, 'outdated');
+    const who = await identity(request, url);
+    const ban = await this.env.MOD.getByName('global').isBanned([who.cid, who.ip]);
+    if (ban) return refuse(ban, 'banned');
+    if (this.kicked.has(who.cid) || this.kicked.has(who.ip)) return refuse('You were removed from this room.', 'kicked');
+    if (this.sockets().length >= MAX_PLAYERS) return refuse('Room is full', 'full');
+
+    const [client, server] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server);
-    if (players.length >= MAX_PLAYERS) {
-      server.send(JSON.stringify({ t: 'error', msg: 'Room is full' }));
-      server.close(4001, 'full');
-      return new Response(null, { status: 101, webSocket: client });
-    }
-    const id = crypto.randomUUID().slice(0, 8);
     const brawler = BRAWLERS.has(url.searchParams.get('b')) ? url.searchParams.get('b') : 'blaster';
     const me = {
-      id, name: clean(url.searchParams.get('name'), 14) || 'Player',
-      brawler, host: !this.host(), joined: Date.now(),
+      id: crypto.randomUUID().slice(0, 8), name: clean(url.searchParams.get('name'), 14) || 'Player', brawler,
+      // matchmade rooms have no leader (nobody may kick or change the map)
+      host: !this.preset && !this.sockets().some(ws => ws !== server && this.info(ws).host),
+      joined: Date.now(), ...who,
     };
     server.serializeAttachment(me);
-    server.send(JSON.stringify({ t: 'welcome', id, code: url.pathname.split('/').pop().toUpperCase() }));
+    server.send(JSON.stringify({ t: 'welcome', id: me.id, code: this.code(), matchmade: !!this.preset }));
     this.broadcastRoom();
+    if (this.preset && !this.inMatch && this.sockets().length >= this.preset.expect) this.startMatch(this.preset.map);
     return new Response(null, { status: 101, webSocket: client });
   }
 
   roster() {
     return this.sockets().map(ws => this.info(ws)).sort((a, b) => a.joined - b.joined)
-      .map(({ id, name, brawler, host }) => ({ id, name, brawler, host }));
+      .map(({ id, name, brawler, host, plat }) => ({ id, name, brawler, host, plat }));
   }
-
   broadcastRoom() {
-    const msg = JSON.stringify({ t: 'room', players: this.roster(), inMatch: this.inMatch, map: this.map });
-    for (const ws of this.sockets()) ws.send(msg);
+    this.broadcast({ t: 'room', players: this.roster(), inMatch: this.inMatch, map: this.map, matchmade: !!this.preset });
+  }
+  broadcast(msg) {
+    const raw = typeof msg === 'string' ? msg : JSON.stringify(msg);
+    for (const ws of this.sockets()) ws.send(raw);
   }
 
-  async setMatch(v) {
-    this.inMatch = v;
-    await this.ctx.storage.put('inMatch', v);
+  startMatch(mapPick) {
+    if (this.inMatch) return;
+    const humans = this.sockets().map(ws => this.info(ws)).sort((a, b) => a.joined - b.joined);
+    if (!humans.length) return;
+    const map = MAP_KEYS.includes(mapPick) ? mapPick : randomMap();
+    const roster = makeRoster(humans.map(p => ({ id: p.id, name: p.name, type: p.brawler })));
+    this.match = new ServerMatch({
+      map, roster,
+      send: msg => this.broadcast(msg),
+      sendTo: (id, msg) => { const ws = this.byId(id); if (ws) ws.send(JSON.stringify(msg)); },
+      onEnd: () => this.endMatch(),
+      onCheat: (id, kind, strikes) => {
+        if (strikes === CHEAT_KICK) this.kick(this.byId(id), 'cheat', 'auto: ' + kind, 'server');
+      },
+    });
+    this.broadcast({ t: 'start', map, roster });
+    this.broadcastRoom();
+    this.last = Date.now();
+    this.started = Date.now();
+    this.loop = setInterval(() => this.tick(), 50);
+  }
+
+  // The match advances by real time, from the loop and from every input that arrives.
+  tick() {
+    if (!this.match) return;
+    const now = Date.now();
+    this.match.advance((now - this.last) / 1000);
+    this.last = now;
+    if (now - this.started > 12 * 60 * 1000) this.endMatch(); // safety net
+  }
+
+  async endMatch() {
+    clearInterval(this.loop);
+    this.match = null;
+    if (this.preset) { // a matchmade room becomes a normal room: the first player can start a rematch
+      this.preset = null;
+      await this.ctx.storage.delete('preset');
+      const first = this.sockets().map(ws => [ws, this.info(ws)]).sort((a, b) => a[1].joined - b[1].joined)[0];
+      if (first) { first[1].host = true; first[0].serializeAttachment(first[1]); }
+    }
+    this.broadcastRoom();
+  }
+
+  // code: 'cheat' (the server caught impossible moves) or 'leader' (the room leader removed them)
+  // by: 'server' (counts toward the cheating ban) or the leader's id (counts as a report from them)
+  async kick(ws, code, why, by) {
+    if (!ws) return;
+    const me = this.info(ws);
+    for (const k of [me.cid, me.ip]) if (k && k.length > 4) this.kicked.add(k);
+    await this.ctx.storage.put('kicked', [...this.kicked]);
+    await this.env.MOD.getByName('global').report({
+      reporter: by, target: me.cid, ip: me.ip, name: me.name, plat: me.plat, reason: why, room: this.code(), auto: by === 'server' ? 1 : 0,
+    });
+    const msg = code === 'cheat' ? 'You were removed: impossible moves (speed or teleport).' : 'The room leader removed you.';
+    try { ws.send(JSON.stringify({ t: 'kicked', code, msg })); ws.close(4004, 'kicked'); } catch { /* gone */ }
+    await this.webSocketClose(ws, 4004);
+  }
+
+  limited(ws) {
+    const now = Date.now(), r = this.rate.get(ws) || { t: now, n: 0 };
+    if (now - r.t >= 1000) { r.t = now; r.n = 0; }
+    r.n++;
+    this.rate.set(ws, r);
+    return r.n > MSG_PER_SEC;
   }
 
   async webSocketMessage(ws, raw) {
-    if (typeof raw !== 'string' || raw.length > 64000) return;
+    if (typeof raw !== 'string' || raw.length > 4000 || this.limited(ws)) return;
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
     const me = this.info(ws);
     switch (msg.t) {
-      case 'pick': // lobby: change brawler
+      case 'in': // input -> the match (the only thing players send while playing)
+        if (this.match) { this.match.input({ ...msg, from: me.id }); this.tick(); }
+        break;
+      case 'pick':
         if (BRAWLERS.has(msg.brawler)) { me.brawler = msg.brawler; ws.serializeAttachment(me); this.broadcastRoom(); }
         break;
-      case 'map': // host picks the next map (shown to everyone in the lobby)
-        if (me.host && /^[a-z]{2,12}$/.test(msg.map)) {
+      case 'map':
+        if (me.host && (msg.map === 'random' || MAP_KEYS.includes(msg.map))) {
           this.map = msg.map;
           await this.ctx.storage.put('map', msg.map);
           this.broadcastRoom();
         }
         break;
-      case 'in': { // client input -> host only
-        const h = this.host();
-        if (h && h !== ws) { msg.from = me.id; h.send(JSON.stringify(msg)); }
+      case 'start':
+        if (me.host && !this.inMatch) this.startMatch(this.map);
+        break;
+      case 'kick': { // room leader only, not in matchmade rooms
+        const target = this.byId(msg.id);
+        if (me.host && !this.preset && target && target !== ws) await this.kick(target, 'leader', 'kicked by leader', me.cid || me.ip);
         break;
       }
-      case 'start': // host starts a match: everyone else builds the same roster + map
-        if (!me.host) return;
-        await this.setMatch(true);
-        this.relay(ws, raw);
-        this.broadcastRoom();
+      case 'report': {
+        const target = this.byId(msg.id);
+        if (!target || target === ws) break;
+        const t = this.info(target);
+        const out = await this.env.MOD.getByName('global').report({
+          reporter: me.cid, target: t.cid, ip: t.ip, name: t.name, plat: t.plat, reason: clean(msg.reason, 40), room: this.code(), auto: 0,
+        });
+        ws.send(JSON.stringify({ t: 'reported', id: msg.id, ok: out.ok }));
         break;
-      case 'end':
-        if (!me.host) return;
-        await this.setMatch(false);
-        this.broadcastRoom();
-        break;
-      case 'snap':
-      case 'ev': // host -> everyone else
-        if (me.host) this.relay(ws, raw);
-        break;
+      }
       case 'ping':
         ws.send(JSON.stringify({ t: 'pong', at: msg.at }));
         break;
     }
   }
 
-  relay(from, raw) {
-    for (const ws of this.sockets()) if (ws !== from) ws.send(raw);
-  }
-
   async webSocketClose(ws, code) {
     const me = this.info(ws);
+    this.rate.delete(ws);
     try { ws.close(code === 1005 ? 1000 : code, 'bye'); } catch { /* already closed */ }
     const rest = this.sockets().filter(s => s !== ws);
-    if (me.host) {
-      // promote the longest-connected player; a running match cannot survive losing its host
+    if (me.host) { // the longest-connected player leads now; the match itself goes on (we run it)
       const next = rest.map(s => [s, this.info(s)]).sort((a, b) => a[1].joined - b[1].joined)[0];
-      if (next) { next[1].host = true; next[0].serializeAttachment(next[1]); }
-      if (this.inMatch) {
-        await this.setMatch(false);
-        for (const s of rest) s.send(JSON.stringify({ t: 'hostLeft' }));
-      }
-    } else if (this.inMatch) {
-      const h = rest.find(s => this.info(s).host);
-      if (h) h.send(JSON.stringify({ t: 'left', id: me.id }));
+      if (next && !this.preset) { next[1].host = true; next[0].serializeAttachment(next[1]); }
     }
-    if (!rest.length) await this.setMatch(false);
-    const msg = JSON.stringify({ t: 'room', players: rest.map(s => this.info(s)).sort((a, b) => a.joined - b.joined)
-      .map(({ id, name, brawler, host }) => ({ id, name, brawler, host })), inMatch: this.inMatch, map: this.map });
+    if (this.match) {
+      this.match.left(me.id); // the brawler keeps fighting as a bot
+      if (!rest.length) await this.endMatch();
+    }
+    const players = rest.map(s => this.info(s)).sort((a, b) => a.joined - b.joined)
+      .map(({ id, name, brawler, host, plat }) => ({ id, name, brawler, host, plat }));
+    const msg = JSON.stringify({ t: 'room', players, inMatch: this.inMatch, map: this.map, matchmade: !!this.preset });
     for (const s of rest) s.send(msg);
   }
 
   async webSocketError(ws) { await this.webSocketClose(ws, 1011); }
+}
+
+/* ------------------------------ Matchmaker ------------------------------ */
+
+// One global queue for every platform (web, Steam, Epic, Android, iOS). 8 players -> a match right
+// away; otherwise the oldest player's wait decides: after 5 minutes, whoever is queued plays and
+// bots fill the empty slots. "Play now with bots" skips the wait for one player.
+export class Matchmaker extends DurableObject {
+  sockets() { return this.ctx.getWebSockets().filter(ws => ws.readyState === 1 && !this.info(ws).matched); }
+  info(ws) { return ws.deserializeAttachment() || {}; }
+  queue() { return this.sockets().sort((a, b) => this.info(a).joined - this.info(b).joined); }
+
+  async fetch(request) {
+    const url = new URL(request.url);
+    if (+url.searchParams.get('v') !== PROTOCOL) return refuse(OUTDATED, 'outdated');
+    const who = await identity(request, url);
+    const ban = await this.env.MOD.getByName('global').isBanned([who.cid, who.ip]);
+    if (ban) return refuse(ban, 'banned');
+    const [client, server] = Object.values(new WebSocketPair());
+    this.ctx.acceptWebSocket(server);
+    server.serializeAttachment({ joined: Date.now(), name: clean(url.searchParams.get('name'), 14) || 'Player', ...who });
+    this.ensureLoop();
+    this.tick();
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  ensureLoop() { if (!this.loop) this.loop = setInterval(() => this.tick(), 1000); }
+
+  async tick() {
+    const q = this.queue(), now = Date.now();
+    if (!q.length) { clearInterval(this.loop); this.loop = null; return; }
+    if (q.length >= MAX_PLAYERS) return this.makeMatch(q.slice(0, MAX_PLAYERS));
+    const oldest = now - this.info(q[0]).joined;
+    const botsAfter = +this.env.QUEUE_BOTS_AFTER_MS || QUEUE_BOTS_AFTER; // the env var is for tests only
+    if (oldest >= botsAfter) return this.makeMatch(q.slice(0, MAX_PLAYERS));
+    const plats = {};
+    for (const ws of q) plats[this.info(ws).plat] = (plats[this.info(ws).plat] || 0) + 1;
+    for (const ws of q) {
+      ws.send(JSON.stringify({ t: 'queue', n: q.length, need: MAX_PLAYERS, waited: now - this.info(ws).joined,
+        botsIn: Math.max(0, botsAfter - oldest), plats }));
+    }
+  }
+
+  async makeMatch(group) {
+    for (const ws of group) { const i = this.info(ws); i.matched = true; ws.serializeAttachment(i); }
+    const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = 'Q';
+    for (let i = 0; i < 5; i++) code += A[Math.floor(Math.random() * A.length)];
+    await this.env.ROOMS.getByName(code).prepare({ expect: group.length, map: randomMap() });
+    for (const ws of group) {
+      try { ws.send(JSON.stringify({ t: 'matched', code, players: group.length })); ws.close(1000, 'matched'); } catch { /* left */ }
+    }
+  }
+
+  async webSocketMessage(ws, raw) {
+    let msg;
+    try { msg = JSON.parse(raw); } catch { return; }
+    if (msg.t === 'bots' && !this.info(ws).matched) await this.makeMatch([ws]); // play now, bots fill up
+  }
+
+  async webSocketClose(ws) { try { ws.close(1000, 'bye'); } catch { /* closed */ } this.tick(); }
+  async webSocketError(ws) { await this.webSocketClose(ws); }
+}
+
+/* ------------------------------ Moderation ------------------------------ */
+
+// Reports and bans (SQLite in one global object). Automatic rules:
+//   - 3 players reporting the same person within 24 h -> that device banned for 24 h;
+//   - kicked 3 times by the server for impossible moves within 7 days -> device and IP banned for
+//     7 days. Only proven cheating bans the IP: IPs are often shared (home, school, mobile network).
+// Everything else goes through the /admin API (see docs/moderation.md).
+const DAY = 24 * 3600 * 1000;
+
+export class Moderation extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    this.sql = ctx.storage.sql;
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS bans (key TEXT PRIMARY KEY, reason TEXT, until INTEGER, created INTEGER)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, reporter TEXT,
+      target TEXT, ip TEXT, name TEXT, plat TEXT, reason TEXT, room TEXT, auto INTEGER)`);
+  }
+
+  isBanned(keys) {
+    const now = Date.now();
+    for (const k of keys) {
+      if (!k || k === 'cid:') continue;
+      const row = this.sql.exec('SELECT reason, until FROM bans WHERE key = ?', k).toArray()[0];
+      if (row && (!row.until || row.until > now)) {
+        const until = row.until ? ` until ${new Date(row.until).toISOString().slice(0, 16).replace('T', ' ')} UTC` : '';
+        return `You are banned${until}${row.reason ? ` (${row.reason})` : ''}.`;
+      }
+    }
+    return null;
+  }
+
+  report(r) {
+    const now = Date.now();
+    if (!r.target) return { ok: false };
+    // a player can file at most 20 reports a day
+    const mine = this.sql.exec('SELECT COUNT(*) AS n FROM reports WHERE reporter = ? AND at > ?', r.reporter, now - DAY).one().n;
+    if (!r.auto && mine >= 20) return { ok: false };
+    this.sql.exec('INSERT INTO reports (at, reporter, target, ip, name, plat, reason, room, auto) VALUES (?,?,?,?,?,?,?,?,?)',
+      now, r.reporter, r.target, r.ip || '', r.name || '', r.plat || '', r.reason || '', r.room || '', r.auto ? 1 : 0);
+    if (r.auto) {
+      const kicks = this.sql.exec('SELECT COUNT(*) AS n FROM reports WHERE target = ? AND auto = 1 AND at > ?', r.target, now - 7 * DAY).one().n;
+      if (kicks >= 3) this.ban(r.target, 'cheating', 7, r.ip);
+    } else {
+      const people = this.sql.exec('SELECT COUNT(DISTINCT reporter) AS n FROM reports WHERE target = ? AND auto = 0 AND at > ?', r.target, now - DAY).one().n;
+      if (people >= 3) this.ban(r.target, 'reported by several players', 1);
+    }
+    return { ok: true };
+  }
+
+  ban(key, reason = '', days = 0, ip = null) {
+    const until = days ? Date.now() + days * DAY : 0;
+    for (const k of [key, ip]) {
+      if (k) this.sql.exec('INSERT OR REPLACE INTO bans (key, reason, until, created) VALUES (?,?,?,?)', k, reason, until, Date.now());
+    }
+    return { ok: true, until };
+  }
+
+  unban(key) { this.sql.exec('DELETE FROM bans WHERE key = ?', key); return { ok: true }; }
+
+  list() {
+    return {
+      bans: this.sql.exec('SELECT * FROM bans ORDER BY created DESC LIMIT 200').toArray(),
+      reports: this.sql.exec(`SELECT target, name, plat, COUNT(*) AS reports, SUM(auto) AS auto_kicks, MAX(at) AS last,
+        GROUP_CONCAT(DISTINCT reason) AS reasons, MAX(ip) AS ip FROM reports GROUP BY target ORDER BY last DESC LIMIT 200`).toArray(),
+    };
+  }
+}
+
+// POST /api/report { target, name, reason, plat } — reports from Steam P2P lobbies.
+async function apiReport(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return json({ ok: false }, 400); }
+  const target = String(body.target || '').replace(/[^\w:-]/g, '').slice(0, 60);
+  if (!target) return json({ ok: false }, 400);
+  const reporter = (await ipKey(request));
+  const out = await env.MOD.getByName('global').report({
+    reporter, target, name: clean(body.name, 14), plat: clean(body.plat, 10), reason: clean(body.reason, 40), room: 'steam-p2p', auto: 0,
+  });
+  return json(out);
+}
+
+// Moderation API. Needs the ADMIN_TOKEN secret (npx wrangler secret put ADMIN_TOKEN) and
+// "Authorization: Bearer <token>". Without the secret it does not exist.
+async function admin(request, env, url) {
+  if (!env.ADMIN_TOKEN || request.headers.get('Authorization') !== `Bearer ${env.ADMIN_TOKEN}`) return new Response('Not found', { status: 404 });
+  const mod = env.MOD.getByName('global');
+  if (url.pathname === '/admin/reports' && request.method === 'GET') return json(await mod.list());
+  if (request.method !== 'POST') return new Response('Not found', { status: 404 });
+  const body = await request.json().catch(() => ({}));
+  if (url.pathname === '/admin/ban') return json(await mod.ban(String(body.key || ''), clean(body.reason, 60), +body.days || 0, body.ip || null));
+  if (url.pathname === '/admin/unban') return json(await mod.unban(String(body.key || '')));
+  return new Response('Not found', { status: 404 });
 }

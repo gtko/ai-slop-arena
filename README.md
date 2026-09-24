@@ -128,12 +128,19 @@ The game rigs and animates them at load time: walking, aiming, recoil and breath
 ```bash
 npm install
 npm run dev          # site on http://localhost:5173, game on http://localhost:5173/play.html
-npm run dev:server   # multiplayer rooms (Cloudflare Worker + Durable Objects, local), on :8787
+npm run dev:server   # online server (Cloudflare Worker + Durable Objects, local), on :8787
 npm run deploy       # build and deploy everything to Cloudflare
 ```
 
 The home page (`index.html`, "/") is the showcase site with the trailer; the game itself is `play.html` ("/play"),
 which opens on a loading screen while the models and textures stream in.
+
+### Online play
+
+**Find a match** puts every platform (web, Steam, Epic, Android, iOS) in one queue; after 5 minutes of
+waiting, bots fill the empty slots. Room codes still work for playing with friends. Our server runs
+every online match itself (the game rules built headless), validates every move, sends each player
+only what they can see, and handles reports, kicks and bans: see [docs/moderation.md](docs/moderation.md).
 
 ### Desktop + Steam
 

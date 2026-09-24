@@ -1,5 +1,5 @@
 import { randomCode } from './net.js';
-import { presence } from './platform.js';
+import { presence, serverOrigin } from './platform.js';
 import { t } from './i18n/index.js';
 
 // Steam transport with the same surface as Net (net.js), so main.js and game.js do not care.
@@ -40,6 +40,9 @@ export class SteamNet {
     this.roster = new Map(); // host only: id -> { id, name, brawler, host, joined }
     this.seqOut = 0;
     this.seqIn = new Map(); // newest lossy packet seen per sender + type
+    this.blocked = new Set(); // players the host removed: their packets are ignored
+    this.serverAuthority = false; // a player hosts (peer-to-peer)
+    this.matchmade = false;
     steam.onPackets(batch => { for (const [from, text] of batch) this.receive(from, text); });
     steam.onLobby(ev => this.lobbyEvent(ev));
   }
@@ -116,12 +119,34 @@ export class SteamNet {
     this.players = [];
     this.roster.clear();
     this.seqIn.clear();
+    this.blocked.clear();
     this.id = null;
     this.inMatch = false;
     presence(t('presence.menu'));
   }
 
   invite() { this.steam.invite(); }
+
+  // Host only: remove a player from the lobby's game (Steam cannot force them out of the lobby,
+  // but the host ignores them from now on and they are told they were removed).
+  kick(id) {
+    if (!this.isHost || id === this.id) return;
+    this.sendTo(id, { t: 'kicked', code: 'leader' });
+    this.blocked.add(id);
+    if (this.roster.delete(id)) {
+      if (this.inMatch) this.emit('left', { id });
+      this.broadcastRoom();
+    }
+  }
+
+  // Reports go to the moderation server over HTTPS (no server of ours sees P2P lobbies).
+  report(id, reason) {
+    const p = this.players.find(x => x.id === id);
+    fetch(`${serverOrigin()}/api/report`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ target: 'steam:' + id, name: p ? p.name : '', reason, plat: 'steam' }),
+    }).then(r => this.emit('reported', { id, ok: r.ok })).catch(() => this.emit('reported', { id, ok: false }));
+  }
 
   /* ------------------------------ sending ------------------------------ */
 
@@ -184,7 +209,7 @@ export class SteamNet {
   /* ------------------------------ receiving ------------------------------ */
 
   receive(from, text) {
-    if (!this.lobby || from === this.id) return;
+    if (!this.lobby || from === this.id || this.blocked.has(from)) return;
     let msg;
     try { msg = JSON.parse(text); } catch { return; }
     if (typeof msg !== 'object' || !msg || typeof msg.t !== 'string') return;
@@ -202,6 +227,7 @@ export class SteamNet {
     switch (msg.t) {
       case 'hello':
         if (!p && this.roster.size >= MAX_PLAYERS) return;
+        if (this.blocked.has(from)) return;
         this.roster.set(from, {
           id: from, name: clean(msg.name, 14) || 'Player', brawler: BRAWLERS.has(msg.brawler) ? msg.brawler : 'blaster',
           host: false, joined: p ? p.joined : Date.now(),

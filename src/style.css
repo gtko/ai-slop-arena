@@ -323,3 +323,27 @@ body.touch .overlay { overflow-y: auto; -webkit-overflow-scrolling: touch; }
   #rotate .phone { width: 56px; height: 96px; border: 5px solid #ffd23f; border-radius: 12px; animation: rotatePhone 2s ease-in-out infinite; }
 }
 @keyframes rotatePhone { 0%, 25% { transform: rotate(0); } 55%, 100% { transform: rotate(-90deg); } }
+
+/* ------------------------------ matchmaking + moderation ------------------------------ */
+.quick { margin: 14px 0 6px; }
+.quick .big { width: 100%; font-size: 30px; }
+.quick .hint { margin-top: 8px; }
+#queue { text-align: center; padding: 10px 0 4px; }
+#queue h3 { font-family: var(--display); font-weight: 400; font-size: 30px; margin: 12px 0 6px; }
+#queue .q-count { font-weight: 900; font-size: 18px; margin: 4px 0; }
+#queue .q-meta, #queue .q-plats { color: var(--muted, #bdb5dc); font-weight: 700; margin: 6px 0; }
+#queue .q-bar { height: 12px; margin: 12px auto; max-width: 360px; border-radius: 99px; background: #221d33; border: 2px solid var(--ink); overflow: hidden; }
+#queue .q-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--yellow), #ffb300); transition: width 0.4s; }
+#queue .row-btns { justify-content: center; }
+.q-spin { display: flex; justify-content: center; gap: 8px; }
+.q-spin i { width: 14px; height: 14px; border-radius: 50%; background: var(--yellow); animation: qDot 1.1s ease-in-out infinite; }
+.q-spin i:nth-child(2) { animation-delay: 0.15s; }
+.q-spin i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes qDot { 0%, 100% { transform: translateY(0); opacity: 0.5; } 40% { transform: translateY(-10px); opacity: 1; } }
+.players li .p-act { margin-left: auto; display: flex; gap: 4px; }
+.players li .crown + .p-act { margin-left: 6px; }
+.players li .p-act button { font: inherit; font-size: 13px; line-height: 1; padding: 4px 6px; border-radius: 8px; border: 2px solid var(--ink);
+  background: rgba(255,255,255,0.08); color: var(--text); cursor: pointer; }
+.players li .p-act button:hover { background: rgba(255,255,255,0.2); }
+.players li .p-act .p-kick:hover { background: #b33; }
+#report .pause-card button { display: block; width: 100%; margin-top: 8px; }

@@ -36,8 +36,24 @@ const appBuild = {
   },
 };
 
+// Authoritative server (`vite build --mode server`): the game rules bundled for the Cloudflare
+// Worker as worker/sim.js, with the sound and translation modules swapped for server stubs.
+const serverBuild = {
+  resolve: {
+    alias: [
+      { find: /^\.\/audio\.js$/, replacement: resolve(__dirname, 'src/server/audio.js') },
+      { find: /^\.\/i18n\/index\.js$/, replacement: resolve(__dirname, 'src/server/i18n.js') },
+    ],
+  },
+  publicDir: false,
+  build: {
+    outDir: 'worker/build', emptyOutDir: true, minify: false, target: 'es2022',
+    lib: { entry: resolve(__dirname, 'src/server/sim.js'), formats: ['es'], fileName: () => 'sim.js' },
+  },
+};
+
 // Two pages: the landing site (index.html, "/") and the game (play.html, "/play").
-export default defineConfig(({ mode }) => mode === 'app' ? {
+export default defineConfig(({ mode }) => mode === 'server' ? serverBuild : mode === 'app' ? {
   plugins: [appBuild],
   build: { outDir: 'dist-app', rollupOptions: { input: { play: resolve(__dirname, 'play.html') } } },
 } : {

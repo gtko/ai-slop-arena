@@ -27,6 +27,29 @@ export function presence(status, group = null, size = 0) {
   steam.presence({ status, steam_player_group: group, steam_player_group_size: group ? size : null });
 }
 
+// Which platform the player is on, as the server's matchmaking and moderation see it.
+export const platformName = isNativeApp ? (window.Capacitor.getPlatform() === 'ios' ? 'ios' : 'android')
+  : isDesktop ? (appInfo.store === 'epic' ? 'epic' : 'steam') : 'web';
+
+// A random id kept on this device: players have no account, so bans and reports use it.
+export function clientId() {
+  const KEY = 'iaslop-cid';
+  try {
+    let id = localStorage.getItem(KEY);
+    if (!id) { id = crypto.randomUUID().replace(/-/g, ''); localStorage.setItem(KEY, id); }
+    return id;
+  } catch { return ''; }
+}
+
+// Base URL of the online server (rooms, matchmaking, reports). Same origin on the website; the
+// apps talk to the public site; `npm run dev` pairs Vite (5173) with wrangler (8787).
+export function serverOrigin() {
+  const { protocol, hostname, port, host } = location;
+  if (isPackagedApp) return WEB_ORIGIN;
+  if (port === '5173') return `${protocol}//${hostname}:8787`;
+  return `${protocol}//${host}`;
+}
+
 // Mobile app: full screen, landscape only.
 if (isNativeApp) {
   import('./native.js').then(m => m.setupNative()).catch(e => console.warn('[native]', e));

@@ -10,8 +10,9 @@ One game, one codebase (`src/`), several shells:
 | Android | Capacitor | `npm run android:apk` | Cloudflare rooms (cross-play) |
 | iOS / iPadOS | Capacitor | `npm run ios` (on a Mac) | Cloudflare rooms (cross-play) |
 
-Every version can meet every other one in a room created on the website's relay (a "cross-play
-room" on Steam, a normal room everywhere else). Steam lobbies are Steam-only.
+Every version can meet every other one through matchmaking or in a room created on our server
+(a "cross-play room" on Steam, a normal room everywhere else); the server runs those matches.
+Steam lobbies are Steam-only and hosted by a player. See [moderation.md](moderation.md).
 
 GitHub builds all of them: see [Releases](#releases) below.
 

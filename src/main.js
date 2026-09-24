@@ -12,8 +12,9 @@ import { Input } from './input.js';
 import { TYPES } from './brawler.js';
 import { makeRoster, randomMap } from './game.js';
 import { MAPS } from './maps.js';
-import { Net, randomCode } from './net.js';
+import { Net, randomCode, serverError } from './net.js';
 import { SteamNet } from './steamnet.js';
+import { Matchmaking } from './matchmaking.js';
 import { isDesktop, isPackagedApp, desktop, steam, steamInfo, epic, presence, WEB_ORIGIN } from './platform.js';
 import { achievements } from './achievements.js';
 import { t, translateDom } from './i18n/index.js';
@@ -313,10 +314,11 @@ $('#play').addEventListener('click', play);
 $('#again').addEventListener('click', play);
 $('#toMenu').addEventListener('click', toMenu);
 
-/* ---- online: Steam lobbies + P2P on desktop (steamnet.js), else Cloudflare rooms (worker/index.js) ---- */
+/* ---- online: server rooms + matchmaking (worker/index.js), Steam friend lobbies (steamnet.js) ---- */
 
-// On Steam there are two kinds of rooms: Steam lobbies (P2P, friends list, invites) and
-// cross-play rooms on the website's relay, which browser players can join with the same code.
+// Web rooms and matchmaking run on our server, which plays the match itself (every version can
+// join them: web, Steam, Epic, Android, iOS). On Steam there are also Steam lobbies (P2P, friends
+// list, invites), hosted by a player.
 const webNet = new Net();
 const steamNet = steam ? new SteamNet(steam, steamInfo) : null;
 let net = steamNet || webNet;
@@ -345,14 +347,16 @@ function openLobby() {
   playMusic('lobby');
 }
 function showRoomView(inRoom) {
-  $('#lobbyJoin').classList.toggle('hidden', inRoom);
+  $('#lobbyJoin').classList.toggle('hidden', inRoom || mm.searching);
+  $('#queue').classList.toggle('hidden', inRoom || !mm.searching);
   $('#lobbyRoom').classList.toggle('hidden', !inRoom);
   // Steam lobby: overlay invite. Cross-play / browser room: copy the web link.
   $('#copyLink').textContent = net === steamNet ? t('lobby.inviteSteam') : t('lobby.copyLink');
   $('#crossBadge').classList.toggle('hidden', !(steamNet && net === webNet));
 }
-// code: a room code to join (on Steam: a Steam lobby first, then a cross-play room);
-// on Steam, no code creates a lobby (or a cross-play room with web), lobbyId joins a friend's one.
+// code: a room code to join (on Steam: a Steam lobby first, then a web room);
+// on Steam, no code creates a lobby; web: a web room (new cross-play room, or a matchmade one);
+// lobbyId joins a friend's Steam lobby.
 async function joinRoom(code, lobbyId = null, web = false) {
   const name = nick.value.trim() || t('lobby.namePlaceholder');
   try { if (!steam) localStorage.setItem('iaslop-name', name); } catch { /* ignore */ }
@@ -360,7 +364,7 @@ async function joinRoom(code, lobbyId = null, web = false) {
   try {
     if (lobbyId) { use(steamNet); await net.joinLobby(lobbyId, name, chosen); }
     else if (steamNet && !code && !web) { use(steamNet); await net.create(name, chosen); }
-    else if (web) { use(webNet); await net.connect(randomCode(), name, chosen); }
+    else if (web) { use(webNet); await net.connect(code || randomCode(), name, chosen); }
     else if (steamNet && await steam.findLobby(code)) { use(steamNet); await net.connect(code, name, chosen); }
     else { use(webNet); await net.connect(code, name, chosen); }
     if (net === webNet) presence(t('presence.room'));
@@ -378,7 +382,43 @@ $('#createWeb').addEventListener('click', () => joinRoom(null, null, true));
 $('#join').addEventListener('click', () => { const c = $('#code').value.trim().toUpperCase(); if (c.length >= 4) joinRoom(c); else status(t('lobby.enterCode')); });
 $('#code').addEventListener('keydown', e => { if (e.code === 'Enter') $('#join').click(); e.stopPropagation(); });
 nick.addEventListener('keydown', e => e.stopPropagation());
-$('#lobbyBack').addEventListener('click', () => { net.close(); history.replaceState(null, '', location.pathname); status(''); toMenu(); });
+$('#lobbyBack').addEventListener('click', () => { mm.cancel(); net.close(); history.replaceState(null, '', location.pathname); status(''); toMenu(); });
+
+/* ---- matchmaking: one queue for every platform; bots fill the match after 5 minutes ---- */
+
+const mm = new Matchmaking();
+const clock = ms => { const s = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+const PLAT_ICON = { web: '🌐', steam: '🎮', epic: '🛒', android: '🤖', ios: '🍏' };
+function findMatch() {
+  const name = nick.value.trim() || t('lobby.namePlaceholder');
+  try { if (!steam) localStorage.setItem('iaslop-name', name); } catch { /* ignore */ }
+  sfx('click');
+  status('');
+  mm.start(name, chosen);
+  $('#qCount').textContent = t('lobby.connecting');
+  $('#qTime').textContent = $('#qBotsIn').textContent = $('#qPlats').textContent = '';
+  $('#qFill').style.width = '0%';
+  showRoomView(false);
+  presence(t('mm.searching'));
+}
+$('#quick').addEventListener('click', findMatch);
+$('#qCancel').addEventListener('click', () => { sfx('click'); mm.cancel(); showRoomView(false); presence(t('presence.menu')); });
+$('#qBots').addEventListener('click', () => { sfx('click'); mm.bots(); });
+mm.on('queue', m => {
+  $('#qCount').textContent = t('mm.inQueue', { n: m.n, need: m.need });
+  $('#qFill').style.width = `${Math.min(100, (m.n / m.need) * 100)}%`;
+  $('#qTime').textContent = t('mm.waited', { time: clock(m.waited) });
+  $('#qBotsIn').textContent = t('mm.botsIn', { time: clock(m.botsIn) });
+  $('#qPlats').textContent = Object.entries(m.plats || {}).map(([k, n]) => `${PLAT_ICON[k] || '•'} ${n}`).join('   ');
+});
+mm.on('matched', m => {
+  sfx('join');
+  status(t('mm.found'));
+  showRoomView(false);
+  joinRoom(m.code, null, true);
+});
+mm.on('error', m => { mm.cancel(); showRoomView(false); status(m.code ? serverError(m) : t('err.unreachable')); });
+mm.on('closed', () => { showRoomView(false); status(t('err.unreachable')); });
 $('#copyLink').addEventListener('click', async () => {
   if (net === steamNet) { net.invite(); return; } // Steam overlay invite dialog
   const link = isPackagedApp ? `${WEB_ORIGIN}/play?room=${net.code}` : `${location.origin}${location.pathname}?room=${net.code}`;
@@ -407,10 +447,19 @@ onNet('room', m => {
   $('#roomCode').textContent = net.code;
   const ul = $('#players');
   ul.innerHTML = '';
+  // Other players: report (everyone) and remove (room leader, not in matchmade rooms).
+  const canKick = net.isHost && !m.matchmade;
   for (const p of m.players) {
     const li = document.createElement('li');
-    li.innerHTML = `<img src="${portrait(p.brawler)}" alt=""><span class="${p.id === net.id ? 'you' : ''}"></span>${p.host ? `<span class="crown">${t('lobby.host')}</span>` : ''}`;
-    li.children[1].textContent = p.id === net.id ? t('lobby.you', { name: p.name }) : p.name;
+    const me = p.id === net.id;
+    li.innerHTML = `<img src="${portrait(p.brawler)}" alt=""><span class="${me ? 'you' : ''}"></span>${p.host ? `<span class="crown">${t('lobby.host')}</span>` : ''}`
+      + (me ? '' : `<span class="p-act"><button class="p-rep" title="${t('mod.report')}">⚑</button>${canKick ? `<button class="p-kick" title="${t('mod.kick')}">✕</button>` : ''}</span>`);
+    li.children[1].textContent = (PLAT_ICON[p.plat] ? PLAT_ICON[p.plat] + ' ' : '') + (me ? t('lobby.you', { name: p.name }) : p.name);
+    if (!me) {
+      li.querySelector('.p-rep').addEventListener('click', () => openReport(p));
+      const k = li.querySelector('.p-kick');
+      if (k) k.addEventListener('click', () => { sfx('click'); net.kick(p.id); });
+    }
     ul.appendChild(li);
   }
   for (let k = m.players.length; k < 8; k++) {
@@ -425,7 +474,7 @@ onNet('room', m => {
   $('#mapNote').textContent = host ? t('lobby.youPick') : t('lobby.hostPicks');
   $('#start').classList.toggle('hidden', !host);
   $('#waiting').classList.toggle('hidden', host);
-  $('#waiting').textContent = m.inMatch ? t('lobby.inProgress') : t('lobby.waiting');
+  $('#waiting').textContent = m.inMatch ? t('lobby.inProgress') : m.matchmade ? t('mm.matchmade') : t('lobby.waiting');
   // host ended the match -> everyone back to the room
   if (!m.inMatch && game.net) backToRoom();
 });
@@ -446,6 +495,8 @@ function startOnline(mapKey, roster, role) {
 $('#start').addEventListener('click', () => {
   if (!net.isHost) return;
   sfx('click');
+  // Server rooms: the server builds the roster and starts everyone (the leader included).
+  if (net.serverAuthority) { net.send({ t: 'start' }); return; }
   const roster = makeRoster(net.players.map(p => ({ id: p.id, name: p.name, type: p.brawler })));
   const mapKey = resolveMap(lobbyMap);
   net.send({ t: 'start', map: mapKey, roster });
@@ -457,7 +508,33 @@ onNet('snap', m => game.applySnap(m));
 onNet('ev', m => game.applyEvents(m.list));
 onNet('left', m => game.onLeft(m.id));
 onNet('hostLeft', () => { backToRoom(); status(t('lobby.hostLeft')); });
-onNet('closed', () => { if (game.net) backToRoom(); showRoomView(false); status(t('lobby.disconnected')); });
+onNet('closed', () => {
+  if (game.net) backToRoom();
+  showRoomView(false);
+  status(net.kickedMsg ? kickedText(net.kickedMsg) : t('lobby.disconnected'));
+  net.kickedMsg = null;
+});
+// Removed by the room leader, or by the server for impossible moves.
+const kickedText = m => t(`mod.kicked.${m.code === 'cheat' ? 'cheat' : 'leader'}`);
+onNet('kicked', m => {
+  net.kickedMsg = m;
+  if (net === steamNet) { net.close(); if (game.net) backToRoom(); showRoomView(false); status(kickedText(m)); }
+});
+onNet('reported', m => status(m.ok ? t('mod.reported') : t('err.unreachable')));
+
+// Report dialog: pick a reason, the server (or /api/report for Steam lobbies) records it.
+let reportTarget = null;
+function openReport(p) {
+  sfx('click');
+  reportTarget = p;
+  $('#reportWho').textContent = p.name;
+  $('#report').classList.remove('hidden');
+}
+document.querySelectorAll('#report [data-reason]').forEach(b => b.addEventListener('click', () => {
+  $('#report').classList.add('hidden');
+  if (b.dataset.reason && reportTarget) net.report(reportTarget.id, b.dataset.reason);
+  reportTarget = null;
+}));
 
 function backToRoom() {
   $('#result').classList.add('hidden');

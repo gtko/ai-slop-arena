@@ -3,11 +3,19 @@
   "name": "ai-slop-arena",
   "main": "worker/index.js",
   "compatibility_date": "2026-09-01",
-  // The Vite build is served as static assets; only /ws/<ROOM> reaches the Worker code.
+  // The Vite build is served as static assets; /ws, /mm, /api and /admin reach the Worker code.
+  // worker/build/sim.js (the headless game) comes from `vite build --mode server` (npm run build).
   "assets": { "directory": "./dist", "binding": "ASSETS" },
   "durable_objects": {
-    "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
+    "bindings": [
+      { "name": "ROOMS", "class_name": "Room" },
+      { "name": "MATCHMAKER", "class_name": "Matchmaker" },
+      { "name": "MOD", "class_name": "Moderation" }
+    ]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Room"] },
+    { "tag": "v2", "new_sqlite_classes": ["Matchmaker", "Moderation"] }
+  ],
   "observability": { "enabled": true }
 }

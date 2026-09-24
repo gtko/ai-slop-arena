@@ -389,7 +389,7 @@ export class Game {
             if (!v.human || v === this.player) continue;
             const seen = v.alive ? alive.filter(b => b === v || this.canSee(v, b)) : alive;
             const g = v.guard;
-            N.sendTo(v.id, { t: 'snap', pt, b: seen.map(row), me: v.alive && g ? [r2(v.net.x), r2(v.net.y), g.fix] : undefined });
+            N.sendTo(v.id, { t: 'snap', pt, b: seen.map(row), me: v.alive ? [r2(v.net.x), r2(v.net.y), g ? g.fix : 0] : undefined });
           }
         } else N.send({ t: 'snap', pt, b: alive.map(row) });
       }

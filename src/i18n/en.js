@@ -116,7 +116,31 @@ export default {
   'lobby.crossHint': 'Cross-play rooms are open to browser players too: share the code or the link.',
   'lobby.crossBadge': 'CROSS-PLAY',
 
+  // matchmaking (one queue for every platform)
+  'mm.quick': 'FIND A MATCH',
+  'mm.quickHint': 'Cross-platform: web, Steam, Epic, Android and iOS players in one queue.',
+  'mm.orFriends': 'Or play with friends',
+  'mm.searching': 'Searching for players…',
+  'mm.inQueue': '{n} / {need} players in the queue',
+  'mm.waited': 'Waiting for {time}',
+  'mm.botsIn': 'bots fill the match in {time}',
+  'mm.playNow': 'PLAY NOW WITH BOTS',
+  'mm.cancel': 'CANCEL',
+  'mm.found': 'Match found! Joining…',
+  'mm.matchmade': 'Matchmaking room: the match starts as soon as everyone is in.',
+
+  // moderation
+  'mod.report': 'Report',
+  'mod.kick': 'Remove from the room',
+  'mod.reasonCheat': 'Cheating',
+  'mod.reasonName': 'Offensive name',
+  'mod.reasonOther': 'Bad behaviour',
+  'mod.reported': 'Thanks, your report was sent.',
+  'mod.kicked.leader': 'The room leader removed you from the room.',
+  'mod.kicked.cheat': 'You were removed from the match: impossible moves (speed or teleport).',
+
   // connection errors
+  'err.outdated': 'This version of the game is out of date: refresh the page or update the app.',
   'err.unreachable': 'Could not reach the server',
   'err.full': 'Room is full',
   'err.notFound': 'No room {code} found',
