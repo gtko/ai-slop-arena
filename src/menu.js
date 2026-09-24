@@ -2,6 +2,7 @@ import { settings, set, applyQuality, bind, resetBinds, resetGroup, keyName, DEF
 import { settings as audio, setVolume, setMuted, setTrack, sfx, initAudio } from './audio.js';
 import { PAD } from './input.js';
 import { t, LANGS } from './i18n/index.js';
+import { WEB_ORIGIN } from './platform.js';
 
 // Video-game style menus: Options (tabs of rows) + Pause, plus console-like navigation for every
 // overlay in the game: ↑↓ / D-pad / left stick move the focus, ←→ change the focused option,
@@ -49,6 +50,9 @@ function tabs(ctx) {
         toggle('fps', t('opt.fps')),
         toggle('shake', t('opt.shake')),
         presetRow,
+        toggle('crashReports', t('opt.crashReports'), t('opt.crashReports.hint')),
+        toggle('analytics', t('opt.analytics'), t('opt.analytics.hint')),
+        { label: t('opt.privacy'), type: 'button', text: t('opt.privacy.open'), run: () => window.open(`${WEB_ORIGIN}/privacy.html`, '_blank') },
       ],
       reset: () => resetGroup(['lang', 'fps', 'shake']),
     },

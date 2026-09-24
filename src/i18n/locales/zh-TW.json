@@ -315,5 +315,18 @@
   "lobby.joinDesc": "好友給了你代碼？",
   "rank.none": "未定級",
   "rank.toNext": "距{tier}還差 {rp} RP",
-  "rank.top": "最高段位：你是傳奇"
+  "rank.top": "最高段位：你是傳奇",
+  "opt.crashReports": "傳送當機報告",
+  "opt.crashReports.hint": "遊戲當機時：錯誤訊息、遊戲版本、平台和顯示卡。不含個人資料。",
+  "opt.analytics": "分享匿名統計",
+  "opt.analytics.hint": "對戰、角色、地圖和幀率，用於改善遊戲。不含名稱和 IP 位址。",
+  "opt.privacy": "隱私",
+  "opt.privacy.open": "開啟",
+  "survey.title": "玩得開心嗎？",
+  "survey.later": "以後再說",
+  "survey.ask": "怎樣能讓遊戲更好？",
+  "survey.placeholder": "選填",
+  "survey.send": "送出",
+  "survey.skip": "略過",
+  "survey.thanks": "感謝你的意見！"
 }

@@ -1,4 +1,5 @@
 import { settings, applyQuality, setAutoInfo, TIERS } from './settings.js';
+import { qualityStep } from './telemetry.js';
 
 // Automatic graphics quality (preset "auto", the default).
 //  1. First launch: guess a tier from the GPU the browser reports (WEBGL_debug_renderer_info) and
@@ -88,10 +89,16 @@ export class AutoQuality {
     if (!this.enabled) return;
     if (this.cooldown > 0) { this.cooldown -= WINDOW; return; }
     const step = this.step;
-    if (this.fps < SLOW_FPS && step < ORDER.length - 1) { this.good = 0; this.apply(step + 1); return; }
+    if (this.fps < SLOW_FPS && step < ORDER.length - 1) { this.good = 0; this.move(step, step + 1); return; }
     if (this.fps >= 57 && step > this.maxStep) {
-      if (++this.good >= UP_WINDOWS) { this.good = 0; this.apply(step - 1); }
+      if (++this.good >= UP_WINDOWS) { this.good = 0; this.move(step, step - 1); }
     } else this.good = 0;
+  }
+
+  move(from, to) {
+    const name = i => { const s = STEPS[ORDER[i]]; return s.renderScale ? `${s.tier}@${s.renderScale}` : s.tier; };
+    this.apply(to);
+    qualityStep({ from: name(from), to: name(to), fps: this.fps, down: to > from });
   }
 
   // "High · 60% res" style label for the Options screen and the FPS counter.

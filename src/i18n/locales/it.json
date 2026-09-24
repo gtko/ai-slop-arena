@@ -316,5 +316,18 @@
   "lobby.joinDesc": "Un amico ti ha dato un codice?",
   "rank.none": "Senza grado",
   "rank.toNext": "{rp} RP a {tier}",
-  "rank.top": "Grado massimo: sei una Leggenda"
+  "rank.top": "Grado massimo: sei una Leggenda",
+  "opt.crashReports": "Invia segnalazioni di crash",
+  "opt.crashReports.hint": "Quando il gioco si blocca: errore, versione, piattaforma e scheda grafica. Niente di personale.",
+  "opt.analytics": "Condividi statistiche anonime",
+  "opt.analytics.hint": "Partite, brawler, mappe e fluidità, per migliorare il gioco. Nessun nome, nessun indirizzo IP.",
+  "opt.privacy": "Privacy",
+  "opt.privacy.open": "Apri",
+  "survey.title": "Ti stai divertendo?",
+  "survey.later": "Non ora",
+  "survey.ask": "Cosa renderebbe il gioco migliore?",
+  "survey.placeholder": "Facoltativo",
+  "survey.send": "INVIA",
+  "survey.skip": "SALTA",
+  "survey.thanks": "Grazie per il tuo parere!"
 }

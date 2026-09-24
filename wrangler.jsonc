@@ -3,6 +3,10 @@
   "name": "ai-slop-arena",
   "main": "worker/index.js",
   "compatibility_date": "2026-09-01",
+  // Sentry (worker/index.js) keeps its context across async calls with AsyncLocalStorage.
+  "compatibility_flags": ["nodejs_als"],
+  // Crash reports of the server. Not a secret: it only lets you send errors to this project.
+  "vars": { "SENTRY_DSN": "https://2da73477bec11b9288f393c3d34ffb98@o4511078519078912.ingest.de.sentry.io/4512143829827664" },
   // The Vite build is served as static assets; /ws, /mm, /api and /admin reach the Worker code.
   // worker/build/sim.js (the headless game) comes from `vite build --mode server` (npm run build).
   "assets": { "directory": "./dist", "binding": "ASSETS" },

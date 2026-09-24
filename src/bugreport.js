@@ -2,6 +2,7 @@ import { serverOrigin, platformName, appInfo } from './platform.js';
 import { settings } from './settings.js';
 import { lang, t } from './i18n/index.js';
 import { version } from '../package.json';
+import { lastCrashId, reportProblem, track } from './telemetry.js';
 
 // "Report a bug": a small form sent to the server (/api/bug, see worker/index.js) with what the
 // player wrote, a screenshot of the game and technical details. It shows up where it is useful:
@@ -57,7 +58,7 @@ async function send() {
   const info = {
     version, platform: platformName, store: appInfo.store, lang, userAgent: navigator.userAgent.slice(0, 200),
     screen: `${innerWidth}x${innerHeight}@${devicePixelRatio}`, gpu: settings.gpu, preset: settings.preset,
-    tier: settings.autoTier, errors: errors.slice(), ...(ctx ? ctx.info() : {}),
+    tier: settings.autoTier, errors: errors.slice(), sentry: lastCrashId(), ...(ctx ? ctx.info() : {}),
   };
   try {
     const r = await fetch(`${serverOrigin()}/api/bug`, {
@@ -67,6 +68,7 @@ async function send() {
     const out = await r.json().catch(() => ({}));
     if (!out.ok) throw new Error(out.error || r.status);
     $('#bugStatus').textContent = t('bug.sent');
+    track('bug_report_sent', { screenshot: !!($('#bugShot').checked && shot), errors: errors.length });
     $('#bugText').value = '';
     setTimeout(close, 1400);
   } catch (e) {
@@ -97,5 +99,5 @@ export function installBugReport(context) {
   addEventListener('error', e => { remember(e.message || e.error); toast(); });
   addEventListener('unhandledrejection', e => { remember(e.reason && (e.reason.stack || e.reason.message) || e.reason); toast(); });
   const canvas = document.querySelector('#c');
-  if (canvas) canvas.addEventListener('webglcontextlost', () => { remember('WebGL context lost'); toast(); });
+  if (canvas) canvas.addEventListener('webglcontextlost', () => { remember('WebGL context lost'); reportProblem('WebGL context lost'); toast(); });
 }

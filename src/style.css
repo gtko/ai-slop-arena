@@ -364,6 +364,19 @@ body.touch .overlay { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .bug-card h2 { font-size: 48px; }
 .bug-card .hint { margin: 0; }
 
+/* ------------------------------ satisfaction survey (result screen) ------------------------------ */
+.survey { margin: 12px auto 0; padding: 10px 14px; max-width: 420px; border-radius: 14px; border: 3px solid var(--ink); background: rgba(40, 32, 60, 0.9); }
+.survey b { display: block; font-family: var(--display); font-weight: 400; font-size: 20px; color: var(--yellow); }
+.sv-faces { display: flex; justify-content: center; gap: 6px; margin-top: 6px; }
+.sv-faces button { font-size: 30px; line-height: 1; padding: 6px 8px; border-radius: 12px; border: 2px solid transparent; background: rgba(255,255,255,0.06); cursor: pointer; }
+.sv-faces button:hover, .sv-faces button:focus-visible { border-color: var(--yellow); background: rgba(255,255,255,0.16); transform: scale(1.1); }
+.survey .link { margin-top: 4px; }
+.survey textarea { width: 100%; margin-top: 8px; font: inherit; font-weight: 700; padding: 8px 10px; border-radius: 10px;
+  border: 3px solid var(--ink); background: #221d33; color: var(--text); resize: none; }
+.survey .row-btns { margin-top: 6px; }
+.survey #svThanks { margin: 0; font-weight: 800; }
+@media (max-height: 520px) { .survey { margin-top: 6px; padding: 6px 10px; } .survey b { font-size: 16px; } .sv-faces button { font-size: 22px; padding: 4px 6px; } }
+
 /* ------------------------------ rank ------------------------------ */
 .rank-badge { margin: 0 0 10px; font-family: var(--display); font-size: 22px; color: var(--yellow); text-align: center; }
 .rank-badge.hidden, .res-rank.hidden { display: none; }

@@ -316,5 +316,18 @@
   "lobby.joinDesc": "Saitko koodin kaverilta?",
   "rank.none": "Ei sijoitusta",
   "rank.toNext": "{rp} RP tasoon {tier}",
-  "rank.top": "Huipputaso: olet Legenda"
+  "rank.top": "Huipputaso: olet Legenda",
+  "opt.crashReports": "Lähetä kaatumisraportit",
+  "opt.crashReports.hint": "Kun peli kaatuu: virhe, pelin versio, alusta ja näytönohjain. Ei mitään henkilökohtaista.",
+  "opt.analytics": "Jaa nimettömiä tilastoja",
+  "opt.analytics.hint": "Ottelut, taistelijat, areenat ja ruudunpäivitys pelin parantamiseksi. Ei nimeä, ei IP-osoitetta.",
+  "opt.privacy": "Tietosuoja",
+  "opt.privacy.open": "Avaa",
+  "survey.title": "Onko hauskaa?",
+  "survey.later": "Ei nyt",
+  "survey.ask": "Mikä tekisi pelistä paremman?",
+  "survey.placeholder": "Vapaaehtoinen",
+  "survey.send": "LÄHETÄ",
+  "survey.skip": "OHITA",
+  "survey.thanks": "Kiitos palautteesta!"
 }

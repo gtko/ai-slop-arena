@@ -316,5 +316,18 @@
   "lobby.joinDesc": "Fått en kod av en vän?",
   "rank.none": "Orankad",
   "rank.toNext": "{rp} RP till {tier}",
-  "rank.top": "Högsta rang: du är en Legend"
+  "rank.top": "Högsta rang: du är en Legend",
+  "opt.crashReports": "Skicka kraschrapporter",
+  "opt.crashReports.hint": "När spelet kraschar: felet, spelversionen, plattformen och grafikkortet. Inget personligt.",
+  "opt.analytics": "Dela anonym statistik",
+  "opt.analytics.hint": "Matcher, brawlers, banor och bildfrekvens, för att förbättra spelet. Inget namn, ingen IP-adress.",
+  "opt.privacy": "Integritet",
+  "opt.privacy.open": "Öppna",
+  "survey.title": "Har du kul?",
+  "survey.later": "Inte nu",
+  "survey.ask": "Vad skulle göra spelet bättre?",
+  "survey.placeholder": "Valfritt",
+  "survey.send": "SKICKA",
+  "survey.skip": "HOPPA ÖVER",
+  "survey.thanks": "Tack för din feedback!"
 }

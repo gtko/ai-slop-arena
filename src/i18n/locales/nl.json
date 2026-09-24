@@ -316,5 +316,18 @@
   "lobby.joinDesc": "Code van een vriend gekregen?",
   "rank.none": "Geen rang",
   "rank.toNext": "{rp} RP tot {tier}",
-  "rank.top": "Hoogste rang: je bent een Legende"
+  "rank.top": "Hoogste rang: je bent een Legende",
+  "opt.crashReports": "Crashrapporten versturen",
+  "opt.crashReports.hint": "Als het spel crasht: de fout, de spelversie, het platform en de videokaart. Niets persoonlijks.",
+  "opt.analytics": "Anonieme statistieken delen",
+  "opt.analytics.hint": "Potjes, brawlers, arena’s en framerate, om het spel te verbeteren. Geen naam, geen IP-adres.",
+  "opt.privacy": "Privacy",
+  "opt.privacy.open": "Openen",
+  "survey.title": "Heb je plezier?",
+  "survey.later": "Niet nu",
+  "survey.ask": "Wat zou het spel beter maken?",
+  "survey.placeholder": "Optioneel",
+  "survey.send": "VERSTUREN",
+  "survey.skip": "OVERSLAAN",
+  "survey.thanks": "Bedankt voor je feedback!"
 }

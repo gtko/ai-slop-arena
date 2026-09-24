@@ -318,5 +318,18 @@
   "lobby.joinDesc": "Masz kod od znajomego?",
   "rank.none": "Bez rangi",
   "rank.toNext": "{rp} RP do {tier}",
-  "rank.top": "Najwyższa ranga: jesteś Legendą"
+  "rank.top": "Najwyższa ranga: jesteś Legendą",
+  "opt.crashReports": "Wysyłaj raporty o awariach",
+  "opt.crashReports.hint": "Gdy gra się zawiesi: błąd, wersja gry, platforma i karta graficzna. Nic osobistego.",
+  "opt.analytics": "Udostępniaj anonimowe statystyki",
+  "opt.analytics.hint": "Mecze, wojownicy, mapy i płynność, by ulepszać grę. Bez imienia i adresu IP.",
+  "opt.privacy": "Prywatność",
+  "opt.privacy.open": "Otwórz",
+  "survey.title": "Dobrze się bawisz?",
+  "survey.later": "Nie teraz",
+  "survey.ask": "Co sprawiłoby, że gra byłaby lepsza?",
+  "survey.placeholder": "Opcjonalnie",
+  "survey.send": "WYŚLIJ",
+  "survey.skip": "POMIŃ",
+  "survey.thanks": "Dzięki za opinię!"
 }

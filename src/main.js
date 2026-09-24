@@ -19,6 +19,8 @@ import { isDesktop, isPackagedApp, isNativeApp, desktop, steam, steamInfo, epic,
 import { achievements } from './achievements.js';
 import { botLevel, recordResult } from './skill.js';
 import { installBugReport, openBugReport } from './bugreport.js';
+import { installTelemetry, track, breadcrumb, perfReset, perfFrame, perfReport } from './telemetry.js';
+import { installSurvey, maybeAskSurvey } from './survey.js';
 import { t, translateDom } from './i18n/index.js';
 import { TouchControls, isTouchDevice } from './touch.js';
 import { AutoQuality } from './autoquality.js';
@@ -35,6 +37,7 @@ import { enableCartoonShading, cartoonGradePass } from './cartoon.js';
 import { PAD } from './input.js';
 import './style.css';
 
+installTelemetry(); // crash reports first: the rest of the start-up can fail
 translateDom();
 
 const $ = s => document.querySelector(s);
@@ -305,6 +308,23 @@ buildMaps($('#maps'), key => { chosenMap = key; syncMaps($('#maps'), key); });
 syncMaps($('#maps'), chosenMap);
 const resolveMap = key => (key === 'random' || !MAPS[key] ? randomMap() : key);
 
+// The match being played, for the statistics (telemetry.js): how it started, KOs so far.
+let played = null;
+function matchStarted(info) {
+  played = { ...info, kos: 0, ended: false };
+  perfReset();
+  breadcrumb('match start', info);
+  track('match_started', info);
+}
+const matchProps = () => ({ mode: played.mode, map: played.map, brawler: played.brawler, duration_s: Math.round(game.time), kos: played.kos });
+// Left before the end (quit, back to the menu or the room, disconnected, restarted).
+function matchLeft(reason) {
+  if (!played || played.ended) return;
+  played.ended = true;
+  track('match_abandoned', { ...matchProps(), reason, alive: game.brawlers.filter(b => b.alive).length });
+  perfReport({ mode: played.mode, map: played.map });
+}
+
 /* ---- solo ---- */
 
 function play() {
@@ -316,14 +336,17 @@ function play() {
   const mapKey = resolveMap(chosenMap);
   playMusic('m_' + mapKey);
   finalMusic = false;
+  matchLeft('restart');
   game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: t('hud.you'), type: chosen }], { level: botLevel() }), localId: 'me' });
   achievements.matchStart({ mapKey, brawler: chosen });
+  matchStarted({ mode: 'solo', map: mapKey, map_random: chosenMap === 'random', brawler: chosen, bot_level: botLevel(), humans: 1 });
   presence(t('presence.solo', { map: t(`map.${mapKey}`) }));
   canvas.focus();
 }
 let finalMusic = false; // the final showdown theme already started this match
 function attract() { achievements.end(); game.newMatch({ mapKey: randomMap() }); }
 function toMenu() {
+  matchLeft('menu');
   if (!net.connected) presence(t('presence.menu'));
   $('#result').classList.add('hidden');
   $('#lobby').classList.add('hidden');
@@ -364,6 +387,7 @@ const status = msg => { $('#lobbyStatus').textContent = msg || ''; };
 function openLobby() {
   initAudio();
   sfx('click');
+  track('lobby_opened');
   $('#menu').classList.add('hidden');
   $('#lobby').classList.remove('hidden');
   showRoomView(net.connected);
@@ -393,11 +417,13 @@ async function joinRoom(code, lobbyId = null, web = false) {
     else if (steamNet && await steam.findLobby(code)) { use(steamNet); await net.connect(code, name, chosen); }
     else { use(webNet); await net.connect(code, name, chosen); }
     if (net === webNet) presence(t('presence.room'));
+    track('room_joined', { kind: net === steamNet ? 'steam_lobby' : net.matchmade ? 'matchmaking' : 'room', created: !code && !lobbyId, friend: !!lobbyId });
     status('');
     sfx('join');
     if (!isPackagedApp && !net.matchmade) history.replaceState(null, '', `?room=${net.code}`); // matchmade rooms are not for sharing
     showRoomView(true);
   } catch (e) {
+    track('room_join_failed', { error: String(e.message).slice(0, 80) });
     status(steam || !import.meta.env.DEV ? `${e.message}.` : `${e.message}. Is the room server running? (npm run dev:server)`);
   }
 }
@@ -412,6 +438,8 @@ $('#lobbyBack').addEventListener('click', () => { mm.cancel(); net.close(); hist
 /* ---- matchmaking: one queue for every platform; bots fill the match after 5 minutes ---- */
 
 const mm = new Matchmaking();
+let queuedAt = 0;
+const waited = () => Math.round((performance.now() - queuedAt) / 1000);
 const clock = ms => { const s = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 const PLAT_ICON = { web: '🌐', steam: '🎮', epic: '🛒', android: '🤖', ios: '🍏' };
 // Visible rank (tier + RP) from the server; the hidden MMR never reaches the client.
@@ -444,6 +472,8 @@ function findMatch() {
   sfx('click');
   status('');
   mm.start(name, chosen);
+  queuedAt = performance.now();
+  track('mm_search_started', { brawler: chosen });
   $('#qCount').textContent = t('lobby.connecting');
   $('#qTime').textContent = $('#qBotsIn').textContent = $('#qPlats').textContent = '';
   $('#qFill').style.width = '0%';
@@ -451,8 +481,8 @@ function findMatch() {
   presence(t('mm.searching'));
 }
 $('#quick').addEventListener('click', findMatch);
-$('#qCancel').addEventListener('click', () => { sfx('click'); mm.cancel(); showRoomView(false); presence(t('presence.menu')); });
-$('#qBots').addEventListener('click', () => { sfx('click'); mm.bots(); });
+$('#qCancel').addEventListener('click', () => { sfx('click'); track('mm_search_cancelled', { wait_s: waited() }); mm.cancel(); showRoomView(false); presence(t('presence.menu')); });
+$('#qBots').addEventListener('click', () => { sfx('click'); track('mm_bots_requested', { wait_s: waited() }); mm.bots(); });
 mm.on('rank', m => showRank(m));
 mm.on('queue', m => {
   $('#qCount').textContent = t('mm.inQueue', { n: m.n, need: m.need });
@@ -462,12 +492,13 @@ mm.on('queue', m => {
   $('#qPlats').textContent = Object.entries(m.plats || {}).map(([k, n]) => `${PLAT_ICON[k] || '•'} ${n}`).join('   ');
 });
 mm.on('matched', m => {
+  track('mm_matched', { wait_s: waited() });
   sfx('join');
   status(t('mm.found'));
   showRoomView(false);
   joinRoom(m.code, null, true);
 });
-mm.on('error', m => { mm.cancel(); showRoomView(false); status(m.code ? serverError(m) : t('err.unreachable')); });
+mm.on('error', m => { track('mm_error', { code: m.code || 'unreachable' }); mm.cancel(); showRoomView(false); status(m.code ? serverError(m) : t('err.unreachable')); });
 mm.on('closed', () => { showRoomView(false); status(t('err.unreachable')); });
 $('#copyLink').addEventListener('click', async () => {
   if (net === steamNet) { net.invite(); return; } // Steam overlay invite dialog
@@ -635,7 +666,9 @@ async function startOnline(mapKey, roster, role) {
   game.state = 'waiting'; // nothing moves until everyone is in
   game.localReady = false;
   const me = roster.find(r => r.id === net.id);
-  achievements.matchStart({ mapKey, brawler: me ? me.type : chosen, online: true, humans: roster.filter(r => r.human).length });
+  const humans = roster.filter(r => r.human).length;
+  achievements.matchStart({ mapKey, brawler: me ? me.type : chosen, online: true, humans });
+  matchStarted({ mode: net === steamNet ? 'steam_lobby' : matchmadeMatch ? 'matchmaking' : 'room', map: mapKey, brawler: me ? me.type : chosen, humans, host: role === 'host' });
   net.send({ t: 'lprog', p: 50 });
   setLoadProgress(net.id, 50);
   // compile the shaders now rather than stuttering on the first frames of the match
@@ -705,6 +738,7 @@ onNet('ranked', m => {
       + (m.tier !== m.prevTier ? ' ' + t('rank.newTier') : '')
     : t('rank.practice');
   rankedText = txt;
+  track('ranked_result', { visible: !!m.visible, delta: m.delta, rp: m.rp, tier: m.tier, prev_tier: m.prevTier, promoted: m.tier !== m.prevTier });
   $('#resRank').textContent = txt;
   $('#resRank').classList.remove('hidden');
   status(txt);
@@ -721,11 +755,12 @@ function openReport(p) {
 }
 document.querySelectorAll('#report [data-reason]').forEach(b => b.addEventListener('click', () => {
   $('#report').classList.add('hidden');
-  if (b.dataset.reason && reportTarget) net.report(reportTarget.id, b.dataset.reason);
+  if (b.dataset.reason && reportTarget) { net.report(reportTarget.id, b.dataset.reason); track('player_reported', { reason: b.dataset.reason }); }
   reportTarget = null;
 }));
 
 function backToRoom() {
+  matchLeft('room');
   $('#result').classList.add('hidden');
   $('#matchload').classList.add('hidden');
   loadState = null;
@@ -749,8 +784,15 @@ installBugReport({
   }),
 });
 $('#resBug').addEventListener('click', () => openBugReport());
+installSurvey();
+achievements.onUnlock = id => track('achievement_unlocked', { achievement: id });
+// Options the players change by hand (the ones worth a chart).
+onChange((key, value) => {
+  if (['preset', 'lang', 'art', 'shake', 'fps', 'vibration', 'tod'].includes(key) && !$('#options').classList.contains('hidden')) track('setting_changed', { key, value: String(value) });
+});
 
 game.onFeat = (kind, n) => {
+  if (played && (kind === 'ko' || kind === 'superko')) played.kos++;
   if (kind === 'ko') achievements.ko();
   else if (kind === 'superko') achievements.superKo();
   else if (kind === 'crate') achievements.crate();
@@ -758,6 +800,12 @@ game.onFeat = (kind, n) => {
 };
 game.onResult = (rank, won) => {
   achievements.result(rank, won, { night: lighting.night >= 0.5 });
+  if (played && !played.ended) {
+    played.ended = true;
+    track('match_ended', { ...matchProps(), rank, won, players: game.brawlers.length });
+    perfReport({ mode: played.mode, map: played.map });
+    maybeAskSurvey({ mode: played.mode, map: played.map, brawler: played.brawler, rank, won });
+  }
   // hidden level: the bots of the next solo / private match follow it (never shown)
   recordResult(rank, won);
   resultShown = true;
@@ -820,6 +868,9 @@ const TIPS = ['tip.bushes', 'tip.crates', 'tip.gas', 'tip.brawlers', 'tip.tod', 
   ]);
   clearInterval(tipTimer);
   $('#ldStep').textContent = t('loader.ready');
+  let first = false;
+  try { first = !localStorage.getItem('iaslop-opened'); localStorage.setItem('iaslop-opened', '1'); } catch { /* private mode */ }
+  track('app_opened', { load_ms: Math.round(performance.now()), first_launch: first, gpu: (settings.gpu || '').slice(0, 120), screen: `${innerWidth}x${innerHeight}`, touch: isTouchDevice });
   setTimeout(() => $('#loader').classList.add('done'), 250);
 }
 for (const k of Object.keys(settings)) applySetting(k);
@@ -866,6 +917,7 @@ function frame(ts) {
   game.update(dt);
   if (touch) touch.update(game.player);
   autoQuality.update(document.visibilityState === 'visible' && $('#loader').classList.contains('done'));
+  if (played && !played.ended && game.mode === 'play' && !menus.paused && document.visibilityState === 'visible' && !$('#hud').classList.contains('hidden')) perfFrame(dt);
   // Last 3 brawlers standing: the final showdown theme takes over until the result.
   if (!finalMusic && game.mode === 'play' && !game.ended && !$('#hud').classList.contains('hidden')) {
     const alive = game.brawlers.reduce((n, b) => n + (b.alive ? 1 : 0), 0);

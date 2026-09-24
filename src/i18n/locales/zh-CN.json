@@ -315,5 +315,18 @@
   "lobby.joinDesc": "好友给了你代码？",
   "rank.none": "未定级",
   "rank.toNext": "距{tier}还差 {rp} RP",
-  "rank.top": "最高段位：你是传奇"
+  "rank.top": "最高段位：你是传奇",
+  "opt.crashReports": "发送崩溃报告",
+  "opt.crashReports.hint": "游戏崩溃时：错误信息、游戏版本、平台和显卡。不含个人信息。",
+  "opt.analytics": "分享匿名统计",
+  "opt.analytics.hint": "对局、角色、地图和帧率，用于改进游戏。不含名字和 IP 地址。",
+  "opt.privacy": "隐私",
+  "opt.privacy.open": "打开",
+  "survey.title": "玩得开心吗？",
+  "survey.later": "以后再说",
+  "survey.ask": "怎样能让游戏更好？",
+  "survey.placeholder": "选填",
+  "survey.send": "发送",
+  "survey.skip": "跳过",
+  "survey.thanks": "感谢你的反馈！"
 }

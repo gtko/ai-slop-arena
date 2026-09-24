@@ -316,5 +316,18 @@
   "lobby.joinDesc": "Um amigo deu-te um código?",
   "rank.none": "Sem classificação",
   "rank.toNext": "{rp} RP até {tier}",
-  "rank.top": "Nível máximo: és uma Lenda"
+  "rank.top": "Nível máximo: és uma Lenda",
+  "opt.crashReports": "Enviar relatórios de falhas",
+  "opt.crashReports.hint": "Quando o jogo falha: o erro, a versão, a plataforma e a placa gráfica. Nada pessoal.",
+  "opt.analytics": "Partilhar estatísticas anónimas",
+  "opt.analytics.hint": "Partidas, lutadores, mapas e fluidez, para melhorar o jogo. Sem nome nem endereço IP.",
+  "opt.privacy": "Privacidade",
+  "opt.privacy.open": "Abrir",
+  "survey.title": "Estás a divertir-te?",
+  "survey.later": "Agora não",
+  "survey.ask": "O que tornaria o jogo melhor?",
+  "survey.placeholder": "Opcional",
+  "survey.send": "ENVIAR",
+  "survey.skip": "SALTAR",
+  "survey.thanks": "Obrigado pela tua opinião!"
 }

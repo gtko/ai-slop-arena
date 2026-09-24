@@ -318,5 +318,18 @@
   "lobby.joinDesc": "Máš kód od kamaráda?",
   "rank.none": "Bez hodnosti",
   "rank.toNext": "{rp} RP do {tier}",
-  "rank.top": "Nejvyšší hodnost: jsi Legenda"
+  "rank.top": "Nejvyšší hodnost: jsi Legenda",
+  "opt.crashReports": "Odesílat hlášení o pádech",
+  "opt.crashReports.hint": "Když hra spadne: chyba, verze hry, platforma a grafická karta. Nic osobního.",
+  "opt.analytics": "Sdílet anonymní statistiky",
+  "opt.analytics.hint": "Zápasy, bojovníci, mapy a snímková frekvence pro vylepšení hry. Žádné jméno ani IP adresa.",
+  "opt.privacy": "Soukromí",
+  "opt.privacy.open": "Otevřít",
+  "survey.title": "Baví tě to?",
+  "survey.later": "Teď ne",
+  "survey.ask": "Co by hru vylepšilo?",
+  "survey.placeholder": "Nepovinné",
+  "survey.send": "ODESLAT",
+  "survey.skip": "PŘESKOČIT",
+  "survey.thanks": "Díky za zpětnou vazbu!"
 }

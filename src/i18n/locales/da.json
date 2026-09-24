@@ -316,5 +316,18 @@
   "lobby.joinDesc": "Fået en kode af en ven?",
   "rank.none": "Urangeret",
   "rank.toNext": "{rp} RP til {tier}",
-  "rank.top": "Højeste rang: du er en Legende"
+  "rank.top": "Højeste rang: du er en Legende",
+  "opt.crashReports": "Send nedbrudsrapporter",
+  "opt.crashReports.hint": "Når spillet går ned: fejlen, spilversionen, platformen og grafikkortet. Intet personligt.",
+  "opt.analytics": "Del anonyme statistikker",
+  "opt.analytics.hint": "Kampe, brawlere, baner og billedhastighed, for at forbedre spillet. Intet navn, ingen IP-adresse.",
+  "opt.privacy": "Privatliv",
+  "opt.privacy.open": "Åbn",
+  "survey.title": "Har du det sjovt?",
+  "survey.later": "Ikke nu",
+  "survey.ask": "Hvad ville gøre spillet bedre?",
+  "survey.placeholder": "Valgfrit",
+  "survey.send": "SEND",
+  "survey.skip": "SPRING OVER",
+  "survey.thanks": "Tak for din feedback!"
 }

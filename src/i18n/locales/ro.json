@@ -317,5 +317,18 @@
   "lobby.joinDesc": "Ai un cod de la un prieten?",
   "rank.none": "Neclasat",
   "rank.toNext": "{rp} RP până la {tier}",
-  "rank.top": "Rang maxim: ești o Legendă"
+  "rank.top": "Rang maxim: ești o Legendă",
+  "opt.crashReports": "Trimite rapoarte de erori",
+  "opt.crashReports.hint": "Când jocul se blochează: eroarea, versiunea, platforma și placa video. Nimic personal.",
+  "opt.analytics": "Trimite statistici anonime",
+  "opt.analytics.hint": "Meciuri, luptători, hărți și fluiditate, pentru a îmbunătăți jocul. Fără nume, fără adresă IP.",
+  "opt.privacy": "Confidențialitate",
+  "opt.privacy.open": "Deschide",
+  "survey.title": "Te distrezi?",
+  "survey.later": "Nu acum",
+  "survey.ask": "Ce ar face jocul mai bun?",
+  "survey.placeholder": "Opțional",
+  "survey.send": "TRIMITE",
+  "survey.skip": "SARI PESTE",
+  "survey.thanks": "Mulțumim pentru părere!"
 }

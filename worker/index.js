@@ -1,4 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
+import * as Sentry from '@sentry/cloudflare';
+import { version } from '../package.json';
 import { ServerMatch, makeRoster, randomMap, BRAWLER_KEYS, MAP_KEYS } from './build/sim.js';
 import { rate, tierOf, pickGroup, botLevelFor, START_MMR } from './ranking.js';
 
@@ -14,6 +16,7 @@ import { rate, tierOf, pickGroup, botLevelFor, START_MMR } from './ranking.js';
 //   /api/rank    a player's visible rank (tier + RP); the hidden MMR never leaves the server.
 //   /admin/*     moderation API (reports, bans), enabled once the ADMIN_TOKEN secret is set.
 // Steam friend lobbies (src/steamnet.js) stay peer-to-peer: a player hosts, with the same checks.
+// Errors of the Worker and of every Durable Object go to Sentry (SENTRY_DSN in wrangler.jsonc).
 
 const PROTOCOL = 3;          // clients send ?v=3; older builds are told to update
 const MAX_PLAYERS = 8;
@@ -25,7 +28,17 @@ const COUNTDOWN = 3000;       // then 3-2-1, and the match starts on every scree
 const CHEAT_KICK = 25;                  // refused moves in one match before the player is kicked
 const MSG_PER_SEC = 60;
 
-export default {
+// Sentry: exceptions only, plus a small share of traced requests. No IP, no request bodies.
+const sentry = env => ({
+  dsn: env.SENTRY_DSN,
+  enabled: !!env.SENTRY_DSN,
+  release: `ai-slop-arena@${version}`,
+  environment: env.SENTRY_ENVIRONMENT || 'production',
+  sendDefaultPii: false,
+  tracesSampleRate: 0.01,
+});
+
+export default Sentry.withSentry(sentry, {
   async fetch(request, env) {
     const url = new URL(request.url);
     const m = url.pathname.match(/^\/ws\/([A-Za-z0-9]+)$/);
@@ -55,7 +68,7 @@ export default {
     // Everything else is a static asset (the Vite build); unknown paths get a 404 from the asset layer.
     return env.ASSETS.fetch(request);
   },
-};
+});
 
 /* ------------------------------ identity ------------------------------ */
 
@@ -98,7 +111,7 @@ const OUTDATED = 'This version of the game is out of date: refresh the page or u
 
 /* ------------------------------ Room ------------------------------ */
 
-export class Room extends DurableObject {
+class RoomObject extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.match = null;      // ServerMatch while a match runs (in memory: the loop keeps us awake)
@@ -240,7 +253,12 @@ export class Room extends DurableObject {
   tick() {
     if (!this.match || !this.loop) return;
     const now = Date.now();
-    this.match.advance((now - this.last) / 1000);
+    try { this.match.advance((now - this.last) / 1000); } catch (e) {
+      // a broken simulation cannot go on: report it once and end the match for everyone
+      Sentry.captureException(e, { tags: { where: 'match' }, extra: { map: this.match.game.mapKey, time: this.match.game.time } });
+      this.endMatch();
+      return;
+    }
     this.last = now;
     if (now - this.started > 12 * 60 * 1000) this.endMatch(); // safety net
   }
@@ -380,7 +398,7 @@ export class Room extends DurableObject {
 // One global queue for every platform (web, Steam, Epic, Android, iOS). 8 players -> a match right
 // away; otherwise the oldest player's wait decides: after 5 minutes, whoever is queued plays and
 // bots fill the empty slots. "Play now with bots" skips the wait for one player.
-export class Matchmaker extends DurableObject {
+class MatchmakerObject extends DurableObject {
   sockets() { return this.ctx.getWebSockets().filter(ws => ws.readyState === 1 && !this.info(ws).matched); }
   info(ws) { return ws.deserializeAttachment() || {}; }
   queue() { return this.sockets().sort((a, b) => this.info(a).joined - this.info(b).joined); }
@@ -445,7 +463,7 @@ export class Matchmaker extends DurableObject {
 
 // Hidden MMR and visible RP per player (device id), see ranking.js. Only the server writes them:
 // ranked results come from matches it ran itself.
-export class Players extends DurableObject {
+class PlayersObject extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.sql = ctx.storage.sql;
@@ -487,7 +505,7 @@ export class Players extends DurableObject {
 const DAY = 24 * 3600 * 1000;
 const REPORT_WINDOW = 7 * DAY, MIN_MATCHES = 10, MIN_REPORTERS = 4, REPORTED_SHARE = 0.3;
 
-export class Moderation extends DurableObject {
+class ModerationObject extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.sql = ctx.storage.sql;
@@ -642,3 +660,9 @@ async function admin(request, env, url) {
   if (url.pathname === '/admin/bug') return json(await mod.bugStatus(+body.id, String(body.status || 'done').slice(0, 20)));
   return new Response('Not found', { status: 404 });
 }
+
+// Durable Objects, wrapped so their exceptions reach Sentry too.
+export const Room = Sentry.instrumentDurableObjectWithSentry(sentry, RoomObject);
+export const Matchmaker = Sentry.instrumentDurableObjectWithSentry(sentry, MatchmakerObject);
+export const Players = Sentry.instrumentDurableObjectWithSentry(sentry, PlayersObject);
+export const Moderation = Sentry.instrumentDurableObjectWithSentry(sentry, ModerationObject);

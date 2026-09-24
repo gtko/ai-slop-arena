@@ -315,5 +315,18 @@
   "lobby.joinDesc": "フレンドからコードをもらった？",
   "rank.none": "ランクなし",
   "rank.toNext": "{tier}まであと{rp} RP",
-  "rank.top": "最高ランク：あなたはレジェンド"
+  "rank.top": "最高ランク：あなたはレジェンド",
+  "opt.crashReports": "クラッシュレポートを送信",
+  "opt.crashReports.hint": "ゲームがクラッシュしたとき：エラー、バージョン、プラットフォーム、グラフィックカード。個人情報は含みません。",
+  "opt.analytics": "匿名の統計を共有",
+  "opt.analytics.hint": "ゲーム改善のための試合、キャラクター、マップ、フレームレート。名前やIPアドレスは含みません。",
+  "opt.privacy": "プライバシー",
+  "opt.privacy.open": "開く",
+  "survey.title": "楽しんでる？",
+  "survey.later": "後で",
+  "survey.ask": "どうすればゲームがもっと良くなる？",
+  "survey.placeholder": "任意",
+  "survey.send": "送信",
+  "survey.skip": "スキップ",
+  "survey.thanks": "ご意見ありがとう！"
 }

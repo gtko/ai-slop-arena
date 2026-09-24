@@ -316,5 +316,18 @@
   "lobby.joinDesc": "Kódot kaptál egy baráttól?",
   "rank.none": "Rang nélkül",
   "rank.toNext": "{rp} RP a következőig: {tier}",
-  "rank.top": "Legfelső szint: Legenda vagy"
+  "rank.top": "Legfelső szint: Legenda vagy",
+  "opt.crashReports": "Összeomlási jelentések küldése",
+  "opt.crashReports.hint": "Ha a játék összeomlik: a hiba, a verzió, a platform és a videokártya. Semmi személyes.",
+  "opt.analytics": "Névtelen statisztikák megosztása",
+  "opt.analytics.hint": "Meccsek, harcosok, pályák és képkockasebesség a játék javításához. Se név, se IP-cím.",
+  "opt.privacy": "Adatvédelem",
+  "opt.privacy.open": "Megnyitás",
+  "survey.title": "Jól szórakozol?",
+  "survey.later": "Most nem",
+  "survey.ask": "Mitől lenne jobb a játék?",
+  "survey.placeholder": "Nem kötelező",
+  "survey.send": "KÜLDÉS",
+  "survey.skip": "KIHAGYÁS",
+  "survey.thanks": "Köszönjük a visszajelzést!"
 }

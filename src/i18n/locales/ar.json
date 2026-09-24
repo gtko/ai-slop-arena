@@ -320,5 +320,18 @@
   "lobby.joinDesc": "لديك رمز من صديق؟",
   "rank.none": "بلا تصنيف",
   "rank.toNext": "{rp} RP حتى {tier}",
-  "rank.top": "أعلى رتبة: أنت أسطورة"
+  "rank.top": "أعلى رتبة: أنت أسطورة",
+  "opt.crashReports": "إرسال تقارير الأعطال",
+  "opt.crashReports.hint": "عند تعطل اللعبة: الخطأ وإصدار اللعبة والمنصة وبطاقة الرسومات. لا شيء شخصي.",
+  "opt.analytics": "مشاركة إحصاءات مجهولة",
+  "opt.analytics.hint": "المباريات والمقاتلون والخرائط ومعدل الإطارات، لتحسين اللعبة. بلا اسم ولا عنوان IP.",
+  "opt.privacy": "الخصوصية",
+  "opt.privacy.open": "فتح",
+  "survey.title": "هل تستمتع؟",
+  "survey.later": "ليس الآن",
+  "survey.ask": "ما الذي سيجعل اللعبة أفضل؟",
+  "survey.placeholder": "اختياري",
+  "survey.send": "إرسال",
+  "survey.skip": "تخطي",
+  "survey.thanks": "شكرًا على رأيك!"
 }

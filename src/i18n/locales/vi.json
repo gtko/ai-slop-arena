@@ -315,5 +315,18 @@
   "lobby.joinDesc": "Bạn có mã từ bạn bè?",
   "rank.none": "Chưa xếp hạng",
   "rank.toNext": "Còn {rp} RP đến {tier}",
-  "rank.top": "Hạng cao nhất: bạn là Huyền Thoại"
+  "rank.top": "Hạng cao nhất: bạn là Huyền Thoại",
+  "opt.crashReports": "Gửi báo cáo lỗi",
+  "opt.crashReports.hint": "Khi trò chơi bị lỗi: lỗi, phiên bản, nền tảng và card đồ họa. Không có gì cá nhân.",
+  "opt.analytics": "Chia sẻ thống kê ẩn danh",
+  "opt.analytics.hint": "Trận đấu, đấu sĩ, bản đồ và tốc độ khung hình, để cải thiện trò chơi. Không tên, không địa chỉ IP.",
+  "opt.privacy": "Quyền riêng tư",
+  "opt.privacy.open": "Mở",
+  "survey.title": "Bạn có vui không?",
+  "survey.later": "Để sau",
+  "survey.ask": "Điều gì sẽ làm trò chơi hay hơn?",
+  "survey.placeholder": "Không bắt buộc",
+  "survey.send": "GỬI",
+  "survey.skip": "BỎ QUA",
+  "survey.thanks": "Cảm ơn góp ý của bạn!"
 }

@@ -316,5 +316,18 @@
   "lobby.joinDesc": "¿Un amigo te pasó un código?",
   "rank.none": "Sin rango",
   "rank.toNext": "{rp} RP para {tier}",
-  "rank.top": "Rango máximo: eres una Leyenda"
+  "rank.top": "Rango máximo: eres una Leyenda",
+  "opt.crashReports": "Enviar reportes de fallas",
+  "opt.crashReports.hint": "Cuando el juego falla: el error, la versión, la plataforma y la tarjeta gráfica. Nada personal.",
+  "opt.analytics": "Compartir estadísticas anónimas",
+  "opt.analytics.hint": "Partidas, luchadores, mapas y fluidez, para mejorar el juego. Sin nombre ni dirección IP.",
+  "opt.privacy": "Privacidad",
+  "opt.privacy.open": "Abrir",
+  "survey.title": "¿Te estás divirtiendo?",
+  "survey.later": "Ahora no",
+  "survey.ask": "¿Qué haría mejor el juego?",
+  "survey.placeholder": "Opcional",
+  "survey.send": "ENVIAR",
+  "survey.skip": "OMITIR",
+  "survey.thanks": "¡Gracias por tu opinión!"
 }

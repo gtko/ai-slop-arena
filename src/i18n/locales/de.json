@@ -316,5 +316,18 @@
   "lobby.joinDesc": "Code von einem Freund?",
   "rank.none": "Ohne Rang",
   "rank.toNext": "{rp} RP bis {tier}",
-  "rank.top": "Höchster Rang: Du bist eine Legende"
+  "rank.top": "Höchster Rang: Du bist eine Legende",
+  "opt.crashReports": "Absturzberichte senden",
+  "opt.crashReports.hint": "Wenn das Spiel abstürzt: Fehler, Spielversion, Plattform und Grafikkarte. Nichts Persönliches.",
+  "opt.analytics": "Anonyme Statistiken teilen",
+  "opt.analytics.hint": "Matches, Brawler, Arenen und Bildrate, um das Spiel zu verbessern. Kein Name, keine IP-Adresse.",
+  "opt.privacy": "Datenschutz",
+  "opt.privacy.open": "Öffnen",
+  "survey.title": "Macht es Spaß?",
+  "survey.later": "Nicht jetzt",
+  "survey.ask": "Was würde das Spiel besser machen?",
+  "survey.placeholder": "Optional",
+  "survey.send": "SENDEN",
+  "survey.skip": "ÜBERSPRINGEN",
+  "survey.thanks": "Danke für dein Feedback!"
 }

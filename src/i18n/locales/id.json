@@ -315,5 +315,18 @@
   "lobby.joinDesc": "Punya kode dari teman?",
   "rank.none": "Tanpa peringkat",
   "rank.toNext": "{rp} RP ke {tier}",
-  "rank.top": "Tingkat tertinggi: kamu Legenda"
+  "rank.top": "Tingkat tertinggi: kamu Legenda",
+  "opt.crashReports": "Kirim laporan crash",
+  "opt.crashReports.hint": "Saat game crash: galat, versi game, platform, dan kartu grafis. Tidak ada data pribadi.",
+  "opt.analytics": "Bagikan statistik anonim",
+  "opt.analytics.hint": "Pertandingan, petarung, peta, dan frame rate, untuk memperbaiki game. Tanpa nama, tanpa alamat IP.",
+  "opt.privacy": "Privasi",
+  "opt.privacy.open": "Buka",
+  "survey.title": "Seru nggak?",
+  "survey.later": "Nanti saja",
+  "survey.ask": "Apa yang bisa membuat game lebih baik?",
+  "survey.placeholder": "Opsional",
+  "survey.send": "KIRIM",
+  "survey.skip": "LEWATI",
+  "survey.thanks": "Terima kasih atas masukanmu!"
 }

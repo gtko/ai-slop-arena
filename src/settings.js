@@ -36,6 +36,7 @@ export const DEFAULTS = {
   fitFrustum: true, texelSnap: true, showFrustum: false, aoView: false, dynLights: true,
   art: 'cartoon', tod: '2', exposure: 1, shake: true, fps: false, debugPanel: false,
   deadzone: 0.18, vibration: true, lang: 'auto',
+  crashReports: true, analytics: true, // telemetry.js: Sentry and PostHog, both can be turned off
   binds: { ...DEFAULT_BINDS },
 };
 

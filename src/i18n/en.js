@@ -316,6 +316,22 @@ export default {
   'opt.pause': 'Pause',
   'opt.menus': 'Menus',
   'opt.pad.menus': 'D-pad / stick · A select · B back · LB / RB tabs',
+  // Privacy (telemetry.js)
+  'opt.crashReports': 'Send crash reports',
+  'opt.crashReports.hint': 'When the game crashes: the error, game version, platform and graphics card. Nothing personal.',
+  'opt.analytics': 'Share anonymous statistics',
+  'opt.analytics.hint': 'Matches, brawlers, maps and frame rate, to improve the game. No name, no IP address.',
+  'opt.privacy': 'Privacy',
+  'opt.privacy.open': 'Open',
+
+  // Satisfaction survey on the result screen (survey.js)
+  'survey.title': 'Having fun?',
+  'survey.later': 'Not now',
+  'survey.ask': 'What would make the game better?',
+  'survey.placeholder': 'Optional',
+  'survey.send': 'SEND',
+  'survey.skip': 'SKIP',
+  'survey.thanks': 'Thanks for your feedback!',
 
   // Steam rich presence (what friends see)
   'presence.menu': 'In the menu',

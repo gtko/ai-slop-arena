@@ -315,5 +315,18 @@
   "lobby.joinDesc": "친구에게 코드를 받았나요?",
   "rank.none": "랭크 없음",
   "rank.toNext": "{tier}까지 {rp} RP",
-  "rank.top": "최고 티어: 당신은 레전드"
+  "rank.top": "최고 티어: 당신은 레전드",
+  "opt.crashReports": "충돌 보고서 보내기",
+  "opt.crashReports.hint": "게임이 충돌하면: 오류, 게임 버전, 플랫폼, 그래픽 카드. 개인 정보는 없습니다.",
+  "opt.analytics": "익명 통계 공유",
+  "opt.analytics.hint": "게임 개선을 위한 매치, 브롤러, 맵, 프레임 속도. 이름과 IP 주소는 없습니다.",
+  "opt.privacy": "개인정보",
+  "opt.privacy.open": "열기",
+  "survey.title": "재미있나요?",
+  "survey.later": "나중에",
+  "survey.ask": "무엇이 게임을 더 좋게 만들까요?",
+  "survey.placeholder": "선택 사항",
+  "survey.send": "보내기",
+  "survey.skip": "건너뛰기",
+  "survey.thanks": "의견 감사합니다!"
 }

@@ -45,7 +45,7 @@ const sinks = steam ? [steam] : [];
 
 function unlock(id) {
   if (!ACHIEVEMENTS[id]) return;
-  if (!prog.unlocked[id]) { prog.unlocked[id] = Date.now(); save(); }
+  if (!prog.unlocked[id]) { prog.unlocked[id] = Date.now(); save(); achievements.onUnlock(id); }
   for (const s of sinks) s.achieve(id); // idempotent; also re-syncs anything earned offline
 }
 
@@ -55,6 +55,7 @@ function pushStats() {
 }
 
 export const achievements = {
+  onUnlock: () => {}, // set by main.js (statistics)
   // Called when the local player starts a real match (not the menu's attract mode).
   matchStart({ mapKey, brawler, online = false, humans = 1 }) {
     match = { mapKey, brawler, online, humans, kos: 0, cubes: 0, done: false };

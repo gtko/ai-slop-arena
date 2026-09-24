@@ -316,5 +316,18 @@
   "lobby.joinDesc": "Arkadaşından kod mu aldın?",
   "rank.none": "Derecesiz",
   "rank.toNext": "{tier} için {rp} RP",
-  "rank.top": "En üst kademe: Sen bir Efsanesin"
+  "rank.top": "En üst kademe: Sen bir Efsanesin",
+  "opt.crashReports": "Çökme raporları gönder",
+  "opt.crashReports.hint": "Oyun çöktüğünde: hata, oyun sürümü, platform ve ekran kartı. Kişisel bir şey yok.",
+  "opt.analytics": "Anonim istatistik paylaş",
+  "opt.analytics.hint": "Maçlar, dövüşçüler, haritalar ve kare hızı, oyunu geliştirmek için. İsim yok, IP adresi yok.",
+  "opt.privacy": "Gizlilik",
+  "opt.privacy.open": "Aç",
+  "survey.title": "Eğleniyor musun?",
+  "survey.later": "Şimdi değil",
+  "survey.ask": "Oyunu ne daha iyi yapardı?",
+  "survey.placeholder": "İsteğe bağlı",
+  "survey.send": "GÖNDER",
+  "survey.skip": "ATLA",
+  "survey.thanks": "Geri bildirimin için teşekkürler!"
 }

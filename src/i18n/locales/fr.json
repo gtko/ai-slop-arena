@@ -316,5 +316,18 @@
   "lobby.joinDesc": "Un ami t’a donné un code ?",
   "rank.none": "Non classé",
   "rank.toNext": "{rp} RP avant {tier}",
-  "rank.top": "Rang max : tu es une Légende"
+  "rank.top": "Rang max : tu es une Légende",
+  "opt.crashReports": "Envoyer les rapports de plantage",
+  "opt.crashReports.hint": "Quand le jeu plante : l'erreur, la version, la plateforme et la carte graphique. Rien de personnel.",
+  "opt.analytics": "Partager des statistiques anonymes",
+  "opt.analytics.hint": "Matchs, brawlers, arènes et fluidité, pour améliorer le jeu. Ni nom, ni adresse IP.",
+  "opt.privacy": "Confidentialité",
+  "opt.privacy.open": "Ouvrir",
+  "survey.title": "Tu t’amuses ?",
+  "survey.later": "Pas maintenant",
+  "survey.ask": "Qu’est-ce qui rendrait le jeu meilleur ?",
+  "survey.placeholder": "Facultatif",
+  "survey.send": "ENVOYER",
+  "survey.skip": "PASSER",
+  "survey.thanks": "Merci pour ton avis !"
 }
