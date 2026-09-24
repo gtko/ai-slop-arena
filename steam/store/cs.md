@@ -57,7 +57,7 @@ Název nelže. AI SLOP ARENA za dva večery vytvořil Claude Opus 5.5, umělá i
 [*]5 rváčů, každý s hlavním útokem a superem.
 [*]5 arén s počasím, které mění způsob hry: led, mlha, písečná bouře, déšť.
 [*]Osvětlení a stíny v reálném čase, střídání dne a noci, bloom a ambientní okluze.
-[*]10 úspěchů na Steamu.
+[*]15 úspěchů na Steamu.
 [*]Myš a klávesnice nebo gamepad, přemapovatelné klávesy.
 [*]Grafické předvolby od Nízké po Ultra: běží i na skromnějších PC.
 [/list]
@@ -85,6 +85,11 @@ Veškerý obsah hry (kód, grafika, 3D modely, hudba, zvukové efekty) byl před
 | `JACK_OF_ALL` | Slopový všeuměl | Vyhraj zápas s každým z pěti rváčů. |
 | `VETERAN` | Veterán | Odehraj 25 zápasů. |
 | `CENTURION` | Centurio | Vyřaď 100 rváčů. |
+| `PODIUM` | Na stupních vítězů | Skonči v zápase mezi prvními třemi. |
+| `SUPER_KO` | Super zakončení | Vyřaď rváče svým superem. |
+| `NIGHT_OWL` | Noční sova | Vyhraj zápas v noci. |
+| `CRATE_CRUSHER` | Drtič beden | Rozbij 50 beden. |
+| `CHAMPION` | Šampion | Vyhraj 10 zápasů. |
 
 ## Systémové požadavky (Windows)
 

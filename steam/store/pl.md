@@ -57,7 +57,7 @@ Nazwa mówi prawdę. AI SLOP ARENA powstała w dwa wieczory dzięki Claude Opus 
 [*]5 zadymiarzy, każdy z atakiem podstawowym i superem.
 [*]5 aren z pogodą, która zmienia sposób gry: lód, mgła, burza piaskowa, deszcz.
 [*]Oświetlenie i cienie w czasie rzeczywistym, cykl dnia i nocy, bloom i ambient occlusion.
-[*]10 osiągnięć Steam.
+[*]15 osiągnięć Steam.
 [*]Mysz i klawiatura lub pad, możliwość zmiany przypisania klawiszy.
 [*]Profile jakości grafiki od Niskiej do Ultra: gra działa na skromnych komputerach.
 [/list]
@@ -85,6 +85,11 @@ Wszystkie treści w grze (kod, grafika, modele 3D, muzyka, efekty dźwiękowe) z
 | `JACK_OF_ALL` | Slopowa złota rączka | Wygraj mecz każdym z pięciu zadymiarzy. |
 | `VETERAN` | Weteran | Rozegraj 25 meczów. |
 | `CENTURION` | Centurion | Znokautuj 100 zadymiarzy. |
+| `PODIUM` | Na podium | Zakończ mecz w pierwszej trójce. |
+| `SUPER_KO` | Super wykończenie | Znokautuj zadymiarza swoim superem. |
+| `NIGHT_OWL` | Nocny marek | Wygraj mecz w nocy. |
+| `CRATE_CRUSHER` | Pogromca skrzynek | Rozbij 50 skrzynek. |
+| `CHAMPION` | Mistrz | Wygraj 10 meczów. |
 
 ## Wymagania systemowe (Windows)
 

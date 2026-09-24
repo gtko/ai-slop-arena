@@ -57,7 +57,7 @@ Cái tên không hề nói dối. AI SLOP ARENA được tạo ra trong hai bu�
 [*]5 đấu sĩ, mỗi người có một đòn đánh chính và một siêu chiêu.
 [*]5 đấu trường với thời tiết thay đổi cách chơi: băng, sương mù, bão cát, mưa.
 [*]Ánh sáng và bóng đổ thời gian thực, chu kỳ ngày đêm, bloom và che khuất môi trường (ambient occlusion).
-[*]10 thành tựu Steam.
+[*]15 thành tựu Steam.
 [*]Chuột và bàn phím hoặc tay cầm, có thể đổi phím.
 [*]Mức đồ họa từ Thấp đến Siêu cao: chạy tốt trên cả PC cấu hình khiêm tốn.
 [/list]
@@ -85,6 +85,11 @@ Toàn bộ nội dung của trò chơi (code, hình ảnh, mô hình 3D, nhạc,
 | `JACK_OF_ALL` | Vua Slop Đa Năng | Thắng một trận với mỗi đấu sĩ trong năm đấu sĩ. |
 | `VETERAN` | Lão Làng | Chơi 25 trận. |
 | `CENTURION` | Bách Nhân Trảm | Hạ gục 100 đấu sĩ. |
+| `PODIUM` | Lên bục vinh quang | Kết thúc trận trong top 3. |
+| `SUPER_KO` | Kết liễu siêu cấp | Hạ gục một đấu sĩ bằng siêu chiêu. |
+| `NIGHT_OWL` | Cú đêm | Thắng một trận vào ban đêm. |
+| `CRATE_CRUSHER` | Kẻ phá thùng | Đập vỡ 50 thùng. |
+| `CHAMPION` | Nhà vô địch | Thắng 10 trận. |
 
 ## Cấu hình yêu cầu (Windows)
 

@@ -57,7 +57,7 @@ Numele spune adevărul. AI SLOP ARENA a fost construit în două seri de Claude 
 [*]5 luptători, fiecare cu un atac principal și un super.
 [*]5 arene cu vreme care schimbă felul în care joci: gheață, ceață, furtună de nisip, ploaie.
 [*]Iluminare și umbre în timp real, ciclu zi/noapte, bloom și ocluzie ambientală.
-[*]10 realizări Steam.
+[*]15 realizări Steam.
 [*]Mouse și tastatură sau controller, taste reconfigurabile.
 [*]Presetări grafice de la Scăzut la Ultra: rulează și pe PC-uri modeste.
 [/list]
@@ -85,6 +85,11 @@ Tot conținutul jocului (cod, grafică, modele 3D, muzică, efecte sonore) a fos
 | `JACK_OF_ALL` | Bun la toate slop-urile | Câștigă un meci cu fiecare dintre cei cinci luptători. |
 | `VETERAN` | Veteran | Joacă 25 de meciuri. |
 | `CENTURION` | Centurion | Elimină 100 de luptători. |
+| `PODIUM` | Pe podium | Termină un meci în top 3. |
+| `SUPER_KO` | Super lovitură finală | Elimină un luptător cu super-ul tău. |
+| `NIGHT_OWL` | Bufniță de noapte | Câștigă un meci noaptea. |
+| `CRATE_CRUSHER` | Spărgător de lăzi | Sparge 50 de lăzi. |
+| `CHAMPION` | Campion | Câștigă 10 meciuri. |
 
 ## Cerințe de sistem (Windows)
 

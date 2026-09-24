@@ -57,7 +57,7 @@ Namanya memang jujur. AI SLOP ARENA dibuat dalam dua malam oleh Claude Opus 5.5,
 [*]5 brawler, masing-masing dengan serangan utama dan super.
 [*]5 arena dengan cuaca yang mengubah cara bermain: es, kabut, badai pasir, hujan.
 [*]Pencahayaan dan bayangan real-time, siklus siang-malam, bloom, dan ambient occlusion.
-[*]10 prestasi Steam.
+[*]15 prestasi Steam.
 [*]Mouse dan keyboard atau gamepad, tombol bisa diatur ulang.
 [*]Preset grafis dari Rendah hingga Ultra: lancar di PC dengan spesifikasi sederhana.
 [/list]
@@ -85,6 +85,11 @@ Seluruh konten game (kode, grafis, model 3D, musik, efek suara) dibuat dengan AI
 | `JACK_OF_ALL` | Serba Bisa Serba Slop | Menangkan match dengan masing-masing dari lima brawler. |
 | `VETERAN` | Veteran | Mainkan 25 match. |
 | `CENTURION` | Centurion | KO 100 brawler. |
+| `PODIUM` | Naik podium | Selesaikan match di 3 besar. |
+| `SUPER_KO` | Penutup super | KO satu brawler dengan super-mu. |
+| `NIGHT_OWL` | Burung hantu | Menangkan match di malam hari. |
+| `CRATE_CRUSHER` | Penghancur peti | Hancurkan 50 peti. |
+| `CHAMPION` | Juara | Menangkan 10 match. |
 
 ## Persyaratan sistem (Windows)
 

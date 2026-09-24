@@ -1,7 +1,7 @@
 # Google Play Games
 
 The Android app uses [Play Games Services v2](https://developer.android.com/games/pgs/overview)
-for the same 10 achievements as Steam. It gets the game into the Google Play Games app (achievements,
+for the same 15 achievements as Steam. It gets the game into the Google Play Games app (achievements,
 player profile) and makes it eligible for Play Points quests and Play Games promotions.
 
 | Part | Where |
@@ -45,8 +45,15 @@ the button stays hidden.
    | `JACK_OF_ALL` | Jack of All Slops | Win a match with each of the five brawlers. | no | 125 |
    | `VETERAN` | Veteran | Play 25 matches. | **yes, 25 steps** | 75 |
    | `CENTURION` | Centurion | Knock out 100 brawlers. | **yes, 100 steps** | 150 |
+   | `PODIUM` | Podium Finish | Finish a match in the top 3. | no | 15 |
+   | `SUPER_KO` | Super Finish | Knock out a brawler with your super. | no | 20 |
+   | `NIGHT_OWL` | Night Owl | Win a match at night. | no | 40 |
+   | `CRATE_CRUSHER` | Crate Crusher | Break 50 crates. | **yes, 50 steps** | 50 |
+   | `CHAMPION` | Champion | Win 10 matches. | **yes, 10 steps** | 100 |
 
-   640 points of the 1000 allowed, leaving room for more achievements later. **Translations**: the
+   865 points of the 1000 allowed, leaving room for more achievements later. Seven of them come
+   within the first hour or two (First Blood, Podium Finish, Super Finish, Last One Standing,
+   Power Hungry, Rampage, Night Owl), as Google advises. **Translations**: the
    30 languages are in [achievements_translations.md](achievements_translations.md) (`node play/gen-loc.mjs`
    rebuilds it from `src/i18n`).
 4. **Ids**: *Configuration > Get resources > Android (XML)*, and paste the result over

@@ -1,7 +1,8 @@
 """Steam achievement icons with openai/gpt-image-2.5-sunburst through OpenRouter (/api/v1/images).
 
 Raw 1024x1024 images go to art-src/achievements/<ID>.png, then every icon is exported for Steamworks as
-steam/achievements/<ID>.jpg (256x256, unlocked) and <ID>_locked.jpg (desaturated and dimmed).
+steam/achievements/<ID>.jpg (256x256, unlocked) and <ID>_locked.jpg (desaturated and dimmed), and for
+Play Console as play/achievements/<ID>.png (512x512; Play greys locked ones out itself).
 Uses the genere-assets skill key (env OPENROUTER_API_KEY or its embedded key).
 Usage: python art-src/gen_achievements.py [ID ...]   (no IDs = every icon missing on disk; IDs = regenerate them)
 """
@@ -17,6 +18,7 @@ from generate_asset import api_key  # noqa: E402
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 RAW = os.path.join(ROOT, 'art-src', 'achievements')
 OUT = os.path.join(ROOT, 'steam', 'achievements')
+PLAY = os.path.join(ROOT, 'play', 'achievements')
 MODEL = 'openai/gpt-image-2.5-sunburst'
 STYLE = ('Square achievement icon for a cute cartoon top-down brawler video game. Glossy stylized 3D render in a chunky '
          'vinyl-toy style, one bold subject centered with a clear silhouette and a thick dark outline, vivid saturated colors, '
@@ -33,6 +35,11 @@ ICONS = {  # API name: (background colour, subject)
     'JACK_OF_ALL': ('royal purple', 'five cartoon weapons fanned out like a hand of cards: a pump shotgun, a silver revolver, a black round bomb, a wooden staff tipped with an ice crystal, and a crackling electric blue orb'),
     'VETERAN': ('navy blue', 'a battle-worn bronze medal with a star, hanging from a striped ribbon, small scratches and a proud shine'),
     'CENTURION': ('crimson', 'a cartoon Roman centurion helmet in polished gold and steel with a tall red brush crest, seen three-quarter'),
+    'PODIUM': ('warm teal', 'a three-step winners podium in gold, silver and bronze with a big number-free star on the top step, small sparkles around it'),
+    'SUPER_KO': ('electric violet', 'a glowing fist crackling with purple and yellow super energy, bursting through a comic starburst shockwave'),
+    'NIGHT_OWL': ('deep midnight blue', 'a chubby cartoon owl with big glowing yellow eyes holding a small lit lantern, a crescent moon and tiny stars behind it'),
+    'CRATE_CRUSHER': ('warm amber', 'a wooden cartoon crate smashing apart into flying planks and splinters, a glowing green energy cube popping out of it'),
+    'CHAMPION': ('rich gold', 'a champion wrestling belt with a big shiny golden plate and a red gem, laurel leaves around it'),
 }
 
 
@@ -57,7 +64,9 @@ def job(name):
 
 
 def export(name):
-    im = Image.open(os.path.join(RAW, name + '.png')).convert('RGB').resize((256, 256), Image.LANCZOS)
+    raw = Image.open(os.path.join(RAW, name + '.png')).convert('RGB')
+    raw.resize((512, 512), Image.LANCZOS).save(os.path.join(PLAY, name + '.png'), optimize=True)
+    im = raw.resize((256, 256), Image.LANCZOS)
     im.save(os.path.join(OUT, name + '.jpg'), quality=95)
     locked = ImageEnhance.Brightness(ImageEnhance.Contrast(ImageOps.grayscale(im)).enhance(0.8)).enhance(0.55)
     locked.convert('RGB').save(os.path.join(OUT, name + '_locked.jpg'), quality=95)
@@ -66,6 +75,7 @@ def export(name):
 if __name__ == '__main__':
     os.makedirs(RAW, exist_ok=True)
     os.makedirs(OUT, exist_ok=True)
+    os.makedirs(PLAY, exist_ok=True)
     names = sys.argv[1:] or [n for n in ICONS if not os.path.exists(os.path.join(RAW, n + '.png'))]
     total = 0
     with ThreadPoolExecutor(5) as pool:

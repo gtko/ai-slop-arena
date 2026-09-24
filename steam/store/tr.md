@@ -57,7 +57,7 @@ Bir lobi kur ve Steam arkadaşlarını davet et ya da doğrudan arkadaş listesi
 [*]Her biri bir ana saldırıya ve bir süpere sahip 5 savaşçı.
 [*]Oynanışı değiştiren hava koşullarına sahip 5 arena: buz, sis, kum fırtınası, yağmur.
 [*]Gerçek zamanlı ışıklandırma ve gölgeler, gece-gündüz döngüsü, bloom ve ortam perdelemesi (ambient occlusion).
-[*]10 Steam başarımı.
+[*]15 Steam başarımı.
 [*]Klavye ve fare ya da oyun kumandası, yeniden atanabilir tuşlar.
 [*]Düşük'ten Ultra'ya grafik ön ayarları: mütevazı bilgisayarlarda da çalışır.
 [/list]
@@ -85,6 +85,11 @@ Oyunun tüm içeriği (kod, görseller, 3D modeller, müzik, ses efektleri) çı
 | `JACK_OF_ALL` | Her Slopta Bir Parmak | Beş savaşçının her biriyle bir maç kazan. |
 | `VETERAN` | Kıdemli | 25 maç oyna. |
 | `CENTURION` | Yüzbaşı | 100 savaşçıyı nakavt et. |
+| `PODIUM` | Kürsüde | Bir maçı ilk 3 içinde bitir. |
+| `SUPER_KO` | Süper bitiriş | Süper yeteneğinle bir savaşçıyı nakavt et. |
+| `NIGHT_OWL` | Gece kuşu | Gece bir maç kazan. |
+| `CRATE_CRUSHER` | Sandık kırıcı | 50 sandık kır. |
+| `CHAMPION` | Şampiyon | 10 maç kazan. |
 
 ## Sistem gereksinimleri (Windows)
 

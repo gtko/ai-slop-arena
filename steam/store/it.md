@@ -57,7 +57,7 @@ Il nome non mente. AI SLOP ARENA è stato realizzato in due serate da Claude Opu
 [*]5 brawler, ognuno con un attacco principale e una super.
 [*]5 arene con un meteo che cambia il tuo modo di giocare: ghiaccio, nebbia, tempesta di sabbia, pioggia.
 [*]Illuminazione e ombre in tempo reale, ciclo giorno/notte, bloom e occlusione ambientale.
-[*]10 obiettivi di Steam.
+[*]15 obiettivi di Steam.
 [*]Mouse e tastiera o controller, tasti riassegnabili.
 [*]Preset grafici da Bassa a Ultra: gira anche su PC modesti.
 [/list]
@@ -85,6 +85,11 @@ Tutti i contenuti del gioco (codice, grafica, modelli 3D, musica, effetti sonori
 | `JACK_OF_ALL` | Tuttofare dello Slop | Vinci una partita con ciascuno dei cinque brawler. |
 | `VETERAN` | Veterano | Gioca 25 partite. |
 | `CENTURION` | Centurione | Metti KO 100 brawler. |
+| `PODIUM` | Sul podio | Finisci una partita tra i primi 3. |
+| `SUPER_KO` | Super colpo finale | Metti KO un brawler con la tua super. |
+| `NIGHT_OWL` | Nottambulo | Vinci una partita di notte. |
+| `CRATE_CRUSHER` | Spaccacasse | Distruggi 50 casse. |
+| `CHAMPION` | Campione | Vinci 10 partite. |
 
 ## Requisiti di sistema (Windows)
 

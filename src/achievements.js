@@ -19,9 +19,14 @@ export const ACHIEVEMENTS = {
   JACK_OF_ALL: { name: 'Jack of All Slops', desc: 'Win a match with each of the five brawlers.' },
   VETERAN: { name: 'Veteran', desc: 'Play 25 matches.' },
   CENTURION: { name: 'Centurion', desc: 'Knock out 100 brawlers.' },
+  PODIUM: { name: 'Podium Finish', desc: 'Finish a match in the top 3.' },
+  SUPER_KO: { name: 'Super Finish', desc: 'Knock out a brawler with your super.' },
+  NIGHT_OWL: { name: 'Night Owl', desc: 'Win a match at night.' },
+  CRATE_CRUSHER: { name: 'Crate Crusher', desc: 'Break 50 crates.' },
+  CHAMPION: { name: 'Champion', desc: 'Win 10 matches.' },
 };
 // Int stats (same names on Steam).
-const STATS = ['MATCHES', 'WINS', 'KOS', 'MAPS_MASK', 'WINS_MASK'];
+const STATS = ['MATCHES', 'WINS', 'KOS', 'MAPS_MASK', 'WINS_MASK', 'CRATES'];
 
 const KEY = 'iaslop-progress';
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
@@ -70,18 +75,31 @@ export const achievements = {
     if (prog.stats.KOS >= 100) unlock('CENTURION');
     save();
   },
+  superKo() {
+    if (match) unlock('SUPER_KO');
+  },
+  crate() {
+    if (!match) return;
+    prog.stats.CRATES++;
+    if (prog.stats.CRATES >= 50) unlock('CRATE_CRUSHER');
+    save(); // sent with the other stats at the end of the match
+  },
   cubes(n) {
     if (!match) return;
     match.cubes = Math.max(match.cubes, n);
     if (n >= 8) unlock('POWER_HUNGRY');
   },
-  result(rank, won) {
+  // night: the arena was dark (lighting.night) when the match ended.
+  result(rank, won, { night = false } = {}) {
     if (!match || match.done) return;
     match.done = true;
     const s = prog.stats;
+    if (rank >= 1 && rank <= 3) unlock('PODIUM');
     if (won) {
       s.WINS++;
       unlock('FIRST_WIN');
+      if (s.WINS >= 10) unlock('CHAMPION');
+      if (night) unlock('NIGHT_OWL');
       if (match.online && match.humans > 1) unlock('ONLINE_WIN');
       if (TYPE_BITS.includes(match.brawler)) s.WINS_MASK |= 1 << TYPE_BITS.indexOf(match.brawler);
       if (s.WINS_MASK === all(TYPE_BITS)) unlock('JACK_OF_ALL');
