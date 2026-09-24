@@ -7,23 +7,32 @@ const buffers = {};
 
 // User mix (0..1 each), persisted per browser. BASE is the internal balance between buses.
 const BASE = { master: 0.8, sfx: 0.55, music: 0.28, amb: 0.5 };
-const DEFAULTS = { master: 1, music: 0.8, sfx: 1, amb: 0.8, muted: false, track: 'auto' };
+// Master starts at 50%: at 100% the first notes were far too loud.
+const DEFAULTS = { master: 0.5, music: 0.8, sfx: 1, amb: 0.8, muted: false, track: 'auto', v: 2 };
 export const settings = { ...DEFAULTS };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('brawl-arena-audio') || '{}')); } catch { /* private mode */ }
 const save = () => { try { localStorage.setItem('brawl-arena-audio', JSON.stringify(settings)); } catch { /* ignore */ } };
+// Mixes saved before v2 had master at 100% by default: bring them down to 50% once.
+if (settings.v !== 2) { settings.master = Math.min(settings.master, 0.5); settings.v = 2; save(); }
 let muted = settings.muted;
 const last = {};
 
 const SFX = ['shot', 'shotgun', 'throw', 'boom', 'boom_big', 'hit', 'hurt', 'break', 'crate', 'pickup',
   'super', 'ready', 'death', 'gas', 'victory', 'defeat', 'click', 'thunder', 'thunder2', 'join'];
 const LOOPS = {
-  battle: 'music/battle', menu: 'music/menu', amb_day: 'music/amb_day', amb_night: 'music/amb_night',
+  amb_day: 'music/amb_day', amb_night: 'music/amb_night',
   amb_rain: 'music/amb_rain', amb_storm: 'music/amb_storm', amb_snow: 'music/amb_snow', amb_marsh: 'music/amb_marsh',
-  // Lyria 3 tracks (art-src/gen_music.py): lobby, generic battle, one battle theme per map, victory fanfare
-  m_oasis: 'music/m_oasis', m_dunes: 'music/m_dunes', m_grove: 'music/m_grove', m_frost: 'music/m_frost', m_marsh: 'music/m_marsh',
   fanfare: 'music/victory',
 };
-const MUSIC = ['menu', 'battle', 'm_oasis', 'm_dunes', 'm_grove', 'm_frost', 'm_marsh'];
+// Songs (Lyria 3 Pro, art-src/gen_music.py) stream from <audio> elements instead of being decoded
+// up front: a 3-minute song decoded takes ~60 MB of RAM. Each game moment has a playlist; a song
+// that ends hands over to the next one, so a long match does not loop the same 2 minutes.
+const PLAYLISTS = {
+  menu: ['menu', 'menu2'],
+  lobby: ['lobby', 'menu2', 'menu'],
+  battle: ['battle', 'battle2'],
+  final: ['final'],
+};
 const BEDS = ['amb_rain', 'amb_storm', 'amb_snow', 'amb_marsh'];
 let weatherBed = null;
 const GAIN = { shot: 0.5, hit: 0.7, hurt: 0.8, click: 0.6, victory: 0.9, defeat: 0.9, gas: 0.6 };
@@ -105,22 +114,64 @@ function fade(name, to, time = 1.2) {
 }
 
 function onLoaded(name) {
-  if (MUSIC.includes(name)) playMusic(wantMusic);
   if (name === weatherBed) setWeatherBed(weatherBed);
   if (name === 'amb_day' || name === 'amb_night') setAmbience(amb.night, true);
 }
 
-// Crossfade between the menu and battle tracks (null = silence). `name` is what the game
-// wants; the user's track setting can override it.
+/* ------------------------------ music ------------------------------ */
+
+const songs = {}; // name -> { el, gain }
+let song = null, playlist = [], songIdx = 0;
+
+function songNode(name) {
+  if (songs[name]) return songs[name];
+  const el = new Audio(`${ASSET_BASE}music/${name}.mp3`);
+  el.preload = 'auto';
+  const gain = ctx.createGain();
+  gain.gain.value = 0;
+  ctx.createMediaElementSource(el).connect(gain).connect(musicBus);
+  el.addEventListener('ended', () => { if (song === name) nextSong(); });
+  return (songs[name] = { el, gain });
+}
+
+// Crossfade to another song (null = silence); the old one pauses once faded out.
+function switchSong(name) {
+  if (song === name) return;
+  const old = song && songs[song];
+  if (old) {
+    old.gain.gain.setTargetAtTime(0, ctx.currentTime, 0.4);
+    const was = song;
+    setTimeout(() => { if (song !== was) old.el.pause(); }, 2500);
+  }
+  song = name;
+  if (!name) return;
+  const s = songNode(name);
+  if (s.el.ended || s.el.currentTime > s.el.duration - 5) s.el.currentTime = 0;
+  s.el.play().catch(() => { /* before the first user gesture: initAudio retries */ });
+  s.gain.gain.setTargetAtTime(1, ctx.currentTime, 0.4);
+}
+
+function nextSong() {
+  if (!playlist.length) return;
+  songIdx = (songIdx + 1) % playlist.length;
+  const name = playlist[songIdx];
+  if (name === song) { songs[name].el.currentTime = 0; songs[name].el.play().catch(() => {}); } else switchSong(name);
+}
+
+// What the game wants: 'menu', 'lobby', 'battle', 'm_<map>' (that map's theme first), 'final'
+// (last 3 brawlers) or null. The user's track setting (Options > Audio) can override it.
 export function playMusic(name) {
   wantMusic = name;
   if (!ctx) return;
   const t = settings.track;
-  let play = t === 'auto' ? name : t === 'off' ? null : t;
-  if (play && !buffers[play] && play.startsWith('m_')) play = 'battle'; // map theme still loading
-  for (const n of MUSIC) {
-    if (n === play) { startLoop(n, musicBus); fade(n, 1); } else fade(n, 0);
-  }
+  const want = t === 'auto' ? name : t === 'off' ? null : t;
+  let list = [];
+  if (want && want.startsWith('m_')) list = amb.night > 0.6 ? ['night', want, 'battle2'] : [want, 'battle', 'battle2'];
+  else if (want) list = PLAYLISTS[want] || [want];
+  if (list.join() === playlist.join()) { if (song && songs[song].el.paused) songs[song].el.play().catch(() => {}); return; }
+  playlist = list;
+  songIdx = 0;
+  switchSong(list[0] || null);
 }
 
 // Ambience follows the lighting: birds and wind by day, crickets and torch crackle at night.

@@ -66,7 +66,7 @@ function tabs(ctx) {
         { label: t('opt.muteAll'), type: 'choice', opts: [[false, t('opt.off')], [true, t('opt.on')]], get: () => audio.muted, set: v => setMuted(v) },
         { label: t('opt.testSfx'), type: 'button', text: t('opt.play'), run: () => { initAudio(); ['shotgun', 'shot', 'boom', 'pickup'].forEach((n, i) => setTimeout(() => sfx(n), i * 280)); } },
       ],
-      reset: () => { setVolume('master', 1); setVolume('music', 0.8); setVolume('sfx', 1); setVolume('amb', 0.8); setTrack('auto'); setMuted(false); },
+      reset: () => { setVolume('master', 0.5); setVolume('music', 0.8); setVolume('sfx', 1); setVolume('amb', 0.8); setTrack('auto'); setMuted(false); },
     },
     controls: {
       title: t('opt.tab.controls'),

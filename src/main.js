@@ -275,17 +275,18 @@ const resolveMap = key => (key === 'random' || !MAPS[key] ? randomMap() : key);
 function play() {
   initAudio();
   sfx('click');
-  playMusic('battle');
   $('#menu').classList.add('hidden');
   $('#result').classList.add('hidden');
   hud.show(true);
   const mapKey = resolveMap(chosenMap);
   playMusic('m_' + mapKey);
+  finalMusic = false;
   game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: t('hud.you'), type: chosen }]), localId: 'me' });
   achievements.matchStart({ mapKey, brawler: chosen });
   presence(t('presence.solo', { map: t(`map.${mapKey}`) }));
   canvas.focus();
 }
+let finalMusic = false; // the final showdown theme already started this match
 function attract() { achievements.end(); game.newMatch({ mapKey: randomMap() }); }
 function toMenu() {
   if (!net.connected) presence(t('presence.menu'));
@@ -330,6 +331,7 @@ function openLobby() {
   $('#menu').classList.add('hidden');
   $('#lobby').classList.remove('hidden');
   showRoomView(net.connected);
+  playMusic('lobby');
 }
 function showRoomView(inRoom) {
   $('#lobbyJoin').classList.toggle('hidden', inRoom);
@@ -419,6 +421,7 @@ onNet('room', m => {
 
 function startOnline(mapKey, roster, role) {
   playMusic('m_' + mapKey);
+  finalMusic = false;
   $('#lobby').classList.add('hidden');
   $('#result').classList.add('hidden');
   hud.show(true);
@@ -448,7 +451,7 @@ function backToRoom() {
   hud.show(false);
   $('#lobby').classList.remove('hidden');
   showRoomView(net.connected);
-  playMusic('menu');
+  playMusic('lobby');
   attract();
 }
 game.onMatchEnd = () => { if (game.net && game.net.role === 'host') net.send({ t: 'end' }); else backToRoom(); };
@@ -549,6 +552,11 @@ function frame(ts) {
   if (input.padHit(PAD.BACK)) setSetting('debugPanel', !settings.debugPanel);
   game.update(dt);
   if (touch) touch.update(game.player);
+  // Last 3 brawlers standing: the final showdown theme takes over until the result.
+  if (!finalMusic && game.mode === 'play' && !game.ended && !$('#hud').classList.contains('hidden')) {
+    const alive = game.brawlers.reduce((n, b) => n + (b.alive ? 1 : 0), 0);
+    if (alive <= 3 && alive > 1) { finalMusic = true; playMusic('final'); }
+  }
   // Sun direction/colour in view space for the foliage rim + translucency term.
   shared.sunDirView.value.copy(lighting.sunDir).transformDirection(camera.matrixWorldInverse);
   shared.sunColor.value.copy(lighting.sun.color).multiplyScalar(lighting.sun.intensity);

@@ -16,11 +16,18 @@ STYLE = 'instrumental only, no vocals, seamless loopable, video game soundtrack,
 TRACKS = {  # name: (model, prompt)
     'menu': ('google/lyria-3-pro-preview', 'Relaxed groovy lobby theme, funky bass, marimba, light claps, warm and friendly, ' + STYLE),
     'battle': ('google/lyria-3-pro-preview', 'High-energy arena battle theme, punchy drums, brass stabs, playful synth lead, heroic and fun, ' + STYLE),
-    'm_oasis': ('google/lyria-3-clip-preview', 'Sunny desert oasis battle music, hand drums, plucked oud and bright flute, upbeat, ' + STYLE),
-    'm_dunes': ('google/lyria-3-clip-preview', 'Spaghetti western showdown in a sandstorm, twangy guitar, whistling, galloping drums, tense and fun, ' + STYLE),
-    'm_grove': ('google/lyria-3-clip-preview', 'Rainy forest adventure battle music, pizzicato strings, woodblocks, soft thunder-like timpani, ' + STYLE),
-    'm_frost': ('google/lyria-3-clip-preview', 'Snowy mountain battle music, sparkling celesta and glockenspiel, sleigh bells, bouncy bass, ' + STYLE),
-    'm_marsh': ('google/lyria-3-clip-preview', 'Spooky foggy swamp battle music, playful bassoon, muted trumpets, creepy-cute organ, ' + STYLE),
+    # map themes: full-length songs (they were 30 s clips looping, which got repetitive)
+    'm_oasis': ('google/lyria-3-pro-preview', 'Sunny desert oasis battle music, hand drums, plucked oud and bright flute, upbeat, with a calmer bridge and a big final chorus, ' + STYLE),
+    'm_dunes': ('google/lyria-3-pro-preview', 'Spaghetti western showdown in a sandstorm, twangy guitar, whistling, galloping drums, tense and fun, builds up in sections, ' + STYLE),
+    'm_grove': ('google/lyria-3-pro-preview', 'Rainy forest adventure battle music, pizzicato strings, woodblocks, soft thunder-like timpani, curious then heroic, ' + STYLE),
+    'm_frost': ('google/lyria-3-pro-preview', 'Snowy mountain battle music, sparkling celesta and glockenspiel, sleigh bells, bouncy bass, playful and brisk, ' + STYLE),
+    'm_marsh': ('google/lyria-3-pro-preview', 'Spooky foggy swamp battle music, playful bassoon, muted trumpets, creepy-cute organ, sneaky groove, ' + STYLE),
+    # variety and game moments (audio.js picks them)
+    'battle2': ('google/lyria-3-pro-preview', 'Second arena battle theme, bouncy electro-funk, slap bass, retro synth arpeggios, handclaps, cheeky and energetic, ' + STYLE),
+    'final': ('google/lyria-3-pro-preview', 'Final showdown theme for the last 3 fighters, fast tempo, pounding taiko and drums, urgent strings, heroic brass, rising tension and climax, ' + STYLE),
+    'menu2': ('google/lyria-3-pro-preview', 'Second lobby theme, chill tropical house groove, steel drums, soft plucks, sunny and relaxed, ' + STYLE),
+    'lobby': ('google/lyria-3-pro-preview', 'Online waiting room music, lo-fi hip hop groove with a cartoon twist, warm keys, vinyl texture, head-nodding and patient, ' + STYLE),
+    'night': ('google/lyria-3-pro-preview', 'Night-time arena battle music, mysterious and stealthy, muted plucks, soft synth pads, ticking percussion, owls-and-lanterns mood, playful tension, ' + STYLE),
     'victory': ('google/lyria-3-clip-preview', 'Short triumphant victory fanfare jingle, brass and drums, joyful, instrumental, video game win sting'),
 }
 

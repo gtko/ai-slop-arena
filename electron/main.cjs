@@ -14,6 +14,8 @@
 const { app, BrowserWindow, ipcMain, protocol, net, shell } = require('electron');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
+const fs = require('node:fs');
+const { Readable } = require('node:stream');
 
 const pkg = require('../package.json');
 const APP_ID = Number(process.env.STEAM_APP_ID) || pkg.steam.appId;
@@ -225,6 +227,18 @@ app.whenReady().then(() => {
     const { pathname } = new URL(req.url);
     const file = path.normalize(path.join(DIST, decodeURIComponent(pathname === '/' ? '/play.html' : pathname)));
     if (!file.startsWith(DIST)) return new Response('Not found', { status: 404 });
+    // Byte ranges, so streamed music can seek (net.fetch on file:// ignores them).
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.get('range') || '');
+    if (range && fs.existsSync(file)) {
+      const size = fs.statSync(file).size;
+      const start = range[1] ? +range[1] : Math.max(0, size - +range[2]);
+      const end = range[1] && range[2] ? Math.min(+range[2], size - 1) : size - 1;
+      if (start >= size) return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } });
+      const stream = Readable.toWeb(fs.createReadStream(file, { start, end }));
+      return new Response(stream, { status: 206, headers: {
+        'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': String(end - start + 1),
+        'Accept-Ranges': 'bytes', 'Content-Type': file.endsWith('.mp3') ? 'audio/mpeg' : 'application/octet-stream' } });
+    }
     return net.fetch(pathToFileURL(file).toString());
   });
   createWindow();
