@@ -20,13 +20,44 @@ const vol = (ch, label) => ({
 
 const ACTIONS = ['up', 'down', 'left', 'right', 'super', 'tod', 'mute', 'panel', 'pause'];
 
+const TIER_NAME = tier => t(`opt.${tier}`);
+// "ANGLE (AMD, AMD Radeon RX 7800 XT (0x0000747E) Direct3D11 ...)" -> "AMD Radeon RX 7800 XT"
+const gpuName = g => String(g || '').replace(/^ANGLE \((.*)\)$/, '$1').replace(/ Direct3D.*$/, '')
+  .replace(/\s*\(0x[0-9a-f]+\)/i, '').replace(/^([^,]+), (.*\1)/i, '$2').slice(0, 48);
+
 function tabs(ctx) {
+  const aq = () => ctx.autoQuality; // set by main.js right after the menus exist
+  // Graphics quality: Auto (default, autoquality.js) or a fixed preset. Shown in General and Graphics.
+  const presetRow = {
+    label: t('opt.preset'), type: 'choice', hint: t('opt.preset.hintAuto'),
+    opts: [['auto', () => (aq() ? `${t('opt.auto')} · ${aq().label(TIER_NAME)}` : t('opt.auto'))],
+      ['low', t('opt.low')], ['medium', t('opt.medium')], ['high', t('opt.high')], ['ultra', t('opt.ultra')], ['custom', t('opt.custom')]],
+    get: () => settings.preset,
+    set: v => { const q = aq(); if (v === 'auto' && q) q.apply(q.step, false); else if (v !== 'custom') applyQuality(v); },
+  };
+  const fullscreenRow = {
+    label: t('opt.fullscreen'), type: 'choice', opts: [[false, t('opt.off')], [true, t('opt.on')]],
+    get: () => ctx.isFullscreen(), set: v => ctx.setFullscreen(v),
+  };
+  const langRow = choice('lang', t('opt.language'), [['auto', t('opt.language.auto')], ...LANGS.map(([code, name]) => [code, name])], t('opt.language.hint'));
   return {
+    general: {
+      title: t('opt.tab.general'),
+      rows: [
+        langRow,
+        fullscreenRow,
+        toggle('fps', t('opt.fps')),
+        toggle('shake', t('opt.shake')),
+        presetRow,
+      ],
+      reset: () => resetGroup(['lang', 'fps', 'shake']),
+    },
     graphics: {
       title: t('opt.tab.graphics'),
       rows: [
-        { label: t('opt.preset'), type: 'choice', opts: [['low', t('opt.low')], ['medium', t('opt.medium')], ['high', t('opt.high')], ['ultra', t('opt.ultra')], ['custom', t('opt.custom')]],
-          get: () => settings.preset, set: v => { if (v !== 'custom') applyQuality(v); }, hint: t('opt.preset.hint') },
+        presetRow,
+        { label: t('opt.gpu'), type: 'info', text: () => gpuName(settings.gpu) || t('opt.gpu.unknown') },
+        { label: t('opt.redetect'), type: 'button', text: t('opt.detect'), hint: t('opt.preset.hintAuto'), run: () => { const q = aq(); if (q) { q.calibrate(); if (settings.preset !== 'auto') q.apply(q.step, false); } } },
         { section: t('opt.sec.display') },
         choice('art', t('opt.art'), [['cartoon', t('opt.art.cartoon')], ['realistic', t('opt.art.realistic')]], t('opt.art.hint')),
         choice('renderScale', t('opt.renderScale'), [[0.5, '50%'], [0.75, '75%'], [1, '100%'], [1.25, '125%'], [1.5, '150%']], t('opt.renderScale.hint')),
@@ -41,10 +72,6 @@ function tabs(ctx) {
         toggle('bloom', t('opt.bloom'), t('opt.bloom.hint')),
         toggle('dynLights', t('opt.dynLights'), t('opt.dynLights.hint')),
         choice('weather', t('opt.weather'), [[0.35, t('opt.low')], [0.7, t('opt.medium')], [1, t('opt.high')]]),
-        { section: t('opt.sec.gameplay') },
-        choice('lang', t('opt.language'), [['auto', t('opt.language.auto')], ...LANGS.map(([code, name]) => [code, name])], t('opt.language.hint')),
-        toggle('shake', t('opt.shake')),
-        toggle('fps', t('opt.fps')),
         { section: t('opt.sec.advanced') },
         toggle('fitFrustum', t('opt.fitFrustum'), t('opt.fitFrustum.hint')),
         toggle('texelSnap', t('opt.texelSnap'), t('opt.texelSnap.hint')),
@@ -52,7 +79,7 @@ function tabs(ctx) {
         toggle('aoView', t('opt.aoView')),
         toggle('debugPanel', t('opt.debugPanel')),
       ],
-      reset: () => applyQuality('high') || resetGroup(['exposure', 'tod', 'shake', 'fps', 'fitFrustum', 'texelSnap', 'showFrustum', 'aoView', 'debugPanel', 'dynLights']),
+      reset: () => { resetGroup(['exposure', 'tod', 'fitFrustum', 'texelSnap', 'showFrustum', 'aoView', 'debugPanel', 'dynLights']); const q = aq(); if (q) q.apply(q.step, false); else applyQuality('high'); },
     },
     audio: {
       title: t('opt.tab.audio'),
@@ -105,7 +132,7 @@ export class Menus {
   constructor(ctx) {
     this.ctx = ctx; // { input, onResume, onQuit, isInMatch }
     this.tabs = tabs(ctx);
-    this.tab = 'graphics';
+    this.tab = 'general';
     this.optionsOpen = false;
     this.returnTo = null;
     this.capture = null;
@@ -173,7 +200,8 @@ export class Menus {
       prev.tabIndex = next.tabIndex = -1;
       prev.addEventListener('click', e => { e.stopPropagation(); this.step(r, -1); });
       next.addEventListener('click', e => { e.stopPropagation(); this.step(r, 1); });
-      const val = el('b', '', r.opts[i][1]);
+      const lbl = r.opts[i][1];
+      const val = el('b', '', typeof lbl === 'function' ? lbl() : lbl);
       const dots = el('span', 'dots', r.opts.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join(''));
       w.append(prev, val, next, dots);
       return w;

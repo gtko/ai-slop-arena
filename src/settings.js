@@ -17,22 +17,23 @@ export const QUALITY = {
 };
 const QUALITY_KEYS = new Set(Object.keys(QUALITY.high));
 
+// preset 'auto' (the default): autoquality.js picks the tier from the GPU, then follows the frame rate.
+export const TIERS = ['low', 'medium', 'high', 'ultra'];
 export const DEFAULTS = {
-  preset: 'high', ...QUALITY.high,
+  preset: 'auto', ...QUALITY.high, autoTier: null, autoMax: null, autoScale: 0, gpu: '',
   fitFrustum: true, texelSnap: true, showFrustum: false, aoView: false, dynLights: true,
   art: 'cartoon', tod: '2', exposure: 1, shake: true, fps: false, debugPanel: false,
   deadzone: 0.18, vibration: true, lang: 'auto',
   binds: { ...DEFAULT_BINDS },
 };
 
-// Phones and tablets start on the low preset (the player can raise it in Options).
-const MOBILE = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
-
 function load() {
   const s = structuredClone(DEFAULTS);
-  if (MOBILE) Object.assign(s, QUALITY.low, { preset: 'low' });
   try {
     const saved = JSON.parse(localStorage.getItem(STORE) || '{}');
+    // Before automatic quality existed, 'high' was just the untouched default: let auto take over.
+    if (!saved.autoV && saved.preset === 'high') saved.preset = 'auto';
+    saved.autoV = 1;
     Object.assign(s, saved);
     s.binds = { ...DEFAULT_BINDS, ...(saved.binds || {}) };
   } catch { /* private mode or corrupt: defaults */ }
@@ -49,19 +50,25 @@ export function onChange(fn) { listeners.add(fn); return () => listeners.delete(
 export function set(key, value) {
   if (settings[key] === value) return;
   settings[key] = value;
+  // a hand-tuned quality setting leaves the presets (and automatic mode) for "custom"
   if (QUALITY_KEYS.has(key) && settings.preset !== 'custom') { settings.preset = 'custom'; notify('preset'); }
   save();
   notify(key);
 }
 
-export function applyQuality(name) {
-  const q = QUALITY[name];
+// name: a tier, or 'auto' (keeps the tier autoquality.js chose). extra: overrides on top (the
+// automatic mode lowers renderScale below the low tier).
+export function applyQuality(name, extra = null) {
+  const auto = name === 'auto';
+  const tier = auto ? (settings.autoTier || 'high') : name;
+  const q = QUALITY[tier];
   if (!q) return;
-  for (const [k, v] of Object.entries(q)) { settings[k] = v; notify(k); }
-  settings.preset = name;
+  for (const [k, v] of Object.entries({ ...q, ...extra })) if (settings[k] !== v) { settings[k] = v; notify(k); }
+  settings.preset = auto ? 'auto' : name;
   save();
   notify('preset');
 }
+export function setAutoInfo(info) { Object.assign(settings, info); save(); }
 
 export function bind(action, code) {
   // one key per action: steal it from whichever action had it

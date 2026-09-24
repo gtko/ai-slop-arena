@@ -18,6 +18,7 @@ import { isDesktop, isPackagedApp, desktop, steam, steamInfo, epic, presence, WE
 import { achievements } from './achievements.js';
 import { t, translateDom } from './i18n/index.js';
 import { TouchControls, isTouchDevice } from './touch.js';
+import { AutoQuality } from './autoquality.js';
 import { VisionFog } from './visionfog.js';
 import { initAudio, playMusic, setAmbience, sfx, toggleMute, setVolume, setMuted, setTrack, settings as audio } from './audio.js';
 import { loadTextures, ASSET_BASE, TEX_FILES } from './assets.js';
@@ -217,8 +218,18 @@ const menus = new Menus({
   isInMatch: () => game.mode === 'play' && !$('#hud').classList.contains('hidden'),
   isOnline: () => !!game.net,
   onPause: p => { game.paused = p; },
+  // General tab: fullscreen through the desktop shell, else the browser's Fullscreen API
+  isFullscreen: () => (isDesktop ? innerWidth === screen.width && innerHeight === screen.height : !!document.fullscreenElement),
+  setFullscreen: v => {
+    if (isDesktop) desktop.fullscreen(v).then(() => menus.render());
+    else if (v) document.documentElement.requestFullscreen?.().then(() => menus.render()).catch(() => {});
+    else document.exitFullscreen?.().then(() => menus.render()).catch(() => {});
+  },
   onQuit: () => { if (game.net) { net.close(); history.replaceState(null, '', location.pathname); } toMenu(); },
 });
+// Automatic graphics quality (preset "auto"): GPU guess, then follows the measured frame rate.
+const autoQuality = new AutoQuality(renderer);
+menus.ctx.autoQuality = autoQuality;
 // Phones and tablets: virtual sticks + pause button (touch.js).
 const touch = isTouchDevice ? new TouchControls(input, { onPause: () => { if (!menus.paused && game.mode === 'play') menus.openPause(); } }) : null;
 if (touch) touch.setSuperLabel(t('hud.super'));
@@ -552,6 +563,7 @@ function frame(ts) {
   if (input.padHit(PAD.BACK)) setSetting('debugPanel', !settings.debugPanel);
   game.update(dt);
   if (touch) touch.update(game.player);
+  autoQuality.update(document.visibilityState === 'visible' && $('#loader').classList.contains('done'));
   // Last 3 brawlers standing: the final showdown theme takes over until the result.
   if (!finalMusic && game.mode === 'play' && !game.ended && !$('#hud').classList.contains('hidden')) {
     const alive = game.brawlers.reduce((n, b) => n + (b.alive ? 1 : 0), 0);
@@ -568,7 +580,8 @@ function frame(ts) {
   fpsAcc += dt; fpsN++; statT += dt;
   if (statT > 0.5) {
     const fps = Math.round(fpsN / fpsAcc);
-    if (settings.fps) $('#fpsBadge').textContent = `${fps} FPS`;
+    if (settings.fps) $('#fpsBadge').textContent = settings.preset === 'auto'
+      ? `${fps} FPS · ${t('opt.auto')} ${autoQuality.label(tier => t(`opt.${tier}`))}` : `${fps} FPS`;
     stats.innerHTML = `
       <span>${fps} fps</span><span>${renderer.info.render.calls} draws</span>
       <span>${lights.used}/${lights.size} lights (${lights.candidates} emitters)</span>
@@ -584,6 +597,6 @@ if (import.meta.hot) import.meta.hot.on('vite:beforeUpdate', () => location.relo
 
 // Dev-only handle for poking at the scene from the console (stripped from production builds).
 if (import.meta.env.DEV) {
-  window.__arena = { game, lighting, lights, renderer, composer, scene, camera, menus, input, settings, frame, timer };
+  window.__arena = { game, lighting, lights, renderer, composer, scene, camera, menus, input, settings, frame, timer, autoQuality };
   import('./devtools.js').then(m => m.installDevtools(window.__arena));
 }
