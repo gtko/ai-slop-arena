@@ -65,7 +65,7 @@ together, and the notes must carry the "update required" warning (old apps are r
 ## 4. Deploy the website + server (Cloudflare)
 
 ```bash
-npm run deploy        # builds everything, then wrangler deploy
+op run --env-file=.env.op -- npm run deploy   # builds (source maps -> Sentry), then wrangler deploy
 # site serves this build, rooms accept the protocol, refuse old ones, queue answers (retried while
 # the new version propagates; a plain `sleep 30` is blocked by the harness)
 for i in 1 2 3 4 5 6; do if npm run check:prod > "$TEMP/prod.log" 2>&1; then break; fi; sleep 10; done; tail -7 "$TEMP/prod.log"
@@ -77,8 +77,9 @@ for i in 1 2 3 4 5 6; do if npm run check:prod > "$TEMP/prod.log" 2>&1; then bre
   deploy is just propagation).
 - Deploy **before** tagging: the apps built by the tag talk to the live server.
 - Secrets (e.g. `ADMIN_TOKEN`) are the user's: never create or print them.
-- Crash reports: when `SENTRY_AUTH_TOKEN` is set (local env for `npm run deploy`, GitHub secret for
-  the apps), the builds upload their source maps to Sentry for release `ai-slop-arena@X.Y.Z`. Without
+- Crash reports: `op run` (1Password CLI) fills `SENTRY_AUTH_TOKEN` from the reference in `.env.op`
+  (the user approves the access; never print or copy the value). The apps get it from the GitHub
+  secret of the same name. With the token, the builds upload their source maps to Sentry for release `ai-slop-arena@X.Y.Z`. Without
   it everything still works, Sentry just shows minified stack traces. After the deploy, check the
   Sentry projects `ai-slop-arena` / `ai-slop-arena-server` (org odykit) for new issues of this release.
 
