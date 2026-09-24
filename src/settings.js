@@ -8,13 +8,25 @@ export const DEFAULT_BINDS = {
   super: 'Space', tod: 'KeyT', mute: 'KeyM', panel: 'Tab', pause: 'Escape',
 };
 
+// Phones and tablets (touch screen): lighter presets, a lower pixel ratio, fewer lights, 60 FPS cap
+// (see main.js). Their GPUs share memory bandwidth with everything else and heat up quickly.
+export const MOBILE = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
+
 // Quality presets only touch these keys; changing one of them by hand switches to "custom".
-export const QUALITY = {
+const DESKTOP_QUALITY = {
   low: { renderScale: 0.75, msaa: 0, shadows: 1024, shadowFilter: 'basic', softness: 1, ao: false, bloom: false, weather: 0.35 },
   medium: { renderScale: 1, msaa: 2, shadows: 2048, shadowFilter: 'pcf', softness: 2, ao: false, bloom: true, weather: 0.7 },
   high: { renderScale: 1, msaa: 4, shadows: 2048, shadowFilter: 'pcf', softness: 3, ao: true, bloom: true, weather: 1 },
   ultra: { renderScale: 1.25, msaa: 4, shadows: 4096, shadowFilter: 'pcf', softness: 3, ao: true, bloom: true, weather: 1 },
 };
+// Mobile: no ambient occlusion, hard shadows below "high", no MSAA below "high", fewer particles.
+const MOBILE_QUALITY = {
+  low: { renderScale: 0.7, msaa: 0, shadows: 1024, shadowFilter: 'basic', softness: 0, ao: false, bloom: false, weather: 0.25 },
+  medium: { renderScale: 0.85, msaa: 0, shadows: 1024, shadowFilter: 'basic', softness: 0, ao: false, bloom: false, weather: 0.45 },
+  high: { renderScale: 1, msaa: 2, shadows: 1024, shadowFilter: 'pcf', softness: 1, ao: false, bloom: true, weather: 0.6 },
+  ultra: { renderScale: 1, msaa: 4, shadows: 2048, shadowFilter: 'pcf', softness: 2, ao: false, bloom: true, weather: 0.8 },
+};
+export const QUALITY = MOBILE ? MOBILE_QUALITY : DESKTOP_QUALITY;
 const QUALITY_KEYS = new Set(Object.keys(QUALITY.high));
 
 // preset 'auto' (the default): autoquality.js picks the tier from the GPU, then follows the frame rate.

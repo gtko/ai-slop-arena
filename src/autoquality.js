@@ -24,16 +24,20 @@ export function detectGpu(renderer) {
   const g = gpu.toLowerCase();
   const mobile = matchMedia('(pointer: coarse)').matches;
   const cores = navigator.hardwareConcurrency || 4;
-  let tier;
+  let tier, max = null;
   if (/swiftshader|llvmpipe|software|basic render/.test(g)) tier = 'low';
-  else if (mobile || /adreno|mali|powervr|apple gpu|tegra|videocore/.test(g)) {
-    // recent flagship phone GPUs manage medium; everything else starts low
-    tier = /adreno \(tm\) (7[3-9]\d|8\d\d)|apple gpu|mali-g7[1-9]|mali-g[6-9]\d\d|immortalis/.test(g) ? 'medium' : 'low';
+  else if (mobile || /adreno|mali|powervr|apple gpu|tegra|videocore|xclipse/.test(g)) {
+    // Mobile presets (settings.js). Flagship GPUs (Snapdragon 8 Gen 2+ / Elite: Adreno 740+/8xx,
+    // Apple, Immortalis, recent Mali / Xclipse) start on medium and may climb to high if the frame
+    // rate holds; the rest start low and may reach medium.
+    const flagship = /adreno \(tm\) (7[4-9]\d|8\d\d)|apple gpu|immortalis|mali-g7[1-9]\d|mali-g[89]\d\d|xclipse 9/.test(g);
+    tier = flagship ? 'medium' : 'low';
+    max = flagship ? 'high' : 'medium';
   } else if (/rtx|rx [5-9]\d{3}|radeon pro w|apple m[2-9]|arc a7/.test(g)) tier = 'ultra';
   else if (/gtx|radeon|rx |apple m1|arc|quadro|nvidia/.test(g)) tier = 'high';
   else if (/intel|iris|uhd|hd graphics|vega \d\b|radeon\(tm\) graphics/.test(g)) tier = 'medium';
   else tier = cores >= 8 ? 'high' : 'medium';
-  return { gpu, tier };
+  return { gpu, tier, max: max || tier };
 }
 
 export class AutoQuality {
@@ -42,7 +46,8 @@ export class AutoQuality {
     this.t = 0; this.frames = 0; this.good = 0; this.cooldown = 3;
     this.last = performance.now();
     this.fps = 0;
-    if (!settings.autoTier || !settings.gpu) this.calibrate();
+    // rev 2: mobile presets + flagship phone detection -> calibrate again once
+    if (!settings.autoTier || !settings.gpu || settings.autoRev !== 2) { this.calibrate(); setAutoInfo({ autoRev: 2 }); }
     else if (settings.preset === 'auto') this.apply(this.step, false);
   }
 
@@ -56,8 +61,8 @@ export class AutoQuality {
 
   // Fresh guess from the GPU (first launch, or "Detect again" in Options).
   calibrate() {
-    const { gpu, tier } = detectGpu(this.renderer);
-    setAutoInfo({ gpu, autoMax: tier, autoTier: tier, autoScale: 0 });
+    const { gpu, tier, max } = detectGpu(this.renderer);
+    setAutoInfo({ gpu, autoMax: max, autoTier: tier, autoScale: 0 });
     this.good = 0; this.cooldown = 3;
     if (this.enabled) this.apply(this.step, false);
   }

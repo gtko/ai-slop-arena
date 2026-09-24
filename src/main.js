@@ -26,7 +26,7 @@ import { VisionFog } from './visionfog.js';
 import { initAudio, playMusic, setAmbience, sfx, toggleMute, setVolume, setMuted, setTrack, settings as audio } from './audio.js';
 import { loadTextures, ASSET_BASE, TEX_FILES } from './assets.js';
 import { shared } from './materials.js';
-import { settings, set as setSetting, onChange } from './settings.js';
+import { settings, set as setSetting, onChange, MOBILE } from './settings.js';
 import { Menus } from './menu.js';
 import { OUTLINES } from './models.js';
 import { preloadFigurines } from './figurines.js';
@@ -45,7 +45,8 @@ if (CARTOON) enableCartoonShading(); // must run before any material compiles
 
 const canvas = $('#c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-const DPR = Math.min(devicePixelRatio, 1.5);
+// Phones have 2.5-3x screens: 1.25 is plenty for this camera and saves a lot of fill rate.
+const DPR = Math.min(devicePixelRatio, MOBILE ? 1.25 : 1.5);
 renderer.setPixelRatio(DPR);
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
@@ -59,7 +60,7 @@ const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.5, 26
 
 const lighting = new Lighting(renderer, scene);
 if (CARTOON) lighting.style = { hemi: 1.45, env: 0.55, exposure: 0.95, sun: 0.9 };
-const lights = new LightPool(scene, 12);
+const lights = new LightPool(scene, MOBILE ? 6 : 12); // every material pays for every light, per pixel
 const hud = new Hud();
 const input = new Input(canvas);
 const game = new Game({ scene, camera, lighting, lights, hud, input });
@@ -88,7 +89,7 @@ composer.addPass(gtao);
 const visionFog = new VisionFog(); // limited field of view on fog maps, before bloom so lights glow through
 composer.addPass(visionFog.pass);
 
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.5, 1.6);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight).multiplyScalar(MOBILE ? 0.5 : 1), 0.4, 0.5, 1.6);
 composer.addPass(bloom);
 if (CARTOON) composer.addPass(cartoonGradePass());
 composer.addPass(new OutputPass());
@@ -102,7 +103,7 @@ addEventListener('resize', () => {
 
 /* ------------------------------ settings -> engine ------------------------------ */
 
-const BASE_DPR = Math.min(devicePixelRatio, 1.5);
+const BASE_DPR = DPR;
 const BOOT_LANG = settings.lang; // the page is translated once, a change reloads it
 function applySetting(k) {
   const v = settings[k];
@@ -780,7 +781,13 @@ if (isDesktop) {
   $('#quitBtn').addEventListener('click', () => desktop.quit());
 }
 
+// Phones: 60 FPS at most. 90/120 Hz screens would otherwise double the work (and the heat) for a
+// top-down game that does not need it.
+const FRAME_MS = MOBILE ? 1000 / 60 : 0;
+let lastFrame = 0;
 function frame(ts) {
+  if (FRAME_MS && ts - lastFrame < FRAME_MS - 2) return;
+  lastFrame = ts;
   timer.update(ts);
   const dt = Math.min(timer.getDelta(), 0.05);
   renderer.info.reset();
