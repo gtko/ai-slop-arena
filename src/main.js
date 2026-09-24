@@ -15,7 +15,7 @@ import { MAPS } from './maps.js';
 import { Net, randomCode, serverError } from './net.js';
 import { SteamNet } from './steamnet.js';
 import { Matchmaking } from './matchmaking.js';
-import { isDesktop, isPackagedApp, desktop, steam, steamInfo, epic, presence, WEB_ORIGIN, serverOrigin, clientId } from './platform.js';
+import { isDesktop, isPackagedApp, isNativeApp, desktop, steam, steamInfo, epic, presence, WEB_ORIGIN, serverOrigin, clientId } from './platform.js';
 import { achievements } from './achievements.js';
 import { botLevel, recordResult } from './skill.js';
 import { installBugReport, openBugReport } from './bugreport.js';
@@ -237,6 +237,12 @@ menus.ctx.autoQuality = autoQuality;
 // Phones and tablets: virtual sticks + pause button (touch.js).
 const touch = isTouchDevice ? new TouchControls(input, { onPause: () => { if (!menus.paused && game.mode === 'play') menus.openPause(); } }) : null;
 if (touch) touch.setSuperLabel(t('hud.super'));
+// Android / iOS app: the back button closes panels and pauses the match, leaving the app pauses it.
+if (isNativeApp) {
+  const pauseMatch = () => { if (!menus.paused && menus.ctx.isInMatch()) { menus.openPause(); return true; } return false; };
+  import('./native.js').then(m => m.bindAppEvents({ onBack: () => menus.back() || pauseMatch(), onHide: pauseMatch }))
+    .catch(e => console.warn('[native]', e));
+}
 
 $('#optionsBtn').addEventListener('click', () => { sfx('click'); menus.openOptions('#menu'); });
 
