@@ -60,3 +60,7 @@ Pushing a tag `v*` (e.g. `git tag v0.2.0 && git push origin v0.2.0`) runs
 | `AISlopArena-web.zip` | the website + game, as deployed to Cloudflare |
 
 The workflow can also be started by hand (Actions → Release → Run workflow).
+
+**Release notes**: write `docs/releases/<tag>.md` before tagging (banner and infographics from
+`art-src/make_release_art.py`, see [CHANGELOG.md](../CHANGELOG.md)); the workflow uses it as the
+release description, or GitHub's generated notes when the file does not exist.

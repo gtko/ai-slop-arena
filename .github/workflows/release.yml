@@ -102,8 +102,13 @@ jobs:
         env: { GH_TOKEN: '${{ github.token }}' }
         run: |
           ls -la out
+          # Hand-written notes with graphics (docs/releases/<tag>.md, see CHANGELOG.md) when there are
+          # some, otherwise GitHub's generated list of changes.
+          NOTES=(--generate-notes)
+          [ -f "docs/releases/$TAG.md" ] && NOTES=(--notes-file "docs/releases/$TAG.md")
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" out/* --clobber
+            [ -f "docs/releases/$TAG.md" ] && gh release edit "$TAG" --notes-file "docs/releases/$TAG.md"
           else
-            gh release create "$TAG" out/* --title "AI SLOP ARENA $TAG" --generate-notes --target "$GITHUB_SHA"
+            gh release create "$TAG" out/* --title "AI SLOP ARENA $TAG" "${NOTES[@]}" --target "$GITHUB_SHA"
           fi
