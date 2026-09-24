@@ -39,9 +39,17 @@ player. Matched players get a room code and the room starts when everyone is in 
   Steam lobbies report through `POST /api/report`. At most 20 reports per player per day.
 - **Remove** (✕, room leader only, not in matchmade rooms): the player cannot come back to that room.
 - **Automatic bans**
-  - 3 different players report the same person within 24 h -> that device banned for 24 h;
-  - kicked 3 times for impossible moves within 7 days -> device **and IP** banned for 7 days
-    (only proven cheating bans an IP: IPs are often shared).
+  - **Reports are a share of the matches played**, so a few sore losers cannot ban a good player.
+    Over the last 7 days, a player is banned when all of this holds:
+    at least **10 matches** played on our server, reported in at least **30%** of them, by at least
+    **4 different players**. A match counts once however many people report it, and one player
+    reports someone once per match. First time: 24 h; again within 30 days: 7 days.
+    The rule runs after every report and every match of a reported player.
+  - **Cheating proven by the server**: kicked 3 times for impossible moves within 7 days -> device
+    **and IP** banned for 7 days (only proven cheating bans an IP: IPs are often shared).
+  - Steam lobby reports are only recorded (the server does not see those matches): review them in
+    `/admin/reports` and ban by hand.
+  - The thresholds are constants at the top of the Moderation class in `worker/index.js`.
 - Players have no account: bans use a random id stored on the device (`cid:`) and, for cheating,
   a hash of the IP (`ip:`; the IP itself is never stored). Steam lobby reports use `steam:<id>`.
 
@@ -56,7 +64,7 @@ npx wrangler secret put ADMIN_TOKEN
 Then, with `Authorization: Bearer <token>`:
 
 ```bash
-# reported players (grouped), bans
+# reported players (grouped, with matches played / reported / reporters over 7 days), bans
 curl -H "Authorization: Bearer $TOKEN" https://ai-slop-arena.gtux-prog.workers.dev/admin/reports
 # ban a device (days: 0 = forever; add "ip": "<ip:...>" from the report to ban the IP too)
 curl -X POST -H "Authorization: Bearer $TOKEN" -d '{"key":"cid:...","days":7,"reason":"cheating"}' https://ai-slop-arena.gtux-prog.workers.dev/admin/ban

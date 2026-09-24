@@ -164,6 +164,10 @@ export class Room extends DurableObject {
         if (strikes === CHEAT_KICK) this.kick(this.byId(id), 'cheat', 'auto: ' + kind, 'server');
       },
     });
+    this.matchSeq = (this.matchSeq || 0) + 1;
+    this.matchId = `${this.code()}#${Date.now().toString(36)}${this.matchSeq}`;
+    // every human's match count: report-based bans are a share of the matches played
+    this.env.MOD.getByName('global').played(humans.map(p => p.cid || p.ip), this.matchId);
     this.broadcast({ t: 'start', map, roster });
     this.broadcastRoom();
     this.last = Date.now();
@@ -200,7 +204,8 @@ export class Room extends DurableObject {
     for (const k of [me.cid, me.ip]) if (k && k.length > 4) this.kicked.add(k);
     await this.ctx.storage.put('kicked', [...this.kicked]);
     await this.env.MOD.getByName('global').report({
-      reporter: by, target: me.cid, ip: me.ip, name: me.name, plat: me.plat, reason: why, room: this.code(), auto: by === 'server' ? 1 : 0,
+      reporter: by, target: me.cid || me.ip, ip: me.ip, name: me.name, plat: me.plat, reason: why, room: this.code(),
+      match: this.matchId || '', auto: by === 'server' ? 1 : 0,
     });
     const msg = code === 'cheat' ? 'You were removed: impossible moves (speed or teleport).' : 'The room leader removed you.';
     try { ws.send(JSON.stringify({ t: 'kicked', code, msg })); ws.close(4004, 'kicked'); } catch { /* gone */ }
@@ -247,7 +252,8 @@ export class Room extends DurableObject {
         if (!target || target === ws) break;
         const t = this.info(target);
         const out = await this.env.MOD.getByName('global').report({
-          reporter: me.cid, target: t.cid, ip: t.ip, name: t.name, plat: t.plat, reason: clean(msg.reason, 40), room: this.code(), auto: 0,
+          reporter: me.cid || me.ip, target: t.cid || t.ip, ip: t.ip, name: t.name, plat: t.plat, reason: clean(msg.reason, 40),
+          room: this.code(), match: this.matchId || '', auto: 0,
         });
         ws.send(JSON.stringify({ t: 'reported', id: msg.id, ok: out.ok }));
         break;
@@ -345,11 +351,15 @@ export class Matchmaker extends DurableObject {
 /* ------------------------------ Moderation ------------------------------ */
 
 // Reports and bans (SQLite in one global object). Automatic rules:
-//   - 3 players reporting the same person within 24 h -> that device banned for 24 h;
-//   - kicked 3 times by the server for impossible moves within 7 days -> device and IP banned for
-//     7 days. Only proven cheating bans the IP: IPs are often shared (home, school, mobile network).
-// Everything else goes through the /admin API (see docs/moderation.md).
+//   - reports: a share of the matches played, so a handful of sore losers cannot ban anyone.
+//     Over the last 7 days: at least 10 matches played on our server, reported in at least 30% of
+//     them, by at least 4 different players (a match counts once however many report it) ->
+//     that device banned for 24 h, 7 days if it happens again within 30 days.
+//   - cheating proven by the server (kicked 3 times for impossible moves within 7 days) -> device
+//     and IP banned for 7 days. Only proven cheating bans an IP: IPs are often shared.
+// Steam P2P lobby reports are only recorded (we do not see those matches): review them by hand.
 const DAY = 24 * 3600 * 1000;
+const REPORT_WINDOW = 7 * DAY, MIN_MATCHES = 10, MIN_REPORTERS = 4, REPORTED_SHARE = 0.3;
 
 export class Moderation extends DurableObject {
   constructor(ctx, env) {
@@ -358,6 +368,38 @@ export class Moderation extends DurableObject {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS bans (key TEXT PRIMARY KEY, reason TEXT, until INTEGER, created INTEGER)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, reporter TEXT,
       target TEXT, ip TEXT, name TEXT, plat TEXT, reason TEXT, room TEXT, auto INTEGER)`);
+    try { this.sql.exec('ALTER TABLE reports ADD COLUMN match TEXT'); } catch { /* already there */ }
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS plays (key TEXT, match TEXT, at INTEGER)`);
+    this.sql.exec(`CREATE INDEX IF NOT EXISTS plays_key ON plays (key, at)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS ban_log (key TEXT, at INTEGER, days INTEGER, reason TEXT)`);
+  }
+
+  // A match started on our server with these players (device ids).
+  played(keys, match) {
+    const now = Date.now();
+    for (const k of keys) if (k) this.sql.exec('INSERT INTO plays (key, match, at) VALUES (?,?,?)', k, match, now);
+    if (Math.random() < 0.02) this.sql.exec('DELETE FROM plays WHERE at < ?', now - 30 * DAY); // keep it small
+    // reports can predate the 10th match: check the reported players again as their count grows
+    for (const k of keys) {
+      if (k && this.sql.exec('SELECT 1 FROM reports WHERE target = ? AND auto = 0 AND at > ? LIMIT 1', k, now - REPORT_WINDOW).toArray().length) this.evaluate(k);
+    }
+  }
+
+  // The report rule (see above), run after every report and every match of a reported player.
+  evaluate(key) {
+    const st = this.standing(key);
+    if (st.played < MIN_MATCHES || st.reporters < MIN_REPORTERS || st.share < REPORTED_SHARE || this.isBanned([key])) return;
+    const before = this.sql.exec('SELECT COUNT(*) AS n FROM ban_log WHERE key = ? AND at > ?', key, Date.now() - 30 * DAY).one().n;
+    this.ban(key, `reported in ${Math.round(st.share * 100)}% of ${st.played} matches`, before ? 7 : 1);
+  }
+
+  // Matches played, matches with at least one report, distinct reporters (last 7 days).
+  standing(key, since = Date.now() - REPORT_WINDOW) {
+    const played = this.sql.exec('SELECT COUNT(DISTINCT match) AS n FROM plays WHERE key = ? AND at > ?', key, since).one().n;
+    const reported = this.sql.exec(`SELECT COUNT(DISTINCT match) AS n FROM reports WHERE target = ? AND auto = 0 AND at > ?
+      AND match IN (SELECT match FROM plays WHERE key = ? AND at > ?)`, key, since, key, since).one().n;
+    const reporters = this.sql.exec('SELECT COUNT(DISTINCT reporter) AS n FROM reports WHERE target = ? AND auto = 0 AND at > ?', key, since).one().n;
+    return { played, reported, reporters, share: played ? reported / played : 0 };
   }
 
   isBanned(keys) {
@@ -376,18 +418,18 @@ export class Moderation extends DurableObject {
   report(r) {
     const now = Date.now();
     if (!r.target) return { ok: false };
+    // one report per reporter, target and match
+    if (!r.auto && r.match && this.sql.exec('SELECT 1 FROM reports WHERE reporter = ? AND target = ? AND match = ? LIMIT 1',
+      r.reporter, r.target, r.match).toArray().length) return { ok: true };
     // a player can file at most 20 reports a day
     const mine = this.sql.exec('SELECT COUNT(*) AS n FROM reports WHERE reporter = ? AND at > ?', r.reporter, now - DAY).one().n;
     if (!r.auto && mine >= 20) return { ok: false };
-    this.sql.exec('INSERT INTO reports (at, reporter, target, ip, name, plat, reason, room, auto) VALUES (?,?,?,?,?,?,?,?,?)',
-      now, r.reporter, r.target, r.ip || '', r.name || '', r.plat || '', r.reason || '', r.room || '', r.auto ? 1 : 0);
+    this.sql.exec('INSERT INTO reports (at, reporter, target, ip, name, plat, reason, room, auto, match) VALUES (?,?,?,?,?,?,?,?,?,?)',
+      now, r.reporter, r.target, r.ip || '', r.name || '', r.plat || '', r.reason || '', r.room || '', r.auto ? 1 : 0, r.match || '');
     if (r.auto) {
       const kicks = this.sql.exec('SELECT COUNT(*) AS n FROM reports WHERE target = ? AND auto = 1 AND at > ?', r.target, now - 7 * DAY).one().n;
       if (kicks >= 3) this.ban(r.target, 'cheating', 7, r.ip);
-    } else {
-      const people = this.sql.exec('SELECT COUNT(DISTINCT reporter) AS n FROM reports WHERE target = ? AND auto = 0 AND at > ?', r.target, now - DAY).one().n;
-      if (people >= 3) this.ban(r.target, 'reported by several players', 1);
-    }
+    } else if (r.match) this.evaluate(r.target);
     return { ok: true };
   }
 
@@ -396,17 +438,17 @@ export class Moderation extends DurableObject {
     for (const k of [key, ip]) {
       if (k) this.sql.exec('INSERT OR REPLACE INTO bans (key, reason, until, created) VALUES (?,?,?,?)', k, reason, until, Date.now());
     }
+    this.sql.exec('INSERT INTO ban_log (key, at, days, reason) VALUES (?,?,?,?)', key, Date.now(), days, reason);
     return { ok: true, until };
   }
 
   unban(key) { this.sql.exec('DELETE FROM bans WHERE key = ?', key); return { ok: true }; }
 
   list() {
-    return {
-      bans: this.sql.exec('SELECT * FROM bans ORDER BY created DESC LIMIT 200').toArray(),
-      reports: this.sql.exec(`SELECT target, name, plat, COUNT(*) AS reports, SUM(auto) AS auto_kicks, MAX(at) AS last,
-        GROUP_CONCAT(DISTINCT reason) AS reasons, MAX(ip) AS ip FROM reports GROUP BY target ORDER BY last DESC LIMIT 200`).toArray(),
-    };
+    const reports = this.sql.exec(`SELECT target, name, plat, COUNT(*) AS reports, SUM(auto) AS auto_kicks, MAX(at) AS last,
+      GROUP_CONCAT(DISTINCT reason) AS reasons, MAX(ip) AS ip FROM reports GROUP BY target ORDER BY last DESC LIMIT 200`).toArray();
+    for (const r of reports) Object.assign(r, this.standing(r.target)); // matches played / reported, last 7 days
+    return { bans: this.sql.exec('SELECT * FROM bans ORDER BY created DESC LIMIT 200').toArray(), reports };
   }
 }
 
