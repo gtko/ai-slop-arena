@@ -524,6 +524,34 @@ def v060():
     img.convert('RGB').save(os.path.join(OUT, 'v0.6.0-fair.png'), optimize=True)
 
 
+def v061():
+    banner('v0.6.1', 'NEW ONLINE MENU', 'Your rank up front, one tap to a match, then again.',
+           [('🏅', 'Your rank'), ('🔎', 'Find a match'), ('🤝', 'Friends'), ('🔁', 'Play again')],
+           'v0.6.1-banner.png', ('gunslinger', 'bomber', 'volt'))
+
+    # the new online menu, three blocks + what happens after a ranked match
+    W, H = 1600, 700
+    img = background(W, H, glow=(0.5, 0.3))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 36), 'THE ONLINE MENU, REBUILT', display(56), YELLOW, anchor='ma')
+    cols = [('🏅', 'You', ['Your brawler and name', 'Rank emblem and RP', 'Progress to the next tier'], None),
+            ('🔎', 'Find a match', ['Ranked, cross-platform', 'One big button', 'Web · Steam · Epic · Android · iOS'], (255, 210, 63)),
+            ('🤝', 'Friends', ['Create a room', 'Join with a code', 'Private, unranked'], None)]
+    cw, gap = 440, 30
+    x0 = (W - (3 * cw + 2 * gap)) // 2
+    for i, (ic, title, lines, hi) in enumerate(cols):
+        x = x0 + i * (cw + gap)
+        card(img, (x, 140, x + cw, 450), outline=hi or (110, 90, 180), radius=26)
+        d.text((x + cw // 2, 200), ic, font=emoji(64), embedded_color=True, anchor='mm')
+        d.text((x + cw // 2, 250), title, font=display(38), fill=YELLOW, anchor='ma')
+        for li, line in enumerate(lines):
+            d.text((x + cw // 2, 318 + li * 36), line, font=body(24, 'Bold'), fill=TEXT, anchor='ma')
+    card(img, (x0, 500, W - x0, 640), fill=(255, 210, 63, 255), outline=INK, radius=24)
+    d.text((W // 2, 540), 'After a ranked match', font=display(34), fill=INK, anchor='mm')
+    d.text((W // 2, 595), 'RP won or lost, then PLAY AGAIN (straight back in the queue) or MENU', font=body(26, 'Bold'), fill=INK, anchor='mm')
+    img.convert('RGB').save(os.path.join(OUT, 'v0.6.1-lobby.png'), optimize=True)
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     v020()
@@ -531,5 +559,6 @@ if __name__ == '__main__':
     v040()
     v050()
     v060()
+    v061()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')
