@@ -247,7 +247,7 @@ def duration(path):
 
 def v030():
     banner('v0.3.0', 'THE SOUNDTRACK', '10 new full-length songs, a playlist for every moment of the game.',
-           [('🎵', '10 songs'), ('⚔️', 'Final showdown theme'), ('🌙', 'Night theme'), ('🔉', 'Quieter start (50%)')],
+           [('🎸', '10 songs'), ('⚔️', 'Final showdown theme'), ('🌙', 'Night theme'), ('🔉', 'Quieter start (50%)')],
            'v0.3.0-banner.png', ('gunslinger', 'bomber', 'volt'))
     tracks = [
         ('Maps', [('m_oasis', 'Oasis', '🏝️'), ('m_dunes', 'Dune Storm', '🌪️'), ('m_grove', 'Rainy Grove', '🌧️'),
