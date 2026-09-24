@@ -7,10 +7,10 @@ The desktop app is the same game as the website, wrapped in Electron (`electron/
 | --- | --- |
 | **Achievements + stats** | `src/achievements.js`. Progress is kept locally and mirrored to Steam, so anything earned offline unlocks the next time Steam is running. |
 | **Friends** | Online rooms are Steam lobbies: *Invite Steam friends* opens the overlay invite dialog, friends can *Join game* from their friends list (running or not: `+connect_lobby`), and rich presence shows what you are doing and groups you with your party. |
-| **Networking** | `src/steamnet.js`: the lobby owner hosts the match and everyone talks to them over Steam P2P (relayed by Steam, no port forwarding, no server). Host leaves → Steam hands the lobby to someone else, who takes over. Room codes still work. |
+| **Networking** | `src/steamnet.js`: the lobby owner hosts the match and everyone talks to them over Steam P2P (relayed by Steam, no port forwarding, no server). Host leaves > Steam hands the lobby to someone else, who takes over. Room codes still work. |
 | **Cross-play** | On Steam, *Cross-play room* creates a room on the website's relay instead of a Steam lobby: browser players join it with its code or link. Joining by code tries Steam lobbies first, then web rooms, so Steam players can also enter any browser room. |
 | **Overlay** | Shift+Tab, enabled in `electron/main.cjs`. |
-| **30 languages** | Every language Steam supports (`src/i18n/`). The game follows the language picked for it in Steam, else the system language; Options → Language overrides it. |
+| **30 languages** | Every language Steam supports (`src/i18n/`). The game follows the language picked for it in Steam, else the system language; Options > Language overrides it. |
 
 Without Steam running, the app still works: online play falls back to the Cloudflare rooms of
 the website and achievements are only tracked locally.
@@ -32,7 +32,7 @@ started outside Steam relaunches itself through Steam.
 
 ## Steamworks setup (partner.steamgames.com)
 
-1. **Achievements** (Stats & Achievements → Achievements), API names must match exactly:
+1. **Achievements** (Stats & Achievements > Achievements), API names must match exactly:
 
    | API name | Name | Description |
    | --- | --- | --- |
@@ -63,3 +63,7 @@ started outside Steam relaunches itself through Steam.
    npm run dist:steam
    steamcmd +login <builder account> +run_app_build %CD%\steam\app_build.vdf +quit
    ```
+
+## Store page
+
+Texts in the 30 Steam languages, tags, required images, AI disclosure, trailer, achievement icons and the launch checklist: [store/README.md](store/README.md).

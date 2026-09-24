@@ -22,6 +22,12 @@
         "8787"
       ],
       "port": 8787
+    },
+    {
+      "name": "steam-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8790", "--bind", "127.0.0.1"],
+      "port": 8790
     }
   ]
 }
