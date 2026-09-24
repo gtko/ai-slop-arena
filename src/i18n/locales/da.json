@@ -272,5 +272,22 @@
   "mod.reported": "Tak, din rapport er sendt.",
   "mod.kicked.leader": "Rummets leder har smidt dig ud af rummet.",
   "mod.kicked.cheat": "Du blev smidt ud af kampen: umulige bevægelser (fart eller teleport).",
-  "err.outdated": "Denne version af spillet er forældet: genindlæs siden eller opdater appen."
+  "err.outdated": "Denne version af spillet er forældet: genindlæs siden eller opdater appen.",
+  "opt.bots": "Bots",
+  "opt.bots.auto": "Adaptiv · niveau {level}",
+  "opt.bots.easy": "Let",
+  "opt.bots.hard": "Svær",
+  "opt.bots.hint": "Adaptiv: bots følger dit niveau, en blanding af svagere og skarpere omkring det.",
+  "result.level": "Dit niveau: {level}",
+  "bug.button": "Rapportér en bug",
+  "bug.something": "Noget galt? Rapportér en bug",
+  "bug.title": "Rapportér en bug",
+  "bug.ask": "Hvad skete der? Hvad lavede du lige før?",
+  "bug.shot": "Vedhæft dette skærmbillede",
+  "bug.info": "Sendes med: spilversion, platform, grafikkort og seneste fejl. Intet personligt.",
+  "bug.send": "SEND",
+  "bug.sent": "Tak! Din rapport er sendt.",
+  "bug.empty": "Skriv et par ord om, hvad der skete.",
+  "bug.limit": "Du har allerede sendt mange rapporter i dag, tak!",
+  "bug.oops": "Ups, noget gik galt."
 }

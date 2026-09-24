@@ -272,5 +272,22 @@
   "mod.reported": "Obrigado, sua denúncia foi enviada.",
   "mod.kicked.leader": "O líder da sala expulsou você.",
   "mod.kicked.cheat": "Você foi expulso da partida: movimentos impossíveis (velocidade ou teleporte).",
-  "err.outdated": "Esta versão do jogo está desatualizada: recarregue a página ou atualize o app."
+  "err.outdated": "Esta versão do jogo está desatualizada: recarregue a página ou atualize o app.",
+  "opt.bots": "Bots",
+  "opt.bots.auto": "Adaptativo · nível {level}",
+  "opt.bots.easy": "Fácil",
+  "opt.bots.hard": "Difícil",
+  "opt.bots.hint": "Adaptativo: os bots seguem seu nível, uma mistura de mais fracos e mais fortes ao redor.",
+  "result.level": "Seu nível: {level}",
+  "bug.button": "Reportar um bug",
+  "bug.something": "Algo errado? Reporte um bug",
+  "bug.title": "Reportar um bug",
+  "bug.ask": "O que aconteceu? O que você estava fazendo logo antes?",
+  "bug.shot": "Anexar esta captura de tela",
+  "bug.info": "Enviado junto: versão do jogo, plataforma, placa de vídeo e erros recentes. Nada pessoal.",
+  "bug.send": "ENVIAR",
+  "bug.sent": "Valeu! Seu relatório foi enviado.",
+  "bug.empty": "Escreva algumas palavras sobre o que aconteceu.",
+  "bug.limit": "Você já enviou muitos relatórios hoje, valeu!",
+  "bug.oops": "Opa, algo deu errado."
 }

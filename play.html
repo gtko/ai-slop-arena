@@ -181,6 +181,22 @@
     </div>
   </div>
 
+  <div id="bug" class="overlay hidden">
+    <div class="pause-card bug-card">
+      <h2 data-i18n="bug.title">Report a bug</h2>
+      <p class="hint" data-i18n="bug.ask">What happened? What were you doing just before?</p>
+      <textarea id="bugText" maxlength="2000" rows="5"></textarea>
+      <label class="row" id="bugShotRow"><input type="checkbox" id="bugShot" checked /> <span data-i18n="bug.shot">Attach this screenshot</span></label>
+      <img id="bugPreview" alt="" />
+      <p class="hint" data-i18n="bug.info">Sent with it: game version, platform, graphics card and recent errors. Nothing personal.</p>
+      <button id="bugSend" class="big" data-i18n="bug.send">SEND</button>
+      <button id="bugCancel" class="ghost" data-i18n="mm.cancel">CANCEL</button>
+      <p id="bugStatus" class="hint"></p>
+    </div>
+  </div>
+  <div id="bugToast" class="hidden"><span data-i18n="bug.oops">Oops, something went wrong.</span>
+    <button id="bugToastGo" data-i18n="bug.button">Report a bug</button><button id="bugToastX" aria-label="Close">✕</button></div>
+
   <div id="options" class="overlay hidden">
     <div class="opt-card">
       <header class="opt-head">
@@ -202,6 +218,7 @@
       <button data-act="resume" class="big" data-i18n="pause.resume">RESUME</button>
       <button data-act="options" class="ghost" data-i18n="pause.options">OPTIONS</button>
       <button data-act="quit" class="ghost" data-i18n="pause.quit">QUIT TO MENU</button>
+      <button data-act="bug" class="ghost small" data-i18n="bug.button">Report a bug</button>
       <p id="pauseNote" class="hint"></p>
     </div>
   </div>
@@ -212,6 +229,8 @@
     <div class="menu-card result">
       <h2 id="resTitle">#1</h2>
       <p id="resSub"></p>
+      <p id="resLevel" class="hint"></p>
+      <button id="resBug" class="link" data-i18n="bug.something">Something wrong? Report a bug</button>
       <div class="row-btns" id="soloBtns"><button id="again" class="big" data-i18n="result.again">PLAY AGAIN</button><button id="toMenu" class="ghost" data-i18n="result.menu">MENU</button></div>
       <div class="row-btns hidden" id="onlineBtns"><button id="spectate" class="ghost" data-i18n="result.spectate">SPECTATE</button><span class="hint" data-i18n="result.backSoon">Back to the room when the match ends…</span></div>
     </div>

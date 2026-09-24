@@ -1,5 +1,6 @@
 import { serverOrigin, clientId, platformName } from './platform.js';
 import { t } from './i18n/index.js';
+import { botLevel } from './skill.js';
 
 // WebSocket client for the online server (worker/index.js). The server RUNS every match of a web
 // room (it is the host); the leader only picks the map and starts. The Steam build's friend
@@ -19,7 +20,7 @@ export function serverBase() { return serverOrigin().replace(/^http/, 'ws'); }
 
 // Query string every connection carries: protocol version, device id and platform (moderation).
 export function identityQuery(name, brawler) {
-  return `v=${PROTOCOL}&cid=${encodeURIComponent(clientId())}&plat=${platformName}&name=${encodeURIComponent(name)}&b=${brawler}`;
+  return `v=${PROTOCOL}&cid=${encodeURIComponent(clientId())}&plat=${platformName}&name=${encodeURIComponent(name)}&b=${brawler}&lvl=${botLevel().toFixed(2)}`;
 }
 
 export function randomCode() {

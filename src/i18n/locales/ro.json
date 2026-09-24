@@ -273,5 +273,22 @@
   "mod.reported": "Mulțumim, raportul tău a fost trimis.",
   "mod.kicked.leader": "Liderul camerei te-a dat afară din cameră.",
   "mod.kicked.cheat": "Ai fost scos din meci: mișcări imposibile (viteză sau teleportare).",
-  "err.outdated": "Această versiune a jocului e învechită: reîncarcă pagina sau actualizează aplicația."
+  "err.outdated": "Această versiune a jocului e învechită: reîncarcă pagina sau actualizează aplicația.",
+  "opt.bots": "Boți",
+  "opt.bots.auto": "Adaptiv · nivel {level}",
+  "opt.bots.easy": "Ușor",
+  "opt.bots.hard": "Greu",
+  "opt.bots.hint": "Adaptiv: boții îți urmează nivelul, un amestec de mai slabi și mai tari în jurul lui.",
+  "result.level": "Nivelul tău: {level}",
+  "bug.button": "Raportează un bug",
+  "bug.something": "Ceva nu merge? Raportează un bug",
+  "bug.title": "Raportează un bug",
+  "bug.ask": "Ce s-a întâmplat? Ce făceai chiar înainte?",
+  "bug.shot": "Atașează această captură de ecran",
+  "bug.info": "Se trimit și: versiunea jocului, platforma, placa video și erorile recente. Nimic personal.",
+  "bug.send": "TRIMITE",
+  "bug.sent": "Mulțumim! Raportul tău a fost trimis.",
+  "bug.empty": "Scrie câteva cuvinte despre ce s-a întâmplat.",
+  "bug.limit": "Ai trimis deja multe rapoarte azi, mulțumim!",
+  "bug.oops": "Hopa, ceva n-a mers bine."
 }

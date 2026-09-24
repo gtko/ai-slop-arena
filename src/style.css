@@ -204,7 +204,7 @@ kbd { font-family: var(--display); font-size: 12px; padding: 1px 6px; border-rad
 @media (max-width: 900px) { .maps { grid-template-columns: repeat(3, 1fr); } .players { grid-template-columns: 1fr; } }
 
 /* ------------------------------ options / pause ------------------------------ */
-#options.overlay, #pause.overlay { justify-content: center; background: rgba(8, 6, 18, 0.72); backdrop-filter: blur(4px); z-index: 40; }
+#options.overlay, #pause.overlay, #bug.overlay, #report.overlay { justify-content: center; background: rgba(8, 6, 18, 0.72); backdrop-filter: blur(4px); z-index: 40; }
 .opt-card { width: min(880px, 100%); height: min(760px, calc(100vh - 48px)); display: flex; flex-direction: column; background: rgba(22, 18, 36, 0.96);
   border: 3px solid var(--ink); border-radius: 18px; box-shadow: 0 8px 0 var(--ink); overflow: hidden; }
 .opt-head { display: flex; align-items: center; gap: 22px; padding: 18px 22px 0; }
@@ -347,3 +347,22 @@ body.touch .overlay { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .players li .p-act button:hover { background: rgba(255,255,255,0.2); }
 .players li .p-act .p-kick:hover { background: #b33; }
 #report .pause-card button { display: block; width: 100%; margin-top: 8px; }
+
+/* ------------------------------ bug report ------------------------------ */
+.bug-card { width: min(520px, 92vw); text-align: left; }
+.bug-card h2 { text-align: center; }
+.bug-card textarea { width: 100%; box-sizing: border-box; font: inherit; font-weight: 700; padding: 10px 12px; border-radius: 12px;
+  border: 3px solid var(--ink); background: #221d33; color: var(--text); resize: vertical; }
+.bug-card #bugPreview { display: block; width: 100%; max-height: 180px; object-fit: cover; border-radius: 10px; border: 2px solid var(--ink); margin: 8px 0; }
+.bug-card #bugPreview.hidden, .bug-card .row.hidden { display: none; }
+.bug-card button { width: 100%; margin-top: 8px; }
+.result .link, button.link { background: none; border: 0; color: var(--muted, #bdb5dc); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; margin-top: 10px; }
+#bugToast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 900;
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; border-radius: 14px; border: 3px solid var(--ink);
+  background: rgba(40, 32, 60, 0.95); color: var(--text); font-weight: 800; box-shadow: 0 6px 0 rgba(0,0,0,0.35); }
+#bugToast.hidden { display: none; }
+#bugToast button { font: inherit; font-weight: 900; padding: 6px 10px; border-radius: 10px; border: 2px solid var(--ink); background: var(--yellow); color: var(--ink); cursor: pointer; }
+#bugToast #bugToastX { background: transparent; color: var(--text); border-color: transparent; }
+#bug.overlay, #report.overlay { z-index: 60; }
+.bug-card h2 { font-size: 48px; }
+.bug-card .hint { margin: 0; }

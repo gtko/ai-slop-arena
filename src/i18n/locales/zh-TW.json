@@ -271,5 +271,22 @@
   "mod.reported": "感謝，你的檢舉已送出。",
   "mod.kicked.leader": "房主已將你踢出房間。",
   "mod.kicked.cheat": "你已被移出對戰：異常移動（速度或瞬間移動）。",
-  "err.outdated": "遊戲版本已過期：請重新整理頁面或更新應用程式。"
+  "err.outdated": "遊戲版本已過期：請重新整理頁面或更新應用程式。",
+  "opt.bots": "機器人",
+  "opt.bots.auto": "自適應 · 等級 {level}",
+  "opt.bots.easy": "簡單",
+  "opt.bots.hard": "困難",
+  "opt.bots.hint": "自適應：機器人跟隨你的等級，混合了比你稍弱和稍強的對手。",
+  "result.level": "你的等級：{level}",
+  "bug.button": "回報 Bug",
+  "bug.something": "遇到問題？回報 Bug",
+  "bug.title": "回報 Bug",
+  "bug.ask": "發生了什麼事？你之前正在做什麼？",
+  "bug.shot": "附上這張截圖",
+  "bug.info": "一併傳送：遊戲版本、平台、顯示卡和最近的錯誤。不含個人資訊。",
+  "bug.send": "傳送",
+  "bug.sent": "謝謝！你的回報已送出。",
+  "bug.empty": "簡單寫幾句發生了什麼事。",
+  "bug.limit": "你今天已經送出很多回報了，謝謝！",
+  "bug.oops": "哎呀，出了點問題。"
 }

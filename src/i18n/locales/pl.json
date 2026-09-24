@@ -274,5 +274,22 @@
   "mod.reported": "Dzięki, zgłoszenie zostało wysłane.",
   "mod.kicked.leader": "Lider pokoju wyrzucił cię z pokoju.",
   "mod.kicked.cheat": "Wyrzucono cię z meczu: niemożliwe ruchy (prędkość lub teleport).",
-  "err.outdated": "Ta wersja gry jest nieaktualna: odśwież stronę lub zaktualizuj aplikację."
+  "err.outdated": "Ta wersja gry jest nieaktualna: odśwież stronę lub zaktualizuj aplikację.",
+  "opt.bots": "Boty",
+  "opt.bots.auto": "Adaptacyjne · poziom {level}",
+  "opt.bots.easy": "Łatwe",
+  "opt.bots.hard": "Trudne",
+  "opt.bots.hint": "Adaptacyjne: boty dopasowują się do twojego poziomu, mieszanka słabszych i ostrzejszych wokół niego.",
+  "result.level": "Twój poziom: {level}",
+  "bug.button": "Zgłoś błąd",
+  "bug.something": "Coś nie tak? Zgłoś błąd",
+  "bug.title": "Zgłoś błąd",
+  "bug.ask": "Co się stało? Co robiłeś tuż przedtem?",
+  "bug.shot": "Dołącz ten zrzut ekranu",
+  "bug.info": "Wysyłane razem: wersja gry, platforma, karta graficzna i ostatnie błędy. Nic osobistego.",
+  "bug.send": "WYŚLIJ",
+  "bug.sent": "Dzięki! Twoje zgłoszenie zostało wysłane.",
+  "bug.empty": "Napisz kilka słów o tym, co się stało.",
+  "bug.limit": "Wysłałeś już dziś wiele zgłoszeń, dzięki!",
+  "bug.oops": "Ups, coś poszło nie tak."
 }

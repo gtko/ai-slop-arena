@@ -2,6 +2,7 @@ import { settings, set, applyQuality, bind, resetBinds, resetGroup, keyName, DEF
 import { settings as audio, setVolume, setMuted, setTrack, sfx, initAudio } from './audio.js';
 import { PAD } from './input.js';
 import { t, LANGS } from './i18n/index.js';
+import { playerLevel } from './skill.js';
 
 // Video-game style menus: Options (tabs of rows) + Pause, plus console-like navigation for every
 // overlay in the game: ↑↓ / D-pad / left stick move the focus, ←→ change the focused option,
@@ -48,9 +49,12 @@ function tabs(ctx) {
         fullscreenRow,
         toggle('fps', t('opt.fps')),
         toggle('shake', t('opt.shake')),
+        { label: t('opt.bots'), type: 'choice', hint: t('opt.bots.hint'),
+          opts: [['auto', () => t('opt.bots.auto', { level: playerLevel() })], ['easy', t('opt.bots.easy')], ['normal', t('opt.medium')], ['hard', t('opt.bots.hard')]],
+          get: () => settings.bots, set: v => set('bots', v) },
         presetRow,
       ],
-      reset: () => resetGroup(['lang', 'fps', 'shake']),
+      reset: () => resetGroup(['lang', 'fps', 'shake', 'bots']),
     },
     graphics: {
       title: t('opt.tab.graphics'),
@@ -291,6 +295,7 @@ export class Menus {
     if (a === 'resume') this.closePause();
     if (a === 'options') this.openOptions('#pause');
     if (a === 'quit') { this.closePause(); this.ctx.onQuit(); }
+    if (a === 'bug' && this.ctx.onBug) this.ctx.onBug();
   }
 
   /* ------------------------------ navigation ------------------------------ */

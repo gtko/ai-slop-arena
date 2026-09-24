@@ -271,5 +271,22 @@
   "mod.reported": "Terima kasih, laporanmu sudah terkirim.",
   "mod.kicked.leader": "Pemimpin room mengeluarkanmu dari room.",
   "mod.kicked.cheat": "Kamu dikeluarkan dari match: gerakan mustahil (kecepatan atau teleport).",
-  "err.outdated": "Versi game ini sudah usang: muat ulang halaman atau perbarui aplikasi."
+  "err.outdated": "Versi game ini sudah usang: muat ulang halaman atau perbarui aplikasi.",
+  "opt.bots": "Bot",
+  "opt.bots.auto": "Adaptif · level {level}",
+  "opt.bots.easy": "Mudah",
+  "opt.bots.hard": "Sulit",
+  "opt.bots.hint": "Adaptif: bot mengikuti level-mu, campuran yang lebih lemah dan lebih tajam di sekitarnya.",
+  "result.level": "Level-mu: {level}",
+  "bug.button": "Laporkan bug",
+  "bug.something": "Ada masalah? Laporkan bug",
+  "bug.title": "Laporkan bug",
+  "bug.ask": "Apa yang terjadi? Apa yang kamu lakukan tepat sebelumnya?",
+  "bug.shot": "Lampirkan tangkapan layar ini",
+  "bug.info": "Ikut terkirim: versi game, platform, kartu grafis, dan error terbaru. Tidak ada data pribadi.",
+  "bug.send": "KIRIM",
+  "bug.sent": "Terima kasih! Laporanmu sudah terkirim.",
+  "bug.empty": "Tulis beberapa kata tentang apa yang terjadi.",
+  "bug.limit": "Kamu sudah mengirim banyak laporan hari ini, terima kasih!",
+  "bug.oops": "Ups, terjadi kesalahan."
 }

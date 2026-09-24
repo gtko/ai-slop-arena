@@ -9,6 +9,7 @@ import { ServerMatch, makeRoster, randomMap, BRAWLER_KEYS, MAP_KEYS } from './bu
 //                validates them and sends each player only what that player can see.
 //   /mm          the Matchmaker (one global object): a cross-platform queue that fills rooms.
 //   /api/report  player reports (also used by Steam P2P lobbies, which have no server of ours).
+//   /api/bug     bug reports from the in-game form (text, technical info, optional screenshot).
 //   /admin/*     moderation API (reports, bans), enabled once the ADMIN_TOKEN secret is set.
 // Steam friend lobbies (src/steamnet.js) stay peer-to-peer: a player hosts, with the same checks.
 
@@ -34,7 +35,12 @@ export default {
       if (request.headers.get('Upgrade') !== 'websocket') return new Response('Expected WebSocket', { status: 426 });
       return env.MATCHMAKER.getByName('global').fetch(withIdentity(request));
     }
-    if (url.pathname === '/api/report' && request.method === 'POST') return apiReport(request, env);
+    // The apps (desktop app://, mobile https://localhost) call these from another origin: CORS.
+    if (url.pathname.startsWith('/api/')) {
+      if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+      if (url.pathname === '/api/report' && request.method === 'POST') return cors(await apiReport(request, env));
+      if (url.pathname === '/api/bug' && request.method === 'POST') return cors(await apiBug(request, env));
+    }
     if (url.pathname.startsWith('/admin/')) return admin(request, env, url);
     // Everything else is a static asset (the Vite build); unknown paths get a 404 from the asset layer.
     return env.ASSETS.fetch(request);
@@ -65,6 +71,8 @@ async function identity(request, url) {
 
 const clean = (s, n) => String(s || '').replace(/[^\p{L}\p{N} _\-.!?']/gu, '').slice(0, n).trim();
 const BRAWLERS = new Set(BRAWLER_KEYS);
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'content-type', 'Access-Control-Max-Age': '86400' };
+const cors = r => { for (const [k, v] of Object.entries(CORS)) r.headers.set(k, v); return r; };
 const json = (data, status = 200) => new Response(JSON.stringify(data, null, 2), { status, headers: { 'content-type': 'application/json' } });
 
 // Refuse a WebSocket with a message the client shows ({ t: 'error', code, msg }: the client
@@ -129,6 +137,7 @@ export class Room extends DurableObject {
       // matchmade rooms have no leader (nobody may kick or change the map)
       host: !this.preset && !this.sockets().some(ws => ws !== server && this.info(ws).host),
       joined: Date.now(), ...who,
+      lvl: Math.min(1, Math.max(0, parseFloat(url.searchParams.get('lvl')) || 0.45)), // bot tuning
     };
     server.serializeAttachment(me);
     server.send(JSON.stringify({ t: 'welcome', id: me.id, code: this.code(), matchmade: !!this.preset }));
@@ -154,7 +163,9 @@ export class Room extends DurableObject {
     const humans = this.sockets().map(ws => this.info(ws)).sort((a, b) => a.joined - b.joined);
     if (!humans.length) return;
     const map = MAP_KEYS.includes(mapPick) ? mapPick : randomMap();
-    const roster = makeRoster(humans.map(p => ({ id: p.id, name: p.name, type: p.brawler })));
+    // bots are a mix around the players' average level
+    const level = humans.reduce((sum, p) => sum + (p.lvl ?? 0.45), 0) / humans.length;
+    const roster = makeRoster(humans.map(p => ({ id: p.id, name: p.name, type: p.brawler })), { level });
     this.match = new ServerMatch({
       map, roster,
       send: msg => this.broadcast(msg),
@@ -372,6 +383,8 @@ export class Moderation extends DurableObject {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS plays (key TEXT, match TEXT, at INTEGER)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS plays_key ON plays (key, at)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS ban_log (key TEXT, at INTEGER, days INTEGER, reason TEXT)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS bugs (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, sender TEXT,
+      text TEXT, info TEXT, shot TEXT, status TEXT DEFAULT 'new')`);
   }
 
   // A match started on our server with these players (device ids).
@@ -444,6 +457,21 @@ export class Moderation extends DurableObject {
 
   unban(key) { this.sql.exec('DELETE FROM bans WHERE key = ?', key); return { ok: true }; }
 
+  // Bug reports: at most 10 a day per sender; the screenshot is a small JPEG data URL.
+  bug({ sender, text, info, shot }) {
+    const n = this.sql.exec('SELECT COUNT(*) AS n FROM bugs WHERE sender = ? AND at > ?', sender, Date.now() - DAY).one().n;
+    if (n >= 10) return { ok: false, error: 'limit' };
+    this.sql.exec('INSERT INTO bugs (at, sender, text, info, shot) VALUES (?,?,?,?,?)', Date.now(), sender, text, info, shot || '');
+    return { ok: true };
+  }
+  bugs(status) {
+    return this.sql.exec(`SELECT id, at, sender, text, info, status, LENGTH(shot) > 0 AS has_shot FROM bugs
+      ${status ? 'WHERE status = ?' : ''} ORDER BY id DESC LIMIT 200`, ...(status ? [status] : [])).toArray()
+      .map(b => ({ ...b, info: JSON.parse(b.info || '{}') }));
+  }
+  bugShot(id) { const r = this.sql.exec('SELECT shot FROM bugs WHERE id = ?', id).toArray()[0]; return r ? r.shot : ''; }
+  bugStatus(id, status) { this.sql.exec('UPDATE bugs SET status = ? WHERE id = ?', status, id); return { ok: true }; }
+
   list() {
     const reports = this.sql.exec(`SELECT target, name, plat, COUNT(*) AS reports, SUM(auto) AS auto_kicks, MAX(at) AS last,
       GROUP_CONCAT(DISTINCT reason) AS reasons, MAX(ip) AS ip FROM reports GROUP BY target ORDER BY last DESC LIMIT 200`).toArray();
@@ -465,15 +493,36 @@ async function apiReport(request, env) {
   return json(out);
 }
 
+// POST /api/bug { text, info, shot } — the in-game bug report form (src/bugreport.js).
+async function apiBug(request, env) {
+  const raw = await request.text();
+  if (raw.length > 400_000) return json({ ok: false, error: 'too big' }, 413);
+  let body;
+  try { body = JSON.parse(raw); } catch { return json({ ok: false }, 400); }
+  const text = String(body.text || '').slice(0, 2000).trim();
+  if (!text) return json({ ok: false, error: 'empty' }, 400);
+  const shot = typeof body.shot === 'string' && body.shot.startsWith('data:image/jpeg;base64,') ? body.shot : '';
+  const info = JSON.stringify(body.info && typeof body.info === 'object' ? body.info : {}).slice(0, 8000);
+  return json(await env.MOD.getByName('global').bug({ sender: await ipKey(request), text, info, shot }));
+}
+
 // Moderation API. Needs the ADMIN_TOKEN secret (npx wrangler secret put ADMIN_TOKEN) and
 // "Authorization: Bearer <token>". Without the secret it does not exist.
 async function admin(request, env, url) {
   if (!env.ADMIN_TOKEN || request.headers.get('Authorization') !== `Bearer ${env.ADMIN_TOKEN}`) return new Response('Not found', { status: 404 });
   const mod = env.MOD.getByName('global');
   if (url.pathname === '/admin/reports' && request.method === 'GET') return json(await mod.list());
+  if (url.pathname === '/admin/bugs' && request.method === 'GET') return json(await mod.bugs(url.searchParams.get('status')));
+  const shot = url.pathname.match(/^\/admin\/bugs\/(\d+)\/shot$/);
+  if (shot && request.method === 'GET') {
+    const data = await mod.bugShot(+shot[1]);
+    if (!data) return new Response('No screenshot', { status: 404 });
+    return new Response(Uint8Array.from(atob(data.split(',')[1]), c => c.charCodeAt(0)), { headers: { 'content-type': 'image/jpeg' } });
+  }
   if (request.method !== 'POST') return new Response('Not found', { status: 404 });
   const body = await request.json().catch(() => ({}));
   if (url.pathname === '/admin/ban') return json(await mod.ban(String(body.key || ''), clean(body.reason, 60), +body.days || 0, body.ip || null));
   if (url.pathname === '/admin/unban') return json(await mod.unban(String(body.key || '')));
+  if (url.pathname === '/admin/bug') return json(await mod.bugStatus(+body.id, String(body.status || 'done').slice(0, 20)));
   return new Response('Not found', { status: 404 });
 }

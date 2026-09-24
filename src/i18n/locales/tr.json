@@ -272,5 +272,22 @@
   "mod.reported": "Teşekkürler, şikâyetin gönderildi.",
   "mod.kicked.leader": "Oda lideri seni odadan attı.",
   "mod.kicked.cheat": "Maçtan atıldın: imkânsız hareketler (hız veya ışınlanma).",
-  "err.outdated": "Oyunun bu sürümü eski: sayfayı yenile veya uygulamayı güncelle."
+  "err.outdated": "Oyunun bu sürümü eski: sayfayı yenile veya uygulamayı güncelle.",
+  "opt.bots": "Botlar",
+  "opt.bots.auto": "Uyarlanabilir · seviye {level}",
+  "opt.bots.easy": "Kolay",
+  "opt.bots.hard": "Zor",
+  "opt.bots.hint": "Uyarlanabilir: botlar seviyeni takip eder, etrafında daha zayıf ve daha keskin olanların bir karışımı.",
+  "result.level": "Seviyen: {level}",
+  "bug.button": "Hata bildir",
+  "bug.something": "Bir sorun mu var? Hata bildir",
+  "bug.title": "Hata bildir",
+  "bug.ask": "Ne oldu? Hemen öncesinde ne yapıyordun?",
+  "bug.shot": "Bu ekran görüntüsünü ekle",
+  "bug.info": "Birlikte gönderilir: oyun sürümü, platform, ekran kartı ve son hatalar. Kişisel hiçbir şey yok.",
+  "bug.send": "GÖNDER",
+  "bug.sent": "Teşekkürler! Raporun gönderildi.",
+  "bug.empty": "Ne olduğunu birkaç kelimeyle yaz.",
+  "bug.limit": "Bugün zaten çok rapor gönderdin, teşekkürler!",
+  "bug.oops": "Hay aksi, bir şeyler ters gitti."
 }

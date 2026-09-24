@@ -17,6 +17,8 @@ import { SteamNet } from './steamnet.js';
 import { Matchmaking } from './matchmaking.js';
 import { isDesktop, isPackagedApp, desktop, steam, steamInfo, epic, presence, WEB_ORIGIN } from './platform.js';
 import { achievements } from './achievements.js';
+import { botLevel, recordResult } from './skill.js';
+import { installBugReport, openBugReport } from './bugreport.js';
 import { t, translateDom } from './i18n/index.js';
 import { TouchControls, isTouchDevice } from './touch.js';
 import { AutoQuality } from './autoquality.js';
@@ -227,6 +229,7 @@ const menus = new Menus({
     else document.exitFullscreen?.().then(() => menus.render()).catch(() => {});
   },
   onQuit: () => { if (game.net) { net.close(); history.replaceState(null, '', location.pathname); } toMenu(); },
+  onBug: () => openBugReport(),
 });
 // Automatic graphics quality (preset "auto"): GPU guess, then follows the measured frame rate.
 const autoQuality = new AutoQuality(renderer);
@@ -293,7 +296,7 @@ function play() {
   const mapKey = resolveMap(chosenMap);
   playMusic('m_' + mapKey);
   finalMusic = false;
-  game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: t('hud.you'), type: chosen }]), localId: 'me' });
+  game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: t('hud.you'), type: chosen }], { level: botLevel() }), localId: 'me' });
   achievements.matchStart({ mapKey, brawler: chosen });
   presence(t('presence.solo', { map: t(`map.${mapKey}`) }));
   canvas.focus();
@@ -497,7 +500,7 @@ $('#start').addEventListener('click', () => {
   sfx('click');
   // Server rooms: the server builds the roster and starts everyone (the leader included).
   if (net.serverAuthority) { net.send({ t: 'start' }); return; }
-  const roster = makeRoster(net.players.map(p => ({ id: p.id, name: p.name, type: p.brawler })));
+  const roster = makeRoster(net.players.map(p => ({ id: p.id, name: p.name, type: p.brawler })), { level: botLevel() });
   const mapKey = resolveMap(lobbyMap);
   net.send({ t: 'start', map: mapKey, roster });
   startOnline(mapKey, roster, 'host');
@@ -547,9 +550,25 @@ function backToRoom() {
 game.onMatchEnd = () => { if (game.net && game.net.role === 'host') net.send({ t: 'end' }); else backToRoom(); };
 $('#spectate').addEventListener('click', () => $('#result').classList.add('hidden'));
 
+// Bug reports (bugreport.js): a screenshot of the next rendered frame + what the game was doing.
+let captureNext = null;
+installBugReport({
+  // the next rendered frame; if nothing renders (hidden tab) the form opens without a screenshot
+  captureFrame: () => new Promise(resolve => { captureNext = resolve; setTimeout(() => { if (captureNext === resolve) { captureNext = null; resolve(''); } }, 400); }),
+  info: () => ({
+    fps: Math.round(lastFps), mode: game.mode, map: game.mapKey, online: !!game.net,
+    room: net.connected ? net.code : null, matchTime: Math.round(game.time), alive: game.brawlers.filter(b => b.alive).length,
+  }),
+});
+$('#resBug').addEventListener('click', () => openBugReport());
+
 game.onFeat = (kind, n) => { if (kind === 'ko') achievements.ko(); else achievements.cubes(n); };
 game.onResult = (rank, won) => {
   achievements.result(rank, won);
+  // the player's level follows the results; the bots of the next match follow it
+  const lv = recordResult(rank, won);
+  $('#resLevel').textContent = settings.bots === 'auto'
+    ? t('result.level', { level: lv.after }) + (lv.after > lv.before ? ' ▲' : lv.after < lv.before ? ' ▼' : '') : '';
   playMusic(null);
   sfx(won ? 'victory' : 'defeat');
   $('#resTitle').textContent = won ? t('result.victory') : t('result.rank', { rank });
@@ -575,7 +594,7 @@ addEventListener('keydown', e => {
 const timer = new THREE.Timer();
 timer.connect(document); // pause-safe: no giant delta after the tab was hidden
 const stats = $('#stats');
-let fpsAcc = 0, fpsN = 0, statT = 0;
+let fpsAcc = 0, fpsN = 0, statT = 0, lastFps = 0;
 
 // Browsers only allow audio after a user gesture: start the lobby music on the first one.
 const unlockAudio = () => { initAudio(); if ($('#hud').classList.contains('hidden')) playMusic('menu'); };
@@ -655,10 +674,12 @@ function frame(ts) {
   visionFog.update(dt, camera, game.visionRadius || 0, game.visionCenter, scene.fog.color, game.time);
   bloom.strength = lighting.bloom;
   composer.render(dt);
+  if (captureNext) { const done = captureNext; captureNext = null; done(canvas.toDataURL('image/jpeg', 0.85)); }
 
   fpsAcc += dt; fpsN++; statT += dt;
   if (statT > 0.5) {
     const fps = Math.round(fpsN / fpsAcc);
+    lastFps = fps;
     if (settings.fps) $('#fpsBadge').textContent = settings.preset === 'auto'
       ? `${fps} FPS · ${t('opt.auto')} ${autoQuality.label(tier => t(`opt.${tier}`))}` : `${fps} FPS`;
     stats.innerHTML = `

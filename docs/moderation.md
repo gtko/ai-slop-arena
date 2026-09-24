@@ -72,6 +72,19 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -d '{"key":"cid:...","days":7,"re
 curl -X POST -H "Authorization: Bearer $TOKEN" -d '{"key":"cid:..."}' https://ai-slop-arena.gtux-prog.workers.dev/admin/unban
 ```
 
+## Bug reports
+
+Players send them from the pause menu, the result screen, **F8** anywhere, or the prompt that
+appears when the game hits an error (once per session). A report holds what they wrote, a 640 px
+screenshot of the game view (optional) and technical details: version, platform, language,
+graphics card and quality, FPS, map, online room, the last errors. At most 10 per day per sender.
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" https://ai-slop-arena.gtux-prog.workers.dev/admin/bugs            # all (or ?status=new)
+curl -H "Authorization: Bearer $TOKEN" https://ai-slop-arena.gtux-prog.workers.dev/admin/bugs/12/shot -o bug12.jpg
+curl -X POST -H "Authorization: Bearer $TOKEN" -d '{"id":12,"status":"done"}' https://ai-slop-arena.gtux-prog.workers.dev/admin/bug
+```
+
 ## Testing locally
 
 ```bash

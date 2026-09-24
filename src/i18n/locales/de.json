@@ -272,5 +272,22 @@
   "mod.reported": "Danke, deine Meldung wurde gesendet.",
   "mod.kicked.leader": "Der Raumleiter hat dich aus dem Raum gekickt.",
   "mod.kicked.cheat": "Du wurdest aus dem Match entfernt: unmögliche Bewegungen (Tempo oder Teleport).",
-  "err.outdated": "Diese Spielversion ist veraltet: Lade die Seite neu oder aktualisiere die App."
+  "err.outdated": "Diese Spielversion ist veraltet: Lade die Seite neu oder aktualisiere die App.",
+  "opt.bots": "Bots",
+  "opt.bots.auto": "Adaptiv · Level {level}",
+  "opt.bots.easy": "Leicht",
+  "opt.bots.hard": "Schwer",
+  "opt.bots.hint": "Adaptiv: Bots richten sich nach deinem Level, eine Mischung aus schwächeren und stärkeren.",
+  "result.level": "Dein Level: {level}",
+  "bug.button": "Bug melden",
+  "bug.something": "Stimmt was nicht? Bug melden",
+  "bug.title": "Bug melden",
+  "bug.ask": "Was ist passiert? Was hast du kurz davor gemacht?",
+  "bug.shot": "Diesen Screenshot anhängen",
+  "bug.info": "Mitgesendet: Spielversion, Plattform, Grafikkarte und letzte Fehler. Nichts Persönliches.",
+  "bug.send": "SENDEN",
+  "bug.sent": "Danke! Dein Bericht wurde gesendet.",
+  "bug.empty": "Schreib ein paar Worte dazu, was passiert ist.",
+  "bug.limit": "Du hast heute schon viele Berichte gesendet, danke!",
+  "bug.oops": "Hoppla, etwas ist schiefgelaufen."
 }

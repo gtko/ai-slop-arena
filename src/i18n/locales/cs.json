@@ -274,5 +274,22 @@
   "mod.reported": "Díky, tvoje nahlášení bylo odesláno.",
   "mod.kicked.leader": "Vedoucí místnosti tě vyhodil z místnosti.",
   "mod.kicked.cheat": "Byl jsi vyhozen ze zápasu: nemožné pohyby (rychlost nebo teleport).",
-  "err.outdated": "Tato verze hry je zastaralá: obnov stránku nebo aktualizuj aplikaci."
+  "err.outdated": "Tato verze hry je zastaralá: obnov stránku nebo aktualizuj aplikaci.",
+  "opt.bots": "Boti",
+  "opt.bots.auto": "Adaptivní · úroveň {level}",
+  "opt.bots.easy": "Lehká",
+  "opt.bots.hard": "Těžká",
+  "opt.bots.hint": "Adaptivní: boti se řídí tvou úrovní, mix slabších i ostřejších kolem ní.",
+  "result.level": "Tvoje úroveň: {level}",
+  "bug.button": "Nahlásit bug",
+  "bug.something": "Něco nefunguje? Nahlas bug",
+  "bug.title": "Nahlásit bug",
+  "bug.ask": "Co se stalo? Co jsi dělal těsně předtím?",
+  "bug.shot": "Přiložit tento snímek obrazovky",
+  "bug.info": "Odešle se také: verze hry, platforma, grafická karta a nedávné chyby. Nic osobního.",
+  "bug.send": "ODESLAT",
+  "bug.sent": "Díky! Tvé hlášení bylo odesláno.",
+  "bug.empty": "Napiš pár slov o tom, co se stalo.",
+  "bug.limit": "Dnes jsi už poslal hodně hlášení, díky!",
+  "bug.oops": "Jejda, něco se pokazilo."
 }

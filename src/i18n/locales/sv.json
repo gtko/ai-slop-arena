@@ -272,5 +272,22 @@
   "mod.reported": "Tack, din rapport har skickats.",
   "mod.kicked.leader": "Rumsledaren sparkade ut dig ur rummet.",
   "mod.kicked.cheat": "Du togs bort från matchen: omöjliga rörelser (hastighet eller teleport).",
-  "err.outdated": "Den här versionen av spelet är föråldrad: ladda om sidan eller uppdatera appen."
+  "err.outdated": "Den här versionen av spelet är föråldrad: ladda om sidan eller uppdatera appen.",
+  "opt.bots": "Bottar",
+  "opt.bots.auto": "Adaptiv · nivå {level}",
+  "opt.bots.easy": "Lätt",
+  "opt.bots.hard": "Svår",
+  "opt.bots.hint": "Adaptiv: bottarna följer din nivå, en blandning av svagare och vassare runt den.",
+  "result.level": "Din nivå: {level}",
+  "bug.button": "Rapportera en bugg",
+  "bug.something": "Något fel? Rapportera en bugg",
+  "bug.title": "Rapportera en bugg",
+  "bug.ask": "Vad hände? Vad gjorde du precis innan?",
+  "bug.shot": "Bifoga den här skärmbilden",
+  "bug.info": "Skickas med: spelversion, plattform, grafikkort och senaste fel. Inget personligt.",
+  "bug.send": "SKICKA",
+  "bug.sent": "Tack! Din rapport har skickats.",
+  "bug.empty": "Skriv några ord om vad som hände.",
+  "bug.limit": "Du har redan skickat många rapporter i dag, tack!",
+  "bug.oops": "Hoppsan, något gick fel."
 }

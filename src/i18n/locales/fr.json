@@ -272,5 +272,22 @@
   "mod.reported": "Merci, ton signalement a été envoyé.",
   "mod.kicked.leader": "Le chef du salon t'a exclu du salon.",
   "mod.kicked.cheat": "Tu as été exclu de la partie : déplacements impossibles (vitesse ou téléportation).",
-  "err.outdated": "Cette version du jeu est obsolète : actualise la page ou mets à jour l'appli."
+  "err.outdated": "Cette version du jeu est obsolète : actualise la page ou mets à jour l'appli.",
+  "opt.bots": "Bots",
+  "opt.bots.auto": "Adaptatif · niveau {level}",
+  "opt.bots.easy": "Facile",
+  "opt.bots.hard": "Difficile",
+  "opt.bots.hint": "Adaptatif : les bots suivent ton niveau, un mélange de plus faibles et de plus redoutables autour.",
+  "result.level": "Ton niveau : {level}",
+  "bug.button": "Signaler un bug",
+  "bug.something": "Un souci ? Signaler un bug",
+  "bug.title": "Signaler un bug",
+  "bug.ask": "Que s'est-il passé ? Que faisais-tu juste avant ?",
+  "bug.shot": "Joindre cette capture d'écran",
+  "bug.info": "Envoyé avec : version du jeu, plateforme, carte graphique et erreurs récentes. Rien de personnel.",
+  "bug.send": "ENVOYER",
+  "bug.sent": "Merci ! Ton signalement a été envoyé.",
+  "bug.empty": "Écris quelques mots sur ce qui s'est passé.",
+  "bug.limit": "Tu as déjà envoyé beaucoup de signalements aujourd'hui, merci !",
+  "bug.oops": "Oups, un problème est survenu."
 }

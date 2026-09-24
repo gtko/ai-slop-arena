@@ -129,6 +129,19 @@ export default {
   'mm.found': 'Match found! Joining…',
   'mm.matchmade': 'Matchmaking room: the match starts as soon as everyone is in.',
 
+  // bug report
+  'bug.button': 'Report a bug',
+  'bug.something': 'Something wrong? Report a bug',
+  'bug.title': 'Report a bug',
+  'bug.ask': 'What happened? What were you doing just before?',
+  'bug.shot': 'Attach this screenshot',
+  'bug.info': 'Sent with it: game version, platform, graphics card and recent errors. Nothing personal.',
+  'bug.send': 'SEND',
+  'bug.sent': 'Thanks! Your report was sent.',
+  'bug.empty': 'Write a few words about what happened.',
+  'bug.limit': 'You already sent many reports today, thanks!',
+  'bug.oops': 'Oops, something went wrong.',
+
   // moderation
   'mod.report': 'Report',
   'mod.kick': 'Remove from the room',
@@ -164,6 +177,7 @@ export default {
   'result.again': 'PLAY AGAIN',
   'result.menu': 'MENU',
   'result.spectate': 'SPECTATE',
+  'result.level': 'Your level: {level}',
   'result.backSoon': 'Back to the room when the match ends…',
 
   // options screen
@@ -191,6 +205,11 @@ export default {
   'opt.redetect': 'Detect the best settings again',
   'opt.detect': 'Detect',
   'opt.fullscreen': 'Fullscreen',
+  'opt.bots': 'Bots',
+  'opt.bots.auto': 'Adaptive · level {level}',
+  'opt.bots.easy': 'Easy',
+  'opt.bots.hard': 'Hard',
+  'opt.bots.hint': 'Adaptive: bots follow your level, a mix of weaker and sharper ones around it.',
   'opt.language': 'Language',
   'opt.language.auto': 'Automatic',
   'opt.language.hint': 'Changing it reloads the game.',

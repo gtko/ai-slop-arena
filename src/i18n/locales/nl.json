@@ -272,5 +272,22 @@
   "mod.reported": "Bedankt, je melding is verzonden.",
   "mod.kicked.leader": "De kamerleider heeft je uit de kamer gekickt.",
   "mod.kicked.cheat": "Je bent uit de match verwijderd: onmogelijke bewegingen (snelheid of teleport).",
-  "err.outdated": "Deze versie van het spel is verouderd: ververs de pagina of update de app."
+  "err.outdated": "Deze versie van het spel is verouderd: ververs de pagina of update de app.",
+  "opt.bots": "Bots",
+  "opt.bots.auto": "Adaptief · level {level}",
+  "opt.bots.easy": "Makkelijk",
+  "opt.bots.hard": "Moeilijk",
+  "opt.bots.hint": "Adaptief: bots volgen jouw level, een mix van zwakkere en scherpere eromheen.",
+  "result.level": "Jouw level: {level}",
+  "bug.button": "Bug melden",
+  "bug.something": "Klopt er iets niet? Meld een bug",
+  "bug.title": "Bug melden",
+  "bug.ask": "Wat gebeurde er? Wat deed je vlak daarvoor?",
+  "bug.shot": "Deze screenshot bijvoegen",
+  "bug.info": "Meegestuurd: gameversie, platform, videokaart en recente fouten. Niets persoonlijks.",
+  "bug.send": "VERSTUREN",
+  "bug.sent": "Bedankt! Je melding is verstuurd.",
+  "bug.empty": "Schrijf een paar woorden over wat er gebeurde.",
+  "bug.limit": "Je hebt vandaag al veel meldingen gestuurd, bedankt!",
+  "bug.oops": "Oeps, er ging iets mis."
 }

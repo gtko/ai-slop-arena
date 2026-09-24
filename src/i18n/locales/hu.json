@@ -272,5 +272,22 @@
   "mod.reported": "Köszönjük, a jelentésedet elküldtük.",
   "mod.kicked.leader": "A szoba vezetője kirúgott a szobából.",
   "mod.kicked.cheat": "Eltávolítottunk a meccsből: lehetetlen mozgás (sebesség vagy teleport).",
-  "err.outdated": "A játék ezen verziója elavult: frissítsd az oldalt vagy az alkalmazást."
+  "err.outdated": "A játék ezen verziója elavult: frissítsd az oldalt vagy az alkalmazást.",
+  "opt.bots": "Botok",
+  "opt.bots.auto": "Adaptív · {level}. szint",
+  "opt.bots.easy": "Könnyű",
+  "opt.bots.hard": "Nehéz",
+  "opt.bots.hint": "Adaptív: a botok a szintedhez igazodnak, gyengébbek és élesebbek keverékével körülötte.",
+  "result.level": "Szinted: {level}",
+  "bug.button": "Hiba bejelentése",
+  "bug.something": "Valami nem stimmel? Jelents hibát",
+  "bug.title": "Hiba bejelentése",
+  "bug.ask": "Mi történt? Mit csináltál közvetlenül előtte?",
+  "bug.shot": "Képernyőkép csatolása",
+  "bug.info": "Vele együtt elküldjük: játékverzió, platform, videokártya és friss hibák. Semmi személyes.",
+  "bug.send": "KÜLDÉS",
+  "bug.sent": "Köszönjük! A jelentésed elküldve.",
+  "bug.empty": "Írj pár szót arról, mi történt.",
+  "bug.limit": "Ma már sok jelentést küldtél, köszönjük!",
+  "bug.oops": "Hoppá, valami hiba történt."
 }

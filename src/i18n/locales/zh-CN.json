@@ -271,5 +271,22 @@
   "mod.reported": "感谢，你的举报已提交。",
   "mod.kicked.leader": "房主已将你踢出房间。",
   "mod.kicked.cheat": "你已被移出对局：异常移动（速度或瞬移）。",
-  "err.outdated": "游戏版本已过期：请刷新页面或更新应用。"
+  "err.outdated": "游戏版本已过期：请刷新页面或更新应用。",
+  "opt.bots": "机器人",
+  "opt.bots.auto": "自适应 · 等级 {level}",
+  "opt.bots.easy": "简单",
+  "opt.bots.hard": "困难",
+  "opt.bots.hint": "自适应：机器人跟随你的等级，混合了比你稍弱和稍强的对手。",
+  "result.level": "你的等级：{level}",
+  "bug.button": "报告 Bug",
+  "bug.something": "遇到问题？报告 Bug",
+  "bug.title": "报告 Bug",
+  "bug.ask": "发生了什么？你之前正在做什么？",
+  "bug.shot": "附上这张截图",
+  "bug.info": "一并发送：游戏版本、平台、显卡和最近的错误。不含个人信息。",
+  "bug.send": "发送",
+  "bug.sent": "谢谢！你的报告已发送。",
+  "bug.empty": "简单写几句发生了什么。",
+  "bug.limit": "你今天已经发送了很多报告，谢谢！",
+  "bug.oops": "哎呀，出了点问题。"
 }
