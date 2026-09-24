@@ -3,6 +3,15 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.6.0](docs/releases/v0.6.0.md): Ranked & fair
+
+<a href="docs/releases/v0.6.0.md"><img src="docs/releases/img/v0.6.0-banner.png" alt="v0.6.0: ranked and fair" width="100%"></a>
+
+- 🏅 Visible rank (RP, Bronze to Legend) and hidden MMR for matchmaking; bots follow your level.
+- ⏳ Loading screen that waits for everyone, synchronised 3-2-1, 5 s spawn shield, calm bots at start.
+- 🐞 In-game bug reports; 📱 phone layout and much lighter mobile rendering.
+- ⚠️ Online play needs this version.
+
 ## [v0.5.0](docs/releases/v0.5.0.md): Find a match
 
 <a href="docs/releases/v0.5.0.md"><img src="docs/releases/img/v0.5.0-banner.png" alt="v0.5.0: find a match" width="100%"></a>

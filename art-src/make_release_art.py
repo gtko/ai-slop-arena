@@ -467,11 +467,69 @@ def v050():
     img.convert('RGB').save(os.path.join(OUT, 'v0.5.0-server.png'), optimize=True)
 
 
+# ------------------------------ v0.6.0: ranked & fair ------------------------------
+
+def v060():
+    banner('v0.6.0', 'RANKED & FAIR', 'A rank to climb, fair starts, bots at your level.',
+           [('🏅', 'Visible rank'), ('⏳', 'Loading screen'), ('🛡️', 'Spawn shield'), ('📱', 'Phone-ready')],
+           'v0.6.0-banner.png', ('volt', 'frostbite', 'blaster'))
+
+    # the rank ladder
+    W, H = 1600, 700
+    img = background(W, H, glow=(0.5, 0.3))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 36), 'CLIMB THE RANKS', display(58), YELLOW, anchor='ma')
+    tiers = [('🥉', 'Bronze', '0', (176, 110, 60)), ('🥈', 'Silver', '200', (150, 160, 185)), ('🥇', 'Gold', '500', (230, 180, 40)),
+             ('💎', 'Diamond', '900', (70, 170, 230)), ('🔮', 'Mythic', '1400', (160, 90, 220)), ('👑', 'Legend', '2000', (240, 90, 80))]
+    n, cw, gap = len(tiers), 220, 18
+    x0 = (W - (n * cw + (n - 1) * gap)) // 2
+    for i, (ic, name, rp, col) in enumerate(tiers):
+        x = x0 + i * (cw + gap)
+        top = 330 - i * 34
+        card(img, (x, top, x + cw, 470), fill=col + (255,), outline=INK, radius=22)
+        d.text((x + cw // 2, top + 48), ic, font=emoji(56), embedded_color=True, anchor='mm')
+        outlined(d, (x + cw // 2, top + 86), name, display(32), TEXT, stroke=4, shadow=False, anchor='ma')
+        d.text((x + cw // 2, 480), f'{rp} RP', font=body(24, 'Black'), fill=MUTED, anchor='ma')
+    by = 540
+    card(img, (x0, by, W // 2 - 10, by + 120), radius=24)
+    d.text((x0 + 26, by + 18), 'Visible rank (RP)', font=display(30), fill=YELLOW)
+    d.text((x0 + 26, by + 64), '1st +30 … 8th −12 · matchmaking with 2+ humans', font=body(22, 'Bold'), fill=TEXT)
+    card(img, (W // 2 + 10, by, W - x0, by + 120), radius=24)
+    d.text((W // 2 + 36, by + 18), 'Hidden MMR', font=display(30), fill=YELLOW)
+    d.text((W // 2 + 36, by + 64), 'pairs close players and sets the bots’ skill', font=body(22, 'Bold'), fill=TEXT)
+    img.convert('RGB').save(os.path.join(OUT, 'v0.6.0-rank.png'), optimize=True)
+
+    # fair start: loading screen -> 3-2-1 -> spawn shield -> bots wake up
+    W, H = 1600, 640
+    img = background(W, H, glow=(0.5, 0.35))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 36), 'A FAIR START FOR EVERYONE', display(56), YELLOW, anchor='ma')
+    steps = [('⏳', 'Loading screen', 'Everyone loads the match. Nobody plays before all 8 are in (25 s max).'),
+             ('🏁', '3 · 2 · 1 · FIGHT!', 'The match starts on every screen at the same moment.'),
+             ('🛡️', 'Spawn shield', 'Nobody can hurt anybody during the first 5 seconds.'),
+             ('😴', 'Calm bots', 'Bots loot for 7–11 s before they start hunting.')]
+    sw, gap = 340, 26
+    x0 = (W - (4 * sw + 3 * gap)) // 2
+    for i, (ic, title, text) in enumerate(steps):
+        x = x0 + i * (sw + gap)
+        card(img, (x, 150, x + sw, 470), radius=26)
+        d.text((x + sw // 2, 215), ic, font=emoji(70), embedded_color=True, anchor='mm')
+        d.text((x + sw // 2, 290), title, font=display(32), fill=YELLOW, anchor='ma')
+        for li, line in enumerate(wrap(d, text, body(22, 'Bold'), sw - 50)[:4]):
+            d.text((x + sw // 2, 345 + li * 30), line, font=body(22, 'Bold'), fill=TEXT, anchor='ma')
+        if i < 3:
+            d.text((x + sw + gap // 2, 310), '→', font=sym(40), fill=YELLOW, anchor='mm')
+    card(img, (x0, 510, W - x0, 590), fill=(255, 210, 63, 255), outline=INK, radius=24)
+    d.text((W // 2, 550), 'Late? A bot plays your brawler until you finish loading, then it is yours again.', font=body(26, 'Bold'), fill=INK, anchor='mm')
+    img.convert('RGB').save(os.path.join(OUT, 'v0.6.0-fair.png'), optimize=True)
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     v020()
     v030()
     v040()
     v050()
+    v060()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')
