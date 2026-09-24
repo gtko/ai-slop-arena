@@ -259,7 +259,6 @@
   "ach.CENTURION.desc": "Elimine 100 lutadores.",
   "mm.quick": "BUSCAR PARTIDA",
   "mm.quickHint": "Multiplataforma: jogadores de web, Steam, Epic, Android e iOS na mesma fila.",
-  "mm.orFriends": "Ou jogue com amigos",
   "mm.searching": "Procurando jogadores…",
   "mm.inQueue": "{n} / {need} jogadores na fila",
   "mm.waited": "Esperando há {time}",
@@ -295,9 +294,16 @@
   "rank.mythic": "Mítico",
   "rank.legend": "Lenda",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Sem rank: jogue uma partida de matchmaking para ganhar seu rank",
+  "rank.unranked": "Jogue uma partida de matchmaking para ganhar seu ranque",
   "rank.pending": "Partida ranqueada: seu resultado sai no fim da partida…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Nova liga!",
-  "rank.practice": "Só um humano nesta partida: treino, seu rank não muda."
+  "rank.practice": "Só um humano nesta partida: treino, seu rank não muda.",
+  "lobby.ranked": "RANQUEADA · MULTIPLATAFORMA",
+  "lobby.friends": "JOGAR COM AMIGOS",
+  "lobby.createDesc": "Pegue um código e convide seus amigos",
+  "lobby.joinDesc": "Um amigo te passou um código?",
+  "rank.none": "Sem ranque",
+  "rank.toNext": "{rp} RP para {tier}",
+  "rank.top": "Ranque máximo: você é uma Lenda"
 }

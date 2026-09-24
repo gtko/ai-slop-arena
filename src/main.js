@@ -269,6 +269,7 @@ function pickBrawler(key) {
   try { localStorage.setItem('iaslop-brawler', key); } catch { /* private mode */ }
   document.querySelectorAll('[data-key]').forEach(x => x.classList.toggle('on', x.dataset.key === key));
   if (net.connected) net.send({ t: 'pick', brawler: key });
+  if ($('#ljAvatar')) showAvatar();
 }
 
 // Map chips (menu + lobby share the markup builder).
@@ -342,7 +343,7 @@ if (steam) {
   nick.value = steamInfo.name;
   nick.disabled = true;
   nick.previousElementSibling.textContent = t('lobby.steamName');
-  $('#lobbyJoin .hint').textContent = t('lobby.steamHint');
+  $('.lj-friends > .hint').textContent = t('lobby.steamHint');
   $('#createWeb').classList.remove('hidden');
   $('#crossHint').classList.remove('hidden');
 }
@@ -356,6 +357,7 @@ function openLobby() {
   showRoomView(net.connected);
   playMusic('lobby');
   loadRank();
+  showAvatar();
 }
 function showRoomView(inRoom) {
   $('#lobbyJoin').classList.toggle('hidden', inRoom || mm.searching);
@@ -381,7 +383,7 @@ async function joinRoom(code, lobbyId = null, web = false) {
     if (net === webNet) presence(t('presence.room'));
     status('');
     sfx('join');
-    if (!isPackagedApp) history.replaceState(null, '', `?room=${net.code}`);
+    if (!isPackagedApp && !net.matchmade) history.replaceState(null, '', `?room=${net.code}`); // matchmade rooms are not for sharing
     showRoomView(true);
   } catch (e) {
     status(steam || !import.meta.env.DEV ? `${e.message}.` : `${e.message}. Is the room server running? (npm run dev:server)`);
@@ -403,10 +405,23 @@ const PLAT_ICON = { web: '🌐', steam: '🎮', epic: '🛒', android: '🤖', i
 // Visible rank (tier + RP) from the server; the hidden MMR never reaches the client.
 const TIER_ICON = { bronze: '🥉', silver: '🥈', gold: '🥇', diamond: '💎', mythic: '🔮', legend: '👑' };
 const rankText = r => (r.matches ? t('rank.badge', { icon: TIER_ICON[r.tier], tier: t(`rank.${r.tier}`), rp: r.rp }) : t('rank.unranked'));
+// Rank card in the online menu: tier emblem, RP and progress to the next tier.
+const TIER_MIN = [['bronze', 0], ['silver', 200], ['gold', 500], ['diamond', 900], ['mythic', 1400], ['legend', 2000]];
 function showRank(r) {
   if (!r || r.rp === undefined) return;
-  $('#rankBadge').textContent = $('#qRank').textContent = rankText(r);
-  $('#rankBadge').classList.remove('hidden');
+  $('#qRank').textContent = rankText(r);
+  const ranked = r.matches > 0;
+  $('#rankEmblem').dataset.tier = ranked ? r.tier : 'none';
+  $('#rankEmblem i').textContent = ranked ? TIER_ICON[r.tier] : '❔';
+  $('#rankTier').textContent = ranked ? `${t(`rank.${r.tier}`)} · ${r.rp} RP` : t('rank.none');
+  const i = TIER_MIN.findIndex(([name]) => name === r.tier), next = TIER_MIN[i + 1];
+  $('#rankSub').textContent = !ranked ? t('rank.unranked') : next ? t('rank.toNext', { rp: next[1] - r.rp, tier: t(`rank.${next[0]}`) }) : t('rank.top');
+  $('#rankFill').style.width = !ranked ? '0%' : next ? `${Math.round((r.rp - TIER_MIN[i][1]) / (next[1] - TIER_MIN[i][1]) * 100)}%` : '100%';
+}
+// Your brawler on the profile card.
+function showAvatar() {
+  $('#ljAvatar').src = portrait(chosen);
+  $('.lj-avatar').style.setProperty('--c', '#' + TYPES[chosen].palette.main.toString(16).padStart(6, '0'));
 }
 async function loadRank() {
   try { const r = await (await fetch(`${serverOrigin()}/api/rank?cid=${clientId()}`)).json(); if (r.ok) showRank(r); } catch { /* offline */ }

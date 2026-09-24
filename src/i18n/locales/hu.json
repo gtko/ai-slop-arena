@@ -259,7 +259,6 @@
   "ach.CENTURION.desc": "Üss ki 100 harcost.",
   "mm.quick": "MECCS KERESÉSE",
   "mm.quickHint": "Crossplay: web, Steam, Epic, Android és iOS játékosok egy sorban.",
-  "mm.orFriends": "Vagy játssz a barátaiddal",
   "mm.searching": "Játékosok keresése…",
   "mm.inQueue": "{n} / {need} játékos a sorban",
   "mm.waited": "Várakozás: {time}",
@@ -295,9 +294,16 @@
   "rank.mythic": "Mitikus",
   "rank.legend": "Legenda",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Rangsorolatlan: játssz egy matchmaking meccset a rangodért",
+  "rank.unranked": "Játssz egy matchmaking meccset, hogy rangot kapj",
   "rank.pending": "Rangsorolt meccs: az eredményed a meccs végén jön…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Új szint!",
-  "rank.practice": "Csak egy ember van a meccsen: gyakorlás, a rangod nem változik."
+  "rank.practice": "Csak egy ember van a meccsen: gyakorlás, a rangod nem változik.",
+  "lobby.ranked": "RANGSOROLT · CROSSPLAY",
+  "lobby.friends": "JÁTÉK BARÁTOKKAL",
+  "lobby.createDesc": "Kérj kódot, és hívd meg a barátaidat",
+  "lobby.joinDesc": "Kódot kaptál egy baráttól?",
+  "rank.none": "Rang nélkül",
+  "rank.toNext": "{rp} RP a következőig: {tier}",
+  "rank.top": "Legfelső szint: Legenda vagy"
 }

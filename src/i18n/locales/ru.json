@@ -261,7 +261,6 @@
   "ach.CENTURION.desc": "Выведите из строя 100 бойцов.",
   "mm.quick": "НАЙТИ МАТЧ",
   "mm.quickHint": "Кроссплатформа: игроки с веба, Steam, Epic, Android и iOS в одной очереди.",
-  "mm.orFriends": "Или играй с друзьями",
   "mm.searching": "Поиск игроков…",
   "mm.inQueue": "Игроков в очереди: {n} / {need}",
   "mm.waited": "Ожидание: {time}",
@@ -297,9 +296,16 @@
   "rank.mythic": "Мифический",
   "rank.legend": "Легенда",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Без ранга: сыграй матч через подбор, чтобы получить ранг",
+  "rank.unranked": "Сыграй матч в подборе, чтобы получить ранг",
   "rank.pending": "Рейтинговый матч: результат будет в конце матча…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Новая лига!",
-  "rank.practice": "В матче только один человек: тренировка, ранг не меняется."
+  "rank.practice": "В матче только один человек: тренировка, ранг не меняется.",
+  "lobby.ranked": "РЕЙТИНГ · КРОССПЛАТФОРМА",
+  "lobby.friends": "ИГРАТЬ С ДРУЗЬЯМИ",
+  "lobby.createDesc": "Получи код и пригласи друзей",
+  "lobby.joinDesc": "Друг дал тебе код?",
+  "rank.none": "Без ранга",
+  "rank.toNext": "{rp} RP до ранга {tier}",
+  "rank.top": "Высший ранг: ты Легенда"
 }

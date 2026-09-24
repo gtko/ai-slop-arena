@@ -263,7 +263,6 @@
   "ach.CENTURION.desc": "أقصِ 100 مقاتل.",
   "mm.quick": "ابحث عن مباراة",
   "mm.quickHint": "لعب مشترك بين المنصات: لاعبو الويب وSteam وEpic وAndroid وiOS في طابور واحد.",
-  "mm.orFriends": "أو العب مع الأصدقاء",
   "mm.searching": "جارٍ البحث عن لاعبين…",
   "mm.inQueue": "اللاعبون في الطابور: {n} / {need}",
   "mm.waited": "الانتظار منذ {time}",
@@ -299,9 +298,16 @@
   "rank.mythic": "خرافي",
   "rank.legend": "أسطورة",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "بلا تصنيف: العب مباراة عبر المطابقة لتحصل على رتبتك",
+  "rank.unranked": "العب مباراة عبر التوفيق للحصول على رتبتك",
   "rank.pending": "مباراة مصنّفة: تظهر نتيجتك في نهاية المباراة…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "مستوى جديد!",
-  "rank.practice": "لاعب بشري واحد فقط في المباراة: تدريب، رتبتك لن تتغير."
+  "rank.practice": "لاعب بشري واحد فقط في المباراة: تدريب، رتبتك لن تتغير.",
+  "lobby.ranked": "مصنّف · متعدد المنصات",
+  "lobby.friends": "العب مع الأصدقاء",
+  "lobby.createDesc": "احصل على رمز وادعُ أصدقاءك",
+  "lobby.joinDesc": "لديك رمز من صديق؟",
+  "rank.none": "بلا تصنيف",
+  "rank.toNext": "{rp} RP حتى {tier}",
+  "rank.top": "أعلى رتبة: أنت أسطورة"
 }

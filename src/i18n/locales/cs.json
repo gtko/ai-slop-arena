@@ -261,7 +261,6 @@
   "ach.CENTURION.desc": "Vyřaď 100 rváčů.",
   "mm.quick": "NAJÍT ZÁPAS",
   "mm.quickHint": "Crossplay: hráči z webu, Steamu, Epicu, Androidu a iOS v jedné frontě.",
-  "mm.orFriends": "Nebo hraj s přáteli",
   "mm.searching": "Hledání hráčů…",
   "mm.inQueue": "Hráčů ve frontě: {n} / {need}",
   "mm.waited": "Čekáš {time}",
@@ -297,9 +296,16 @@
   "rank.mythic": "Mýtická",
   "rank.legend": "Legenda",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Bez hodnocení: odehraj zápas přes matchmaking a získej hodnost",
+  "rank.unranked": "Odehraj zápas v matchmakingu a získej hodnost",
   "rank.pending": "Hodnocený zápas: výsledek přijde na konci zápasu…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Nová liga!",
-  "rank.practice": "V zápase je jen jeden člověk: trénink, tvoje hodnost se nemění."
+  "rank.practice": "V zápase je jen jeden člověk: trénink, tvoje hodnost se nemění.",
+  "lobby.ranked": "HODNOCENÁ · CROSSPLAY",
+  "lobby.friends": "HRAJ S PŘÁTELI",
+  "lobby.createDesc": "Získej kód a pozvi přátele",
+  "lobby.joinDesc": "Máš kód od kamaráda?",
+  "rank.none": "Bez hodnosti",
+  "rank.toNext": "{rp} RP do {tier}",
+  "rank.top": "Nejvyšší hodnost: jsi Legenda"
 }

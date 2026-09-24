@@ -261,7 +261,6 @@
   "ach.CENTURION.desc": "Znokautuj 100 zadymiarzy.",
   "mm.quick": "SZUKAJ MECZU",
   "mm.quickHint": "Crossplay: gracze z przeglądarki, Steama, Epica, Androida i iOS w jednej kolejce.",
-  "mm.orFriends": "Lub zagraj ze znajomymi",
   "mm.searching": "Szukanie graczy…",
   "mm.inQueue": "Graczy w kolejce: {n} / {need}",
   "mm.waited": "Czekasz {time}",
@@ -297,9 +296,16 @@
   "rank.mythic": "Mityczna",
   "rank.legend": "Legenda",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Bez rangi: zagraj mecz z matchmakingu, by zdobyć rangę",
+  "rank.unranked": "Zagraj mecz w matchmakingu, aby zdobyć rangę",
   "rank.pending": "Mecz rankingowy: wynik poznasz na końcu meczu…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Nowa liga!",
-  "rank.practice": "Tylko jeden człowiek w meczu: trening, twoja ranga się nie zmienia."
+  "rank.practice": "Tylko jeden człowiek w meczu: trening, twoja ranga się nie zmienia.",
+  "lobby.ranked": "RANKINGOWA · CROSSPLAY",
+  "lobby.friends": "GRAJ ZE ZNAJOMYMI",
+  "lobby.createDesc": "Zdobądź kod i zaproś znajomych",
+  "lobby.joinDesc": "Masz kod od znajomego?",
+  "rank.none": "Bez rangi",
+  "rank.toNext": "{rp} RP do {tier}",
+  "rank.top": "Najwyższa ranga: jesteś Legendą"
 }

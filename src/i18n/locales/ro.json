@@ -260,7 +260,6 @@
   "ach.CENTURION.desc": "Elimină 100 de luptători.",
   "mm.quick": "CAUTĂ MECI",
   "mm.quickHint": "Cross-platform: jucători de pe web, Steam, Epic, Android și iOS în aceeași coadă.",
-  "mm.orFriends": "Sau joacă cu prietenii",
   "mm.searching": "Se caută jucători…",
   "mm.inQueue": "{n} / {need} jucători în coadă",
   "mm.waited": "Aștepți de {time}",
@@ -296,9 +295,16 @@
   "rank.mythic": "Mitic",
   "rank.legend": "Legendă",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Neclasat: joacă un meci de matchmaking ca să primești rangul",
+  "rank.unranked": "Joacă un meci de matchmaking ca să primești un rang",
   "rank.pending": "Meci clasat: rezultatul vine la finalul meciului…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Nivel nou!",
-  "rank.practice": "Un singur om în acest meci: antrenament, rangul tău nu se schimbă."
+  "rank.practice": "Un singur om în acest meci: antrenament, rangul tău nu se schimbă.",
+  "lobby.ranked": "CLASAT · CROSS-PLATFORM",
+  "lobby.friends": "JOACĂ CU PRIETENII",
+  "lobby.createDesc": "Primește un cod și invită-ți prietenii",
+  "lobby.joinDesc": "Ai un cod de la un prieten?",
+  "rank.none": "Neclasat",
+  "rank.toNext": "{rp} RP până la {tier}",
+  "rank.top": "Rang maxim: ești o Legendă"
 }

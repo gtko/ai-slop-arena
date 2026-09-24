@@ -258,7 +258,6 @@
   "ach.CENTURION.desc": "브롤러 100명을 처치하세요.",
   "mm.quick": "매치 찾기",
   "mm.quickHint": "크로스플레이: 웹, Steam, Epic, Android, iOS 플레이어가 한 대기열에서 매칭됩니다.",
-  "mm.orFriends": "또는 친구와 플레이",
   "mm.searching": "플레이어 찾는 중…",
   "mm.inQueue": "대기열 인원 {n} / {need}명",
   "mm.waited": "대기 시간 {time}",
@@ -294,9 +293,16 @@
   "rank.mythic": "신화",
   "rank.legend": "레전드",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "랭크 없음: 매치메이킹 경기를 플레이해 랭크를 받으세요",
+  "rank.unranked": "매치메이킹 경기를 플레이해 랭크를 받으세요",
   "rank.pending": "랭크 경기: 결과는 경기 종료 시 나옵니다…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "새 티어!",
-  "rank.practice": "이 경기에 사람은 한 명뿐: 연습이라 랭크가 변하지 않습니다."
+  "rank.practice": "이 경기에 사람은 한 명뿐: 연습이라 랭크가 변하지 않습니다.",
+  "lobby.ranked": "랭크 · 크로스 플랫폼",
+  "lobby.friends": "친구와 플레이",
+  "lobby.createDesc": "코드를 받아 친구를 초대하세요",
+  "lobby.joinDesc": "친구에게 코드를 받았나요?",
+  "rank.none": "랭크 없음",
+  "rank.toNext": "{tier}까지 {rp} RP",
+  "rank.top": "최고 티어: 당신은 레전드"
 }

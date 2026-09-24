@@ -259,7 +259,6 @@
   "ach.CENTURION.desc": "Elimina a 100 brawlers.",
   "mm.quick": "BUSCAR PARTIDA",
   "mm.quickHint": "Multiplataforma: jugadores de web, Steam, Epic, Android e iOS en la misma cola.",
-  "mm.orFriends": "O juega con amigos",
   "mm.searching": "Buscando jugadores…",
   "mm.inQueue": "{n} / {need} jugadores en la cola",
   "mm.waited": "Esperando {time}",
@@ -295,9 +294,16 @@
   "rank.mythic": "Mítico",
   "rank.legend": "Leyenda",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Sin rango: juega una partida de emparejamiento para obtener tu rango",
+  "rank.unranked": "Juega una partida de emparejamiento para obtener tu rango",
   "rank.pending": "Partida clasificatoria: tu resultado llegará al final de la partida…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "¡Nueva liga!",
-  "rank.practice": "Solo un humano en esta partida: práctica, tu rango no cambia."
+  "rank.practice": "Solo un humano en esta partida: práctica, tu rango no cambia.",
+  "lobby.ranked": "CLASIFICATORIA · MULTIPLATAFORMA",
+  "lobby.friends": "JUGAR CON AMIGOS",
+  "lobby.createDesc": "Consigue un código e invita a tus amigos",
+  "lobby.joinDesc": "¿Un amigo te dio un código?",
+  "rank.none": "Sin rango",
+  "rank.toNext": "{rp} RP para {tier}",
+  "rank.top": "Rango máximo: eres una Leyenda"
 }

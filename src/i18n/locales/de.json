@@ -259,7 +259,6 @@
   "ach.CENTURION.desc": "Knocke 100 Brawler aus.",
   "mm.quick": "MATCH SUCHEN",
   "mm.quickHint": "Crossplay: Web-, Steam-, Epic-, Android- und iOS-Spieler in einer Warteschlange.",
-  "mm.orFriends": "Oder mit Freunden spielen",
   "mm.searching": "Suche nach Spielern…",
   "mm.inQueue": "{n} / {need} Spieler in der Warteschlange",
   "mm.waited": "Wartezeit: {time}",
@@ -295,9 +294,16 @@
   "rank.mythic": "Mythisch",
   "rank.legend": "Legende",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Unplatziert: Spiel ein Matchmaking-Match, um deinen Rang zu erhalten",
+  "rank.unranked": "Spiel ein Matchmaking-Match, um deinen Rang zu erhalten",
   "rank.pending": "Ranglistenmatch: Dein Ergebnis kommt am Ende des Matches…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Neue Stufe!",
-  "rank.practice": "Nur ein Mensch in diesem Match: Training, dein Rang ändert sich nicht."
+  "rank.practice": "Nur ein Mensch in diesem Match: Training, dein Rang ändert sich nicht.",
+  "lobby.ranked": "RANGLISTE · CROSSPLAY",
+  "lobby.friends": "MIT FREUNDEN SPIELEN",
+  "lobby.createDesc": "Hol dir einen Code und lade Freunde ein",
+  "lobby.joinDesc": "Code von einem Freund?",
+  "rank.none": "Ohne Rang",
+  "rank.toNext": "{rp} RP bis {tier}",
+  "rank.top": "Höchster Rang: Du bist eine Legende"
 }

@@ -259,7 +259,6 @@
   "ach.CENTURION.desc": "Mettre K.O. 100 brawlers.",
   "mm.quick": "TROUVER UNE PARTIE",
   "mm.quickHint": "Multiplateforme : joueurs web, Steam, Epic, Android et iOS dans la même file.",
-  "mm.orFriends": "Ou joue avec tes amis",
   "mm.searching": "Recherche de joueurs…",
   "mm.inQueue": "{n} / {need} joueurs dans la file",
   "mm.waited": "En attente depuis {time}",
@@ -295,9 +294,16 @@
   "rank.mythic": "Mythique",
   "rank.legend": "Légende",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Non classé : joue un match en matchmaking pour obtenir ton rang",
+  "rank.unranked": "Joue une partie en matchmaking pour obtenir ton rang",
   "rank.pending": "Match classé : ton résultat arrive à la fin du match…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Nouveau palier !",
-  "rank.practice": "Un seul humain dans ce match : entraînement, ton rang ne change pas."
+  "rank.practice": "Un seul humain dans ce match : entraînement, ton rang ne change pas.",
+  "lobby.ranked": "CLASSÉ · MULTIPLATEFORME",
+  "lobby.friends": "JOUER ENTRE AMIS",
+  "lobby.createDesc": "Obtiens un code et invite tes amis",
+  "lobby.joinDesc": "Un ami t’a donné un code ?",
+  "rank.none": "Non classé",
+  "rank.toNext": "{rp} RP avant {tier}",
+  "rank.top": "Rang max : tu es une Légende"
 }

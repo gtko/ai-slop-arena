@@ -258,7 +258,6 @@
   "ach.CENTURION.desc": "ブロウラーを100体倒す。",
   "mm.quick": "マッチを探す",
   "mm.quickHint": "クロスプレイ対応：Web・Steam・Epic・Android・iOSのプレイヤーが同じキューに。",
-  "mm.orFriends": "またはフレンドと遊ぶ",
   "mm.searching": "プレイヤーを検索中…",
   "mm.inQueue": "キュー内のプレイヤー：{n} / {need}",
   "mm.waited": "待機時間 {time}",
@@ -294,9 +293,16 @@
   "rank.mythic": "ミシック",
   "rank.legend": "レジェンド",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "ランクなし：マッチメイキングで1試合プレイしてランクを獲得しよう",
+  "rank.unranked": "マッチメイキングで1試合プレイしてランクを獲得",
   "rank.pending": "ランクマッチ：結果は試合終了時に発表…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "新ティア到達！",
-  "rank.practice": "この試合の人間は1人だけ：練習なのでランクは変わりません。"
+  "rank.practice": "この試合の人間は1人だけ：練習なのでランクは変わりません。",
+  "lobby.ranked": "ランク · クロスプレイ",
+  "lobby.friends": "フレンドと遊ぶ",
+  "lobby.createDesc": "コードを取得してフレンドを招待",
+  "lobby.joinDesc": "フレンドからコードをもらった？",
+  "rank.none": "ランクなし",
+  "rank.toNext": "{tier}まであと{rp} RP",
+  "rank.top": "最高ランク：あなたはレジェンド"
 }

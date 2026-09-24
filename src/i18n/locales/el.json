@@ -259,7 +259,6 @@
   "ach.CENTURION.desc": "Βγάλε νοκ άουτ 100 μαχητές.",
   "mm.quick": "ΒΡΕΣ ΑΓΩΝΑ",
   "mm.quickHint": "Cross-platform: παίκτες web, Steam, Epic, Android και iOS στην ίδια ουρά.",
-  "mm.orFriends": "Ή παίξε με φίλους",
   "mm.searching": "Αναζήτηση παικτών…",
   "mm.inQueue": "{n} / {need} παίκτες στην ουρά",
   "mm.waited": "Αναμονή {time}",
@@ -295,9 +294,16 @@
   "rank.mythic": "Μυθικό",
   "rank.legend": "Θρύλος",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Χωρίς κατάταξη: παίξε έναν αγώνα matchmaking για να πάρεις κατάταξη",
+  "rank.unranked": "Παίξε έναν αγώνα matchmaking για να πάρεις κατάταξη",
   "rank.pending": "Αγώνας κατάταξης: το αποτέλεσμα έρχεται στο τέλος του αγώνα…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Νέα βαθμίδα!",
-  "rank.practice": "Μόνο ένας άνθρωπος στον αγώνα: προπόνηση, η κατάταξή σου δεν αλλάζει."
+  "rank.practice": "Μόνο ένας άνθρωπος στον αγώνα: προπόνηση, η κατάταξή σου δεν αλλάζει.",
+  "lobby.ranked": "ΚΑΤΑΤΑΞΗΣ · CROSS-PLATFORM",
+  "lobby.friends": "ΠΑΙΞΕ ΜΕ ΦΙΛΟΥΣ",
+  "lobby.createDesc": "Πάρε έναν κωδικό και κάλεσε τους φίλους σου",
+  "lobby.joinDesc": "Σου έδωσε κωδικό ένας φίλος;",
+  "rank.none": "Χωρίς κατάταξη",
+  "rank.toNext": "{rp} RP για {tier}",
+  "rank.top": "Κορυφαία βαθμίδα: είσαι Θρύλος"
 }

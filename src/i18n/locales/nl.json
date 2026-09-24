@@ -259,7 +259,6 @@
   "ach.CENTURION.desc": "Schakel 100 brawlers uit.",
   "mm.quick": "MATCH ZOEKEN",
   "mm.quickHint": "Crossplay: web-, Steam-, Epic-, Android- en iOS-spelers in één wachtrij.",
-  "mm.orFriends": "Of speel met vrienden",
   "mm.searching": "Spelers zoeken…",
   "mm.inQueue": "{n} / {need} spelers in de wachtrij",
   "mm.waited": "Wachttijd: {time}",
@@ -295,9 +294,16 @@
   "rank.mythic": "Mythisch",
   "rank.legend": "Legende",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Geen rang: speel een matchmaking-potje om je rang te krijgen",
+  "rank.unranked": "Speel een matchmaking-potje om je rang te krijgen",
   "rank.pending": "Ranked potje: je resultaat komt aan het einde van het potje…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Nieuwe rang!",
-  "rank.practice": "Maar één mens in dit potje: oefenen, je rang verandert niet."
+  "rank.practice": "Maar één mens in dit potje: oefenen, je rang verandert niet.",
+  "lobby.ranked": "RANKED · CROSS-PLATFORM",
+  "lobby.friends": "SPELEN MET VRIENDEN",
+  "lobby.createDesc": "Krijg een code en nodig je vrienden uit",
+  "lobby.joinDesc": "Code van een vriend gekregen?",
+  "rank.none": "Geen rang",
+  "rank.toNext": "{rp} RP tot {tier}",
+  "rank.top": "Hoogste rang: je bent een Legende"
 }

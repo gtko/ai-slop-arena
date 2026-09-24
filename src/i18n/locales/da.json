@@ -259,7 +259,6 @@
   "ach.CENTURION.desc": "Slå 100 brawlere ud.",
   "mm.quick": "FIND EN KAMP",
   "mm.quickHint": "Crossplay: web-, Steam-, Epic-, Android- og iOS-spillere i samme kø.",
-  "mm.orFriends": "Eller spil med venner",
   "mm.searching": "Søger efter spillere…",
   "mm.inQueue": "{n} / {need} spillere i køen",
   "mm.waited": "Ventet i {time}",
@@ -295,9 +294,16 @@
   "rank.mythic": "Mytisk",
   "rank.legend": "Legende",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Urangeret: spil en matchmaking-kamp for at få din rang",
+  "rank.unranked": "Spil en matchmaking-kamp for at få din rang",
   "rank.pending": "Rangeret kamp: dit resultat kommer ved kampens slutning…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Nyt niveau!",
-  "rank.practice": "Kun ét menneske i kampen: træning, din rang ændres ikke."
+  "rank.practice": "Kun ét menneske i kampen: træning, din rang ændres ikke.",
+  "lobby.ranked": "RANGERET · CROSSPLAY",
+  "lobby.friends": "SPIL MED VENNER",
+  "lobby.createDesc": "Få en kode og inviter dine venner",
+  "lobby.joinDesc": "Fået en kode af en ven?",
+  "rank.none": "Urangeret",
+  "rank.toNext": "{rp} RP til {tier}",
+  "rank.top": "Højeste rang: du er en Legende"
 }

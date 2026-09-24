@@ -258,7 +258,6 @@
   "ach.CENTURION.desc": "KO 100 brawler.",
   "mm.quick": "CARI MATCH",
   "mm.quickHint": "Lintas platform: pemain web, Steam, Epic, Android, dan iOS dalam satu antrean.",
-  "mm.orFriends": "Atau main bareng teman",
   "mm.searching": "Mencari pemain…",
   "mm.inQueue": "{n} / {need} pemain dalam antrean",
   "mm.waited": "Menunggu {time}",
@@ -294,9 +293,16 @@
   "rank.mythic": "Mitik",
   "rank.legend": "Legenda",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Belum berperingkat: mainkan match matchmaking untuk dapat rank",
+  "rank.unranked": "Mainkan match matchmaking untuk mendapat peringkatmu",
   "rank.pending": "Match ranked: hasilmu keluar di akhir match…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Tier baru!",
-  "rank.practice": "Hanya satu manusia di match ini: latihan, rank-mu tidak berubah."
+  "rank.practice": "Hanya satu manusia di match ini: latihan, rank-mu tidak berubah.",
+  "lobby.ranked": "PERINGKAT · LINTAS PLATFORM",
+  "lobby.friends": "MAIN BERSAMA TEMAN",
+  "lobby.createDesc": "Dapatkan kode dan undang temanmu",
+  "lobby.joinDesc": "Punya kode dari teman?",
+  "rank.none": "Tanpa peringkat",
+  "rank.toNext": "{rp} RP ke {tier}",
+  "rank.top": "Tingkat tertinggi: kamu Legenda"
 }

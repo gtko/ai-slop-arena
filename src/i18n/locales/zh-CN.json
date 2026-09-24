@@ -258,7 +258,6 @@
   "ach.CENTURION.desc": "击倒 100 位英雄。",
   "mm.quick": "寻找对局",
   "mm.quickHint": "跨平台：网页、Steam、Epic、Android 和 iOS 玩家同队列匹配。",
-  "mm.orFriends": "或与好友一起玩",
   "mm.searching": "正在寻找玩家…",
   "mm.inQueue": "队列中玩家：{n} / {need}",
   "mm.waited": "已等待 {time}",
@@ -294,9 +293,16 @@
   "rank.mythic": "神话",
   "rank.legend": "传奇",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "未定级：进行一场匹配对局以获得段位",
+  "rank.unranked": "进行一场匹配对局即可获得段位",
   "rank.pending": "排位赛：结果将在对局结束时公布…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "新段位！",
-  "rank.practice": "本局只有一名真人玩家：练习模式，段位不变。"
+  "rank.practice": "本局只有一名真人玩家：练习模式，段位不变。",
+  "lobby.ranked": "排位 · 跨平台",
+  "lobby.friends": "与好友同玩",
+  "lobby.createDesc": "获取代码并邀请好友",
+  "lobby.joinDesc": "好友给了你代码？",
+  "rank.none": "未定级",
+  "rank.toNext": "距{tier}还差 {rp} RP",
+  "rank.top": "最高段位：你是传奇"
 }

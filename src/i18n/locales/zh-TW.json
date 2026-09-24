@@ -258,7 +258,6 @@
   "ach.CENTURION.desc": "擊倒 100 位英雄。",
   "mm.quick": "尋找對戰",
   "mm.quickHint": "跨平台：網頁、Steam、Epic、Android 和 iOS 玩家在同一個佇列配對。",
-  "mm.orFriends": "或與好友一起玩",
   "mm.searching": "正在尋找玩家…",
   "mm.inQueue": "佇列中玩家：{n} / {need}",
   "mm.waited": "已等待 {time}",
@@ -294,9 +293,16 @@
   "rank.mythic": "神話",
   "rank.legend": "傳奇",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "未定級：進行一場配對對戰以取得段位",
+  "rank.unranked": "進行一場配對對戰即可獲得段位",
   "rank.pending": "排位賽：結果將在對戰結束時公布…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "新段位！",
-  "rank.practice": "本局只有一名真人玩家：練習模式，段位不變。"
+  "rank.practice": "本局只有一名真人玩家：練習模式，段位不變。",
+  "lobby.ranked": "排位 · 跨平台",
+  "lobby.friends": "與好友同玩",
+  "lobby.createDesc": "取得代碼並邀請好友",
+  "lobby.joinDesc": "好友給了你代碼？",
+  "rank.none": "未定級",
+  "rank.toNext": "距{tier}還差 {rp} RP",
+  "rank.top": "最高段位：你是傳奇"
 }

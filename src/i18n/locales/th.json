@@ -258,7 +258,6 @@
   "ach.CENTURION.desc": "น็อกเอาต์นักสู้ 100 คน",
   "mm.quick": "หาแมตช์",
   "mm.quickHint": "ข้ามแพลตฟอร์ม: ผู้เล่นเว็บ, Steam, Epic, Android และ iOS ในคิวเดียวกัน",
-  "mm.orFriends": "หรือเล่นกับเพื่อน",
   "mm.searching": "กำลังค้นหาผู้เล่น…",
   "mm.inQueue": "ผู้เล่นในคิว {n} / {need} คน",
   "mm.waited": "รอมาแล้ว {time}",
@@ -294,9 +293,16 @@
   "rank.mythic": "มิธิก",
   "rank.legend": "เลเจนด์",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "ยังไม่มีแรงก์: เล่นแมตช์จับคู่เพื่อรับแรงก์",
+  "rank.unranked": "เล่นแมตช์จับคู่เพื่อรับแรงค์ของคุณ",
   "rank.pending": "แมตช์จัดอันดับ: ผลจะออกเมื่อจบแมตช์…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "ขึ้นระดับใหม่!",
-  "rank.practice": "มีมนุษย์คนเดียวในแมตช์นี้: ฝึกซ้อม แรงก์ของคุณไม่เปลี่ยน"
+  "rank.practice": "มีมนุษย์คนเดียวในแมตช์นี้: ฝึกซ้อม แรงก์ของคุณไม่เปลี่ยน",
+  "lobby.ranked": "จัดอันดับ · ข้ามแพลตฟอร์ม",
+  "lobby.friends": "เล่นกับเพื่อน",
+  "lobby.createDesc": "รับโค้ดแล้วชวนเพื่อนของคุณ",
+  "lobby.joinDesc": "ได้โค้ดจากเพื่อนมาใช่ไหม?",
+  "rank.none": "ไม่มีแรงค์",
+  "rank.toNext": "อีก {rp} RP ถึง {tier}",
+  "rank.top": "แรงค์สูงสุด: คุณคือเลเจนด์"
 }

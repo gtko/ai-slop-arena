@@ -258,7 +258,6 @@
   "ach.CENTURION.desc": "Hạ gục 100 đấu sĩ.",
   "mm.quick": "TÌM TRẬN",
   "mm.quickHint": "Đa nền tảng: người chơi web, Steam, Epic, Android và iOS chung một hàng chờ.",
-  "mm.orFriends": "Hoặc chơi với bạn bè",
   "mm.searching": "Đang tìm người chơi…",
   "mm.inQueue": "{n} / {need} người chơi trong hàng chờ",
   "mm.waited": "Đã chờ {time}",
@@ -294,9 +293,16 @@
   "rank.mythic": "Thần Thoại",
   "rank.legend": "Huyền Thoại",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Chưa xếp hạng: chơi một trận ghép cặp để nhận hạng",
+  "rank.unranked": "Chơi một trận ghép cặp để nhận hạng",
   "rank.pending": "Trận xếp hạng: kết quả có khi trận đấu kết thúc…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Bậc mới!",
-  "rank.practice": "Chỉ có một người thật trong trận: luyện tập, hạng của bạn không đổi."
+  "rank.practice": "Chỉ có một người thật trong trận: luyện tập, hạng của bạn không đổi.",
+  "lobby.ranked": "XẾP HẠNG · ĐA NỀN TẢNG",
+  "lobby.friends": "CHƠI VỚI BẠN BÈ",
+  "lobby.createDesc": "Lấy mã và mời bạn bè của bạn",
+  "lobby.joinDesc": "Bạn có mã từ bạn bè?",
+  "rank.none": "Chưa xếp hạng",
+  "rank.toNext": "Còn {rp} RP đến {tier}",
+  "rank.top": "Hạng cao nhất: bạn là Huyền Thoại"
 }

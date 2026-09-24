@@ -259,7 +259,6 @@
   "ach.CENTURION.desc": "Нокаутирай 100 бойци.",
   "mm.quick": "НАМЕРИ МАЧ",
   "mm.quickHint": "Крос-платформа: играчи от уеб, Steam, Epic, Android и iOS в една опашка.",
-  "mm.orFriends": "Или играй с приятели",
   "mm.searching": "Търсене на играчи…",
   "mm.inQueue": "Играчи в опашката: {n} / {need}",
   "mm.waited": "Чакаш {time}",
@@ -295,9 +294,16 @@
   "rank.mythic": "Митичен",
   "rank.legend": "Легенда",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Без ранг: изиграй мач чрез matchmaking, за да получиш ранг",
+  "rank.unranked": "Изиграй мач чрез matchmaking, за да получиш ранг",
   "rank.pending": "Класиран мач: резултатът идва в края на мача…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Нова лига!",
-  "rank.practice": "Само един човек в мача: тренировка, рангът ти не се променя."
+  "rank.practice": "Само един човек в мача: тренировка, рангът ти не се променя.",
+  "lobby.ranked": "КЛАСИРАН · КРОСПЛАТФОРМЕН",
+  "lobby.friends": "ИГРАЙ С ПРИЯТЕЛИ",
+  "lobby.createDesc": "Вземи код и покани приятелите си",
+  "lobby.joinDesc": "Имаш код от приятел?",
+  "rank.none": "Без ранг",
+  "rank.toNext": "{rp} RP до {tier}",
+  "rank.top": "Най-висок ранг: ти си Легенда"
 }

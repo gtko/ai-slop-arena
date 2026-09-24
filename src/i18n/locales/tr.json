@@ -259,7 +259,6 @@
   "ach.CENTURION.desc": "100 savaşçıyı nakavt et.",
   "mm.quick": "MAÇ BUL",
   "mm.quickHint": "Platformlar arası: web, Steam, Epic, Android ve iOS oyuncuları aynı sırada.",
-  "mm.orFriends": "Ya da arkadaşlarınla oyna",
   "mm.searching": "Oyuncu aranıyor…",
   "mm.inQueue": "Sırada {n} / {need} oyuncu",
   "mm.waited": "Bekleme: {time}",
@@ -295,9 +294,16 @@
   "rank.mythic": "Mitik",
   "rank.legend": "Efsane",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Derecesiz: rütbeni almak için bir eşleştirme maçı oyna",
+  "rank.unranked": "Dereceni almak için bir eşleştirme maçı oyna",
   "rank.pending": "Dereceli maç: sonucun maçın sonunda gelecek…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Yeni lig!",
-  "rank.practice": "Bu maçta tek bir insan var: antrenman, rütben değişmez."
+  "rank.practice": "Bu maçta tek bir insan var: antrenman, rütben değişmez.",
+  "lobby.ranked": "DERECELİ · ÇAPRAZ PLATFORM",
+  "lobby.friends": "ARKADAŞLARLA OYNA",
+  "lobby.createDesc": "Bir kod al ve arkadaşlarını davet et",
+  "lobby.joinDesc": "Arkadaşından kod mu aldın?",
+  "rank.none": "Derecesiz",
+  "rank.toNext": "{tier} için {rp} RP",
+  "rank.top": "En üst kademe: Sen bir Efsanesin"
 }

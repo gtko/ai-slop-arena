@@ -259,7 +259,6 @@
   "ach.CENTURION.desc": "Tyrmää 100 tappelijaa.",
   "mm.quick": "ETSI OTTELU",
   "mm.quickHint": "Crossplay: web-, Steam-, Epic-, Android- ja iOS-pelaajat samassa jonossa.",
-  "mm.orFriends": "Tai pelaa kavereiden kanssa",
   "mm.searching": "Etsitään pelaajia…",
   "mm.inQueue": "{n} / {need} pelaajaa jonossa",
   "mm.waited": "Odotettu {time}",
@@ -295,9 +294,16 @@
   "rank.mythic": "Myyttinen",
   "rank.legend": "Legenda",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Ei sijoitusta: pelaa matchmaking-ottelu saadaksesi arvosi",
+  "rank.unranked": "Pelaa matchmaking-ottelu saadaksesi sijoituksen",
   "rank.pending": "Rankattu ottelu: tuloksesi tulee ottelun lopussa…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Uusi taso!",
-  "rank.practice": "Vain yksi ihminen ottelussa: harjoitus, arvosi ei muutu."
+  "rank.practice": "Vain yksi ihminen ottelussa: harjoitus, arvosi ei muutu.",
+  "lobby.ranked": "RANKED · CROSSPLAY",
+  "lobby.friends": "PELAA KAVEREIDEN KANSSA",
+  "lobby.createDesc": "Hae koodi ja kutsu kaverisi",
+  "lobby.joinDesc": "Saitko koodin kaverilta?",
+  "rank.none": "Ei sijoitusta",
+  "rank.toNext": "{rp} RP tasoon {tier}",
+  "rank.top": "Huipputaso: olet Legenda"
 }

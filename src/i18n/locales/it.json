@@ -259,7 +259,6 @@
   "ach.CENTURION.desc": "Metti KO 100 brawler.",
   "mm.quick": "TROVA PARTITA",
   "mm.quickHint": "Crossplay: giocatori web, Steam, Epic, Android e iOS nella stessa coda.",
-  "mm.orFriends": "Oppure gioca con gli amici",
   "mm.searching": "Ricerca giocatori…",
   "mm.inQueue": "{n} / {need} giocatori in coda",
   "mm.waited": "In attesa da {time}",
@@ -295,9 +294,16 @@
   "rank.mythic": "Mitico",
   "rank.legend": "Leggenda",
   "rank.badge": "{icon} {tier} · {rp} RP",
-  "rank.unranked": "Senza grado: gioca una partita in matchmaking per ottenere il tuo grado",
+  "rank.unranked": "Gioca una partita in matchmaking per ottenere il tuo grado",
   "rank.pending": "Partita classificata: il risultato arriva a fine partita…",
   "rank.change": "{delta} RP · {icon} {tier} · {rp} RP",
   "rank.newTier": "Nuova lega!",
-  "rank.practice": "Un solo umano in questa partita: allenamento, il tuo grado non cambia."
+  "rank.practice": "Un solo umano in questa partita: allenamento, il tuo grado non cambia.",
+  "lobby.ranked": "CLASSIFICATA · CROSS-PLATFORM",
+  "lobby.friends": "GIOCA CON GLI AMICI",
+  "lobby.createDesc": "Ottieni un codice e invita i tuoi amici",
+  "lobby.joinDesc": "Un amico ti ha dato un codice?",
+  "rank.none": "Senza grado",
+  "rank.toNext": "{rp} RP a {tier}",
+  "rank.top": "Grado massimo: sei una Leggenda"
 }

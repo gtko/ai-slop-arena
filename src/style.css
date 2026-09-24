@@ -444,20 +444,7 @@ body.touch .overlay { overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .map i { font-size: 12px; top: 2px; }
   #menu .row-btns { grid-area: btns; flex-direction: column; align-items: stretch; gap: 8px; justify-content: center; }
 
-  /* online lobby: join view in two columns, room view in two columns */
-  .lobby { width: 100%; max-width: 980px; margin: 0 auto; }
-  .lobby-title { display: none; }
-  #lobby.overlay { padding-top: calc(52px + env(safe-area-inset-top)); } /* clear the sound + back buttons */
-  #lobbyJoin:not(.hidden) { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "name friends" "quick create" "quick join"; column-gap: 20px; row-gap: 6px; align-items: start; }
-  #lobbyJoin .field { grid-area: name; }
-  #lobbyJoin .quick { grid-area: quick; margin: 0; }
-  #lobbyJoin .quick .big { font-size: 24px; padding: 12px 18px; }
-  #lblFriends { grid-area: friends; align-self: end; }
-  #lobbyJoin .row-btns { grid-area: create; }
-  #lobbyJoin .join-row { grid-area: join; margin-top: 0; }
-  #lobbyJoin > .hint { display: none; }
-  .rank-badge { font-size: 16px; margin-bottom: 4px; }
-  .field input, .join-row input { font-size: 16px; padding: 6px 10px; }
+  /* online lobby: room view in two columns (join view: see the lobby panel block) */
   #lobbyRoom:not(.hidden) { display: grid; grid-template-columns: 1.1fr 1fr; grid-template-areas: "head brawlerlbl" "players brawlers" "players maplbl" "players maps" "players start";
     grid-template-rows: auto auto auto auto 1fr; column-gap: 16px; row-gap: 4px; }
   .room-head { grid-area: head; padding: 4px 10px; }
@@ -520,4 +507,86 @@ body.touch .overlay { overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .bug-card #bugPreview { max-height: 56px; margin: 0; }
   .bug-card p[data-i18n="bug.info"] { display: none; }
   .bug-card #bugSend, .bug-card #bugCancel { grid-column: auto; margin-top: 2px; }
+}
+
+/* ------------------------------ online menu (lobby panel) ------------------------------ */
+#lobby.overlay { justify-content: center; background: rgba(8, 6, 18, 0.55); }
+.menu-card.lobby { position: relative; width: min(900px, 100%); padding: 16px 20px 16px; border-radius: 24px; border: 3px solid var(--ink);
+  background: linear-gradient(180deg, rgba(38, 29, 72, 0.95), rgba(18, 14, 34, 0.95)); backdrop-filter: blur(8px);
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.35), 0 30px 80px rgba(0, 0, 0, 0.55); }
+.lobby-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.lobby-head .lobby-title { margin: 0; font-size: 44px; }
+.lobby-back { width: 44px; height: 44px; flex: none; border-radius: 14px; border: 3px solid var(--ink); background: rgba(255,255,255,0.08);
+  color: #fff; font: inherit; font-family: var(--display); font-size: 24px; cursor: pointer; box-shadow: 0 4px 0 var(--ink); }
+.lobby-back:hover { background: rgba(255,255,255,0.16); }
+.lj-box { border-radius: 18px; padding: 14px; background: rgba(255,255,255,0.045); border: 2px solid rgba(255,255,255,0.08); }
+#lobbyJoin:not(.hidden) { display: grid; grid-template-columns: 1fr 1.15fr; grid-template-areas: "profile ranked" "friends friends"; gap: 12px; }
+.lj-profile { grid-area: profile; display: flex; gap: 14px; align-items: center; }
+.lj-avatar { width: 92px; height: 92px; flex: none; border-radius: 20px; border: 3px solid var(--ink); overflow: hidden; position: relative;
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--c, #7b4dff) 55%, #fff), var(--c, #7b4dff) 60%, color-mix(in srgb, var(--c, #7b4dff) 55%, #000)); }
+.lj-avatar img { position: absolute; left: 50%; bottom: -8px; height: 106px; transform: translateX(-50%); }
+.lj-id { flex: 1; min-width: 0; display: grid; gap: 10px; }
+.lj-id .field { max-width: none; }
+.lj-id .field input { width: 100%; box-sizing: border-box; }
+.lj-rank { display: flex; align-items: center; gap: 10px; }
+.emblem { width: 44px; height: 44px; flex: none; border-radius: 50%; border: 3px solid var(--ink); display: grid; place-items: center; font-style: normal;
+  background: radial-gradient(circle at 40% 30%, #fff8, transparent 55%), var(--tier, #4a4266); box-shadow: 0 3px 0 var(--ink); }
+.emblem i { font-style: normal; font-size: 22px; }
+.emblem[data-tier="bronze"] { --tier: #b06e3c; } .emblem[data-tier="silver"] { --tier: #97a0b9; } .emblem[data-tier="gold"] { --tier: #e6b428; }
+.emblem[data-tier="diamond"] { --tier: #46aae6; } .emblem[data-tier="mythic"] { --tier: #a05adc; } .emblem[data-tier="legend"] { --tier: #f05a50; }
+.lj-rank-txt { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.lj-rank-txt b { font-family: var(--display); font-weight: 400; font-size: 20px; color: var(--yellow); }
+.lj-rank-txt small { color: var(--muted); font-weight: 700; font-size: 12px; }
+.rank-bar { height: 8px; border-radius: 99px; background: rgba(0,0,0,0.4); overflow: hidden; }
+.rank-bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, var(--yellow), #ffb300); transition: width 0.5s; }
+.lj-ranked { grid-area: ranked; display: flex; flex-direction: column; justify-content: center; gap: 10px;
+  background: linear-gradient(160deg, rgba(255, 210, 63, 0.14), rgba(255,255,255,0.03)); border-color: rgba(255, 210, 63, 0.35); }
+.lj-chip { align-self: flex-start; padding: 3px 10px; border-radius: 99px; background: var(--yellow); color: var(--ink); font-weight: 900; font-size: 11px; letter-spacing: 0.6px; }
+.lj-quick { width: 100%; margin: 0; font-size: 34px; padding: 14px 18px; }
+.lj-plats { display: flex; gap: 12px; font-size: 22px; }
+.lj-ranked .hint, .lj-friends .hint { margin: 0; }
+.lj-friends { grid-area: friends; display: grid; gap: 10px; }
+.lj-h { margin: 0; color: var(--muted); font-size: 12px; font-weight: 900; letter-spacing: 1px; }
+.lj-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lj-tile { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; row-gap: 2px; text-align: left; padding: 12px 14px;
+  border-radius: 16px; border: 3px solid var(--ink); background: rgba(30, 26, 48, 0.92); color: var(--text); font: inherit; box-shadow: 0 4px 0 var(--ink); }
+button.lj-tile { cursor: pointer; transition: transform 0.08s, background 0.15s; }
+button.lj-tile:hover { background: rgba(58, 48, 96, 0.95); }
+button.lj-tile:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.lj-tile > i { grid-row: span 2; font-style: normal; font-size: 30px; }
+.lj-tile b { font-family: var(--display); font-weight: 400; font-size: 22px; }
+.lj-tile small { color: var(--muted); font-weight: 700; font-size: 12px; }
+.lj-join .join-row { grid-column: 2; margin-top: 4px; }
+.lj-join .join-row input { width: 110px; flex: 1; min-width: 0; font-size: 18px; padding: 6px 8px; letter-spacing: 3px; }
+.lj-join .join-row .ghost { padding: 6px 14px; font-size: 16px; box-shadow: 0 3px 0 var(--ink); }
+#lobbyJoin #createWeb { justify-self: start; }
+.menu-card.lobby .status { text-align: center; margin: 10px 0 0; }
+@media (max-width: 700px) {
+  #lobbyJoin:not(.hidden) { grid-template-columns: 1fr; grid-template-areas: "profile" "ranked" "friends"; }
+  .lj-tiles { grid-template-columns: 1fr; }
+}
+/* phones held sideways: everything on one screen, three columns */
+@media (max-height: 520px) and (orientation: landscape) {
+  .lobby { width: 100%; max-width: 980px; margin: 0 auto; }
+  .lobby-head { margin-bottom: 6px; padding-left: 40px; } /* clear of the fixed mute button */
+  #lblBrawler { align-self: end; }
+  .lobby-head .lobby-title { font-size: 24px; }
+  .lobby-back { width: 34px; height: 34px; font-size: 18px; border-radius: 10px; }
+  .menu-card.lobby { padding: 8px 10px; border-radius: 18px; }
+  #lobbyJoin:not(.hidden) { grid-template-columns: 1fr 1fr 1.1fr; grid-template-areas: "profile ranked friends"; gap: 8px; }
+  .lj-box { padding: 9px; border-radius: 14px; }
+  .lj-profile { flex-direction: column; align-items: stretch; gap: 8px; }
+  .lj-avatar { display: none; }
+  .lj-id { gap: 6px; }
+  .field input, .join-row input { font-size: 15px; padding: 5px 8px; }
+  .lj-quick { font-size: 22px; padding: 10px 12px; }
+  .lj-ranked { gap: 6px; }
+  .lj-ranked .hint, .lj-friends > .hint { display: none; }
+  .lj-tiles { grid-template-columns: 1fr; gap: 6px; }
+  .lj-tile { padding: 6px 10px; column-gap: 8px; }
+  .lj-tile > i { font-size: 20px; }
+  .lj-tile b { font-size: 16px; }
+  .lj-tile small { font-size: 10px; }
+  .emblem { width: 34px; height: 34px; } .emblem i { font-size: 16px; }
+  .lj-rank-txt b { font-size: 16px; }
 }
