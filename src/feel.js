@@ -54,6 +54,7 @@ export class Feel {
 
   // slow: the render slow motion (offline only; online the match keeps real time)
   finalKo(slow = true) {
+    if (this.orbitWant) return; // once per match
     this.slowT = slow ? 1 : 0;
     this.orbitWant = 2.1; // ~120° around the winner while the result comes in
   }

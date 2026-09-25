@@ -335,7 +335,7 @@ export class Game {
       const w = alive[0];
       w.rank = 1;
       w.win();
-      if (this.mode === 'play') this.feel.finalKo(!this.net); // slow motion offline only: online the rules keep real time
+      if (this.mode === 'play') { this.feel.finalKo(!this.net); if (this.player) sfx('sting_finalko'); } // slow motion offline only: online the rules keep real time
       this.ev({ e: 'win', id: w.id });
       if (w === this.player) { this.state = 'over'; this.resultT = 1.2; }
       if (this.net) this.endT = 5;
@@ -549,7 +549,7 @@ export class Game {
           break;
         case 'win':
           this.ended = true;
-          if (b) { b.rank = 1; b.win(); this.feel.finalKo(false); if (b === this.player) { this.state = 'over'; this.resultT = 1.2; } }
+          if (b) { b.rank = 1; b.win(); if (!this.feel.orbitWant) sfx('sting_finalko'); this.feel.finalKo(false); if (b === this.player) { this.state = 'over'; this.resultT = 1.2; } }
           break;
         case 'knock': if (b === this.player) b.knock.set(e.x, 0, e.z); break;
         case 'imm': if (b && b.visibleToPlayer) this.hud.floater(this.camera, b.pos.x, 3.1, b.pos.z, t('hud.immune'), 'immune'); break;

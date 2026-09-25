@@ -23,7 +23,7 @@ let jingle = null;
 const SFX = ['shot', 'shotgun', 'throw', 'boom', 'boom_big', 'hit', 'hurt', 'break', 'crate', 'pickup',
   'super', 'ready', 'death', 'gas', 'victory', 'defeat', 'click', 'thunder', 'thunder2', 'join',
   // v0.11 sound pass (ElevenLabs): per-brawler shots, hit confirm, KO, match stings, footsteps, voice barks
-  'shot_ray', 'shot_ice', 'shot_zap', 'hit_confirm', 'ko', 'sting_three', 'sting_duel', 'heartbeat', 'immune',
+  'shot_ray', 'shot_ice', 'shot_zap', 'hit_confirm', 'ko', 'sting_three', 'sting_duel', 'sting_finalko', 'heartbeat', 'immune',
   'step_sand', 'step_grass', 'step_snow', 'step_stone', 'step_mud',
   ...['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt'].flatMap(k => [`bark_${k}_super`, `bark_${k}_cheer`])];
 const LOOPS = {
@@ -43,7 +43,7 @@ const PLAYLISTS = {
 const BEDS = ['amb_rain', 'amb_storm', 'amb_snow', 'amb_marsh'];
 let weatherBed = null;
 const GAIN = { shot: 0.5, hit: 0.7, hurt: 0.8, click: 0.6, victory: 0.9, defeat: 0.9, gas: 0.6,
-  shot_ray: 0.45, shot_ice: 0.5, shot_zap: 0.5, hit_confirm: 0.75, ko: 0.8, heartbeat: 0.9, sting_three: 0.7, sting_duel: 0.75 };
+  shot_ray: 0.45, shot_ice: 0.5, shot_zap: 0.5, hit_confirm: 0.75, ko: 0.8, heartbeat: 0.9, sting_three: 0.7, sting_duel: 0.75, sting_finalko: 0.8 };
 
 export function initAudio() {
   if (ctx) { ctx.resume(); return; }

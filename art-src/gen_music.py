@@ -1,7 +1,7 @@
 """Music generation with Google Lyria 3 through OpenRouter (streamed audio).
 
 Uses the genere-assets skill key (env OPENROUTER_API_KEY or its embedded key).
-Usage: python art-src/gen_music.py [name ...]   (no names = every track missing on disk)
+Usage: python art-src/gen_music.py [name ...]   (no names = every track; sting_* names = the short match stings)
 """
 import base64, json, os, sys, urllib.request, urllib.error
 from concurrent.futures import ThreadPoolExecutor
@@ -30,6 +30,35 @@ TRACKS = {  # name: (model, prompt)
     'night': ('google/lyria-3-pro-preview', 'Night-time arena battle music, mysterious and stealthy, muted plucks, soft synth pads, ticking percussion, owls-and-lanterns mood, playful tension, ' + STYLE),
     'victory': ('google/lyria-3-clip-preview', 'Short triumphant victory fanfare jingle, brass and drums, joyful, instrumental, video game win sting'),
 }
+# Match stings (v0.11): a Lyria clip, cut to its first seconds with a fade by ffmpeg, saved as a sound
+# effect (public/assets/sfx/<name>.mp3). name: (seconds kept, prompt)
+STINGS = {
+    'sting_three': (2.4, 'Very short tense musical sting, three fighters left: a snare roll into a rising brass stab and a cymbal hit, '
+                         'cartoon brawler game, instrumental, starts immediately with no intro'),
+    'sting_duel': (3.2, 'Very short dramatic final duel sting: a twangy western guitar note, a whistle and two heavy taiko hits, '
+                        'showdown tension, cartoon brawler game, instrumental, starts immediately with no intro'),
+    'sting_finalko': (3.0, 'Very short triumphant knockout sting: a big orchestral hit with a gong and a bright brass fanfare flourish, '
+                           'slow-motion climax, cartoon brawler game, instrumental, starts immediately with no intro'),
+}
+SFX_OUT = os.path.join(os.path.dirname(__file__), '..', 'public', 'assets', 'sfx')
+
+
+def sting(name):
+    import subprocess, tempfile
+    keep, prompt = STINGS[name]
+    try:
+        data, fmt = generate('google/lyria-3-clip-preview', prompt)
+        raw = os.path.join(tempfile.gettempdir(), f'{name}_raw.{"wav" if data[:4] == b"RIFF" else "mp3"}')
+        with open(raw, 'wb') as f:
+            f.write(data)
+        out = os.path.join(SFX_OUT, f'{name}.mp3')
+        # skip leading silence, keep `keep` seconds, fade the tail, mono 96 kbps, peaks at -2 dB
+        subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-i', raw, '-af',
+                        f'silenceremove=start_periods=1:start_threshold=-45dB,atrim=0:{keep},afade=t=out:st={keep - 0.6}:d=0.6,'
+                        'loudnorm=I=-16:TP=-2', '-ac', '1', '-b:a', '96k', out], check=True)
+        return f'{name}: OK {os.path.getsize(out)} bytes'
+    except Exception as e:
+        return f'{name}: FAILED {e}'
 
 
 def generate(model, prompt, timeout=600):
@@ -79,5 +108,5 @@ if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     names = sys.argv[1:] or list(TRACKS)
     with ThreadPoolExecutor(max_workers=4) as ex:
-        for res in ex.map(job, names):
+        for res in ex.map(lambda n: sting(n) if n in STINGS else job(n), names):
             print(res, flush=True)
