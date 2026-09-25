@@ -594,6 +594,37 @@ def v062():
     img.convert('RGB').save(os.path.join(OUT, 'v0.6.2-achievements.png'), optimize=True)
 
 
+def v070():
+    banner('v0.7.0', 'MADE WITH YOU', 'Crash reports, a quick "Having fun?" and smoother games.',
+           [('🐞', 'Crash reports'), ('😍', 'Having fun?'), ('📈', 'Frame rate'), ('🔒', 'Your choice')],
+           'v0.7.0-banner.png', ('volt', 'gunslinger', 'frostbite'))
+
+    # what the game now tells us, and how to turn it off
+    W, H = 1600, 760
+    img = background(W, H, glow=(0.5, 0.3))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 36), 'HELP US MAKE IT BETTER', display(58), YELLOW, anchor='ma')
+    cols = [('🐞', 'Crash reports', ['The error and where it broke', 'Version, platform, graphics chip', 'Fixed before you even report it'], None),
+            ('📊', 'Game statistics', ['Brawlers, maps, queue times', 'Frame rate during matches', 'Balance and speed on every device'], None),
+            ('😍', 'Having fun?', ['Five faces after some matches', 'An optional comment', 'At most once a month'], (255, 210, 63))]
+    cw, gap = 440, 30
+    x0 = (W - (3 * cw + 2 * gap)) // 2
+    for i, (ic, title, lines, hi) in enumerate(cols):
+        x = x0 + i * (cw + gap)
+        card(img, (x, 140, x + cw, 470), outline=hi or (110, 90, 180), radius=26)
+        d.text((x + cw // 2, 200), ic, font=emoji(64), embedded_color=True, anchor='mm')
+        d.text((x + cw // 2, 250), title, font=display(38), fill=YELLOW, anchor='ma')
+        for li, line in enumerate(lines):
+            d.text((x + cw // 2, 318 + li * 40), line, font=body(24, 'Bold'), fill=TEXT, anchor='ma')
+    by = 520
+    card(img, (x0, by, W - x0, by + 170), fill=(255, 210, 63, 255), outline=INK, radius=26)
+    d.text((x0 + 44, by + 85), '🛡️', font=emoji(64), embedded_color=True, anchor='lm')
+    d.text((x0 + 140, by + 30), 'No account · no name · no IP · no ads', font=display(40), fill=INK)
+    d.text((x0 + 142, by + 100), 'Turn each one off in Options > General. Details in the privacy policy.',
+           font=body(26, 'Bold'), fill=INK)
+    img.convert('RGB').save(os.path.join(OUT, 'v0.7.0-feedback.png'), optimize=True)
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     v020()
@@ -603,5 +634,6 @@ if __name__ == '__main__':
     v060()
     v061()
     v062()
+    v070()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')

@@ -3,6 +3,15 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.7.0](docs/releases/v0.7.0.md): Made with you
+
+<a href="docs/releases/v0.7.0.md"><img src="docs/releases/img/v0.7.0-banner.png" alt="v0.7.0: made with you" width="100%"></a>
+
+- 🐞 Crash reports from the game and the online server, linked to in-game bug reports.
+- 📊 Anonymous game statistics: brawlers, maps, queue times, frame rate per device.
+- 😍 A quick "Having fun?" on the result screen, at most once a month.
+- 🔒 Both switchable in Options > General; privacy policy updated.
+
 ## [v0.6.2](docs/releases/v0.6.2.md): 15 achievements
 
 <a href="docs/releases/v0.6.2.md"><img src="docs/releases/img/v0.6.2-banner.png" alt="v0.6.2: 15 achievements" width="100%"></a>
