@@ -884,6 +884,45 @@ def v0101():
     img.convert('RGB').save(os.path.join(OUT, 'v0.10.1-damage.png'), optimize=True)
 
 
+def v0110():
+    banner('v0.11.0', 'IMPACT', 'Every hit lands. You feel it.',
+           [('💥', 'Hit freeze'), ('🎥', 'Living camera'), ('🔊', '24 new sounds'), ('⏱️', '1-min queue')],
+           'v0.11.0-banner.png', ('bomber', 'blaster', 'gunslinger'))
+
+    def grid(title, feats, name, cols=3):
+        rows = (len(feats) + cols - 1) // cols
+        cw, chh, gx, gy = 470, 300, 30, 30
+        W, H = 1600, 150 + rows * chh + (rows - 1) * gy + 60
+        img = background(W, H, glow=(0.5, 0.3))
+        d = ImageDraw.Draw(img)
+        outlined(d, (W // 2, 30), title, display(56), YELLOW, anchor='ma')
+        x0 = (W - (cols * cw + (cols - 1) * gx)) // 2
+        for i, (icon, head, lines) in enumerate(feats):
+            x, y = x0 + (i % cols) * (cw + gx), 140 + (i // cols) * (chh + gy)
+            card(img, (x, y, x + cw, y + chh), outline=(150, 120, 230), radius=26)
+            d.text((x + cw // 2, y + 22), icon, font=emoji(58), embedded_color=True, anchor='ma')
+            d.text((x + cw // 2, y + 108), head, font=display(34), fill=YELLOW, anchor='ma')
+            for li, line in enumerate(lines):
+                d.text((x + cw // 2, y + 164 + li * 36), line, font=body(23, 'Bold'), fill=TEXT, anchor='ma')
+        img.convert('RGB').save(os.path.join(OUT, name), optimize=True)
+
+    # src/feel.js (per-weapon freeze 20-120 ms, trauma camera), hud.js, figurines.js
+    grid('EVERY HIT LANDS', [
+        ('🥊', 'Hit freeze', ['each weapon freezes the victim', '20 to 120 ms, then a jelly squash', 'one counting damage number']),
+        ('🎥', 'Living camera', ['smooth shake, looks where you aim', 'zooms out for the final duel', 'punches in on your KOs']),
+        ('💀', 'KO beat', ['K.O. stamp, bodies fly off', 'kill feed, 3 LEFT, FINAL DUEL', 'final KO in slow motion']),
+        ('❤️', 'Big health bar', ['bottom centre, with your ammo', 'heartbeat and red edges', 'under 30% health']),
+        ('👀', 'Readable chaos', ['blue outline for you, red for them', 'colour-blind option', 'bigger weapons, eye expressions']),
+        ('🧊', 'Fairer fights', ['1.5 s immune after a freeze', 'bots fill the queue after 1 min', 'hide and seek stays intact']),
+    ], 'v0.11.0-impact.png')
+    grid('HEAR EVERY HIT', [
+        ('🔫', 'Own weapon sounds', ['ray pew, ice shards, electric zap', 'a hit sound that rises', 'with every hit you chain']),
+        ('📣', 'Brawler voices', ['a battle cry on every super', 'a cheer after each KO', 'gibberish, in every language']),
+        ('🥾', 'Footsteps', ['sand, grass, snow and mud', 'yours, and the brawlers', 'you can see close by']),
+        ('🎺', 'Match stings', ['3 LEFT, FINAL DUEL, final KO', 'the music ducks on your super', 'and goes muffled at low health']),
+    ], 'v0.11.0-sound.png', cols=2)
+
+
 if __name__ == '__main__':
     import sys
     os.makedirs(OUT, exist_ok=True)
@@ -902,5 +941,6 @@ if __name__ == '__main__':
     v090()
     v0100()
     v0101()
+    v0110()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')

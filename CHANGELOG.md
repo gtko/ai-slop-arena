@@ -3,6 +3,15 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.11.0](docs/releases/v0.11.0.md): Impact
+
+<a href="docs/releases/v0.11.0.md"><img src="docs/releases/img/v0.11.0-banner.png" alt="v0.11.0: impact" width="100%"></a>
+
+- 💥 Hit freeze, jelly squash, a living camera, K.O. stamps, kill feed and a slow-motion finale.
+- 🔊 24 new sounds: own weapon sounds, voices, footsteps, match stings.
+- ❤️ Big health bar, team outline colours, a colour-blind option, eyes that react.
+- ⏱️ Online matches start within a minute; 1.5 s of immunity after a freeze.
+
 ## [v0.10.1](docs/releases/v0.10.1.md): Fair hits
 
 <a href="docs/releases/v0.10.1.md"><img src="docs/releases/img/v0.10.1-banner.png" alt="v0.10.1: fair hits" width="100%"></a>
