@@ -1,11 +1,14 @@
 # Google Play listing
 
-Package `ch.gtko.aisloparena`. Build the upload bundle with `npm run android:aab`
+Package `com.aislop.arena` (Play, permanent). Console: developer 4735682826873956606, app 4973855167888523454.
+Build the upload bundle with `npm run android:aab`
 (`android/app/build/outputs/bundle/release/app-release.aab`, signed with the upload key in
 `~/.android-keys/`, versionCode = major*10000 + minor*100 + patch from package.json).
 
 Graphics in this folder: `icon-512.png`, `feature-graphic.png` (1024x500), phone screenshots
 (2608x1304: a landscape touch phone emulated in Electron by `art-src/gp_screenshots.cjs`, French UI).
+Play wants 16:9 screenshots: pad them to 2608x1467 with dark bars before uploading (phone, 7" and
+10" tablet slots all use the same seven, menu first).
 
 Privacy policy: https://ai-slop-arena.gtux-prog.workers.dev/privacy.html (`public/privacy.html`).
 Contact: gtux.prog@gmail.com. Category: Game > Action. Free, no ads, no in-app purchases.
@@ -43,12 +46,14 @@ FIVE ARENAS, FIVE WEATHERS
 • Frost Peak: snowfall and slippery ice.
 • Misty Marsh: fog that shrinks your vision to a few meters.
 Every match also rolls a time of day: morning, noon, sunset or night, with real-time lights and shadows.
+Walls, trees and crates block the view: you only see what your brawler sees.
 
 PLAY YOUR WAY
 • Solo against bots, even offline.
 • Online matchmaking with a rank ladder, or a private room with a code to play with friends.
 • Empty slots are filled with bots that adapt to your level.
 • Touch controls made for phones: floating joystick, tap to shoot the nearest enemy, drag to aim, and a charged Super.
+• 15 Google Play Games achievements.
 • Also works with a gamepad.
 
 FAIR AND CLEAN
@@ -90,12 +95,14 @@ CINQ ARÈNES, CINQ MÉTÉOS
 • Pic gelé : chutes de neige et glace glissante.
 • Marais brumeux : un brouillard qui réduit votre vision à quelques mètres.
 Chaque partie tire aussi un moment de la journée : matin, midi, coucher de soleil ou nuit, avec lumières et ombres en temps réel.
+Murs, arbres et caisses bloquent la vue : vous ne voyez que ce que voit votre brawler.
 
 JOUEZ COMME VOUS VOULEZ
 • En solo contre des bots, même hors connexion.
 • En ligne avec le matchmaking et un classement, ou dans un salon privé avec un code pour jouer entre amis.
 • Les places libres sont complétées par des bots qui s'adaptent à votre niveau.
 • Des commandes tactiles pensées pour le téléphone : joystick flottant, un appui pour tirer sur l'ennemi le plus proche, glisser pour viser, et un Super à charger.
+• 15 succès Google Play Jeux.
 • Compatible manette.
 
 SANS PIÈGE
