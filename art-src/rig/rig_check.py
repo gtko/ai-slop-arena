@@ -410,3 +410,67 @@ def sway_sheet(d, rig, body, marks, out):
     me.color_attributes.remove(attr)
     sc.display.shading.color_type = 'TEXTURE'
     return png
+
+
+def eye_sheet(d, rig, body, marks, out):
+    """Close-ups of the face: textured (eyes open), the eyes closed (lid colour over every eye vertex
+    above half height, texture elsewhere, by vertex colour), and the eye map (red bottom, yellow top)."""
+    os.makedirs(out, exist_ok=True)
+    key = d['key']
+    me = body.data
+    sph = marks['eyes'].get('spheres', [])
+    sc = bpy.context.scene
+    sc.render.engine = 'BLENDER_WORKBENCH'
+    sc.display.shading.light = 'STUDIO'
+    sc.render.resolution_x = sc.render.resolution_y = 520
+    if not sc.world:
+        sc.world = bpy.data.worlds.new('w')
+    sc.world.color = (0.42, 0.44, 0.5)
+    sc.display.shading.background_type = 'WORLD'
+    rig.hide_render = True
+    if sph:
+        c = sum((Vector(e['sphere']) for e in sph), Vector()) / len(sph)
+        span = max(abs(Vector(e['sphere']).x - c.x) + e['radius'] for e in sph) * 2.6 + 0.2
+    else:
+        c, span = marks['joints']['Head'] + Vector((0, -0.3, 0.35)), 1.2
+    tmp = os.path.join(out, f'_{key}_eyes')
+    os.makedirs(tmp, exist_ok=True)
+    files = []
+    _camera(True, (c.x, -6, c.z), (c.x, 0, c.z), scale=span)
+    sc.display.shading.color_type = 'TEXTURE'
+    files.append(os.path.join(tmp, 'open.png'))
+    _render(files[-1])
+    ev = me.attributes['_eye'].data if '_eye' in me.attributes else None
+    lid = list(me.get('lid', [0.8, 0.6, 0.5]))
+    img = next(n.image for n in me.materials[0].node_tree.nodes if n.type == 'TEX_IMAGE')
+    px = list(img.pixels)
+    w, h = img.size
+    uvs = me.uv_layers.active.data
+    tex = [None] * len(me.vertices)
+    for li, loop in enumerate(me.loops):
+        if tex[loop.vertex_index] is None:
+            u, v = uvs[li].uv
+            o = (min(h - 1, max(0, int(v * h))) * w + min(w - 1, max(0, int(u * w)))) * 4
+            tex[loop.vertex_index] = px[o:o + 3]
+    closed = me.color_attributes.new('closed', 'FLOAT_COLOR', 'POINT')
+    emap = me.color_attributes.new('emap', 'FLOAT_COLOR', 'POINT')
+    lin = [x ** 2.2 for x in lid]
+    for i in range(len(me.vertices)):
+        e = ev[i].value if ev else 0.0
+        t = [x ** 2.2 for x in (tex[i] or (0.5, 0.5, 0.5))]  # vertex colours are linear
+        closed.data[i].color = (*(lin if e > 0.08 else t), 1)
+        emap.data[i].color = ((1, 0.2 + 0.8 * e, 0.1, 1) if e > 0 else (*t, 1))
+    sc.display.shading.color_type = 'VERTEX'
+    for name, attr in (('closed', closed), ('map', emap)):
+        me.color_attributes.active_color = attr
+        files.append(os.path.join(tmp, name + '.png'))
+        _render(files[-1])
+    me.color_attributes.remove(closed)
+    me.color_attributes.remove(emap)
+    sc.display.shading.color_type = 'TEXTURE'
+    png = os.path.join(out, f'{key}_eyes.png')
+    ins = []
+    for f in files:
+        ins += ['-i', f]
+    subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', *ins, '-filter_complex', 'hstack=3', png], check=True)
+    return png

@@ -68,7 +68,11 @@ function prepare(key, gltf, aniso) {
   // soft parts painted by the rig pipeline (landmarks "sway"): leaves, gills, flames, capes, hair
   const soft = mesh.geometry.getAttribute('_sway');
   if (soft) mesh.geometry.setAttribute('aSway', soft);
-  return { scene, clips: gltf.animations, map, gain: textureGain(map), flames, sway: !!soft, name: mesh.name };
+  // painted eyes (landmarks "eyes"): height inside each eye, and the eyelid colour (glTF extras)
+  const eye = mesh.geometry.getAttribute('_eye'), lidRGB = mesh.userData.lid || mesh.geometry.userData?.lid;
+  if (eye) mesh.geometry.setAttribute('aEye', eye);
+  const lid = eye && lidRGB ? new THREE.Color().setRGB(lidRGB[0], lidRGB[1], lidRGB[2], THREE.SRGBColorSpace) : null;
+  return { scene, clips: gltf.animations, map, gain: textureGain(map), flames, sway: !!soft, lid, name: mesh.name };
 }
 
 // Flame hair: aFlame = (weight, 0 at the flame base -> 1 at the tips) on the head vertices, which
@@ -206,7 +210,22 @@ function textureGain(map) {
 // Painted-vinyl look: the texture carries the colours, a thin clear coat adds the figurine gloss.
 // Exposure gain + a little self-lighting keep dark outfits readable from the high game camera and
 // inside wall shadows. `emissive` stays free for the hit flash and frost tint in brawler.js.
-function figurineMaterial(map, gain, flames = false, sway = null) {
+// Blinks: the eyes are painted, so a lid of skin colour slides down over them (aEye: 0 at the bottom
+// of an eye .. 1 at its top), with a darker lash line along its edge. uBlink: 0 open .. 1 shut.
+const EYE_PARS_V = `
+attribute float aEye;
+varying float vEye;`;
+const EYE_PARS_F = `
+varying float vEye;
+uniform float uBlink;
+uniform vec3 uLid;`;
+const EYE_FRAG = /* glsl */`
+if ( vEye > 0.0 && uBlink > 0.0 ) {
+  float lidEdge = 1.0 - uBlink * 1.08;
+  if ( vEye > lidEdge ) diffuseColor.rgb = uLid * ( vEye < lidEdge + 0.07 ? 0.45 : 1.0 );
+}`;
+
+function figurineMaterial(map, gain, flames = false, sway = null, eyes = null) {
   const rim = charMat(0xffffff);
   const m = new THREE.MeshPhysicalMaterial({ map, roughness: 0.6, metalness: 0, clearcoat: 0.3, clearcoatRoughness: 0.45 });
   const uGain = { value: gain };
@@ -214,6 +233,15 @@ function figurineMaterial(map, gain, flames = false, sway = null) {
     rim.onBeforeCompile(sh, r);
     sh.uniforms.uGain = uGain;
     if (sway) swayPatch(sh, sway);
+    if (eyes) {
+      Object.assign(sh.uniforms, eyes);
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', `#include <common>${EYE_PARS_V}`)
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvEye = aEye;');
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', `#include <common>${EYE_PARS_F}`)
+        .replace('#include <map_fragment>', `#include <map_fragment>${EYE_FRAG}`);
+    }
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nuniform float uGain;')
       .replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb = min( diffuseColor.rgb * uGain, vec3( 0.95 ) );')
@@ -226,7 +254,7 @@ function figurineMaterial(map, gain, flames = false, sway = null) {
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
 totalEmissiveRadiance += diffuseColor.rgb * vFlame * ( 0.7 + 0.25 * sin( uTime * 17.0 + vViewPosition.y * 9.0 ) + 0.15 * sin( uTime * 29.0 ) );`);
   };
-  m.customProgramCacheKey = () => `figurine${flames ? '-flame' : ''}${sway ? '-sway' : ''}`;
+  m.customProgramCacheKey = () => `figurine${flames ? '-flame' : ''}${sway ? '-sway' : ''}${eyes ? '-eyes' : ''}`;
   rim.dispose();
   return m;
 }
@@ -243,7 +271,8 @@ export function buildFigurine(key) {
   rig.traverse(o => { if (o.isSkinnedMesh && !mesh) mesh = o; });
   // per brawler: its own lean of the soft parts
   const sway = T.sway ? { uSwayPush: { value: new THREE.Vector3() }, uSwayWind: shared.wind, uSwayTime: shared.time } : null;
-  const mat = figurineMaterial(T.map, T.gain, T.flames, sway); // own material: hit flash and frost tint are per brawler
+  const eyes = T.lid ? { uBlink: { value: 0 }, uLid: { value: T.lid } } : null;
+  const mat = figurineMaterial(T.map, T.gain, T.flames, sway, eyes); // own material: hit flash and frost tint are per brawler
   mesh.material = mat;
   mesh.castShadow = mesh.receiveShadow = true;
   mesh.frustumCulled = false; // bounds move with the pose
@@ -268,5 +297,5 @@ export function buildFigurine(key) {
   }
   const anim = new Animator(rig, T.clips);
   return { figurine: true, root, body, rig, mesh, skeleton: mesh.skeleton, anim, weapon: RIGS[key]?.weapon, style: RIGS[key]?.style, mats: [mat],
-    sway: sway && sway.uSwayPush.value, disposables: lineMat === outlineMaterial(0.02) ? [] : [lineMat] };
+    sway: sway && sway.uSwayPush.value, blink: eyes && eyes.uBlink, disposables: lineMat === outlineMaterial(0.02) ? [] : [lineMat] };
 }

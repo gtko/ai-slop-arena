@@ -100,6 +100,7 @@ export class Brawler {
     this.isPlayer = isPlayer;
     this.model = hasFigurine(typeKey) ? buildFigurine(typeKey) : buildSculpted(this.type);
     this.blinkT = 1 + Math.random() * 3;
+    this.blinkAge = 9;
     this.root = new THREE.Group();
     this.root.add(this.model.root);
     game.scene.add(this.root);
@@ -282,6 +283,22 @@ export class Brawler {
     if (this.inPoison && !aiming && this.coughT <= 0) { A.fire('Cough'); this.coughT = 2 + Math.random() * 1.5; }
     A.update(dt);
     this.updateSway(dt, speedFrac);
+    this.updateBlink(dt);
+  }
+
+  // Blinks every 2-5.5 s (sometimes twice in a row); eyes stay shut while knocked out (die()).
+  updateBlink(dt) {
+    const u = this.model.blink;
+    if (!u) return;
+    this.blinkT -= dt;
+    this.blinkAge += dt;
+    if (this.blinkT < 0) {
+      this.blinkAge = 0;
+      this.blinkTwice = Math.random() < 0.2;
+      this.blinkT = 2 + Math.random() * 3.5;
+    }
+    const one = a => (a >= 0 && a < 0.16 ? Math.sin(Math.PI * a / 0.16) : 0);
+    u.value = Math.max(one(this.blinkAge), this.blinkTwice ? one(this.blinkAge - 0.24) : 0);
   }
 
   // Soft parts (leaves, gills, flames, capes, hair, antennas; figurines.js): they lean with the
@@ -334,6 +351,7 @@ export class Brawler {
     this.flash = 0;
     this.model.root.scale.setScalar(1);
     for (const mat of this.model.mats) if (!mat.userData.glow) mat.emissive.setRGB(0, 0, 0);
+    if (this.model.blink) this.model.blink.value = 1; // eyes shut
     if (A && A.has('Death') && this.visibleToPlayer) {
       A.mixer.timeScale = 1;
       A.once('Death', { hold: true, fade: 0.08 });

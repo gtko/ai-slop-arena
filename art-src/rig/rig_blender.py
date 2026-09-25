@@ -147,7 +147,7 @@ def default_marks(d):
             side + 'ToeEnd': toe + Vector((0, -0.04 * H, 0)),
         })
     return {'joints': j, 'bands': dict(BANDS), 'head_tilt': 20.0, 'smooth': 2, 'cloth': True,
-            'weapon_radius': 0.07, 'regions': [], 'weapons': {}, 'poses': {}, 'sway': []}
+            'weapon_radius': 0.07, 'regions': [], 'weapons': {}, 'poses': {}, 'sway': [], 'eyes': {}}
 
 
 def load_marks(d):
@@ -175,6 +175,10 @@ def load_marks(d):
                     amp * smoothstep((p . axis - from) / length), or by its distance from root:
                     0 where it's attached, 1 at the tips. The game's shader moves them with the
                     wind and the brawler's motion (src/figurines.js); also the "Sway" vertex group.
+      eyes          {"spheres": [{"sphere": [x, y, z], "radius": r}, ...], "lid": [r, g, b] (optional)}:
+                    the painted eyes, one sphere each, covering the eye (and a little skin around).
+                    For the blink, "_eye" = height inside the sphere (0 outside); the lid colour is
+                    sampled from the texture just above each eye unless given.
     The resolved set is written to work/<key>_landmarks.json (a starting point to copy)."""
     m = default_marks(d)
     path = os.path.join(MARKS, d['key'] + '.json')
@@ -190,7 +194,7 @@ def load_marks(d):
             else:
                 m['joints'][name] = Vector(v)
         m['bands'].update(over.get('bands', {}))
-        for k in ('head_tilt', 'smooth', 'cloth', 'weapon_radius', 'regions', 'weapons', 'poses', 'sway'):
+        for k in ('head_tilt', 'smooth', 'cloth', 'weapon_radius', 'regions', 'weapons', 'poses', 'sway', 'eyes'):
             if k in over:
                 m[k] = over[k]
     out = {**m, 'joints': {k: [round(c, 4) for c in v] for k, v in m['joints'].items()}}
@@ -507,6 +511,52 @@ def sway_group(body):
             vg.add([i], a.value, 'REPLACE')
 
 
+def _texel(img, px, uv):
+    """Linear RGB of a texture at a UV (nearest texel)."""
+    w, h = img.size
+    x = min(w - 1, max(0, int(uv[0] * w)))
+    y = min(h - 1, max(0, int(uv[1] * h)))
+    o = (y * w + x) * 4
+    return px[o:o + 3]
+
+
+def eyes(body, m):
+    """Blink support: "_eye" (0 outside the eyes, else 0.001 .. 1 from the bottom to the top of each
+    eye sphere) and the eyelid colour as the mesh's "lid" property (glTF extras)."""
+    spec = m['eyes']
+    spheres = spec.get('spheres', [])
+    if not spheres:
+        return 0
+    me = body.data
+    val = [0.0] * len(me.vertices)
+    for e in spheres:
+        c, r = Vector(e['sphere']), e['radius']
+        for v in me.vertices:
+            if (v.co - c).length <= r:
+                val[v.index] = max(val[v.index], 0.001 + 0.999 * min(1.0, max(0.0, (v.co.z - (c.z - r)) / (2 * r))))
+    attr = me.attributes.new('_eye', 'FLOAT', 'POINT')
+    attr.data.foreach_set('value', val)
+    lid = spec.get('lid')
+    if lid is None:  # the skin just above each eye, from the texture
+        img = next(n.image for n in me.materials[0].node_tree.nodes if n.type == 'TEX_IMAGE')
+        px = list(img.pixels)
+        uvs = me.uv_layers.active.data
+        acc, n = [0.0, 0.0, 0.0], 0
+        for poly in me.polygons:
+            for li in poly.loop_indices:
+                co = me.vertices[me.loops[li].vertex_index].co
+                for e in spheres:
+                    c, r = Vector(e['sphere']), e['radius']
+                    d = (co - c).length
+                    if r * 1.05 < d < r * 1.5 and co.z > c.z + r * 0.4:
+                        t = _texel(img, px, uvs[li].uv)
+                        acc = [acc[k] + t[k] for k in range(3)]
+                        n += 1
+        lid = [a / max(n, 1) for a in acc] if n else [0.8, 0.6, 0.5]  # sRGB, as stored in the texture
+    body.data['lid'] = [round(c, 3) for c in lid]
+    return sum(1 for x in val if x > 0)
+
+
 def measure(body, weapons):
     """Rest-pose volumes the clips keep the arms out of: the head (box), the torso (box), the legs'
     thickness, and surface samples of each arm piece (upper arm with its pad, forearm, fist) and
@@ -592,6 +642,7 @@ def build(key):
     weapons = split_weapons(d, body, rig, marks, wside)
     body.parent = rig  # (before measure: it reads the bones)
     print(key, 'soft vertices:', sway(body, marks))
+    print(key, 'eye vertices:', eyes(body, marks), 'lid', body.data.get('lid') and list(body.data['lid']))
     mod = body.modifiers.new('Armature', 'ARMATURE')
     mod.object = rig
     d['measure'] = measure(body, weapons)
@@ -613,7 +664,7 @@ def export(key, rig, body, weapons):
         export_yup=True, export_skins=True, export_animations=True, export_animation_mode='ACTIONS',
         export_force_sampling=True, export_optimize_animation_size=True, export_def_bones=False,
         export_image_format='AUTO', export_normals=True, export_apply=False, export_reset_pose_bones=True,
-        export_attributes=True)  # _sway
+        export_attributes=True, export_extras=True)  # _sway, _eye; the lid colour
     sway_group(body)
     bpy.ops.export_scene.fbx(
         filepath=os.path.join(RIGGED, key + '.fbx'), use_selection=True, object_types={'ARMATURE', 'MESH'},
@@ -631,6 +682,9 @@ def main():
     for key in keys:
         d, rig, body, marks, weapons = build(key)
         print(key, 'weapons:', ', '.join(f'{w.name} ({len(w.data.polygons)} faces)' for w in weapons) or 'none')
+        if '--eyes' in argv:  # the eyes and the closed lid: work/check/<key>_eyes.png
+            import rig_check
+            print(key, 'eye sheet:', rig_check.eye_sheet(d, rig, body, marks, os.path.join(WORK, 'check')))
         if '--sway' in argv:  # the soft parts, coloured: work/check/<key>_sway.png
             import rig_check
             print(key, 'sway sheet:', rig_check.sway_sheet(d, rig, body, marks, os.path.join(WORK, 'check')))

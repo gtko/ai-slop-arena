@@ -92,3 +92,7 @@ changes (it moves the automatic cut), rerun `export_rig.mjs <key>` first.
   `Brawler.updateSway`). `--sway --quick` renders `work/check/<key>_sway.png` (weights in colour).
 - `--collide` lists, per clip, the faces of arms / hands / weapons that go through the head, torso or
   legs, and renders the worst frames (`work/collide/`); `--preview` tiles four frames of every clip.
+- `eyes` in the landmarks: one sphere per painted eye. It ships as `_eye` (height inside the eye) and
+  the eyelid colour as a mesh extra (`lid`, sampled from the skin above the eyes unless given); the
+  game slides a lid over the eyes to blink (`Brawler.updateBlink`) and keeps them shut when knocked
+  out. `--eyes --quick` renders `work/check/<key>_eyes.png` (open, closed, eye map).
