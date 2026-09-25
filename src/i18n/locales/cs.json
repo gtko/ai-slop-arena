@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> pohyb · <b>Myš</b> míření · <b>Drž LTM</b> útok · <b>PTM / Mezerník</b> super · <b>T</b> denní doba · <b>Esc</b> pauza · <b>M</b> ztlumit · 🎮 podporován",
   "hud.you": "TY",
   "hud.power": "+SÍLA",
+  "hud.bounty": "ODMĚNA!",
   "hud.immune": "IMUNNÍ",
   "hud.ko": "K.O.",
   "hud.threeLeft": "ZBÝVAJÍ 3",

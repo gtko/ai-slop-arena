@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> hareket · <b>Fare</b> nişan · <b>Sol tık basılı</b> saldırı · <b>Sağ tık / Boşluk</b> süper · <b>T</b> günün saati · <b>Esc</b> duraklat · <b>M</b> sessiz · 🎮 desteklenir",
   "hud.you": "SEN",
   "hud.power": "+GÜÇ",
+  "hud.bounty": "ÖDÜL!",
   "hud.immune": "BAĞIŞIK",
   "hud.ko": "NAKAVT",
   "hud.threeLeft": "3 KİŞİ KALDI",

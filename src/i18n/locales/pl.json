@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> ruch · <b>Mysz</b> celowanie · <b>Przytrzymaj LPM</b> atak · <b>PPM / Spacja</b> super · <b>T</b> pora dnia · <b>Esc</b> pauza · <b>M</b> wycisz · 🎮 obsługiwany",
   "hud.you": "TY",
   "hud.power": "+MOC",
+  "hud.bounty": "NAGRODA!",
   "hud.immune": "ODPORNY",
   "hud.ko": "K.O.",
   "hud.threeLeft": "ZOSTAŁO 3",

@@ -28,6 +28,7 @@ export default {
   'hud.keys': '<b>WASD</b> move · <b>Mouse</b> aim · <b>Hold LMB</b> attack · <b>RMB / Space</b> super · <b>T</b> time of day · <b>Esc</b> pause · <b>M</b> mute · 🎮 supported',
   'hud.you': 'YOU',
   'hud.power': '+POWER',
+  'hud.bounty': "BOUNTY!",
   'hud.immune': "IMMUNE",
   'hud.ko': "K.O.",
   'hud.threeLeft': "3 LEFT",

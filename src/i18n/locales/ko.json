@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> 이동 · <b>마우스</b> 조준 · <b>좌클릭 유지</b> 공격 · <b>우클릭 / 스페이스</b> 궁극기 · <b>T</b> 시간대 · <b>Esc</b> 일시정지 · <b>M</b> 음소거 · 🎮 지원",
   "hud.you": "나",
   "hud.power": "+파워",
+  "hud.bounty": "현상금!",
   "hud.immune": "면역",
   "hud.ko": "K.O.",
   "hud.threeLeft": "3명 남음",

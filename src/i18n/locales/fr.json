@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> déplacement · <b>Souris</b> visée · <b>Clic gauche maintenu</b> attaque · <b>Clic droit / Espace</b> super · <b>T</b> moment de la journée · <b>Esc</b> pause · <b>M</b> muet · 🎮 compatible",
   "hud.you": "TOI",
   "hud.power": "+PUISSANCE",
+  "hud.bounty": "PRIME !",
   "hud.immune": "IMMUNISÉ",
   "hud.ko": "K.O.",
   "hud.threeLeft": "3 RESTANTS",

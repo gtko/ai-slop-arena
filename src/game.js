@@ -41,6 +41,22 @@ const r2 = v => Math.round(v * 100) / 100;
 // for 7-11 s, see ai.js), so nobody gets jumped at spawn. Crates still break.
 export const SPAWN_SHIELD = 5;
 
+// A small gold crown (bounty crown): a band and five points.
+function crownMesh(parent) {
+  const g = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ color: 0xffc933, metalness: 0.8, roughness: 0.3, emissive: 0x6b4a00, emissiveIntensity: 0.6 });
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.38, 0.22, 16, 1, true), mat);
+  band.material.side = THREE.DoubleSide;
+  g.add(band);
+  for (let k = 0; k < 5; k++) {
+    const a = k / 5 * Math.PI * 2, p = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.28, 6), mat);
+    p.position.set(Math.cos(a) * 0.4, 0.24, Math.sin(a) * 0.4);
+    g.add(p);
+  }
+  g.visible = false;
+  parent.add(g);
+  return g;
+}
+
 export class Game {
   constructor({ scene, camera, lighting, lights, hud, input }) {
     Object.assign(this, { scene, camera, lighting, lights, hud, input });
@@ -293,7 +309,9 @@ export class Game {
   kill(b, killer, bySuper = false) {
     if (!b.alive) return;
     b.rank = this.brawlers.filter(o => o.alive && o !== b).length + 1;
-    const n = Math.max(1, b.cubes), x = b.pos.x, z = b.pos.z;
+    const bounty = b === this.crown && killer && killer !== b; // knocking out the crown pays 2 extra cubes
+    const n = Math.max(1, b.cubes) + (bounty ? 2 : 0), x = b.pos.x, z = b.pos.z;
+    if (bounty && killer === this.player) this.hud.floater(this.camera, x, 3.4, z, t('hud.bounty'), 'power');
     this.killFx(b, killer, bySuper);
     if (!this.authority) return;
     for (let k = 0; k < n; k++) this.dropCube(x, z, k, n);
@@ -402,8 +420,8 @@ export class Game {
   pickItem(it, b) {
     b.cubes++;
     b.refreshDmg();
-    b.maxHp += 400;
-    b.hp += 400;
+    b.maxHp += 300; // v0.12: +300 (was +400), the cube leader snowballs less
+    b.hp += 300;
     this.fx.remove(it.mesh);
     this.items.splice(this.items.indexOf(it), 1);
     this.effects.sparkBurst(it.x, 1, it.z, GREEN, 14, 5, 0.5);
@@ -413,6 +431,21 @@ export class Game {
       this.hud.floater(this.camera, b.pos.x, 3.4, b.pos.z, t('hud.power'), 'power');
       if (this.onFeat) this.onFeat('cubes', b.cubes);
     }
+  }
+
+  // Bounty crown: whoever carries the most power cubes (5 or more, no tie) wears it. Knocking them
+  // out drops 2 extra cubes. It only shows when you can see its wearer: no reveal through walls.
+  updateCrown(t) {
+    let best = null, n = 4, tie = false;
+    for (const b of this.brawlers) {
+      if (!b.alive) continue;
+      if (b.cubes > n) { best = b; n = b.cubes; tie = false; } else if (b.cubes === n && best) tie = true;
+    }
+    this.crown = tie ? null : best;
+    if (!this.crownMesh) this.crownMesh = crownMesh(this.fx);
+    const c = this.crownMesh, W = this.crown;
+    c.visible = !!W && this.fxVisible(W) && W.root.visible;
+    if (c.visible) { c.position.set(W.pos.x, W.pos.y + 3.55 + Math.sin(t * 3) * 0.06, W.pos.z); c.rotation.y = t * 1.4; }
   }
 
   /* ------------------------------ network ------------------------------ */
@@ -624,6 +657,7 @@ export class Game {
     this.poison.update(dt, t);
     if (this.authority) this.poisonDamage(dt);
     this.updateItems(dt, t);
+    this.updateCrown(t);
     this.updateVisibility();
     this.updateFoliage(dt);
     if (P && P.alive) this.updateAim();

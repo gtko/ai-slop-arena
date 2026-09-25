@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> gerak · <b>Mouse</b> bidik · <b>Tahan klik kiri</b> serang · <b>Klik kanan / Space</b> super · <b>T</b> waktu · <b>Esc</b> jeda · <b>M</b> bisu · 🎮 didukung",
   "hud.you": "KAMU",
   "hud.power": "+POWER",
+  "hud.bounty": "HADIAH!",
   "hud.immune": "KEBAL",
   "hud.ko": "K.O.",
   "hud.threeLeft": "SISA 3",

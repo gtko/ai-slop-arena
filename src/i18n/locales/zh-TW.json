@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> 移動 · <b>滑鼠</b> 瞄準 · <b>按住左鍵</b> 攻擊 · <b>右鍵 / 空白鍵</b> 超級技能 · <b>T</b> 時段 · <b>Esc</b> 暫停 · <b>M</b> 靜音 · 🎮 支援手把",
   "hud.you": "你",
   "hud.power": "+能量",
+  "hud.bounty": "懸賞！",
   "hud.immune": "免疫",
   "hud.ko": "擊倒",
   "hud.threeLeft": "剩下 3 人",

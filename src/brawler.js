@@ -359,7 +359,8 @@ export class Brawler {
       this.squash += this.squashV * h;
     }
     const sq = this.squash;
-    m.root.scale.set(pop * (1 + 0.1 * sq), this.spawnT * pop * (1 - 0.14 * sq), pop * (1 + 0.1 * sq));
+    const grow = 1 + Math.min(0.15, this.cubes * 0.015); // power cubes make you visibly bigger (the hitbox stays)
+    m.root.scale.set(grow * pop * (1 + 0.1 * sq), grow * this.spawnT * pop * (1 - 0.14 * sq), grow * pop * (1 + 0.1 * sq));
     this.hitstopT -= dt;
 
     if (this.flash > 0) {

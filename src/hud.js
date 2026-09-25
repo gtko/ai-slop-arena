@@ -89,7 +89,8 @@ export class Hud {
         o.lastHp = hp;
       }
       o.lag.style.width = (o.lagV * 100).toFixed(1) + '%';
-      if (b.cubes !== o.lastCubes) { o.cubes.textContent = b.cubes ? ` ◆${b.cubes}` : ''; o.lastCubes = b.cubes; }
+      const crown = b === game.crown;
+      if (b.cubes !== o.lastCubes || crown !== o.crown) { o.cubes.textContent = (b.cubes ? ` ◆${b.cubes}` : '') + (crown ? ' 👑' : ''); o.lastCubes = b.cubes; o.crown = crown; }
       for (let k = 0; k < o.ammo.length; k++) {
         o.ammo[k].style.width = (Math.min(1, Math.max(0, b.ammo - k)) * 100).toFixed(0) + '%';
       }

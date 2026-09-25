@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> muoviti · <b>Mouse</b> mira · <b>Tieni premuto SX</b> attacca · <b>DX / Spazio</b> super · <b>T</b> ora del giorno · <b>Esc</b> pausa · <b>M</b> muto · 🎮 supportato",
   "hud.you": "TU",
   "hud.power": "+POTENZA",
+  "hud.bounty": "TAGLIA!",
   "hud.immune": "IMMUNE",
   "hud.ko": "K.O.",
   "hud.threeLeft": "NE RESTANO 3",
