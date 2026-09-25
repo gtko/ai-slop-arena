@@ -24,9 +24,9 @@ Sekiz savaşçı arenaya iner. Uzun otlara saklan, seni güçlendiren güç küp
 
 [h2]Beş savaşçı, beş dövüş tarzı[/h2]
 [list]
-[*][b]Blaster[/b]: yakın mesafede beş saçmalı geniş bir pompalı atış. Süper: düşmanları geri savuran ve duvarları yıkan bir patlama.
-[*][b]Gunslinger[/b]: uzun menzilli altı mermilik seri atış. Süper: duvarları delip geçen on iki mermilik bir yaylım.
-[*][b]Bomber[/b]: siperlerin üzerinden bomba fırlatır. Süper: çevresindeki her şeyi yerle bir eden dev bir varil.
+[*][b]Blaster[/b]: kütük tromblonuyla yakın mesafeye beş dikenli tohum saçan bir kütük golem. Süper: düşmanları geri savuran ve duvarları yıkan bir patlama.
+[*][b]Gunslinger[/b]: ikiz ışın tabancalarıyla uzun menzilli altı ışınlık seri atış yapan bir aksolotl yıldız korucusu. Süper: duvarları delip geçen on iki ışınlık bir yaylım.
+[*][b]Bomber[/b]: siperlerin üzerinden ateş topu fırlatan bir magma iblisi. Süper: çevresindeki her şeyi yerle bir eden bir meteor.
 [*][b]Frostbite[/b]: düşmanları yavaşlatan üç buz parçası. Süper: yakındaki herkesi donduran bir ayaz dalgası.
 [*][b]Volt[/b]: şimşeği iki düşmana sıçrayan bir elektrik küresi. Süper: gökten yıldırım yağdıran bir fırtına.
 [/list]

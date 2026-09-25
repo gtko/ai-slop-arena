@@ -24,9 +24,9 @@ Tám đấu sĩ đổ bộ xuống đấu trường. Nấp trong bụi rậm, đ
 
 [h2]Năm đấu sĩ, năm lối đánh[/h2]
 [list]
-[*][b]Blaster[/b]: bắn tỏa năm viên đạn ở tầm gần. Siêu chiêu: vụ nổ hất văng kẻ địch và phá tường.
-[*][b]Gunslinger[/b]: loạt sáu viên đạn tầm xa. Siêu chiêu: loạt mười hai viên xuyên thẳng qua tường.
-[*][b]Bomber[/b]: ném bom qua chướng ngại vật. Siêu chiêu: thùng bom khổng lồ san phẳng mọi thứ xung quanh.
+[*][b]Blaster[/b]: golem gốc cây dùng súng loa kèn bằng khúc gỗ bắn tỏa năm hạt gai ở tầm gần. Siêu chiêu: vụ nổ hất văng kẻ địch và phá tường.
+[*][b]Gunslinger[/b]: axolotl biệt kích ngân hà với cặp súng tia bắn loạt sáu tia tầm xa. Siêu chiêu: loạt mười hai tia xuyên thẳng qua tường.
+[*][b]Bomber[/b]: tiểu quỷ dung nham ném cầu lửa qua chướng ngại vật. Siêu chiêu: thiên thạch san phẳng mọi thứ xung quanh.
 [*][b]Frostbite[/b]: ba mảnh băng làm chậm kẻ địch. Siêu chiêu: vụ nổ băng đóng băng mọi kẻ ở gần.
 [*][b]Volt[/b]: quả cầu điện với tia sét lan sang hai kẻ địch. Siêu chiêu: cơn bão giáng sét xuống đấu trường.
 [/list]

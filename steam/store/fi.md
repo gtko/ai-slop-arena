@@ -24,9 +24,9 @@ Kahdeksan tappelijaa pudotetaan areenalle. Piiloudu korkeaan heinikkoon, riko la
 
 [h2]Viisi tappelijaa, viisi tapaa taistella[/h2]
 [list]
-[*][b]Blaster[/b]: viiden haulin viuhka lähietäisyydeltä. Super: räjähdys, joka sinkoaa viholliset kauemmas ja murskaa seiniä.
-[*][b]Gunslinger[/b]: kuuden luodin sarja pitkältä matkalta. Super: kahdentoista luodin yhteislaukaus, joka lävistää seinät.
-[*][b]Bomber[/b]: heittää pommeja suojien yli. Super: jättimäinen tynnyri, joka tasoittaa kaiken ympäriltään.
+[*][b]Blaster[/b]: kantogolemi, jonka tukkipyssy ampuu viiden piikkisiemenen viuhkan lähietäisyydeltä. Super: räjähdys, joka sinkoaa viholliset kauemmas ja murskaa seiniä.
+[*][b]Gunslinger[/b]: aksolotti-tähtivartija, jonka kaksi sädepistoolia ampuvat kuuden säteen sarjan pitkältä matkalta. Super: kahdentoista säteen yhteislaukaus, joka lävistää seinät.
+[*][b]Bomber[/b]: magmapiru, joka heittää tulipalloja suojien yli. Super: meteori, joka tasoittaa kaiken ympäriltään.
 [*][b]Frostbite[/b]: kolme hidastavaa jääsirpaletta. Super: pakkasnova, joka jäädyttää kaikki lähellä olevat.
 [*][b]Volt[/b]: pallo, jonka salama hyppää kahteen viholliseen. Super: myrsky, joka iskee salamoita maahan.
 [/list]

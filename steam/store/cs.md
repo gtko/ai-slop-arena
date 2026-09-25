@@ -24,9 +24,9 @@ Do arény se vrhne osm rváčů. Schovej se ve vysoké trávě, rozbíjej bedny 
 
 [h2]Pět rváčů, pět stylů boje[/h2]
 [list]
-[*][b]Blaster[/b]: brokovnice, která na blízko rozprskne pět broků. Super: výbuch, který odhodí nepřátele a rozmetá zdi.
-[*][b]Gunslinger[/b]: dávka šesti kulek na dlouhou vzdálenost. Super: salva dvanácti kulek, která projde i zdmi.
-[*][b]Bomber[/b]: hází bomby přes překážky. Super: obří sud, který srovná se zemí všechno kolem.
+[*][b]Blaster[/b]: golem z pařezu, jehož hromovka z klády na blízko rozprskne pět trnitých semen. Super: výbuch, který odhodí nepřátele a rozmetá zdi.
+[*][b]Gunslinger[/b]: axolotl hvězdný strážce, jehož dvě paprskové pistole vypálí dávku šesti paprsků na dlouhou vzdálenost. Super: salva dvanácti paprsků, která projde i zdmi.
+[*][b]Bomber[/b]: magmový čertík, který hází ohnivé koule přes překážky. Super: meteor, který srovná se zemí všechno kolem.
 [*][b]Frostbite[/b]: tři ledové střepy, které zpomalují. Super: mrazivá nova, která zmrazí všechny poblíž.
 [*][b]Volt[/b]: koule, jejíž blesk přeskočí na dva nepřátele. Super: bouře, která přivolá blesky.
 [/list]

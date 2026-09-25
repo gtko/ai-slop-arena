@@ -25,9 +25,9 @@ Eight brawlers drop into the arena. Hide in the tall grass, smash crates for pow
 
 [h2]Five brawlers, five ways to fight[/h2]
 [list]
-[*][b]Blaster[/b]: a five-pellet shotgun spread at short range. Super: a blast that knocks enemies back and smashes walls.
-[*][b]Gunslinger[/b]: a long-range six-bullet burst. Super: a twelve-bullet volley that goes through walls.
-[*][b]Bomber[/b]: lobs bombs over cover. Super: a giant barrel that levels everything around it.
+[*][b]Blaster[/b]: a tree-stump golem whose log blunderbuss sprays five thorny seeds at short range. Super: a blast that knocks enemies back and smashes walls.
+[*][b]Gunslinger[/b]: an axolotl star-ranger whose twin ray pistols fire a long-range six-bolt burst. Super: a twelve-bolt volley that goes through walls.
+[*][b]Bomber[/b]: a magma imp who lobs fireballs over cover. Super: a meteor that levels everything around it.
 [*][b]Frostbite[/b]: three ice shards that slow. Super: a frost nova that freezes everyone nearby.
 [*][b]Volt[/b]: an orb whose lightning chains to two enemies. Super: a storm that calls down lightning.
 [/list]

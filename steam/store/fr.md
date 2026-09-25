@@ -24,9 +24,9 @@ Huit brawlers débarquent dans l'arène. Cachez-vous dans les hautes herbes, cas
 
 [h2]Cinq brawlers, cinq façons de se battre[/h2]
 [list]
-[*][b]Blaster[/b] : une gerbe de cinq plombs à courte portée. Super : une déflagration qui repousse les ennemis et détruit les murs.
-[*][b]Gunslinger[/b] : une rafale de six balles à longue portée. Super : une salve de douze balles qui traverse les murs.
-[*][b]Bomber[/b] : lance des bombes par-dessus les obstacles. Super : un baril géant qui rase tout autour de lui.
+[*][b]Blaster[/b] : un golem-souche dont le tromblon en bûche crache cinq graines épineuses à courte portée. Super : une déflagration qui repousse les ennemis et détruit les murs.
+[*][b]Gunslinger[/b] : un axolotl star-ranger dont les deux pistolets à rayons tirent une rafale de six rayons à longue portée. Super : une salve de douze rayons qui traverse les murs.
+[*][b]Bomber[/b] : un diablotin de magma qui lance des boules de feu par-dessus les obstacles. Super : un météore qui rase tout autour de lui.
 [*][b]Frostbite[/b] : trois éclats de glace qui ralentissent. Super : une nova de givre qui gèle tout le monde à proximité.
 [*][b]Volt[/b] : un orbe dont l'éclair rebondit sur deux ennemis. Super : un orage qui fait tomber la foudre.
 [/list]

@@ -24,9 +24,9 @@ Delapan brawler terjun ke arena. Sembunyi di rumput tinggi, hancurkan peti untuk
 
 [h2]Lima brawler, lima gaya bertarung[/h2]
 [list]
-[*][b]Blaster[/b]: tembakan sebar lima peluru jarak dekat. Super: ledakan yang menghempas musuh dan menghancurkan tembok.
-[*][b]Gunslinger[/b]: rentetan enam peluru jarak jauh. Super: berondongan dua belas peluru yang menembus tembok.
-[*][b]Bomber[/b]: melempar bom melewati perlindungan. Super: tong raksasa yang meratakan semua yang ada di sekitarnya.
+[*][b]Blaster[/b]: golem tunggul yang senapan kayunya menembakkan lima biji berduri jarak dekat. Super: ledakan yang menghempas musuh dan menghancurkan tembok.
+[*][b]Gunslinger[/b]: aksolotl penjaga bintang yang dua pistol sinarnya menembakkan rentetan enam sinar jarak jauh. Super: berondongan dua belas sinar yang menembus tembok.
+[*][b]Bomber[/b]: iblis kecil magma yang melempar bola api melewati perlindungan. Super: meteor yang meratakan semua yang ada di sekitarnya.
 [*][b]Frostbite[/b]: tiga serpihan es yang memperlambat musuh. Super: gelombang es yang membekukan semua yang ada di dekatnya.
 [*][b]Volt[/b]: bola listrik yang petirnya menyambar berantai ke dua musuh. Super: badai yang menurunkan sambaran petir.
 [/list]

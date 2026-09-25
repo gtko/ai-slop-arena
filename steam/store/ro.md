@@ -24,9 +24,9 @@ Opt luptători intră în arenă. Ascunde-te în iarba înaltă, sparge lăzi pe
 
 [h2]Cinci luptători, cinci stiluri de luptă[/h2]
 [list]
-[*][b]Blaster[/b]: o salvă de cinci alice trasă de aproape. Super: o explozie care aruncă inamicii înapoi și sparge zidurile.
-[*][b]Gunslinger[/b]: o rafală de șase gloanțe la distanță mare. Super: o salvă de douăsprezece gloanțe care trece prin ziduri.
-[*][b]Bomber[/b]: aruncă bombe peste adăposturi. Super: un butoi uriaș care rade tot din jurul lui.
+[*][b]Blaster[/b]: un golem-buturug a cărui flintă din trunchi trage cinci semințe spinoase de aproape. Super: o explozie care aruncă inamicii înapoi și sparge zidurile.
+[*][b]Gunslinger[/b]: un axolotl ranger stelar ale cărui două pistoale cu raze trag o rafală de șase raze la distanță mare. Super: o salvă de douăsprezece raze care trece prin ziduri.
+[*][b]Bomber[/b]: un drăcușor de magmă care aruncă mingi de foc peste adăposturi. Super: un meteorit care rade tot din jurul lui.
 [*][b]Frostbite[/b]: trei cioburi de gheață care încetinesc. Super: un val de ger care îi îngheață pe toți cei din apropiere.
 [*][b]Volt[/b]: o sferă al cărei fulger sare la doi inamici. Super: o furtună care aduce fulgere din cer.
 [/list]

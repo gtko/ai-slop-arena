@@ -24,9 +24,9 @@ En gullig brawler i fågelperspektiv för åtta spelare. Välj en brawler, göm 
 
 [h2]Fem brawlers, fem sätt att slåss[/h2]
 [list]
-[*][b]Blaster[/b]: en hagelsvärm med fem hagel på nära håll. Super: en smäll som slår tillbaka fiender och krossar väggar.
-[*][b]Gunslinger[/b]: en skur med sex kulor på långt håll. Super: en salva på tolv kulor som går rakt igenom väggar.
-[*][b]Bomber[/b]: kastar bomber över skydd. Super: en jättetunna som jämnar allt runt omkring med marken.
+[*][b]Blaster[/b]: en stubbgolem vars muskedunder av en stock sprider fem taggiga frön på nära håll. Super: en smäll som slår tillbaka fiender och krossar väggar.
+[*][b]Gunslinger[/b]: en axolotl-stjärnranger vars två strålpistoler avfyrar en skur med sex strålar på långt håll. Super: en salva på tolv strålar som går rakt igenom väggar.
+[*][b]Bomber[/b]: en magmadjävul som kastar eldklot över skydd. Super: en meteor som jämnar allt runt omkring med marken.
 [*][b]Frostbite[/b]: tre isskärvor som saktar ner. Super: en frostvåg som fryser alla i närheten.
 [*][b]Volt[/b]: ett klot vars blixt hoppar vidare till två fiender. Super: en storm som kallar ner blixtar.
 [/list]

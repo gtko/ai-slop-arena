@@ -6,19 +6,19 @@ import { hasFigurine, buildFigurine } from './figurines.js';
 export const TYPES = {
   blaster: {
     key: 'blaster', name: 'Blaster', role: 'Shotgun',
-    desc: 'Close-range spread of 5 pellets. Super: a wide blast that knocks enemies back and smashes walls.',
+    desc: 'A tree-stump golem whose hollow-log blunderbuss sprays 5 thorny seeds at close range. Super: a wide seed blast that knocks enemies back and smashes walls.',
     hp: 4800, speed: 6.0, ammo: 3, reload: 1.7, range: 9.5, superCost: 2600, projSpeed: 25,
     palette: { main: 0x5fb83a, dark: 0x6b4428, accent: 0xf28cb1, hair: 0x4f9a2e, skin: 0xe8c99a },
   },
   gunslinger: {
     key: 'gunslinger', name: 'Gunslinger', role: 'Sharpshooter',
-    desc: 'Long-range burst of 6 bullets. Super: a 12-bullet volley that tears straight through walls.',
+    desc: 'An axolotl star-ranger whose twin ray pistols fire a long-range burst of 6 bolts. Super: a 12-bolt volley that tears straight through walls.',
     hp: 3600, speed: 6.6, ammo: 3, reload: 1.6, range: 16, superCost: 2800, projSpeed: 32,
     palette: { main: 0xf27aa8, dark: 0x6a3fb5, accent: 0x3fd8e8, hair: 0xd9366f, skin: 0xf7a8c4 },
   },
   bomber: {
     key: 'bomber', name: 'Bomber', role: 'Thrower',
-    desc: 'Lobs bombs over walls that explode in an area. Super: a huge barrel bomb that levels cover.',
+    desc: 'A magma imp who lobs fireballs over walls that explode in an area. Super: a meteor that crashes down and levels cover.',
     hp: 3400, speed: 6.1, ammo: 3, reload: 1.9, range: 13, superCost: 2400, projSpeed: 18,
     palette: { main: 0xff7a1f, dark: 0x2e2a2c, accent: 0xffc23a, hair: 0xff9a1f, skin: 0x3a3436 },
   },

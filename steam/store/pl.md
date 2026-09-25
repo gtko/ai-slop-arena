@@ -24,9 +24,9 @@ Ośmiu zadymiarzy ląduje na arenie. Ukryj się w wysokiej trawie, rozbijaj skrz
 
 [h2]Pięciu zadymiarzy, pięć stylów walki[/h2]
 [list]
-[*][b]Blaster[/b]: rozrzut pięciu śrucin z bliska. Super: wybuch, który odrzuca wrogów i burzy ściany.
-[*][b]Gunslinger[/b]: seria sześciu pocisków z daleka. Super: salwa dwunastu pocisków, która przebija ściany.
-[*][b]Bomber[/b]: rzuca bomby ponad osłonami. Super: gigantyczna beczka, która zrównuje z ziemią wszystko dookoła.
+[*][b]Blaster[/b]: golem-pniak, którego garłacz z kłody miota z bliska pięć kolczastych nasion. Super: wybuch, który odrzuca wrogów i burzy ściany.
+[*][b]Gunslinger[/b]: aksolotl gwiezdny strażnik, którego dwa pistolety promieniowe strzelają z daleka serią sześciu promieni. Super: salwa dwunastu promieni, która przebija ściany.
+[*][b]Bomber[/b]: magmowy chochlik, który rzuca kule ognia ponad osłonami. Super: meteor, który zrównuje z ziemią wszystko dookoła.
 [*][b]Frostbite[/b]: trzy spowalniające lodowe odłamki. Super: mroźna nova, która zamraża wszystkich w pobliżu.
 [*][b]Volt[/b]: kula, której błyskawica przeskakuje na dwóch wrogów. Super: burza, która ściąga pioruny.
 [/list]
