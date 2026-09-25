@@ -104,7 +104,7 @@
         },
         {
           "emoji": "⭐",
-          "title_fr": "10 pouvoirs stars",
+          "title_fr": "10 pouvoirs star",
           "text_fr": "Un passif à choisir avant la partie pour jouer ton brawler à ta façon.",
           "tag": "gameplay"
         },
@@ -390,7 +390,7 @@
     {
       "emoji": "🦀",
       "title_fr": "Encore plus de brawlers",
-      "text_fr": "Clawdia la bernard-l'hermite bâtisseuse de tourelles, et Nimbus le mouton-nuage tireur d'élite."
+      "text_fr": "Clawdia, bernard-l'hermite et bâtisseuse de tourelles, et Nimbus le mouton-nuage tireur d'élite."
     }
   ],
   "moonshots": [
@@ -469,7 +469,7 @@
     {
       "name": "Clawdia",
       "role_fr": "Bâtisseuse",
-      "pitch_fr": "Une bernard-l'hermite dont la coquille est une petite maison de thé. Sa super pose sa coquille en tourelle automatique pendant qu'elle court, toute nue et toute rouge.",
+      "pitch_fr": "Clawdia porte en guise de coquille une petite maison de thé. Sa super pose sa coquille en tourelle automatique pendant qu'elle court, toute nue et toute rouge.",
       "release": "Plus tard",
       "color": "#ff8a3d",
       "image": "clawdia"

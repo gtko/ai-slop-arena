@@ -19,7 +19,7 @@
 .pillars { max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; }
 .pillar { flex: 1 1 200px; max-width: 280px; }
 .pillar { padding: 24px 20px; border-radius: var(--radius); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); text-align: center;
-  transition: border-color 0.4s, transform 0.4s var(--ease); }
+  transition: opacity 1s var(--ease), border-color 0.4s, transform 0.4s var(--ease); }
 .pillar:hover { border-color: rgba(255, 210, 63, 0.35); transform: translateY(-3px); }
 .pillar .ico { display: grid; place-items: center; width: 62px; height: 62px; margin: 0 auto 12px; border-radius: 18px; font-size: 32px; background: rgba(255,255,255,0.07); }
 .pillar h3 { margin: 0 0 8px; font-family: var(--display); font-weight: 400; font-size: 21px; line-height: 1.1; }
@@ -38,7 +38,7 @@
   display: flex; flex-direction: column; gap: 34px; }
 .road::before, .road::after { content: ''; position: absolute; left: calc(var(--rail) - 3px); top: 20px; bottom: 30px; width: 6px; border-radius: 6px; }
 .road::before { background: rgba(255,255,255,0.08); }
-.road::after { background: linear-gradient(#ffd23f, #ff4d4f 12%, #fab005 28%, #7b4dff 45%, #15aabf 62%, #2f9e44 78%, #f03e3e 90%, #15aabf);
+.road::after { background: var(--rail-g, var(--yellow));
   clip-path: inset(0 0 calc((1 - var(--p)) * 100%) 0); box-shadow: 0 0 18px rgba(255, 210, 63, 0.35); }
 .stop { position: relative; }
 .node { position: absolute; left: calc(-44px - 32px); top: 18px; z-index: 1; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%;
@@ -55,7 +55,7 @@ a.now-card:hover { background: rgba(255, 210, 63, 0.12); }
 .ver { font-family: var(--display); color: var(--c, var(--yellow)); letter-spacing: 1.5px; font-size: 16px; }
 .ver small { margin-left: 10px; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
 
-.rel { position: relative; display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.4fr); gap: 28px; padding: 30px; border-radius: 28px; overflow: hidden;
+.rel { position: relative; display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.4fr); gap: 28px; padding: 30px; border-radius: 28px; overflow: clip;
   background: radial-gradient(ellipse at 0% 0%, color-mix(in srgb, var(--c) 30%, transparent), transparent 55%), linear-gradient(180deg, #221a40, #17122c);
   border: 3px solid var(--ink); box-shadow: 0 12px 0 rgba(0,0,0,0.3), 0 30px 60px rgba(6, 3, 20, 0.45); transition: opacity 0.4s, filter 0.4s; }
 .rel > header { position: sticky; top: 150px; align-self: start; }
@@ -91,7 +91,7 @@ a.now-card:hover { background: rgba(255, 210, 63, 0.12); }
 .newcards { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; perspective: 1200px; }
 .ncard { position: relative; padding: 0 20px 22px; border-radius: var(--radius); overflow: hidden; scroll-margin-top: 90px;
   background: linear-gradient(180deg, var(--c), rgba(22, 18, 40, 0.97) 55%); border: 3px solid var(--ink); box-shadow: 0 10px 0 rgba(0,0,0,0.3);
-  transform-style: preserve-3d; transition: transform 0.5s var(--ease), box-shadow 0.4s; }
+  transform-style: preserve-3d; transition: opacity 1s var(--ease), transform 0.5s var(--ease), box-shadow 0.4s; }
 .ncard:target { box-shadow: 0 10px 0 rgba(0,0,0,0.3), 0 0 0 4px var(--yellow); }
 .ncard .art { position: relative; height: 230px; margin: 0 -20px; display: flex; align-items: flex-end; justify-content: center; }
 .ncard .art::before { content: ''; position: absolute; inset: 18% 12% 0; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.32), transparent 65%); }
@@ -112,7 +112,7 @@ a.now-card:hover { background: rgba(255, 210, 63, 0.12); }
     radial-gradient(1px 1px at 72% 45%, #fff, transparent), radial-gradient(2px 2px at 88% 25%, #ffd23f, transparent), radial-gradient(1px 1px at 92% 80%, #fff, transparent),
     radial-gradient(1.5px 1.5px at 8% 85%, #fff, transparent), radial-gradient(1px 1px at 45% 90%, #fff, transparent); animation: blink 6s ease-in-out infinite; }
 .moons { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-.mcard { padding: 24px; border-radius: 22px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); transition: transform 0.4s var(--ease), border-color 0.4s; }
+.mcard { padding: 24px; border-radius: 22px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); transition: opacity 1s var(--ease), transform 0.4s var(--ease), border-color 0.4s; }
 .mcard:hover { transform: translateY(-4px) rotate(-0.6deg); border-color: rgba(157, 123, 255, 0.6); }
 .mcard .ico { font-size: 34px; }
 .mcard h3 { margin: 10px 0 6px; font-family: var(--display); font-weight: 400; font-size: 23px; }
