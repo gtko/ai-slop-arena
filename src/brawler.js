@@ -119,8 +119,7 @@ export class Brawler {
     this.ammo = this.type.ammo;
     this.superCharge = 0;
     this.cubes = 0;
-    this.baseDmg = isPlayer ? 1 : 0.85; // bots aim with lead prediction, so hit a bit softer
-    this.dmgMul = this.baseDmg;
+    this.setHuman(isPlayer);
     this.lastHurt = -99;
     this.lastAttack = -99;
     this.alive = true;
@@ -164,6 +163,20 @@ export class Brawler {
   }
 
   get radius() { return 0.62; }
+
+  // Humans hit at full strength and bots a bit softer (they aim with lead prediction). It depends on
+  // who drives the brawler, never on which machine simulates the match: the Steam host, the online
+  // server and solo play all give every human the same damage.
+  setHuman(v) {
+    this.human = v;
+    this.baseDmg = v ? 1 : 0.85;
+    this.refreshDmg();
+  }
+
+  // each power cube adds 10% damage
+  refreshDmg() {
+    this.dmgMul = this.baseDmg + 0.1 * this.cubes;
+  }
 
   setVisible(v) {
     this.root.visible = v;

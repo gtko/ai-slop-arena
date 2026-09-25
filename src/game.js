@@ -118,7 +118,7 @@ export class Game {
       const isPlayer = r.id === localId;
       const b = new Brawler(this, r.type, { name: isPlayer ? t('hud.you') : r.name, isPlayer });
       b.id = r.id;
-      b.human = r.human;
+      b.setHuman(!!r.human);
       if (r.skill !== undefined) b.skill = r.skill;
       b.pos.copy(this.arena.spawns[r.spawn % this.arena.spawns.length]);
       b.net.set(b.pos.x, b.pos.z);
@@ -338,7 +338,7 @@ export class Game {
 
   pickItem(it, b) {
     b.cubes++;
-    b.dmgMul = b.baseDmg + 0.1 * b.cubes;
+    b.refreshDmg();
     b.maxHp += 400;
     b.hp += 400;
     this.fx.remove(it.mesh);
@@ -396,7 +396,7 @@ export class Game {
   onRejoin(id) {
     const b = this.byId.get(id);
     if (!b || !this.authority || b.human || !b.alive) return;
-    b.human = true; b.netDriven = true; b.guard = null; b.remoteIn = null;
+    b.setHuman(true); b.netDriven = true; b.guard = null; b.remoteIn = null;
     b.net.set(b.pos.x, b.pos.z);
     this.brains.delete(b);
   }
@@ -405,7 +405,7 @@ export class Game {
   onLeft(id) {
     const b = this.byId.get(id);
     if (!b || !this.authority) return;
-    b.human = false; b.netDriven = false; b.remoteIn = null;
+    b.setHuman(false); b.netDriven = false; b.remoteIn = null;
     this.brains.set(b, new BotBrain(this, b));
     this.checkEnd();
   }

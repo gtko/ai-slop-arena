@@ -61,6 +61,19 @@ await test('inputs are sanitised and rate-limited', () => {
   assert.ok(a.remoteIn.s < 60, 'flood not limited');
 });
 
+await test('every human hits at full strength online, bots a bit softer', () => {
+  const { g } = match('oasis', ['alice', 'bob']);
+  const [a, b] = ['alice', 'bob'].map(id => g.byId.get(id));
+  assert.equal(a.dmgMul, 1, 'a human deals less than full damage on the server');
+  assert.equal(b.dmgMul, 1, 'humans do not deal the same damage');
+  assert.ok(g.brawlers.filter(o => !o.human).every(o => o.dmgMul === 0.85), 'bot damage changed');
+  b.cubes = 2; b.refreshDmg();
+  g.onLeft('bob');
+  assert.ok(Math.abs(b.dmgMul - 1.05) < 1e-9, 'a player who left keeps full damage or loses their cubes');
+  g.onRejoin('bob');
+  assert.ok(Math.abs(b.dmgMul - 1.2) < 1e-9, 'a player who came back does not get full damage back');
+});
+
 await test('nobody is hurt during the opening seconds (spawn shield + calm bots)', () => {
   for (const map of ['oasis', 'dunes', 'grove', 'frost', 'marsh']) {
     for (let k = 0; k < 4; k++) {
