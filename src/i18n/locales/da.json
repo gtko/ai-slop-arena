@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> bevæg dig · <b>Mus</b> sigt · <b>Hold VMT</b> angrib · <b>HMT / Mellemrum</b> super · <b>T</b> tidspunkt · <b>Esc</b> pause · <b>M</b> lyd fra · 🎮 understøttet",
   "hud.you": "DIG",
   "hud.power": "+KRAFT",
+  "hud.immune": "IMMUN",
   "load.waiting": "{n} / {total} spillere klar",
   "load.bot": "Bot",
   "load.fight": "KÆMP!",

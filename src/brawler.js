@@ -92,6 +92,10 @@ const lerpAngle = (a, b, t) => {
   return a + d * t;
 };
 
+// Seconds of immunity to crowd control once a freeze ends, so two novas can't chain-lock anyone.
+export const CC_IMMUNE = 1.5;
+const IMMUNE_COL = new THREE.Color(2.2, 3, 3.6);
+
 export class Brawler {
   constructor(game, typeKey, { name, isPlayer = false }) {
     this.g = game;
@@ -137,6 +141,7 @@ export class Brawler {
     this.poisonTick = 0;
     this.slowT = 0;     // Frostbite shards
     this.freezeT = 0;   // Frost nova: can't move or attack
+    this.ccImmuneT = 0; // after a freeze: immune to the next one for a moment (no freeze chains)
     this.spawnT = 0;
     this.visibleToPlayer = true;
     this.rank = 0;
@@ -204,7 +209,13 @@ export class Brawler {
     this.revealT -= dt;
     this.aimHold -= dt;
     this.slowT -= dt;
+    const wasFrozen = this.freezeT > 0;
     this.freezeT -= dt;
+    this.ccImmuneT -= dt;
+    if (wasFrozen && this.freezeT <= 0) {
+      this.ccImmuneT = CC_IMMUNE;
+      if (this.visibleToPlayer) this.g.effects.ring(this.pos.x, this.pos.z, 1.4, IMMUNE_COL, 0.5); // the ice breaks: immune
+    }
     const statusMul = this.freezeT > 0 ? 0 : this.slowT > 0 ? 0.55 : 1;
 
     // Brawl-style regen: 13%/s after 3s without dealing or taking damage.

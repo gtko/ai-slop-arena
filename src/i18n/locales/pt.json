@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> mover · <b>Rato</b> apontar · <b>Manter botão esq.</b> atacar · <b>Botão dir. / Espaço</b> super · <b>T</b> hora do dia · <b>Esc</b> pausa · <b>M</b> silenciar · 🎮 suportado",
   "hud.you": "TU",
   "hud.power": "+PODER",
+  "hud.immune": "IMUNE",
   "load.waiting": "{n} / {total} jogadores prontos",
   "load.bot": "Bot",
   "load.fight": "LUTA!",

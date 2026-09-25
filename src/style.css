@@ -44,6 +44,7 @@ kbd { font-family: var(--display); font-size: 12px; padding: 1px 6px; border-rad
 .floater.dmg-out { color: #fff; font-size: 23px; }
 .floater.dmg-other { font-size: 15px; color: #ffe0c8; }
 .floater.power { color: var(--green); font-size: 22px; }
+.floater.immune { color: #bfe8ff; font-size: 19px; letter-spacing: 1px; }
 @keyframes floatUp {
   0% { opacity: 0; transform: translate(-50%, -30%) scale(0.6); }
   15% { opacity: 1; transform: translate(-50%, -80%) scale(1.15); }

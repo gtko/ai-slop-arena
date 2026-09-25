@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> liiku · <b>Hiiri</b> tähtää · <b>Pidä VHP</b> hyökkää · <b>OHP / Välilyönti</b> super · <b>T</b> vuorokaudenaika · <b>Esc</b> tauko · <b>M</b> mykistä · 🎮 tuettu",
   "hud.you": "SINÄ",
   "hud.power": "+VOIMA",
+  "hud.immune": "IMMUUNI",
   "load.waiting": "{n} / {total} pelaajaa valmiina",
   "load.bot": "Botti",
   "load.fight": "TAISTELU!",

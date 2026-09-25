@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> hareket · <b>Fare</b> nişan · <b>Sol tık basılı</b> saldırı · <b>Sağ tık / Boşluk</b> süper · <b>T</b> günün saati · <b>Esc</b> duraklat · <b>M</b> sessiz · 🎮 desteklenir",
   "hud.you": "SEN",
   "hud.power": "+GÜÇ",
+  "hud.immune": "BAĞIŞIK",
   "load.waiting": "{n} / {total} oyuncu hazır",
   "load.bot": "Bot",
   "load.fight": "SAVAŞ!",

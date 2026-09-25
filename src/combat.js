@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { TILE } from './arena.js';
 import { sfx } from './audio.js';
 import { particle } from './effects.js';
+import { t } from './i18n/index.js';
 
 // HDR colours (> 1) so projectiles bloom; the light colour is the normalised hue.
 const COL = {
@@ -331,7 +332,9 @@ export class Combat {
       for (const o of g.brawlers) {
         if (o === b || !o.alive || Math.hypot(o.pos.x - x, o.pos.z - z) > R) continue;
         g.damage(o, 900 * b.dmgMul, b, true);
-        if (o.alive) o.freezeT = Math.max(o.freezeT, 1.4);
+        if (!o.alive) continue;
+        if (o.ccImmuneT > 0) { if (o.visibleToPlayer) g.hud.floater(g.camera, o.pos.x, 3.1, o.pos.z, t('hud.immune'), 'immune'); }
+        else o.freezeT = Math.max(o.freezeT, 1.4);
       }
     }
     const fx = g.effects;

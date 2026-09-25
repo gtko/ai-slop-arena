@@ -20,6 +20,7 @@
   "hud.keys": "<b>WASD</b> mozgás · <b>Egér</b> célzás · <b>BEGY nyomva</b> támadás · <b>JEGY / Szóköz</b> szuper · <b>T</b> napszak · <b>Esc</b> szünet · <b>M</b> némítás · 🎮 támogatott",
   "hud.you": "TE",
   "hud.power": "+ERŐ",
+  "hud.immune": "IMMUNIS",
   "load.waiting": "{n} / {total} játékos kész",
   "load.bot": "Bot",
   "load.fight": "HARC!",
