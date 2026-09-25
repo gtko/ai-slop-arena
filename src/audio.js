@@ -16,6 +16,9 @@ const save = () => { try { localStorage.setItem('brawl-arena-audio', JSON.string
 if (settings.v !== 2) { settings.master = Math.min(settings.master, 0.5); settings.v = 2; save(); }
 let muted = settings.muted;
 const last = {};
+// The result jingle (the victory fanfare is a whole song) plays until the next song starts.
+const JINGLES = ['fanfare', 'victory', 'defeat'];
+let jingle = null;
 
 const SFX = ['shot', 'shotgun', 'throw', 'boom', 'boom_big', 'hit', 'hurt', 'break', 'crate', 'pickup',
   'super', 'ready', 'death', 'gas', 'victory', 'defeat', 'click', 'thunder', 'thunder2', 'join'];
@@ -162,6 +165,7 @@ function nextSong() {
 // (last 3 brawlers) or null. The user's track setting (Options > Audio) can override it.
 export function playMusic(name) {
   wantMusic = name;
+  if (name) stopJingle();
   if (!ctx) return;
   const t = settings.track;
   const want = t === 'auto' ? name : t === 'off' ? null : t;
@@ -212,9 +216,21 @@ export function sfx(name, vol = 1) {
     g.gain.value = vol * (GAIN[name] ?? 1);
     src.connect(g).connect(sfxBus);
     src.start(now);
+    if (JINGLES.includes(name)) { stopJingle(); jingle = { src, g }; src.onended = () => { if (jingle && jingle.src === src) jingle = null; }; }
     return;
   }
   synth(name, vol);
+}
+
+// Fades out the result jingle still playing, if any (new match, back to the menu...).
+function stopJingle() {
+  if (!jingle || !ctx) return;
+  const { src, g } = jingle, now = ctx.currentTime;
+  jingle = null;
+  g.gain.cancelScheduledValues(now);
+  g.gain.setValueAtTime(g.gain.value, now);
+  g.gain.linearRampToValueAtTime(0, now + 0.3);
+  src.stop(now + 0.32);
 }
 
 function tone(f0, f1, dur, type, vol) {
