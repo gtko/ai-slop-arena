@@ -164,6 +164,10 @@ export class Game {
     this.camTarget = this.player || this.brawlers[0];
     this.camFocus.copy(this.camTarget.pos);
     this.feel.reset();
+    // supply drops (authority schedules, everyone sees): ~40-50 s and ~85-95 s into the match
+    for (const D of this.dropping || []) this.fx.remove(D.beam, D.ring);
+    this.drops = this.mode === 'play' ? [40 + Math.random() * 10, 85 + Math.random() * 10] : [];
+    this.dropping = [];
     this.gadgetSeq = 0;
     this.hud.setup(this.brawlers, this.player);
     this.aim.visible = this.aimTarget.visible = !!this.player;
@@ -385,9 +389,11 @@ export class Game {
   }
 
   damageCrate(i, j, dmg, by = null) {
+    const supply = this.arena.crateAt(i, j)?.supply;
     if (!this.authority || !this.arena.hitCrate(i, j, dmg)) return;
     this.crateFx(i, j, by);
-    this.dropCube(_v.x, _v.z, 0, 1);
+    const n = supply ? 3 : 1;
+    for (let k = 0; k < n; k++) this.dropCube(_v.x, _v.z, k, n);
     this.ev({ e: 'crate', i, j, by: by ? by.id : null });
   }
 
@@ -431,6 +437,65 @@ export class Game {
       this.hud.floater(this.camera, b.pos.x, 3.4, b.pos.z, t('hud.power'), 'power');
       if (this.onFeat) this.onFeat('cubes', b.cubes);
     }
+  }
+
+  // Supply drop: 5 s of warning (a beacon and a siren where it will land), then a gold crate falls
+  // from the sky with 3 power cubes inside. Whoever stands under it gets bumped.
+  updateDrops(dt) {
+    if (this.authority && this.drops.length && this.time > this.drops[0] - 5 && !this.ended) {
+      this.drops.shift();
+      const A = this.arena, lvl = this.poison.level;
+      for (let tries = 0; tries < 30; tries++) {
+        const [i, j] = A.randomOpenTile(lvl + 3);
+        if (A.get(i, j) !== '.' || A.ring(i, j) <= lvl + 2) continue;
+        const c = A.center(i, j, new THREE.Vector3());
+        if (this.brawlers.some(o => o.alive && Math.hypot(o.pos.x - c.x, o.pos.z - c.z) < 2)) continue;
+        this.dropWarn(i, j);
+        this.ev({ e: 'dropWarn', i, j });
+        break;
+      }
+    }
+    for (let k = this.dropping.length - 1; k >= 0; k--) {
+      const D = this.dropping[k];
+      D.t -= dt;
+      D.beam.material.opacity = 0.25 + 0.2 * Math.sin(this.time * 12);
+      D.ring.scale.setScalar(1.6 + 0.3 * Math.sin(this.time * 6));
+      if (D.t > 0.7) continue;
+      if (!D.crate) { // falling for the last 0.7 s
+        this.fx.remove(D.beam, D.ring);
+        D.crate = this.arena.makeCrate(D.i, D.j, true);
+        this.arena.rev++;
+      }
+      const k01 = Math.max(0, D.t) / 0.7;
+      D.crate.position.y = 16 * k01 * k01;
+      if (D.t > 0) continue;
+      D.crate.position.y = 0;
+      this.dropping.splice(k, 1);
+      const c = this.arena.center(D.i, D.j, new THREE.Vector3());
+      this.effects.dust(c.x, c.z, 16, 0xc9a070, 2);
+      this.effects.ring(c.x, c.z, 2.2, new THREE.Color(3, 2.4, 0.6), 0.5);
+      this.shakeAt(c.x, c.z, 0.35);
+      sfx('supply_land', this.volumeAt(c.x, c.z));
+      if (this.authority) for (const o of this.brawlers) {
+        const dx = o.pos.x - c.x, dz = o.pos.z - c.z, d = Math.hypot(dx, dz);
+        if (!o.alive || d > 1.6) continue;
+        this.damage(o, 300, null);
+        this.applyKnock(o, (dx || 1) / (d || 1) * 9, dz / (d || 1) * 9);
+      }
+    }
+  }
+
+  dropWarn(i, j) {
+    const c = this.arena.center(i, j, new THREE.Vector3()), col = new THREE.Color(3, 2.4, 0.6);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.9, 30, 16, 1, true),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+    beam.position.set(c.x, 15, c.z);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 32).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.7, depthWrite: false }));
+    ring.position.set(c.x, 0.08, c.z);
+    this.fx.add(beam, ring);
+    this.dropping.push({ i, j, t: 5, beam, ring, crate: null });
+    sfx('supply_siren', Math.max(0.35, this.volumeAt(c.x, c.z)));
   }
 
   // Bounty crown: whoever carries the most power cubes (5 or more, no tie) wears it. Knocking them
@@ -603,6 +668,7 @@ export class Game {
           if (b && b !== this.player && b.alive) GADGETS[b.type.key + b.gadget]?.fx(this, b, e.dx, e.dz);
           break;
         case 'flare': flareFx(this, e.x, e.z); break;
+        case 'dropWarn': this.dropWarn(e.i, e.j); break;
         case 'zoneOff': this.combat.zones.filter(Z => Z.once && Math.hypot(Z.x - e.x, Z.z - e.z) < 0.1).forEach(Z => { Z.t = 0; }); break;
         case 'ice': this.arena.iceWall(e.t, 3); break;
         case 'zone': this.combat.zone({ ...e.z, owner: this.byId.get(e.z.owner), col: new THREE.Color(...e.z.col) }); break;
@@ -658,6 +724,7 @@ export class Game {
     if (this.authority) this.poisonDamage(dt);
     this.updateItems(dt, t);
     this.updateCrown(t);
+    this.updateDrops(dt);
     this.updateVisibility();
     this.updateFoliage(dt);
     if (P && P.alive) this.updateAim();

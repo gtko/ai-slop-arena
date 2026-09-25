@@ -51,7 +51,7 @@ function tintedBox(w, h, d, r, bottom = 0.62) {
   return g;
 }
 
-let ICE_BLOCK = null;
+let ICE_BLOCK = null, SUPPLY_BAND = null;
 
 export class Arena {
   constructor(scene, map = MAPS.oasis) {
@@ -336,8 +336,14 @@ export class Arena {
     const gem = new THREE.BoxGeometry(0.5, 0.5, 0.5);
     const bandMat = new THREE.MeshStandardMaterial({ color: 0x5b3419, roughness: 0.7 });
     const gemMat = new THREE.MeshStandardMaterial({ color: 0x3dff7a, emissive: 0x22ff66, emissiveIntensity: 1.1, roughness: 0.3 });
-    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-      if (this.grid[j][i] !== 'C') continue;
+    this.crateKit = { sculpted, body, band, gem, bandMat, gemMat };
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) if (this.grid[j][i] === 'C') this.makeCrate(i, j);
+  }
+
+  // One crate on tile (i, j). supply: a supply drop (gold bands, sturdier, 3 cubes inside).
+  makeCrate(i, j, supply = false) {
+    const { sculpted, body, band, gem, bandMat, gemMat } = this.crateKit;
+    {
       const g = new THREE.Group();
       this.center(i, j, g.position);
       const map = tex('wood', 1, 1);
@@ -359,8 +365,17 @@ export class Arena {
       const gm = add(gem, gemMat, top + 0.1);
       gm.rotation.set(Math.PI / 4, Math.PI / 4, 0);
       g.rotation.y = (this.rand() - 0.5) * 0.3;
+      if (supply) { // gold, and a bit bigger
+        mat.color.set(0xffd46b);
+        g.scale.setScalar(1.12);
+        const gold = add(band, SUPPLY_BAND || (SUPPLY_BAND = new THREE.MeshStandardMaterial({ color: 0xffc233, metalness: 0.7, roughness: 0.35 })), 0.72);
+        gold.scale.set(1.02, 1.6, 1.02);
+      }
       this.group.add(g);
-      this.crates.set(this.key(i, j), { i, j, hp: 3200, maxHp: 3200, group: g, mat, gem: gm, shake: 0, flash: 0 });
+      const hp = supply ? 4000 : 3200;
+      this.crates.set(this.key(i, j), { i, j, hp, maxHp: hp, group: g, mat, gem: gm, shake: 0, flash: 0, supply });
+      this.grid[j][i] = 'C';
+      return g;
     }
   }
 
