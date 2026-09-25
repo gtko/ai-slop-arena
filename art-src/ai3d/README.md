@@ -7,6 +7,7 @@ Nothing here ships with the game: it produces the GLBs in `art-src/glb/`, which
 | Step | Tool |
 |---|---|
 | reference art | `decor_images.py` (OpenRouter, one shared style prompt) → `art-src/decor/*.png` |
+| character art | `char_images.py` (prompt library: figurine style + one sheet per brawler) sent to `openai/gpt-image-2.5-sunburst` through the OpenRouter MCP, saved with `grab_mcp_images.py` → `art-src/chibi/apose|action/*.png` |
 | shape | Hunyuan3D-2 DiT turbo + FlashVDM (`tencent/Hunyuan3D-2`) |
 | texture | Hunyuan3D-Paint turbo, baked with `custom_rasterizer/` (OpenGL via moderngl, replaces the CUDA-only kernel) |
 | game files | `python art-src/optimize_models.py --decor` (triangle budget per prop, webp, meshopt) |
