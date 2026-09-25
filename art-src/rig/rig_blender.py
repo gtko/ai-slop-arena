@@ -544,6 +544,20 @@ def measure(body, weapons):
                 bn = arm[name]
                 dists.append(seg_dist(v.co, bn.head_local, bn.tail_local))
     out['leg_radius'] = sorted(dists)[len(dists) // 2] if dists else 0.1
+    # the belt: outermost pelvis / waist surface on each side, where a put-away weapon hangs
+    out['belt'] = {}
+    if arm:
+        hz = arm['Hips'].head_local.z
+        for s_, sg in (('L', 1), ('R', -1)):
+            best = None
+            for v in me.vertices:
+                if not v.groups or abs(v.co.z - (hz + 0.06)) > 0.06 or abs(v.co.y - arm['Hips'].head_local.y) > 0.2:
+                    continue
+                name = names[max(v.groups, key=lambda x: x.weight).group]
+                if name in ('Hips', 'Spine') and (best is None or sg * v.co.x > sg * best.x):
+                    best = v.co.copy()
+            if best is not None:
+                out['belt'][s_] = list(best)
     out['weapon'] = {}
     for w in weapons:
         vs = [w.matrix_world @ v.co for v in w.data.vertices]

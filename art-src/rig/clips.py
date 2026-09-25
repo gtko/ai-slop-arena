@@ -100,8 +100,8 @@ POSE_DEFAULTS = {
     'shrug': 1.0,              # scale of the shoulder shrugs (sigh, flinch, shiver)
     'head_motion': 1.0,        # scale of the head turns and tilts (a big head brushing its pads)
     'reach': 0.9,              # IK: fraction of the arm's length a hand may reach (elbow stays bent)
-    'holster_out': 0.16,       # where a put-away weapon hangs: out from the torso side ...
-    'holster_up': 0.18,        # ... and up from the hips joint
+    'holster_out': 0.05,       # a put-away weapon: gap between its inner side and the belt ...
+    'holster_up': 0.06,        # ... and how far its top rises above the belt
     'wave_forward': -0.55,     # how far forward the waving arm is raised (-y = forward)
     'raise_fore': None,        # Wave / Cheer forearm direction for the LEFT arm (mirrored), None = upright
     'resolve': True,       # every frame: swing an arm away from the head / torso when it goes through
@@ -144,6 +144,7 @@ class Char:
             self.wcorners[s_] = [Vector((x, y, z)) for x in (lo.x, hi.x) for y in (lo.y, hi.y) for z in (lo.z, hi.z)] + [(lo + hi) / 2]
         # surface samples of each arm piece and weapon (rig_blender.measure): what really collides
         self.samples = {k: [Vector(p) for p in v] for k, v in M.get('samples', {}).items()}
+        self.belt = {k: Vector(v) for k, v in M.get('belt', {}).items()}
         self.wax = {}
         for s_ in 'LR':  # the weapon's axis from its own mesh (grip included), pointing to its bulk
             pts = self.samples.get('weapon' + s_)
@@ -333,6 +334,7 @@ class Pose:
         self.r = {}
         self.loc = Vector()
         self.moved = {}  # weapon bone -> world offset of its head (weapon put away)
+        self.stowed = {}  # side -> how far its weapon is put away (redone after the safety net)
 
     def get(self, b):
         return self.r.get(b, I)
@@ -390,20 +392,34 @@ class Pose:
         self.set(side + 'ForeArm', arm.inverted() @ q(d, ang) @ arm @ fore)
 
     def holster(self, s, h):
-        """Put the weapon of hand s away at the hip (h = 0 in the hand .. 1 holstered): its bone
-        leaves the hand for a spot beside the hip, barrel down. Call after the arm is posed."""
+        """Put the weapon of hand s away at the belt (h = 0 in the hand .. 1 holstered): its bone
+        leaves the hand, the weapon hangs barrel down against the outside of the hip, its top at the
+        belt (rig_blender.measure finds the belt). Call after the arm is posed."""
         C = self.C
         side, sg = SIDE[s]
         wb = side + 'Weapon'
-        if wb not in C.head or h <= 0:
+        pts = C.samples.get('weapon' + s)
+        if wb not in C.head or h <= 0 or not pts:
             return
-        tc, tr = C.torso_ell or (C.head['Spine'], Vector((0.3, 0.3, 0.3)))
-        # on the outside of the hip, grip at the belt, barrel down and a little back
-        spot = Vector((sg * (tr.x * 0.9 + C.over['holster_out']), C.head['Hips'].y, C.head['Hips'].z + C.over['holster_up']))
-        held = C.to_world(self, side + 'Hand', C.head[wb])
-        self.moved[wb] = (C.to_world(self, 'Hips', spot) - held) * h
-        down = C.turn(self, 'Hips') @ between(C.wpn[s], Vector((sg * 0.3, 0.35, -1)))
-        self.set(wb, I.slerp(C.turn(self, side + 'Hand').inverted() @ down, h))
+        self.stowed[s] = h
+        belt = C.belt.get(s)
+        if belt is None:
+            tc, tr = C.torso_ell or (C.head['Spine'], Vector((0.3, 0.3, 0.3)))
+            belt = Vector((sg * tr.x, C.head['Hips'].y, C.head['Hips'].z + 0.06))
+        down = C.turn(self, 'Hips') @ between(C.wpn[s], Vector((sg * 0.3, 0.2, -1)))  # clears the thigh
+        self.set(wb, C.turn(self, side + 'Hand').inverted() @ down)
+        self.moved.pop(wb, None)
+        # where the turned weapon is, then slide it onto the hip: inner side touching the belt,
+        # top a little above it, centred front-to-back on it
+        posed = [C.to_world(self, wb, p) for p in pts]
+        anchor = C.to_world(self, 'Hips', belt)
+        inner = min(posed, key=lambda p: sg * p.x)
+        top = max(p.z for p in posed)
+        mid_y = sum(p.y for p in posed) / len(posed)
+        fix = Vector((anchor.x + sg * C.over['holster_out'] - inner.x, anchor.y - mid_y,
+                      anchor.z + C.over['holster_up'] - top))
+        self.moved[wb] = fix * h
+        self.set(wb, I.slerp(self.get(wb), h))
 
     def reach(self, s, target, pole):
         """Two-bone IK: the wrist on `target` (torso frame), the elbow toward `pole`."""
@@ -1018,6 +1034,8 @@ def make_all(d, rig):
             if C.over['resolve']:
                 for side in 'LR':
                     resolve(C, P, side)
+            for side, h in list(P.stowed.items()):  # the arm may have moved: hang it again
+                P.holster(side, h)
             apply(C, P)
             for pb in rig.pose.bones:
                 qq = pb.rotation_quaternion
