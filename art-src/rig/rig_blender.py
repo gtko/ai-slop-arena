@@ -11,7 +11,8 @@ The clips themselves are written in clips.py.
 Joints come from the automatic fit, corrected per character by art-src/rig/landmarks/<key>.json
 (see load_marks).
 
-Usage: "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b -P art-src/rig/rig_blender.py -- [keys...] [--preview] [--check [--quick]]
+Usage: "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b -P art-src/rig/rig_blender.py -- [keys...]
+         [--preview] [--check] [--collide] [--quick]   (--quick: no export; with --check alone, no clips either)
 """
 import json
 import math
@@ -19,7 +20,7 @@ import os
 import sys
 
 import bpy
-from mathutils import Matrix, Quaternion, Vector
+from mathutils import Euler, Matrix, Quaternion, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -146,7 +147,7 @@ def default_marks(d):
             side + 'ToeEnd': toe + Vector((0, -0.04 * H, 0)),
         })
     return {'joints': j, 'bands': dict(BANDS), 'head_tilt': 20.0, 'smooth': 2, 'cloth': True,
-            'weapon_radius': 0.07, 'regions': []}
+            'weapon_radius': 0.07, 'regions': [], 'weapons': {}, 'poses': {}}
 
 
 def load_marks(d):
@@ -161,6 +162,12 @@ def load_marks(d):
       regions       [{"sphere": [x, y, z], "radius": r} or {"box": [[x0, y0, z0], [x1, y1, z1]]},
                      + "part": "body" | "armL" | "armR" | "legL" | "legR"  (move those vertices to a part)
                      or "bone": "<Bone>"  (weight them fully to one bone)], applied in order
+      weapons       {"R": {"add": [shapes], "remove": [shapes], "grip": {"rotate": [x, y, z] degrees,
+                    "offset": [x, y, z]}}}: the weapon in that hand becomes its own object, parented
+                    to the hand bone. It starts as the vertices pinned to the hand (weapon_radius, or a
+                    region with "bone": "<Side>Hand"), plus / minus the shapes; the grip turns it about
+                    the wrist and shifts it, in the rest pose.
+      poses         per-character adjustments of the clips (clips.py, POSE_DEFAULTS)
     The resolved set is written to work/<key>_landmarks.json (a starting point to copy)."""
     m = default_marks(d)
     path = os.path.join(MARKS, d['key'] + '.json')
@@ -176,7 +183,7 @@ def load_marks(d):
             else:
                 m['joints'][name] = Vector(v)
         m['bands'].update(over.get('bands', {}))
-        for k in ('head_tilt', 'smooth', 'cloth', 'weapon_radius', 'regions'):
+        for k in ('head_tilt', 'smooth', 'cloth', 'weapon_radius', 'regions', 'weapons', 'poses'):
             if k in over:
                 m[k] = over[k]
     out = {**m, 'joints': {k: [round(c, 4) for c in v] for k, v in m['joints'].items()}}
@@ -324,11 +331,14 @@ def skin(d, obj, src, m, part_of_vertex, rigid_of_vertex):
             [0, bw('Arm'), bw('ForeArm'), bw('Hand')])
     armed = lambda s: d['weapon'] in ('both', s)
     groups = {}
+    wside = [None] * len(src)  # the hand whose weapon this vertex belongs to
     for i, o in enumerate(src):
         p = to_b(P[o * 3:o * 3 + 3])
         part, rigid = part_of_vertex[o], rigid_of_vertex[o]
         if rigid:
             w = {rigid: 1.0}
+            if rigid in ('LeftHand', 'RightHand'):
+                wside[i] = rigid[0]
         elif part == 'body':
             w, carry = {}, 1.0
             for bone, below in torso:
@@ -345,6 +355,7 @@ def skin(d, obj, src, m, part_of_vertex, rigid_of_vertex):
             if part.startswith('arm') and armed(s) and dist > m['weapon_radius'] * H \
                     and arc > ch.cum[2]:  # the weapon, past the elbow: rigid on the hand
                 w = {side + 'Hand': 1.0}
+                wside[i] = s
             else:
                 w = ch.weights(arc)
                 if part.startswith('arm') and not armed(s) and m['cloth']:
@@ -367,6 +378,100 @@ def skin(d, obj, src, m, part_of_vertex, rigid_of_vertex):
     bpy.ops.object.vertex_group_limit_total(group_select_mode='ALL', limit=4)
     bpy.ops.object.vertex_group_normalize_all(lock_active=False)
     bpy.ops.object.mode_set(mode='OBJECT')
+    for s, spec in m['weapons'].items():
+        for i, o in enumerate(src):
+            p = to_b(P[o * 3:o * 3 + 3])
+            if any(in_shape(r, p) for r in spec.get('add', [])):
+                wside[i] = s
+            if wside[i] == s and any(in_shape(r, p) for r in spec.get('remove', [])):
+                wside[i] = None
+    return wside
+
+
+def split_weapons(d, body, rig, m, wside):
+    """Each weapon becomes its own mesh, parented to its hand bone (rigid, and free to be placed or
+    swapped): the faces whose corners all belong to it leave the body."""
+    out = []
+    me = body.data
+    # kept as a mesh attribute: separating a weapon renumbers the body's vertices
+    attr = me.attributes.new('weapon_side', 'INT', 'POINT')
+    attr.data.foreach_set('value', [{'L': 1, 'R': 2}.get(w, 0) for w in wside])
+    for s, side, _ in SIDES:
+        code = 1 if s == 'L' else 2
+        sel = [a.value == code for a in me.attributes['weapon_side'].data]
+        faces = [all(sel[v] for v in p.vertices) for p in me.polygons]
+        if sum(faces) < 20:
+            continue
+        me.vertices.foreach_set('select', sel)
+        me.edges.foreach_set('select', [sel[e.vertices[0]] and sel[e.vertices[1]] for e in me.edges])
+        me.polygons.foreach_set('select', faces)
+        for o in bpy.context.view_layer.objects:
+            o.select_set(o == body)
+        bpy.context.view_layer.objects.active = body
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.separate(type='SELECTED')
+        bpy.ops.object.mode_set(mode='OBJECT')
+        wpn = next(o for o in bpy.context.selected_objects if o != body)
+        wpn.name = wpn.data.name = f"{d['key']}_weapon_{s}"
+        wpn.vertex_groups.clear()
+        wpn.modifiers.clear()
+        # grip: turn about the wrist and shift, then put the object's origin on the wrist
+        wrist = m['joints'][side + 'Hand']
+        g = m['weapons'].get(s, {}).get('grip', {})
+        rot = Euler([math.radians(a) for a in g.get('rotate', (0, 0, 0))]).to_matrix().to_4x4()
+        pivot = wrist + Vector(g.get('offset', (0, 0, 0)))
+        wpn.data.transform(Matrix.Translation(pivot) @ rot @ Matrix.Translation(-wrist))
+        wpn.data.transform(Matrix.Translation(-pivot))
+        wpn.parent = None
+        wpn.matrix_world = Matrix.Translation(pivot)
+        bpy.context.view_layer.update()
+        mw = wpn.matrix_world.copy()
+        wpn.parent = rig
+        wpn.parent_type = 'BONE'
+        wpn.parent_bone = side + 'Hand'
+        bpy.context.view_layer.update()
+        wpn.matrix_world = mw
+        if 'weapon_side' in wpn.data.attributes:
+            wpn.data.attributes.remove(wpn.data.attributes['weapon_side'])
+        out.append(wpn)
+    me.attributes.remove(me.attributes['weapon_side'])
+    return out
+
+
+def measure(body, weapons):
+    """Rest-pose volumes the clips keep the arms out of: the head (box), the torso (box), and each
+    weapon's corners in the armature frame (for clearance checks)."""
+    me = body.data
+    names = {g.index: g.name for g in body.vertex_groups}
+    pts = {'head': [], 'torso': []}
+    for v in me.vertices:
+        if not v.groups:
+            continue
+        g = max(v.groups, key=lambda x: x.weight)
+        name = names[g.group]
+        if name == 'Head':
+            pts['head'].append(v.co)
+        elif name in ('Hips', 'Spine', 'Spine1', 'Spine2'):
+            pts['torso'].append(v.co)
+    box = lambda ps: [[min(p[k] for p in ps) for k in range(3)], [max(p[k] for p in ps) for k in range(3)]]
+    out = {k: box(v) for k, v in pts.items() if v}
+    # leg thickness: median distance of the thigh / shin vertices to their bone
+    arm = body.parent.data.bones if body.parent else None
+    dists = []
+    if arm:
+        for v in me.vertices:
+            if not v.groups:
+                continue
+            name = names[max(v.groups, key=lambda x: x.weight).group]
+            if name.endswith('UpLeg') or name.endswith('Leg'):
+                bn = arm[name]
+                dists.append(seg_dist(v.co, bn.head_local, bn.tail_local))
+    out['leg_radius'] = sorted(dists)[len(dists) // 2] if dists else 0.1
+    out['weapon'] = {}
+    for w in weapons:
+        vs = [w.matrix_world @ v.co for v in w.data.vertices]
+        out['weapon'][w.name[-1]] = box(vs)
+    return out
 
 
 
@@ -391,19 +496,24 @@ def build(key):
     bpy.context.scene.collection.objects.link(body)
     rig = build_armature(d, joint_layout(marks))
     rig.name = key + '_rig'
-    skin(d, body, src, marks, part, rigid)
-    body.parent = rig
+    wside = skin(d, body, src, marks, part, rigid)
+    weapons = split_weapons(d, body, rig, marks, wside)
+    body.parent = rig  # (before measure: it reads the bones)
     mod = body.modifiers.new('Armature', 'ARMATURE')
     mod.object = rig
-    return d, rig, body, marks
+    d['measure'] = measure(body, weapons)
+    d['poses'] = marks['poses']
+    return d, rig, body, marks, weapons
 
 
-def export(key, rig, body):
+def export(key, rig, body, weapons):
     os.makedirs(GAME, exist_ok=True)
     os.makedirs(RIGGED, exist_ok=True)
     bpy.ops.object.select_all(action='DESELECT')
     rig.select_set(True)
     body.select_set(True)
+    for w in weapons:
+        w.select_set(True)
     bpy.context.view_layer.objects.active = rig
     bpy.ops.export_scene.gltf(
         filepath=os.path.join(GAME, key + '.glb'), export_format='GLB', use_selection=True,
@@ -421,20 +531,25 @@ def export(key, rig, body):
 
 def main():
     argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
-    preview, check, quick = '--preview' in argv, '--check' in argv, '--quick' in argv
+    preview, check, quick, collide = '--preview' in argv, '--check' in argv, '--quick' in argv, '--collide' in argv
     keys = [a for a in argv if not a.startswith('--')] or KEYS
     for key in keys:
-        d, rig, body, marks = build(key)
-        if check:  # the rig test sheet: work/check/<key>.png
+        d, rig, body, marks, weapons = build(key)
+        print(key, 'weapons:', ', '.join(f'{w.name} ({len(w.data.polygons)} faces)' for w in weapons) or 'none')
+        if check:  # the rig test sheet: work/check/<key>_*.png
             import rig_check
             print(key, 'check sheet:', rig_check.sheet(d, rig, body, marks, os.path.join(WORK, 'check')))
-        if quick:  # --check --quick: the sheet only, no clips, no export
+        if quick and not collide:  # --check --quick: the sheet only, no clips, no export
             continue
         made = clips.make_all(d, rig)
         print(key, 'clips:', ', '.join(made))
+        if collide:  # arms / weapons through the head or body, per clip: work/collide/<key>.*
+            import rig_check
+            rig_check.collide(d, rig, body, weapons, os.path.join(WORK, 'collide'))
         if preview:
             clips.preview(key, rig, body, os.path.join(HERE, 'work', 'preview'))
-        export(key, rig, body)
+        if not quick:
+            export(key, rig, body, weapons)
 
 
 if __name__ == '__main__':

@@ -74,15 +74,55 @@ def to_b(v):
 
 # ------------------------------------------------------------------ character
 
+# Per-character pose adjustments ("poses" in art-src/rig/landmarks/<key>.json), all optional.
+POSE_DEFAULTS = {
+    'head_margin': 0.1,    # gap kept between arms / hands / weapons and the head (game units)
+    'torso_margin': 0.02,  # the same against the torso (only deep penetration is corrected)
+    'leg_margin': 0.02,    # the same against the thighs and shins
+    'head_scale': [1, 1, 1],   # the head volume (an ellipsoid in the Head-weighted box): stretch it
+    'head_shift': [0, 0, 0],   # ... and move it (e.g. to cover a hood, horns, gills)
+    'torso_scale': [1, 1, 1],
+    'torso_shift': [0, 0, 0],
+    'leg_radius': None,        # thigh / shin thickness (measured when None)
+    'resolve': True,       # every frame: swing an arm away from the head / torso when it goes through
+    'up_forward': -0.12,   # raised arms lean forward (-y) or back (+y)
+    'carry': {},           # {"R": [x, y, z]}: rest direction of the weapon (guns) or of the arm
+    'aim': {},             # {"R": [x, y, z]}: aiming direction of the weapon / fist
+    'throw_raise': -2.6,   # throwers: arm pitch of the cocked throw
+    'mouth': [0, 0, 0],    # shift of the coughing hand's target (in front of the mouth)
+    'watch': [0, 0, 0],    # shift of the watch-checking hand's target (in front of the chest)
+}
+
+
 class Char:
-    """Rest data of one rigged character: bone rests, limb lengths, arm poses by weapon style."""
+    """Rest data of one rigged character: bone rests, limb lengths, arm poses by weapon style, and
+    the head / torso volumes the arms must stay out of."""
 
     def __init__(self, d, rig):
         self.key, self.style, self.weapon, self.H = d['key'], d['style'], d['weapon'], d['height']
         self.rig = rig
+        self.over = {**POSE_DEFAULTS, **d.get('poses', {})}
         bones = rig.data.bones
         self.rest = {b.name: b.matrix_local.to_quaternion() for b in bones}
         self.head = {b.name: b.head_local.copy() for b in bones}
+        self.tail = {b.name: b.tail_local.copy() for b in bones}
+        M = d.get('measure', {})
+        ell = lambda box: ((Vector(box[0]) + Vector(box[1])) / 2, (Vector(box[1]) - Vector(box[0])) / 2)
+        self.head_ell = ell(M['head']) if 'head' in M else (self.head['Head'] + Vector((0, 0, 0.5)), Vector((0.5, 0.5, 0.5)))
+        self.torso_ell = ell(M['torso']) if 'torso' in M else None
+        o = self.over
+        mul = lambda a, b: Vector([a[i] * b[i] for i in range(3)])
+        self.head_ell = (self.head_ell[0] + Vector(o['head_shift']), mul(self.head_ell[1], o['head_scale']))
+        if self.torso_ell:
+            self.torso_ell = (self.torso_ell[0] + Vector(o['torso_shift']), mul(self.torso_ell[1], o['torso_scale']))
+        self.leg_r = o['leg_radius'] or M.get('leg_radius', 0.1)
+        self.parent = {b.name: (b.parent.name if b.parent else None) for b in bones}
+        self.chains = {}
+        self.wcorners = {}
+        for s_, box in M.get('weapon', {}).items():
+            lo, hi = Vector(box[0]), Vector(box[1])
+            self.wcorners[s_] = [Vector((x, y, z)) for x in (lo.x, hi.x) for y in (lo.y, hi.y) for z in (lo.z, hi.z)] + [(lo + hi) / 2]
+        self.cache = {}
         self.free = 'R' if self.weapon == 'L' else 'L'  # the hand that waves, coughs, cheers
         self.hang, self.aim, self.axis, self.wpn = {}, {}, {}, {}
         for s, sg in (('L', 1), ('R', -1)):
@@ -92,13 +132,16 @@ class Char:
             self.axis[s] = (self.head[side + 'ForeArm'] - self.head[side + 'Arm']).normalized()
             self.wpn[s] = to_b(J['weaponAxis'])
             armed = self.armed(s)
-            if armed and self.style == 'gun':
+            carry = self.over['carry'].get(s)
+            if carry:
+                self.hang[s] = between(self.wpn[s] if armed and self.style == 'gun' else self.axis[s], Vector(carry))
+            elif armed and self.style == 'gun':
                 self.hang[s] = between(self.wpn[s], Vector((sg * 0.12, -0.65, -0.75)))
             elif armed and self.style == 'staff':
                 self.hang[s] = between(self.axis[s], Vector((sg * 0.45, -0.1, -0.9)))
             else:
                 self.hang[s] = between(self.axis[s], Vector((sg * 0.18, -0.08, -1)))
-            fwd = Vector((sg * 0.06, -1, -0.06))
+            fwd = Vector(self.over['aim'].get(s, (sg * 0.06, -1, -0.06)))
             self.aim[s] = (between(self.wpn[s], fwd) if self.style == 'gun' else between(self.axis[s], fwd)) \
                 if armed and self.style in ('gun', 'cast') else None
         # legs, for the IK: hip, knee, ankle in the side plane (y, z)
@@ -120,6 +163,103 @@ class Char:
 
     def arm_to(self, s, direction, weapon=False):
         return between(self.wpn[s] if weapon else self.axis[s], Vector(direction))
+
+    def chain(self, bone):
+        """Bones from the root down to `bone`."""
+        if bone not in self.chains:
+            out, b = [], bone
+            while b:
+                out.append(b)
+                b = self.parent[b]
+            self.chains[bone] = out[::-1]
+        return self.chains[bone]
+
+    def to_world(self, P, bone, p):
+        """A rest point carried by `bone`, posed (armature frame)."""
+        for b in reversed(self.chain(bone)):
+            h = self.head[b]
+            p = P.get(b) @ (p - h) + h
+        return p + P.loc
+
+    def to_local(self, P, bone, p):
+        """A posed point back into `bone`'s rest frame."""
+        p = p - P.loc
+        for b in self.chain(bone):
+            h = self.head[b]
+            p = P.get(b).inverted() @ (p - h) + h
+        return p
+
+    def turn(self, P, bone):
+        """Total rotation of `bone` (its deltas, root first)."""
+        r = Quaternion()
+        for b in self.chain(bone):
+            r = r @ P.get(b)
+        return r
+
+    def arm_points(self, P, s):
+        """(kind, posed point) along the arm, hand and weapon, in the armature frame."""
+        side = SIDE[s][0]
+        S, E0, W0, T0 = self.head[side + 'Arm'], self.head[side + 'ForeArm'], self.head[side + 'Hand'], self.tail[side + 'Hand']
+        pts = [('upper', self.to_world(P, side + 'Arm', S.lerp(E0, k))) for k in (0.6, 1.0)]
+        pts += [('lower', self.to_world(P, side + 'ForeArm', E0.lerp(W0, k))) for k in (0.5, 1.0)]
+        pts += [('lower', self.to_world(P, side + 'Hand', W0.lerp(T0, k))) for k in (0.5, 1.0)]
+        pts += [('weapon', self.to_world(P, side + 'Hand', c)) for c in self.wcorners.get(s, [])]
+        return pts
+
+    def clearance(self, P, s):
+        """How far the arm stays out of the head, and its hand / weapon (deeply) out of the torso
+        and the legs: < 0 = inside, in units of the volume's size. Returns (value, posed centre of the
+        volume it hits)."""
+        o = self.over
+        c, r = self.head_ell
+        best = (1e9, c)
+        legs = []
+        for side_ in ('Left', 'Right'):
+            hip = self.to_world(P, side_ + 'UpLeg', self.head[side_ + 'UpLeg'])
+            knee = self.to_world(P, side_ + 'Leg', self.head[side_ + 'Leg'])
+            ankle = self.to_world(P, side_ + 'Foot', self.head[side_ + 'Foot'])
+            legs += [(hip, knee), (knee, ankle)]
+        for kind, p in self.arm_points(P, s):
+            v = self.to_local(P, 'Head', p) - c
+            k = math.sqrt(sum((v[i] / (r[i] + o['head_margin'])) ** 2 for i in range(3))) - 1
+            if k < best[0]:
+                best = (k, self.to_world(P, 'Head', c))
+            if kind == 'upper':
+                continue
+            if self.torso_ell:
+                tc, tr = self.torso_ell
+                v = self.to_local(P, 'Spine1', p) - tc
+                k = math.sqrt(sum((v[i] / (tr[i] * 0.9 + o['torso_margin'])) ** 2 for i in range(3))) - 1
+                if k < best[0]:
+                    best = (k, self.to_world(P, 'Spine1', tc))
+            for a, b_ in legs:
+                ab = b_ - a
+                t = min(1.0, max(0.0, (p - a).dot(ab) / max(ab.length_squared, 1e-9)))
+                near = a + ab * t
+                k = (p - near).length / (self.leg_r + o['leg_margin']) - 1
+                if k < best[0]:
+                    best = (k, near)
+        return best
+
+    def up_dir(self, s, fore_bend=-0.3, forward=None):
+        """The highest raised-arm direction (out to the side and up) that keeps the fist and the
+        weapon clear of the big chibi head."""
+        key = ('up', s, fore_bend, forward)
+        if key in self.cache:
+            return self.cache[key]
+        sg = SIDE[s][1]
+        fwd = self.over['up_forward'] if forward is None else forward
+        P = Pose(self)
+        out = None
+        for deg in range(85, -31, -5):
+            e = math.radians(deg)
+            out = Vector((sg * math.cos(e), fwd, math.sin(e))).normalized()
+            P.arm(s, self.arm_to(s, out))
+            P.fore(s, fore_bend)
+            if self.clearance(P, s)[0] >= 0:
+                break
+        self.cache[key] = out
+        return out
 
 
 SIDE = {'L': ('Left', 1), 'R': ('Right', -1)}
@@ -164,6 +304,32 @@ class Pose:
         arm = self.get(SIDE[s][0] + 'Arm')
         local = arm.inverted() @ Vector(direction).normalized()
         self.set(SIDE[s][0] + 'ForeArm', between(self.C.fore_rest[s], local))
+
+    def reach(self, s, target, pole):
+        """Two-bone IK: the wrist on `target` (torso frame), the elbow toward `pole`."""
+        C = self.C
+        side = SIDE[s][0]
+        S, E0, W0 = C.head[side + 'Arm'], C.head[side + 'ForeArm'], C.head[side + 'Hand']
+        l1, l2 = (E0 - S).length, (W0 - E0).length
+        d = Vector(target) - S
+        D = min(max(d.length, abs(l1 - l2) + 1e-3), (l1 + l2) * 0.999)
+        u = d.normalized()
+        a = (l1 * l1 - l2 * l2 + D * D) / (2 * D)
+        h = math.sqrt(max(0.0, l1 * l1 - a * a))
+        p = Vector(pole)
+        p = p - u * p.dot(u)
+        p = p.normalized() if p.length > 1e-6 else Vector((SIDE[s][1], 0, 0))
+        E, W = S + u * a + p * h, S + u * D
+        Ra = between(E0 - S, E - S)
+        self.set(side + 'Arm', Ra)
+        self.set(side + 'ForeArm', between(W0 - E0, Ra.inverted() @ (W - E)))
+
+    def point_weapon(self, s, direction, k=1.0):
+        """Turn the hand so the weapon points along `direction` (torso frame), blended by k."""
+        side = SIDE[s][0]
+        Raf = self.get(side + 'Arm') @ self.get(side + 'ForeArm')
+        turn = between(self.C.wpn[s], Raf.inverted() @ Vector(direction))
+        self.set(side + 'Hand', self.get(side + 'Hand').slerp(turn, k))
 
     def shoulder(self, s, raise_):
         self.set(SIDE[s][0] + 'Shoulder', q(Y, -SIDE[s][1] * raise_))
@@ -244,7 +410,7 @@ def aim_arms(P, C, r, amount=1.0):
         if C.aim[s] is not None:
             target = q(X, -r * 0.45) @ C.aim[s]
         elif C.style == 'throw':
-            target = q(X, -2.6 + r * 1.8) @ C.hang[s]
+            target = q(X, C.over['throw_raise'] + r * 1.8) @ C.hang[s]
         else:  # staff
             target = q(X, -0.55 - r * 0.6) @ C.hang[s]
         P.arm(s, P.get(SIDE[s][0] + 'Arm').slerp(target, amount))
@@ -268,6 +434,38 @@ def blend_arm(P, s, target, k, fore=None, fore_dir=None):
         tmp = Pose(P.C)
         tmp.fore(s, *fore)
         P.set(fb, old_fore.slerp(tmp.get(fb), k))
+
+
+def resolve(C, P, s, step=0.05, steps=40):
+    """Safety net, every frame: while an arm (or its fist or weapon) is inside the head, deep in the
+    torso or in a leg, swing it away from that volume about the shoulder, straightening the elbow."""
+    k, centre = C.clearance(P, s)
+    if k >= 0:
+        return
+    side = SIDE[s][0]
+    for i in range(steps):
+        S = C.to_world(P, side + 'Arm', C.head[side + 'Arm'])
+        W = C.to_world(P, side + 'Hand', C.head[side + 'Hand'])
+        d = (W - S).normalized()
+        away = W - centre
+        away = away - d * away.dot(d)
+        away = away.normalized() if away.length > 1e-5 else Vector((SIDE[s][1], 0, 0))
+        axis = C.turn(P, side + 'Shoulder').inverted() @ d.cross(away)  # into the arm's parent frame
+        P.set(side + 'Arm', q(axis.normalized(), step) @ P.get(side + 'Arm'))
+        if i % 3 == 2:  # a little less elbow bend too
+            P.set(side + 'ForeArm', P.get(side + 'ForeArm').slerp(I, 0.15))
+        k, centre = C.clearance(P, s)
+        if k >= 0:
+            return
+
+
+def blend_reach(P, s, target, pole, k):
+    """Blend an arm toward an IK pose (wrist on target)."""
+    side = SIDE[s][0]
+    tmp = Pose(P.C)
+    tmp.reach(s, target, pole)
+    for b in ('Arm', 'ForeArm'):
+        P.set(side + b, P.get(side + b).slerp(tmp.get(side + b), k))
 
 
 # ------------------------------------------------------------------ clips
@@ -391,7 +589,7 @@ def c_super(C, t):
         fling = env(t, 0.4, 0.52, 0.75, 1.1)
         up = Vector((0, 0.25, 0.95))
         for s, sg in (('L', 1), ('R', -1)):
-            over = C.arm_to(s, (sg * 0.25, up.y, up.z))
+            over = C.arm_to(s, C.up_dir(s, -0.6, 0.25))  # overhead, behind the head
             ahead = C.arm_to(s, (sg * 0.2, -0.95, -0.1))
             blend_arm(P, s, over, wind, (-0.6, 0, 0))
             blend_arm(P, s, ahead, fling, (-0.1, 0, 0))
@@ -427,7 +625,7 @@ def c_super(C, t):
         P.spine(-0.25 * lift, 0, tremble)
         P.head(-0.45 * lift)
         for s, sg in (('L', 1), ('R', -1)):
-            blend_arm(P, s, C.arm_to(s, (sg * 0.45, 0.1, 0.9)), lift, (-0.1 + tremble, 0, 0))
+            blend_arm(P, s, C.arm_to(s, C.up_dir(s, -0.1, 0.1)), lift, (-0.1 + tremble, 0, 0))
             P.leg_fk(s, -0.1 * lift, 0.5 * lift, 0.35 * lift, 0.05)
     return P
 
@@ -483,8 +681,9 @@ def c_victory(C, t, dur=1.2):
         P.leg_ik(s, 0.05 * hop, 0.5 * hop, 0.04 if s == 'L' else -0.04)
     pump = math.sin(TAU * t / dur * 2)
     for s, sg in (('L', 1), ('R', -1)):
-        P.arm(s, q(Y, -sg * 0.15 * pump) @ C.arm_to(s, (sg * 0.75, -0.15, 0.65)))  # a V: the head hides straight-up arms
-        P.fore_to(s, (sg * (0.3 - 0.2 * pump), -0.15, 0.95))
+        up = C.up_dir(s, -0.35)  # as high as the head lets the fists go
+        P.arm(s, q(Y, -sg * 0.1 * (1 + pump)) @ C.arm_to(s, up))
+        P.fore(s, -0.35 - 0.25 * (0.5 + 0.5 * pump))
     return P
 
 
@@ -494,9 +693,13 @@ def c_wave(C, t):
     sg = SIDE[s][1]
     e = env(t, 0.1, 0.45, 1.75, 2.2)
     P = stance(C, t, 0.6)
-    raised = C.arm_to(s, (sg * 0.95, -0.2, 0.22))
+    side = SIDE[s][0]
+    raised = C.arm_to(s, C.up_dir(s, -1.0))
     w = math.sin(TAU * 2.4 * t)
-    blend_arm(P, s, raised, e, fore_dir=(sg * (0.2 + 0.45 * w), -0.25, 0.95))
+    blend_arm(P, s, raised, e, (-1.0, 0, 0))
+    # the bent forearm swings like a wiper, about the upper arm
+    upper = (C.head[side + 'ForeArm'] - C.head[side + 'Arm']).normalized()
+    P.set(side + 'ForeArm', q(upper, 0.45 * w * e) @ P.get(side + 'ForeArm'))
     P.head(0.05 * e, sg * 0.15 * e, -sg * 0.18 * e)
     P.hips(0, 0, -sg * 0.05 * e)
     return P
@@ -515,7 +718,11 @@ def c_bored(C, t):
     P.head(-0.3 * sigh)
     # watch: forearm up across the chest, head tilted down toward it
     watch = env(t, 1.4, 1.8, 3.1, 3.5)
-    blend_arm(P, s, C.arm_to(s, (sg * 0.35, -0.6, -0.72)), watch, fore_dir=(-sg * 0.8, -0.5, 0.35))
+    tc, tr = C.torso_ell or (C.head['Spine2'], Vector((0.3, 0.3, 0.3)))
+    target = Vector((-sg * 0.02, tc.y - tr.y - 0.14, C.head['Spine2'].z)) + Vector(C.over['watch'])
+    blend_reach(P, s, target, (sg, 0.4, -0.6), watch)  # wrist in front of the chest
+    if C.armed(s) and s in C.wcorners:  # the weapon held down and out of the way
+        P.point_weapon(s, (sg * 0.6, -0.2, -0.8), watch)
     P.head(0.35 * watch, sg * 0.35 * watch, 0)
     # foot tap on the other foot
     tapper = 'R' if s == 'L' else 'L'
@@ -588,7 +795,11 @@ def c_cough(C, t):
     s = C.free
     sg = SIDE[s][1]
     e = env(t, 0.05, 0.3, 1.25, 1.6)
-    blend_arm(P, s, C.arm_to(s, (sg * 0.3, -0.7, -0.65)), e, fore_dir=(-sg * 0.58, -0.05, 0.82))  # hand to the mouth
+    hc, hr = C.head_ell
+    mouth = Vector((sg * 0.02, hc.y - hr.y - C.over['head_margin'] - 0.06, hc.z - 0.45 * hr.z)) + Vector(C.over['mouth'])
+    blend_reach(P, s, mouth, (sg, 0.3, -1), e)  # the fist in front of the mouth
+    if C.armed(s) and s in C.wcorners:  # the weapon held away, pointing down and out
+        P.point_weapon(s, (sg * 0.7, -0.1, -0.7), e)
     c = sum(kick(t, a, 0.04, 9.0) for a in (0.35, 0.7, 1.05))
     P.spine(0.18 * e + 0.25 * c)
     P.head(0.1 * e + 0.2 * c)
@@ -604,7 +815,7 @@ def c_cheer(C, t):
     pump = 0.5 + 0.5 * math.sin(TAU * 2.5 * t)
     for s in arms:
         sg = SIDE[s][1]
-        blend_arm(P, s, C.arm_to(s, (sg * 0.8, -0.2, 0.55)), e, fore_dir=(sg * (0.45 - 0.35 * pump), -0.2, 0.9))
+        blend_arm(P, s, C.arm_to(s, C.up_dir(s, -0.5)), e, (-0.5 - 0.5 * pump, 0, 0))
     P.spine(-0.1 * e)
     P.head(-0.2 * e)
     P.loc.z = 0.03 * e * pump
@@ -656,6 +867,9 @@ def make_all(d, rig):
         for f in range(n + 1):
             t = f / FPS
             P = fn(C, 0.0 if loop and f == n else t)  # loops end exactly where they start
+            if C.over['resolve']:
+                for side in 'LR':
+                    resolve(C, P, side)
             apply(C, P)
             for pb in rig.pose.bones:
                 qq = pb.rotation_quaternion
