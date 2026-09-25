@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { ASSET_BASE } from './assets.js';
-import { charMat } from './materials.js';
+import { charMat, shared } from './materials.js';
 import { outlineMaterial, OUTLINES } from './models.js';
 
 // Image-to-3D figurines: the chibi art (art-src/chibi) turned into textured meshes by
@@ -19,11 +19,11 @@ const H = HEIGHT;
 
 // Which hand holds the weapon (R = the character's right = -x, models face +z), how the attack
 // is animated (see RAISE in brawler.js), plus per-model joint overrides (fractions of the height)
-// when the automatic fit needs help.
+// when the automatic fit needs help. `flames`: the flame-coloured part of the head is animated.
 export const RIGS = {
   blaster: { weapon: 'R', style: 'gun' },
   gunslinger: { weapon: 'both', style: 'gun' },
-  bomber: { weapon: 'L', style: 'throw' },
+  bomber: { weapon: 'L', style: 'throw', flames: true },
   frostbite: { weapon: 'R', style: 'staff' },
   volt: { weapon: 'both', style: 'cast' },
 };
@@ -77,7 +77,94 @@ function prepare(key, scene, aniso) {
 
   const map = mesh.material.map;
   map.anisotropy = aniso;
-  return { geo, map, joints, gain: textureGain(map) };
+  const flames = !!RIGS[key]?.flames && flameWeights(geo, map, joints);
+  return { geo, map, joints, gain: textureGain(map), flames };
+}
+
+// Flame hair: aFlame = (weight, 0 at the flame base -> 1 at the tips) on the head vertices, which
+// the material makes lick upward and flicker (see FLAME_VERT). A vertex is flame-coloured when its
+// texel is a saturated yellow-orange; the weight is the share of flame-coloured vertices around it,
+// so the field is smooth (no lone vertex pulled out of the surface) and the thin lava cracks of the
+// horns, with few such neighbours, stay still. Returns false when the texture can't be read.
+function flameWeights(geo, map, J) {
+  let d, S = 256;
+  try {
+    const c = document.createElement('canvas');
+    c.width = c.height = S;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(map.image, 0, 0, S, S);
+    d = ctx.getImageData(0, 0, S, S).data;
+  } catch { return false; }
+  const pos = geo.attributes.position, uv = geo.attributes.uv, n = pos.count;
+  const head = [], hot = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    if (pos.getY(i) < J.neck + 0.02 * H) continue;
+    head.push(i);
+    // glTF textures are not flipped: uv (0, 0) is the top-left texel
+    const px = Math.min(S - 1, Math.max(0, Math.floor(uv.getX(i) * S)));
+    const py = Math.min(S - 1, Math.max(0, Math.floor(uv.getY(i) * S)));
+    const o = (py * S + px) * 4, r = d[o] / 255, g = d[o + 1] / 255, b = d[o + 2] / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), sat = mx > 0 ? (mx - mn) / mx : 0;
+    const hue = mx === mn ? 0 : mx === r ? 60 * (((g - b) / (mx - mn)) % 6) : mx === g ? 60 * ((b - r) / (mx - mn) + 2) : 60 * ((r - g) / (mx - mn) + 4);
+    hot[i] = hue > 5 && hue < 60 && sat > 0.4 && mx > 0.45 ? 1 : 0;
+  }
+  // neighbours within R through a uniform grid of R-sized cells
+  const R = 0.06 * H, cell = new Map(), key = (x, y, z) => `${x},${y},${z}`;
+  const c3 = i => [Math.floor(pos.getX(i) / R), Math.floor(pos.getY(i) / R), Math.floor(pos.getZ(i) / R)];
+  for (const i of head) { const k = key(...c3(i)); if (!cell.has(k)) cell.set(k, []); cell.get(k).push(i); }
+  const w = new Float32Array(n), p = new THREE.Vector3(), q = new THREE.Vector3();
+  let top = -Infinity, base = Infinity;
+  for (const i of head) {
+    const [cx, cy, cz] = c3(i);
+    p.fromBufferAttribute(pos, i);
+    let all = 0, fire = 0;
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+      for (const j of cell.get(key(cx + dx, cy + dy, cz + dz)) || []) {
+        if (q.fromBufferAttribute(pos, j).distanceToSquared(p) > R * R) continue;
+        all++; fire += hot[j];
+      }
+    }
+    w[i] = THREE.MathUtils.clamp((fire / all - 0.2) / 0.3, 0, 1);
+    if (w[i] > 0) { top = Math.max(top, p.y); base = Math.min(base, p.y); }
+  }
+  if (!(top > base)) return false;
+  const out = new Float32Array(n * 2);
+  for (const i of head) {
+    if (!w[i]) continue;
+    out[i * 2] = w[i];
+    out[i * 2 + 1] = THREE.MathUtils.clamp((pos.getY(i) - base) / (top - base), 0, 1);
+  }
+  geo.setAttribute('aFlame', new THREE.BufferAttribute(out, 2));
+  return true;
+}
+
+// In bind space, before skinning, so the flames follow the head: tips sway and stretch upward,
+// each tongue on its own phase.
+const FLAME_PARS = 'attribute vec2 aFlame;\nuniform float uTime;\nvarying float vFlame;';
+const FLAME_VERT = /* glsl */`
+vFlame = aFlame.x;
+if ( aFlame.x > 0.0 ) {
+  float fk = aFlame.x * aFlame.y * aFlame.y;
+  float fph = uTime * 6.0 + position.x * 11.0 + position.z * 9.0;
+  transformed += vec3( sin( fph ) * 0.045, ( 0.5 + 0.5 * sin( fph * 1.37 + position.y * 13.0 ) ) * 0.09, cos( fph * 0.83 ) * 0.045 ) * fk;
+}`;
+function flamePatch(sh) {
+  sh.uniforms.uTime = shared.time;
+  sh.vertexShader = sh.vertexShader
+    .replace('#include <common>', `#include <common>\n${FLAME_PARS}`)
+    .replace('#include <begin_vertex>', `#include <begin_vertex>\n${FLAME_VERT}`);
+}
+
+// Figurine outline hull that moves with the animated flames (the shared one would stay still).
+const flameOutlines = new Map();
+function flameOutline(width) {
+  if (flameOutlines.has(width)) return flameOutlines.get(width);
+  const base = outlineMaterial(width), m = base.clone();
+  m.onBeforeCompile = sh => { base.onBeforeCompile(sh); flamePatch(sh); };
+  m.customProgramCacheKey = () => 'outline-flame' + width;
+  m.userData.outline = true;
+  flameOutlines.set(width, m);
+  return m;
 }
 
 // The file has no normals, and its UV seams split vertices: average face normals per *position*
@@ -480,7 +567,7 @@ function textureGain(map) {
 // Painted-vinyl look: the texture carries the colours, a thin clear coat adds the figurine gloss.
 // Exposure gain + a little self-lighting keep dark outfits readable from the high game camera and
 // inside wall shadows. `emissive` stays free for the hit flash and frost tint in brawler.js.
-function figurineMaterial(map, gain) {
+function figurineMaterial(map, gain, flames = false) {
   const rim = charMat(0xffffff);
   const m = new THREE.MeshPhysicalMaterial({ map, roughness: 0.6, metalness: 0, clearcoat: 0.3, clearcoatRoughness: 0.45 });
   const uGain = { value: gain };
@@ -491,8 +578,15 @@ function figurineMaterial(map, gain) {
       .replace('#include <common>', '#include <common>\nuniform float uGain;')
       .replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb = min( diffuseColor.rgb * uGain, vec3( 0.95 ) );')
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * 0.28;');
+    if (!flames) return;
+    // flames glow (enough to bloom) and flicker
+    flamePatch(sh);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uTime;\nvarying float vFlame;')
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+totalEmissiveRadiance += diffuseColor.rgb * vFlame * ( 0.7 + 0.25 * sin( uTime * 17.0 + vViewPosition.y * 9.0 ) + 0.15 * sin( uTime * 29.0 ) );`);
   };
-  m.customProgramCacheKey = () => 'figurine';
+  m.customProgramCacheKey = () => flames ? 'figurine-flame' : 'figurine';
   rim.dispose();
   return m;
 }
@@ -503,13 +597,13 @@ export function buildFigurine(key) {
   const root = new THREE.Group(), body = new THREE.Group();
   root.add(body);
   const skeleton = makeSkeleton(T.joints);
-  const mat = figurineMaterial(T.map, T.gain); // own material: hit flash and frost tint are per brawler
+  const mat = figurineMaterial(T.map, T.gain, T.flames); // own material: hit flash and frost tint are per brawler
   const mesh = new THREE.SkinnedMesh(T.geo, mat);
   mesh.add(skeleton.bones[0]);
   mesh.bind(skeleton);
   mesh.castShadow = mesh.receiveShadow = true;
   mesh.frustumCulled = false; // bounds move with the pose
-  const line = new THREE.SkinnedMesh(T.geo, outlineMaterial(0.02)); // finer than the rigs: lots of small details
+  const line = new THREE.SkinnedMesh(T.geo, (T.flames ? flameOutline : outlineMaterial)(0.02)); // finer than the rigs: lots of small details
   line.bind(skeleton, mesh.bindMatrix);
   line.frustumCulled = false;
   line.userData.outline = true;
