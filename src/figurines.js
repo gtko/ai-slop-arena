@@ -65,7 +65,10 @@ function prepare(key, gltf, aniso) {
     scene.getObjectByName('Head').getWorldPosition(neck);
     flames = flameWeights(mesh.geometry, new THREE.BufferAttribute(rest, 3), map, { neck: neck.y });
   }
-  return { scene, clips: gltf.animations, map, gain: textureGain(map), flames, name: mesh.name };
+  // soft parts painted by the rig pipeline (landmarks "sway"): leaves, gills, flames, capes, hair
+  const soft = mesh.geometry.getAttribute('_sway');
+  if (soft) mesh.geometry.setAttribute('aSway', soft);
+  return { scene, clips: gltf.animations, map, gain: textureGain(map), flames, sway: !!soft, name: mesh.name };
 }
 
 // Flame hair: aFlame = (weight, 0 at the flame base -> 1 at the tips) on the head vertices, which
@@ -143,15 +146,38 @@ function flamePatch(sh) {
     .replace('#include <begin_vertex>', `#include <begin_vertex>\n${FLAME_VERT}`);
 }
 
-// Figurine outline hull that moves with the animated flames (the shared one would stay still).
-const flameOutlines = new Map();
-function flameOutline(width) {
-  if (flameOutlines.has(width)) return flameOutlines.get(width);
-  const base = outlineMaterial(width), m = base.clone();
-  m.onBeforeCompile = sh => { base.onBeforeCompile(sh); flamePatch(sh); };
-  m.customProgramCacheKey = () => 'outline-flame' + width;
+// Soft parts (art-src/rig, "sway"): `aSway` is 0 where a leaf / gill / cape / strand is attached and
+// 1 at its tip. In bind space, before skinning, those vertices flutter on their own phase and lean
+// with uSwayPush: the wind, the drag of running and a springy lag (brawler.js, every frame).
+const SWAY_PARS = /* glsl */`
+attribute float aSway;
+uniform vec3 uSwayPush;
+uniform float uSwayTime;
+uniform float uSwayWind;`;
+const SWAY_VERT = /* glsl */`
+if ( aSway > 0.0 ) {
+  float sw = aSway * aSway;
+  float sph = uSwayTime * 2.6 + position.x * 9.0 + position.y * 6.0 + position.z * 7.0;
+  vec3 flutter = vec3( sin( sph ), 0.4 * sin( sph * 1.6 + 1.1 ), cos( sph * 0.8 + 0.4 ) ) * ( 0.012 + 0.012 * uSwayWind );
+  transformed += ( flutter + uSwayPush ) * sw;
+}`;
+function swayPatch(sh, U) {
+  Object.assign(sh.uniforms, U);
+  sh.vertexShader = sh.vertexShader
+    .replace('#include <common>', `#include <common>
+${SWAY_PARS}`)
+    .replace('#include <begin_vertex>', `#include <begin_vertex>
+${SWAY_VERT}`);
+}
+
+// The outline hull deforms like the figurine (flames, soft parts): its own material then.
+function figurineOutline(width, flames, U) {
+  const base = outlineMaterial(width);
+  if (!flames && !U) return base;
+  const m = base.clone();
+  m.onBeforeCompile = sh => { base.onBeforeCompile(sh); if (flames) flamePatch(sh); if (U) swayPatch(sh, U); };
+  m.customProgramCacheKey = () => `outline-${flames ? 'f' : ''}${U ? 's' : ''}${width}`;
   m.userData.outline = true;
-  flameOutlines.set(width, m);
   return m;
 }
 
@@ -180,13 +206,14 @@ function textureGain(map) {
 // Painted-vinyl look: the texture carries the colours, a thin clear coat adds the figurine gloss.
 // Exposure gain + a little self-lighting keep dark outfits readable from the high game camera and
 // inside wall shadows. `emissive` stays free for the hit flash and frost tint in brawler.js.
-function figurineMaterial(map, gain, flames = false) {
+function figurineMaterial(map, gain, flames = false, sway = null) {
   const rim = charMat(0xffffff);
   const m = new THREE.MeshPhysicalMaterial({ map, roughness: 0.6, metalness: 0, clearcoat: 0.3, clearcoatRoughness: 0.45 });
   const uGain = { value: gain };
   m.onBeforeCompile = (sh, r) => {
     rim.onBeforeCompile(sh, r);
     sh.uniforms.uGain = uGain;
+    if (sway) swayPatch(sh, sway);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nuniform float uGain;')
       .replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb = min( diffuseColor.rgb * uGain, vec3( 0.95 ) );')
@@ -199,7 +226,7 @@ function figurineMaterial(map, gain, flames = false) {
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
 totalEmissiveRadiance += diffuseColor.rgb * vFlame * ( 0.7 + 0.25 * sin( uTime * 17.0 + vViewPosition.y * 9.0 ) + 0.15 * sin( uTime * 29.0 ) );`);
   };
-  m.customProgramCacheKey = () => flames ? 'figurine-flame' : 'figurine';
+  m.customProgramCacheKey = () => `figurine${flames ? '-flame' : ''}${sway ? '-sway' : ''}`;
   rim.dispose();
   return m;
 }
@@ -214,11 +241,14 @@ export function buildFigurine(key) {
   body.add(rig);
   let mesh = null;
   rig.traverse(o => { if (o.isSkinnedMesh && !mesh) mesh = o; });
-  const mat = figurineMaterial(T.map, T.gain, T.flames); // own material: hit flash and frost tint are per brawler
+  // per brawler: its own lean of the soft parts
+  const sway = T.sway ? { uSwayPush: { value: new THREE.Vector3() }, uSwayWind: shared.wind, uSwayTime: shared.time } : null;
+  const mat = figurineMaterial(T.map, T.gain, T.flames, sway); // own material: hit flash and frost tint are per brawler
   mesh.material = mat;
   mesh.castShadow = mesh.receiveShadow = true;
   mesh.frustumCulled = false; // bounds move with the pose
-  const line = new THREE.SkinnedMesh(mesh.geometry, (T.flames ? flameOutline : outlineMaterial)(0.02)); // finer than the rigs: lots of small details
+  const lineMat = figurineOutline(0.02, T.flames, sway); // finer than the rigs: lots of small details
+  const line = new THREE.SkinnedMesh(mesh.geometry, lineMat);
   line.position.copy(mesh.position); line.quaternion.copy(mesh.quaternion); line.scale.copy(mesh.scale);
   mesh.parent.add(line);
   line.bind(mesh.skeleton, mesh.bindMatrix);
@@ -237,5 +267,6 @@ export function buildFigurine(key) {
     w.add(hull);
   }
   const anim = new Animator(rig, T.clips);
-  return { figurine: true, root, body, rig, mesh, skeleton: mesh.skeleton, anim, weapon: RIGS[key]?.weapon, style: RIGS[key]?.style, mats: [mat] };
+  return { figurine: true, root, body, rig, mesh, skeleton: mesh.skeleton, anim, weapon: RIGS[key]?.weapon, style: RIGS[key]?.style, mats: [mat],
+    sway: sway && sway.uSwayPush.value, disposables: lineMat === outlineMaterial(0.02) ? [] : [lineMat] };
 }

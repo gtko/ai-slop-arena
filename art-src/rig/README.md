@@ -78,3 +78,17 @@ renders `work/check/<key>_ortho.png` (front and side with a height grid and the 
 `<key>_weights.png` (bone colours) and `<key>_poses.png` (head turns, arms up, elbows, squat, stride)
 in a few seconds, without the clips or the export. Edit the landmarks, rerun, repeat; when `fit`
 changes (it moves the automatic cut), rerun `export_rig.mjs <key>` first.
+
+## Weapons and soft parts
+
+- Every weapon is its own mesh object, parented to a `LeftWeapon` / `RightWeapon` bone under the hand
+  (`weapons` in the landmarks: which vertices, and the grip). Clips can move that bone: the Wave puts
+  an armed hand's weapon away at the hip and takes it back.
+- `sway` in the landmarks paints the soft parts (Blaster's leaves, Bomber's flames, Gunslinger's gills
+  and tail, Frostbite's cape, robe hem and hair, Volt's antennas and tufts): 0 where they are attached,
+  1 at the tips. It ships as the `_sway` vertex attribute (and a `Sway` vertex group in the .blend /
+  FBX, handy for a cloth or jiggle setup); in the game a vertex shader makes them flutter, lean with
+  the wind and trail behind the brawler's motion through a spring (`src/figurines.js`,
+  `Brawler.updateSway`). `--sway --quick` renders `work/check/<key>_sway.png` (weights in colour).
+- `--collide` lists, per clip, the faces of arms / hands / weapons that go through the head, torso or
+  legs, and renders the worst frames (`work/collide/`); `--preview` tiles four frames of every clip.

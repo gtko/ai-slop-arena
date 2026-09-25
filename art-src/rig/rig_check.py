@@ -367,3 +367,46 @@ def collide(d, rig, body, weapons, out):
                             f'xstack=inputs={len(files)}:layout={layout}', png], check=True)
     rig.animation_data.action = None
     return report
+
+
+def sway_sheet(d, rig, body, marks, out):
+    """Front, side and back views coloured by the "_sway" softness (dark = rigid, yellow = free)."""
+    os.makedirs(out, exist_ok=True)
+    key, H = d['key'], d['height']
+    sc = bpy.context.scene
+    sc.render.engine = 'BLENDER_WORKBENCH'
+    sc.display.shading.light = 'STUDIO'
+    sc.render.resolution_x = sc.render.resolution_y = 520
+    sc.render.image_settings.file_format = 'PNG'
+    if not sc.world:
+        sc.world = bpy.data.worlds.new('w')
+    sc.world.color = (0.42, 0.44, 0.5)
+    sc.display.shading.background_type = 'WORLD'
+    rig.hide_render = True
+    me = body.data
+    attr = me.color_attributes.new('swaycol', 'FLOAT_COLOR', 'POINT')
+    sw = me.attributes['_sway'].data if '_sway' in me.attributes else None
+    for i in range(len(me.vertices)):
+        w = sw[i].value if sw else 0.0
+        attr.data[i].color = (0.12 + 0.88 * w, 0.12 + 0.75 * w, 0.2 - 0.1 * w, 1)
+    me.color_attributes.active_color = attr
+    sc.display.shading.color_type = 'VERTEX'
+    grid = _add_grid(H)
+    mid = (0, 0, H / 2)
+    tmp = os.path.join(out, f'_{key}_sway')
+    os.makedirs(tmp, exist_ok=True)
+    files = []
+    for name, loc in (('front', (0, -6, H / 2)), ('side', (6, 0, H / 2)), ('back', (0, 6, H / 2))):
+        _camera(True, loc, mid, scale=H * 1.12)
+        p = os.path.join(tmp, name + '.png')
+        _render(p)
+        files.append(p)
+    grid.hide_render = True
+    png = os.path.join(out, f'{key}_sway.png')
+    ins = []
+    for f in files:
+        ins += ['-i', f]
+    subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', *ins, '-filter_complex', 'hstack=3', png], check=True)
+    me.color_attributes.remove(attr)
+    sc.display.shading.color_type = 'TEXTURE'
+    return png

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { radialTexture } from './materials.js';
+import { radialTexture, shared } from './materials.js';
 import { buildModel as buildSculpted, OUTLINES } from './models.js';
 import { hasFigurine, buildFigurine } from './figurines.js';
 
@@ -82,6 +82,9 @@ let BLOB_MAT = null;
 let ICE_MAT = null;
 
 
+const SWAY_WIND = new THREE.Vector2(1, 0.3).normalize(); // the arena's wind blows toward +x
+const _sway = new THREE.Vector3();
+
 const lerpAngle = (a, b, t) => {
   let d = (b - a) % (Math.PI * 2);
   if (d > Math.PI) d -= Math.PI * 2;
@@ -128,6 +131,8 @@ export class Brawler {
     this.burst = [];
     this.recoil = 0;
     this.walkPhase = Math.random() * 6;
+    this.walkPhase0 = this.walkPhase;       // per-brawler phase of the wind gusts
+    this.swayVel = new THREE.Vector3();     // spring of the soft parts
     this.walkAmp = 0;
     this.poisonTick = 0;
     this.slowT = 0;     // Frostbite shards
@@ -276,6 +281,25 @@ export class Brawler {
     this.coughT -= dt;
     if (this.inPoison && !aiming && this.coughT <= 0) { A.fire('Cough'); this.coughT = 2 + Math.random() * 1.5; }
     A.update(dt);
+    this.updateSway(dt, speedFrac);
+  }
+
+  // Soft parts (leaves, gills, flames, capes, hair, antennas; figurines.js): they lean with the
+  // gusty wind and trail behind the motion, through a spring so they overshoot and settle when the
+  // brawler starts, stops or turns. Model space: the root is turned by `facing`.
+  updateSway(dt) {
+    const push = this.model.sway;
+    if (!push || this.freezeT > 0) return;
+    const t = this.g.time || 0, w = shared.wind.value, seed = this.walkPhase0;
+    const gust = w * (0.55 + 0.3 * Math.sin(t * 0.9 + seed) + 0.15 * Math.sin(t * 2.3 + seed * 2));
+    const tx = SWAY_WIND.x * 0.05 * gust - this.vel.x * 0.016;
+    const tz = SWAY_WIND.y * 0.05 * gust - this.vel.z * 0.016;
+    const a = -this.facing, c = Math.cos(a), s = Math.sin(a);
+    _sway.set(tx * c + tz * s, -0.012 - 0.004 * Math.hypot(this.vel.x, this.vel.z), -tx * s + tz * c);
+    const sv = this.swayVel;
+    const k = Math.min(dt, 1 / 30);
+    sv.addScaledVector(_sway.sub(push), 70 * k).multiplyScalar(Math.exp(-7 * k));
+    push.addScaledVector(sv, k);
   }
 
   // Game events (game.js, combat.js): each one also plays its clip on a figurine.
@@ -366,6 +390,7 @@ export class Brawler {
     this.g.scene.remove(this.root);
     this.g.fx.remove(this.ring, this.blob);
     for (const m of this.model.mats) m.dispose();
+    for (const m of this.model.disposables || []) m.dispose();
     if (this.model.skeleton) this.model.skeleton.dispose(); // bone texture
     this.model.root.traverse(o => { if (o.isMesh && o.userData.baked) o.geometry.dispose(); if (o.userData.outline) OUTLINES.delete(o); }); // outlines share the geometry
     this.ring.material.dispose();

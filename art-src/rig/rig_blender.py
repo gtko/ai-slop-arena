@@ -147,7 +147,7 @@ def default_marks(d):
             side + 'ToeEnd': toe + Vector((0, -0.04 * H, 0)),
         })
     return {'joints': j, 'bands': dict(BANDS), 'head_tilt': 20.0, 'smooth': 2, 'cloth': True,
-            'weapon_radius': 0.07, 'regions': [], 'weapons': {}, 'poses': {}}
+            'weapon_radius': 0.07, 'regions': [], 'weapons': {}, 'poses': {}, 'sway': []}
 
 
 def load_marks(d):
@@ -169,6 +169,12 @@ def load_marks(d):
                     region with "bone": "<Side>Hand"), plus / minus the shapes; the grip turns it about
                     the wrist and shifts it, in the rest pose.
       poses         per-character adjustments of the clips (clips.py, POSE_DEFAULTS)
+      sway          [{"box" | "sphere": ..., "axis": [x, y, z], "from": d, "length": L, "amp": a}]
+                    or {..., "root": [x, y, z], "from": d, "length": L}: the soft parts (leaves,
+                    gills, cape, hair, antenna). Inside the shape, a vertex sways by
+                    amp * smoothstep((p . axis - from) / length), or by its distance from root:
+                    0 where it's attached, 1 at the tips. The game's shader moves them with the
+                    wind and the brawler's motion (src/figurines.js); also the "Sway" vertex group.
     The resolved set is written to work/<key>_landmarks.json (a starting point to copy)."""
     m = default_marks(d)
     path = os.path.join(MARKS, d['key'] + '.json')
@@ -184,7 +190,7 @@ def load_marks(d):
             else:
                 m['joints'][name] = Vector(v)
         m['bands'].update(over.get('bands', {}))
-        for k in ('head_tilt', 'smooth', 'cloth', 'weapon_radius', 'regions', 'weapons', 'poses'):
+        for k in ('head_tilt', 'smooth', 'cloth', 'weapon_radius', 'regions', 'weapons', 'poses', 'sway'):
             if k in over:
                 m[k] = over[k]
     out = {**m, 'joints': {k: [round(c, 4) for c in v] for k, v in m['joints'].items()}}
@@ -467,6 +473,40 @@ def _spread(pts, n):
     return [list(p) for p in out]
 
 
+def sway(body, m):
+    """Per-vertex softness (0 rigid .. 1 free tip) from the landmark "sway" shapes, as the mesh
+    attribute "_sway" (exported to the GLB) and a "Sway" vertex group (for cloth / jiggle setups)."""
+    me = body.data
+    w = [0.0] * len(me.vertices)
+    for spec in m['sway']:
+        amp = spec.get('amp', 1.0)
+        axis = Vector(spec['axis']).normalized() if 'axis' in spec else None
+        root = Vector(spec['root']) if 'root' in spec else None
+        for v in me.vertices:
+            p = v.co
+            if not in_shape(spec, p):
+                continue
+            d = p.dot(axis) if axis is not None else (p - root).length
+            k = amp * smooth(0.0, 1.0, (d - spec.get('from', 0.0)) / spec['length'])
+            w[v.index] = max(w[v.index], k)
+    if not any(w):
+        return 0
+    attr = me.attributes.new('_sway', 'FLOAT', 'POINT')
+    attr.data.foreach_set('value', w)
+    return sum(1 for x in w if x > 1e-3)
+
+
+def sway_group(body):
+    """The softness as a "Sway" vertex group too (added last: it isn't a bone)."""
+    me = body.data
+    if '_sway' not in me.attributes or 'Sway' in body.vertex_groups:
+        return
+    vg = body.vertex_groups.new(name='Sway')
+    for i, a in enumerate(me.attributes['_sway'].data):
+        if a.value > 1e-3:
+            vg.add([i], a.value, 'REPLACE')
+
+
 def measure(body, weapons):
     """Rest-pose volumes the clips keep the arms out of: the head (box), the torso (box), the legs'
     thickness, and surface samples of each arm piece (upper arm with its pad, forearm, fist) and
@@ -537,6 +577,7 @@ def build(key):
     wside = skin(d, body, src, marks, part, rigid)
     weapons = split_weapons(d, body, rig, marks, wside)
     body.parent = rig  # (before measure: it reads the bones)
+    print(key, 'soft vertices:', sway(body, marks))
     mod = body.modifiers.new('Armature', 'ARMATURE')
     mod.object = rig
     d['measure'] = measure(body, weapons)
@@ -557,7 +598,9 @@ def export(key, rig, body, weapons):
         filepath=os.path.join(GAME, key + '.glb'), export_format='GLB', use_selection=True,
         export_yup=True, export_skins=True, export_animations=True, export_animation_mode='ACTIONS',
         export_force_sampling=True, export_optimize_animation_size=True, export_def_bones=False,
-        export_image_format='AUTO', export_normals=True, export_apply=False, export_reset_pose_bones=True)
+        export_image_format='AUTO', export_normals=True, export_apply=False, export_reset_pose_bones=True,
+        export_attributes=True)  # _sway
+    sway_group(body)
     bpy.ops.export_scene.fbx(
         filepath=os.path.join(RIGGED, key + '.fbx'), use_selection=True, object_types={'ARMATURE', 'MESH'},
         add_leaf_bones=False, bake_anim=True, bake_anim_use_all_actions=True, bake_anim_use_nla_strips=False,
@@ -574,6 +617,9 @@ def main():
     for key in keys:
         d, rig, body, marks, weapons = build(key)
         print(key, 'weapons:', ', '.join(f'{w.name} ({len(w.data.polygons)} faces)' for w in weapons) or 'none')
+        if '--sway' in argv:  # the soft parts, coloured: work/check/<key>_sway.png
+            import rig_check
+            print(key, 'sway sheet:', rig_check.sway_sheet(d, rig, body, marks, os.path.join(WORK, 'check')))
         if check:  # the rig test sheet: work/check/<key>_*.png
             import rig_check
             print(key, 'check sheet:', rig_check.sheet(d, rig, body, marks, os.path.join(WORK, 'check')))
