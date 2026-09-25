@@ -49,4 +49,19 @@ for f in figs:
 splash = splash.convert('RGB')
 splash.save('assets/splash.png')
 splash.save('assets/splash-dark.png')
-print('icon', ICON_KEY, '| splash', ROSTER)
+
+# Google Play feature graphic (1024x500): the empty arena (art-src/feature_bg.png, generated without
+# characters), the logo on top, the roster standing in front, the middle one a little bigger
+bg = Image.open('art-src/feature_bg.png').convert('RGBA')
+bg = bg.crop((0, 60, bg.width, 60 + round(bg.width * 500 / 1024))).resize((1024, 500), Image.LANCZOS)
+logo = Image.open('docs/readme/logo.png').convert('RGBA')
+logo = logo.resize((600, round(logo.height * 600 / logo.width)), Image.LANCZOS)
+bg.alpha_composite(logo, ((1024 - logo.width) // 2, 18))
+order = ['frostbite', 'blaster', 'gunslinger', 'bomber', 'volt']  # drawn back to front: outer, inner, centre
+heights = {'frostbite': 300, 'volt': 300, 'blaster': 330, 'bomber': 330, 'gunslinger': 360}
+centres = {'frostbite': 150, 'blaster': 330, 'gunslinger': 512, 'bomber': 694, 'volt': 874}
+for k in sorted(order, key=lambda k: heights[k]):
+    f = fit(portrait(k), heights[k])
+    bg.alpha_composite(f, (centres[k] - f.width // 2, 500 - f.height))
+bg.convert('RGB').save('google-play/feature-graphic.png')
+print('icon', ICON_KEY, '| splash + feature graphic', ROSTER)
