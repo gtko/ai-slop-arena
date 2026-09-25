@@ -90,6 +90,26 @@ export class BotBrain {
     this.last = bot.pos.clone();
   }
 
+  // A spot within 8 m the threat cannot see, not in the gas, closest first, bushes preferred.
+  findCover(threat) {
+    const g = this.g, A = g.arena, b = this.b, P = g.poison;
+    const ci = A.toTile(b.pos.x), cj = A.toTile(b.pos.z), c = new THREE.Vector3();
+    let best = null, bs = Infinity;
+    for (let dj = -4; dj <= 4; dj++) for (let di = -4; di <= 4; di++) {
+      const i = ci + di, j = cj + dj;
+      if (!A.walkable(i, j) || A.ring(i, j) <= P.level + 1) continue;
+      A.center(i, j, c);
+      if (A.los(threat.pos.x, threat.pos.z, c.x, c.z)) continue;
+      const s = Math.hypot(di, dj) - (A.get(i, j) === 'B' ? 2 : 0) + (Math.hypot(c.x - threat.pos.x, c.z - threat.pos.z) < 4 ? 5 : 0);
+      if (s < bs) { bs = s; best = c.clone(); }
+    }
+    return best;
+  }
+
+  coverOk(threat) {
+    return this.hasGoal && !this.g.arena.los(threat.pos.x, threat.pos.z, this.goal.x, this.goal.z);
+  }
+
   setGoal(p, force = false) {
     if (!force && this.hasGoal && this.goal.distanceTo(p) < 1.5 && this.repath > 0 && this.path.length) return;
     this.goal.copy(p); this.hasGoal = true; this.repath = 1.0;
@@ -135,12 +155,22 @@ export class BotBrain {
 
     if (best) {
       const d = best.pos.distanceTo(b.pos), hpF = b.hp / b.maxHp;
-      if (this.skill > 0.3 && hpF < 0.3 && best.hp > b.hp && d < T.range * 1.3) { // clumsy bots never back off
+      // Bots 2.0: hurt and outmatched, back off to cover (out of the threat's sight, a bush if
+      // possible) and stay there until healed (regen needs 3 s without fighting).
+      if (this.healing && hpF > 0.7) this.healing = false;
+      if (this.skill > 0.3 && (this.healing || (hpF < 0.3 && best.hp > b.hp && d < T.range * 1.3))) { // clumsy bots never back off
+        this.healing = true;
         this.mode = 'retreat';
-        _v.subVectors(b.pos, best.pos).setY(0).normalize().multiplyScalar(9).add(b.pos);
-        const s = P.safeHalf - 2;
-        _v.x = THREE.MathUtils.clamp(_v.x, -s, s); _v.z = THREE.MathUtils.clamp(_v.z, -s, s);
-        this.setGoal(_v.clone());
+        if (!this.hasGoal || !this.coverOk(best)) {
+          const cover = this.findCover(best);
+          if (cover) this.setGoal(cover, true);
+          else {
+            _v.subVectors(b.pos, best.pos).setY(0).normalize().multiplyScalar(9).add(b.pos);
+            const s = P.safeHalf - 2;
+            _v.x = THREE.MathUtils.clamp(_v.x, -s, s); _v.z = THREE.MathUtils.clamp(_v.z, -s, s);
+            this.setGoal(_v.clone());
+          }
+        }
         return;
       }
       const want = T.key === 'blaster' ? 4.5 : T.range * 0.7;
@@ -202,6 +232,7 @@ export class BotBrain {
       if (this.path.length) move.set(this.path[0].x - b.pos.x, 0, this.path[0].z - b.pos.z);
       else this.hasGoal = false;
     }
+    this.dodge(dt, move);
     // separation from other brawlers
     for (const o of g.brawlers) {
       if (o === b || !o.alive) continue;
@@ -219,6 +250,42 @@ export class BotBrain {
 
     this.shoot(dt);
     this.gadget(dt);
+  }
+
+  // Bots 2.0: sidestep a bullet about to hit (sharp bots most of the time, clumsy ones rarely),
+  // and walk out of lava puddles and zap traps.
+  dodge(dt, move) {
+    const g = this.g, b = this.b;
+    this.dodgeT = (this.dodgeT || 0) - dt;
+    if (this.dodgeT > 0) { move.x += this.dodgeX * 1.6; move.z += this.dodgeZ * 1.6; return; }
+    for (const B of g.combat.bullets) {
+      if (B.owner === b || B.dodgeSeen?.has(b)) continue;
+      const rx = b.pos.x - B.x, rz = b.pos.z - B.z, along = rx * B.dx + rz * B.dz;
+      if (along < 0 || along > 6) continue;
+      const side = rx * -B.dz + rz * B.dx; // signed distance off the bullet's line
+      if (Math.abs(side) > b.radius + B.r + 0.4) continue;
+      (B.dodgeSeen ||= new Set()).add(b);
+      if (Math.random() > this.skill * 0.8) continue;
+      const s = side >= 0 ? 1 : -1;
+      this.dodgeX = -B.dz * s; this.dodgeZ = B.dx * s; this.dodgeT = 0.25;
+      return;
+    }
+    for (const Z of g.combat.zones) {
+      if (Z.owner === b) continue;
+      const dx = b.pos.x - Z.x, dz = b.pos.z - Z.z, d = Math.hypot(dx, dz);
+      if (d < Z.r + 1 && d > 1e-3) { move.x += dx / d * 1.5; move.z += dz / d * 1.5; }
+    }
+  }
+
+  // Super: per brawler, when it pays off (a cluster, a finisher, point-blank...).
+  superGood(tgt, d) {
+    const g = this.g, T = this.b.type.key, low = tgt.hp < tgt.maxHp * 0.45;
+    const near = (p, r) => g.brawlers.filter(o => o !== this.b && o.alive && Math.hypot(o.pos.x - p.x, o.pos.z - p.z) < r).length;
+    if (T === 'frostbite') return near(this.b.pos, 4.5) >= 1;
+    if (T === 'blaster') return d < 6;
+    if (T === 'volt') return near(tgt.pos, 3) >= 2 || low;
+    if (T === 'bomber') return low || tgt.inBush || !g.arena.los(this.b.pos.x, this.b.pos.z, tgt.pos.x, tgt.pos.z) || near(tgt.pos, 3.6) >= 2;
+    return low || d < this.b.type.range * 0.6; // gunslinger: finisher or a sure hit
   }
 
   // When to use the gadget (Kit 2.0): mobility to escape when hurt or to close in, utility in a fight.
@@ -257,7 +324,7 @@ export class BotBrain {
       dx = Math.sin(a) * l; dz = Math.cos(a) * l;
       const point = _v.set(b.pos.x + dx, 0, b.pos.z + dz);
       const superRange = T.key === 'frostbite' ? 4.5 : range * 0.9;
-      if (b.superCharge >= 1 && d < superRange && Math.random() < 0.2 + this.skill * 0.5) {
+      if (b.superCharge >= 1 && d < superRange && this.superGood(tgt, d) && Math.random() < 0.35 + this.skill * 0.5) {
         g.tryAttack(b, dx, dz, point, true);
       } else if (this.fireCd <= 0 && b.ammo >= 1) {
         if (g.tryAttack(b, dx, dz, point, false)) this.fireCd = 0.45 + Math.random() * 1.5 * (1.25 - this.skill);
