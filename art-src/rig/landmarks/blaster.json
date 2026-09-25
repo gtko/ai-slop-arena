@@ -243,6 +243,7 @@
    1.15,
    1.15
   ],
-  "head_margin": 0.14
+  "head_margin": 0.14,
+  "head_motion": 0.5
  }
 }

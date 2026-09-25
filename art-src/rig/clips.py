@@ -84,6 +84,9 @@ POSE_DEFAULTS = {
     'torso_scale': [1, 1, 1],
     'torso_shift': [0, 0, 0],
     'leg_radius': None,        # thigh / shin thickness (measured when None)
+    'shrug': 1.0,              # scale of the shoulder shrugs (sigh, flinch, shiver)
+    'head_motion': 1.0,        # scale of the head turns and tilts (a big head brushing its pads)
+    'reach': 0.9,              # IK: fraction of the arm's length a hand may reach (elbow stays bent)
     'resolve': True,       # every frame: swing an arm away from the head / torso when it goes through
     'up_forward': -0.12,   # raised arms lean forward (-y) or back (+y)
     'carry': {},           # {"R": [x, y, z]}: rest direction of the weapon (guns) or of the arm
@@ -122,7 +125,10 @@ class Char:
         for s_, box in M.get('weapon', {}).items():
             lo, hi = Vector(box[0]), Vector(box[1])
             self.wcorners[s_] = [Vector((x, y, z)) for x in (lo.x, hi.x) for y in (lo.y, hi.y) for z in (lo.z, hi.z)] + [(lo + hi) / 2]
+        # surface samples of each arm piece and weapon (rig_blender.measure): what really collides
+        self.samples = {k: [Vector(p) for p in v] for k, v in M.get('samples', {}).items()}
         self.cache = {}
+        self.rest_k = None
         self.free = 'R' if self.weapon == 'L' else 'L'  # the hand that waves, coughs, cheers
         self.hang, self.aim, self.axis, self.wpn = {}, {}, {}, {}
         for s, sg in (('L', 1), ('R', -1)):
@@ -197,10 +203,19 @@ class Char:
         return r
 
     def arm_points(self, P, s):
-        """(kind, posed point) along the arm, hand and weapon, in the armature frame."""
+        """(kind, posed point) on the arm, fist and weapon surfaces, in the armature frame (bone-line
+        points when the rig has no surface samples)."""
         side = SIDE[s][0]
         S, E0, W0, T0 = self.head[side + 'Arm'], self.head[side + 'ForeArm'], self.head[side + 'Hand'], self.tail[side + 'Hand']
-        pts = [('upper', self.to_world(P, side + 'Arm', S.lerp(E0, k))) for k in (0.6, 1.0)]
+        sm = self.samples
+        if sm:
+            pts = [('upper', self.to_world(P, side + 'Shoulder', p)) for p in sm.get(side + 'Shoulder', [])]
+            pts += [('upper', self.to_world(P, side + 'Arm', p)) for p in sm.get(side + 'Arm', [])]
+            pts += [('lower', self.to_world(P, side + 'ForeArm', p)) for p in sm.get(side + 'ForeArm', [])]
+            pts += [('lower', self.to_world(P, side + 'Hand', p)) for p in sm.get(side + 'Hand', [])]
+            pts += [('weapon', self.to_world(P, side + 'Hand', p)) for p in sm.get('weapon' + s, [])]
+            return pts
+        pts = [('upper', self.to_world(P, side + 'Arm', S.lerp(E0, k))) for k in (0.2, 0.6, 1.0)]
         pts += [('lower', self.to_world(P, side + 'ForeArm', E0.lerp(W0, k))) for k in (0.5, 1.0)]
         pts += [('lower', self.to_world(P, side + 'Hand', W0.lerp(T0, k))) for k in (0.5, 1.0)]
         pts += [('weapon', self.to_world(P, side + 'Hand', c)) for c in self.wcorners.get(s, [])]
@@ -213,33 +228,48 @@ class Char:
         o = self.over
         c, r = self.head_ell
         best = (1e9, c)
+        if self.rest_k is None:  # what already touches in the rest pose is allowed to stay there
+            self.rest_k = {}
+            rest = Pose(self)
+            for s_ in 'LR':
+                self.rest_k[s_] = [min(0.0, k) for k in self._point_ks(rest, s_)]
+        ks = self._point_ks(P, s, centres=True)
+        for (k, ctr), k0 in zip(ks, self.rest_k[s]):
+            k = k - k0
+            if k < best[0]:
+                best = (k, ctr)
+        return best
+
+    def _point_ks(self, P, s, centres=False):
+        o = self.over
+        c, r = self.head_ell
+        out = []
         legs = []
         for side_ in ('Left', 'Right'):
             hip = self.to_world(P, side_ + 'UpLeg', self.head[side_ + 'UpLeg'])
             knee = self.to_world(P, side_ + 'Leg', self.head[side_ + 'Leg'])
             ankle = self.to_world(P, side_ + 'Foot', self.head[side_ + 'Foot'])
             legs += [(hip, knee), (knee, ankle)]
+        hc = self.to_world(P, 'Head', c) if centres else None
         for kind, p in self.arm_points(P, s):
             v = self.to_local(P, 'Head', p) - c
-            k = math.sqrt(sum((v[i] / (r[i] + o['head_margin'])) ** 2 for i in range(3))) - 1
-            if k < best[0]:
-                best = (k, self.to_world(P, 'Head', c))
-            if kind == 'upper':
-                continue
-            if self.torso_ell:
-                tc, tr = self.torso_ell
-                v = self.to_local(P, 'Spine1', p) - tc
-                k = math.sqrt(sum((v[i] / (tr[i] * 0.9 + o['torso_margin'])) ** 2 for i in range(3))) - 1
-                if k < best[0]:
-                    best = (k, self.to_world(P, 'Spine1', tc))
-            for a, b_ in legs:
-                ab = b_ - a
-                t = min(1.0, max(0.0, (p - a).dot(ab) / max(ab.length_squared, 1e-9)))
-                near = a + ab * t
-                k = (p - near).length / (self.leg_r + o['leg_margin']) - 1
-                if k < best[0]:
-                    best = (k, near)
-        return best
+            best = (math.sqrt(sum((v[i] / (r[i] + o['head_margin'])) ** 2 for i in range(3))) - 1, hc)
+            if kind != 'upper':
+                if self.torso_ell:
+                    tc, tr = self.torso_ell
+                    v = self.to_local(P, 'Spine1', p) - tc
+                    k = math.sqrt(sum((v[i] / (tr[i] * 0.9 + o['torso_margin'])) ** 2 for i in range(3))) - 1
+                    if k < best[0]:
+                        best = (k, self.to_world(P, 'Spine1', tc) if centres else None)
+                for a, b_ in legs:
+                    ab = b_ - a
+                    t = min(1.0, max(0.0, (p - a).dot(ab) / max(ab.length_squared, 1e-9)))
+                    near = a + ab * t
+                    k = (p - near).length / (self.leg_r + o['leg_margin']) - 1
+                    if k < best[0]:
+                        best = (k, near)
+            out.append(best if centres else best[0])
+        return out
 
     def up_dir(self, s, fore_bend=-0.3, forward=None):
         """The highest raised-arm direction (out to the side and up) that keeps the fist and the
@@ -286,6 +316,8 @@ class Pose:
             self.pre(b, E3(x / 3, y / 3, z / 3))
 
     def head(self, x=0.0, y=0.0, z=0.0):
+        k = self.C.over['head_motion']
+        x, y, z = x * k, y * k, z * k
         self.pre('Neck', E3(x * 0.3, y * 0.3, z * 0.3))
         self.pre('Head', E3(x * 0.7, y * 0.7, z * 0.7))
 
@@ -312,7 +344,7 @@ class Pose:
         S, E0, W0 = C.head[side + 'Arm'], C.head[side + 'ForeArm'], C.head[side + 'Hand']
         l1, l2 = (E0 - S).length, (W0 - E0).length
         d = Vector(target) - S
-        D = min(max(d.length, abs(l1 - l2) + 1e-3), (l1 + l2) * 0.999)
+        D = min(max(d.length, abs(l1 - l2) + 1e-3), (l1 + l2) * C.over['reach'])  # out of reach: bent elbow, pointing at it
         u = d.normalized()
         a = (l1 * l1 - l2 * l2 + D * D) / (2 * D)
         h = math.sqrt(max(0.0, l1 * l1 - a * a))
@@ -332,7 +364,7 @@ class Pose:
         self.set(side + 'Hand', self.get(side + 'Hand').slerp(turn, k))
 
     def shoulder(self, s, raise_):
-        self.set(SIDE[s][0] + 'Shoulder', q(Y, -SIDE[s][1] * raise_))
+        self.set(SIDE[s][0] + 'Shoulder', q(Y, -SIDE[s][1] * raise_ * self.C.over['shrug']))
 
     def leg_fk(self, s, thigh=0.0, shin=0.0, foot=0.0, out=0.0):
         side, sg = SIDE[s]
@@ -443,6 +475,12 @@ def resolve(C, P, s, step=0.05, steps=40):
     if k >= 0:
         return
     side = SIDE[s][0]
+    if P.get(side + 'Shoulder') != I:  # a shrug pushing the pad into the head: drop it first
+        for _ in range(4):
+            P.set(side + 'Shoulder', P.get(side + 'Shoulder').slerp(I, 0.5))
+            k, centre = C.clearance(P, s)
+            if k >= 0:
+                return
     for i in range(steps):
         S = C.to_world(P, side + 'Arm', C.head[side + 'Arm'])
         W = C.to_world(P, side + 'Hand', C.head[side + 'Hand'])
@@ -487,7 +525,7 @@ def c_run(C, t, dur=0.6):
     P.spine(0.1, s * 0.24, c * 0.05)
     P.head(-0.08 + math.cos(2 * ph) * 0.035, -s * 0.12, -c * 0.04)
     for side, sg in (('L', 1), ('R', -1)):
-        armed = C.armed(side) and C.style == 'gun'
+        armed = C.armed(side) and C.style in ('gun', 'staff')
         P.arm(side, q(X, sg * s * (0.18 if armed else 0.42)) @ C.hang[side])
         P.fore(side, -0.12 - (0.15 + max(0.0, -sg * s) * 0.35))
     return P
@@ -612,8 +650,14 @@ def c_super(C, t):
             P.leg_ik(s, 0, max(0.0, P.loc.z) + 0.12 * tuck, 0.05 if s == 'L' else -0.05)
         for s in ('L', 'R'):
             if C.armed(s):
-                blend_arm(P, s, q(X, -2.5) @ C.hang[s], ramp(t, 0.15, 0.4) * (1 - ramp(t, 0.5, 0.58)), (-0.3, 0, 0))
-                blend_arm(P, s, q(X, -0.2) @ C.hang[s], slam, (0, 0, 0))
+                sg = SIDE[s][1]
+                up = ramp(t, 0.15, 0.4) * (1 - ramp(t, 0.5, 0.58))
+                # raised high in front, then driven down into the ground in front of the feet
+                # lifted in front, then driven down: the staff stays upright, crystal up, beside the body
+                blend_arm(P, s, C.arm_to(s, (sg * 0.5, -0.55, 0.25)), up, (-0.3, 0, 0))
+                blend_arm(P, s, C.arm_to(s, (sg * 0.45, -0.55, -0.6)), slam, (0, 0, 0))
+                if s in C.wcorners:
+                    P.point_weapon(s, (sg * 0.05, -0.1, 1.0), max(up, slam))
             else:
                 blend_arm(P, s, C.arm_to(s, (0.85 if s == 'L' else -0.85, 0, 0.3)), ramp(t, 0.2, 0.4) * (1 - ramp(t, 0.8, 1.1)), (-0.3, 0, 0))
         P.head(-0.2 * tuck - 0.1 * slam)
@@ -696,10 +740,8 @@ def c_wave(C, t):
     side = SIDE[s][0]
     raised = C.arm_to(s, C.up_dir(s, -1.0))
     w = math.sin(TAU * 2.4 * t)
-    blend_arm(P, s, raised, e, (-1.0, 0, 0))
-    # the bent forearm swings like a wiper, about the upper arm
-    upper = (C.head[side + 'ForeArm'] - C.head[side + 'Arm']).normalized()
-    P.set(side + 'ForeArm', q(upper, 0.45 * w * e) @ P.get(side + 'ForeArm'))
+    # upper arm out, forearm upright and swinging side to side, clear of the face
+    blend_arm(P, s, raised, e, fore_dir=(sg * (0.35 + 0.35 * w), -0.2, 1))
     P.head(0.05 * e, sg * 0.15 * e, -sg * 0.18 * e)
     P.hips(0, 0, -sg * 0.05 * e)
     return P
@@ -815,7 +857,7 @@ def c_cheer(C, t):
     pump = 0.5 + 0.5 * math.sin(TAU * 2.5 * t)
     for s in arms:
         sg = SIDE[s][1]
-        blend_arm(P, s, C.arm_to(s, C.up_dir(s, -0.5)), e, (-0.5 - 0.5 * pump, 0, 0))
+        blend_arm(P, s, C.arm_to(s, C.up_dir(s, -0.5)), e, fore_dir=(sg * (0.2 + 0.3 * pump), -0.25, 1))
     P.spine(-0.1 * e)
     P.head(-0.2 * e)
     P.loc.z = 0.03 * e * pump
@@ -925,3 +967,15 @@ def preview(key, rig, body, out, frames_per_clip=4):
     rig.animation_data.action = None
     bpy.data.objects.remove(cam)
     bpy.data.objects.remove(tgt)
+    # two sheets of 8 clips (one row each, frames_per_clip across), in CLIPS order
+    import subprocess
+    names = [c[0] for c in CLIPS]
+    for part, chunk in (('A', names[:8]), ('B', names[8:])):
+        ins = []
+        for name in chunk:
+            for i in range(frames_per_clip):
+                ins += ['-i', os.path.join(out, f'{key}_{name}_{i}.png')]
+        n = len(chunk) * frames_per_clip
+        layout = '|'.join(f'{(k % frames_per_clip) * 300}_{(k // frames_per_clip) * 300}' for k in range(n))
+        subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', *ins, '-filter_complex',
+                        f'xstack=inputs={n}:layout={layout}', os.path.join(out, f'{key}_sheet{part}.png')], check=True)

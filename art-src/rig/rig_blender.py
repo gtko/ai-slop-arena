@@ -161,7 +161,8 @@ def load_marks(d):
                     the height) are the weapon: rigid on the hand
       regions       [{"sphere": [x, y, z], "radius": r} or {"box": [[x0, y0, z0], [x1, y1, z1]]},
                      + "part": "body" | "armL" | "armR" | "legL" | "legR"  (move those vertices to a part)
-                     or "bone": "<Bone>"  (weight them fully to one bone)], applied in order
+                     or "bone": "<Bone>"  (weight them fully to one bone)
+                     or "bone": {"Spine2": 0.6, "LeftArm": 0.4}  (fixed shared weights)], in order
       weapons       {"R": {"add": [shapes], "remove": [shapes], "grip": {"rotate": [x, y, z] degrees,
                     "offset": [x, y, z]}}}: the weapon in that hand becomes its own object, parented
                     to the hand bone. It starts as the vertices pinned to the hand (weapon_radius, or a
@@ -335,7 +336,9 @@ def skin(d, obj, src, m, part_of_vertex, rigid_of_vertex):
     for i, o in enumerate(src):
         p = to_b(P[o * 3:o * 3 + 3])
         part, rigid = part_of_vertex[o], rigid_of_vertex[o]
-        if rigid:
+        if isinstance(rigid, dict):  # shared between bones, e.g. a mantle half on the arm
+            w = dict(rigid)
+        elif rigid:
             w = {rigid: 1.0}
             if rigid in ('LeftHand', 'RightHand'):
                 wside[i] = rigid[0]
@@ -438,9 +441,23 @@ def split_weapons(d, body, rig, m, wside):
     return out
 
 
+def _spread(pts, n):
+    """n points spread over a point set (farthest-point sampling)."""
+    if len(pts) <= n:
+        return [list(p) for p in pts]
+    out = [pts[0]]
+    dist = [(p - pts[0]).length for p in pts]
+    while len(out) < n:
+        i = max(range(len(pts)), key=dist.__getitem__)
+        out.append(pts[i])
+        dist = [min(dist[k], (pts[k] - pts[i]).length) for k in range(len(pts))]
+    return [list(p) for p in out]
+
+
 def measure(body, weapons):
-    """Rest-pose volumes the clips keep the arms out of: the head (box), the torso (box), and each
-    weapon's corners in the armature frame (for clearance checks)."""
+    """Rest-pose volumes the clips keep the arms out of: the head (box), the torso (box), the legs'
+    thickness, and surface samples of each arm piece (upper arm with its pad, forearm, fist) and
+    weapon, in the armature frame, for the clearance checks."""
     me = body.data
     names = {g.index: g.name for g in body.vertex_groups}
     pts = {'head': [], 'torso': []}
@@ -455,6 +472,13 @@ def measure(body, weapons):
             pts['torso'].append(v.co)
     box = lambda ps: [[min(p[k] for p in ps) for k in range(3)], [max(p[k] for p in ps) for k in range(3)]]
     out = {k: box(v) for k, v in pts.items() if v}
+    pieces = {}
+    for v in me.vertices:
+        if v.groups:
+            name = names[max(v.groups, key=lambda x: x.weight).group]
+            if name.endswith(('Shoulder', 'Arm', 'ForeArm', 'Hand')):
+                pieces.setdefault(name, []).append(v.co.copy())
+    out['samples'] = {name: _spread(ps[::max(1, len(ps) // 600)], 16) for name, ps in pieces.items()}
     # leg thickness: median distance of the thigh / shin vertices to their bone
     arm = body.parent.data.bones if body.parent else None
     dists = []
@@ -471,6 +495,7 @@ def measure(body, weapons):
     for w in weapons:
         vs = [w.matrix_world @ v.co for v in w.data.vertices]
         out['weapon'][w.name[-1]] = box(vs)
+        out['samples']['weapon' + w.name[-1]] = _spread(vs[::max(1, len(vs) // 800)], 24)
     return out
 
 
