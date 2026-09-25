@@ -57,7 +57,8 @@ export class Game {
     this.state = 'idle';
     this.camFocus = new THREE.Vector3(0, 0, 4);
     this.camTarget = null;
-    this.camOffset = new THREE.Vector3(0, 21.5, 13.5);
+    this.camOffset = new THREE.Vector3(0, 27.4, 25); // ~47° pitch (hack'n'slash), 1.44x further than the old 57° view
+    lighting.fogShift = Math.max(0, this.camOffset.length() - 22); // keep the air around the player clear
     this.shake = 0;
     this.aimPoint = new THREE.Vector3();
     this.aimDir = new THREE.Vector3(0, 0, -1);
@@ -109,6 +110,8 @@ export class Game {
     const real = !!localId || headless;
     this.poison = new Poison(this, real ? {} : { startAt: 18, interval: 6 });
     this.visionRadius = MAPS[this.mapKey].vision || 0;
+    // How far anyone sees (fog maps use their fog wall instead); the sandstorm cuts it shorter.
+    this.sightRange = this.visionRadius ? 0 : MAPS[this.mapKey].weather === 'sandstorm' ? 11 : 14;
     roster = roster || makeRoster([]);
     this.player = null;
     for (const r of roster) {
@@ -156,13 +159,29 @@ export class Game {
     if (this.mode === 'play' && k > 0.08) this.input.rumble(Math.min(1, k * 1.4), Math.min(1, k), 120 + k * 250);
   }
 
-  // Bushes hide brawlers unless you are close, or they recently fired / got hit.
-  // On limited-vision maps nobody (players or bots) sees past the fog wall.
+  // Walls, trees and crates block the line of sight. Bushes hide brawlers unless you are close,
+  // or they recently fired / got hit. On limited-vision maps nobody sees past the fog wall.
   canSee(viewer, target) {
     const d = Math.hypot(viewer.pos.x - target.pos.x, viewer.pos.z - target.pos.z);
     if (this.visionRadius && d > this.visionRadius * 0.92) return false;
+    if (this.sightRange && d > this.sightRange) return false;
+    if (!this.inSight(viewer.pos, target.pos)) return false;
     if (!target.inBush || target.revealT > 0) return true;
     return d < 3.6;
+  }
+
+  // Clear line to the target's centre or either shoulder, so a brawler peeking past a corner shows.
+  inSight(a, b) {
+    const A = this.arena;
+    if (A.los(a.x, a.z, b.x, b.z)) return true;
+    const dx = b.x - a.x, dz = b.z - a.z, l = Math.hypot(dx, dz) || 1, px = -dz / l * 0.5, pz = dx / l * 0.5;
+    return A.los(a.x, a.z, b.x + px, b.z + pz) || A.los(a.x, a.z, b.x - px, b.z - pz);
+  }
+
+  // Whose eyes the screen shows: you, or on fog maps whoever the camera follows once you are out.
+  get sightViewer() {
+    const P = this.player;
+    return P && P.alive ? P : (this.visionRadius ? this.camTarget : null);
   }
 
   // Where the fog wall is centred: you, or whoever the camera follows once you are out.
@@ -436,9 +455,12 @@ export class Game {
       // status effects are decided by the host; our own brawler needs them too (we move it locally)
       b.slowT = flags & 4 ? 0.2 : Math.min(b.slowT, 0);
       b.freezeT = flags & 8 ? 0.2 : Math.min(b.freezeT, 0);
-      if (b !== this.player) { b.net.set(x, z); b.netFacing = f; }
+      if (b !== this.player) {
+        b.net.set(x, z); b.netFacing = f;
+        if (b.netHidden) { b.pos.x = x; b.pos.z = z; } // back in sight: appear where it is, don't glide there through the wall
+      }
     }
-    // Brawlers the host left out are hidden from us (bush / fog): keep them invisible.
+    // Brawlers the host left out are hidden from us (bush / wall / range / fog): keep them invisible.
     for (const b of this.brawlers) b.netHidden = b !== this.player && !seen.has(b);
     // The host refused one of our moves (too fast, through a wall...): snap back to where it says.
     const P = this.player;
@@ -668,10 +690,9 @@ export class Game {
   }
 
   updateVisibility() {
-    const P = this.player;
+    const viewer = this.sightViewer;
     for (const b of this.brawlers) {
       if (!b.alive) { b.visibleToPlayer = false; continue; }
-      const viewer = P && P.alive ? P : (this.visionRadius ? this.camTarget : null);
       const v = !b.netHidden && (!viewer || b === viewer || this.canSee(viewer, b));
       if (v !== b.visibleToPlayer) b.setVisible(v);
       b.visibleToPlayer = v;

@@ -102,11 +102,15 @@ export class BotBrain {
     for (const o of g.brawlers) {
       if (calm || o === b || !o.alive) continue;
       const d = o.pos.distanceTo(b.pos);
-      if (d > sight || !g.canSee(b, o)) continue;
+      // A target that just ducked behind a wall is remembered for a moment (not one hiding in a bush).
+      const seen = g.canSee(b, o);
+      if (seen && o === this.target) this.seenAt = g.time;
+      const recall = o === this.target && g.time - (this.seenAt || 0) < 2.5 && !(o.inBush && o.revealT <= 0);
+      if (d > sight || !(seen || recall)) continue;
       const s = d + (o.hp / o.maxHp) * 4 - (o === this.target ? 2 : 0);
       if (s < bestS) { bestS = s; best = o; }
     }
-    if (best !== this.target) this.seen = 0;
+    if (best !== this.target) { this.seen = 0; this.seenAt = g.time; } // memory starts with the new target
     this.target = best;
     this.crate = null;
 
