@@ -186,7 +186,7 @@ export class Game {
     b.lastAttack = this.time;
     b.revealT = 1.2;
     b.face(dx, dz);
-    b.recoil = 1;
+    b.attacked(isSuper);
     this.combat.attack(b, dx, dz, point, isSuper);
     this.ev({ e: 'atk', id: b.id, dx: r2(dx), dz: r2(dz), px: r2(point.x), pz: r2(point.z), s: isSuper ? 1 : 0 });
     return true;
@@ -220,7 +220,7 @@ export class Game {
   }
 
   damageFx(target, amount, source) {
-    target.flash = 1;
+    target.hurt();
     target.revealT = Math.max(target.revealT, 0.8);
     if (target.visibleToPlayer) {
       const cls = target.isPlayer ? 'dmg-in' : source && source.isPlayer ? 'dmg-out' : 'dmg-other';
@@ -245,8 +245,8 @@ export class Game {
     b.alive = false;
     b.hp = 0;
     b.burst.length = 0;
-    b.setVisible(false);
-    this.effects.poof(b.pos.x, b.pos.z, b.type.palette.main);
+    b.die(); // death fall, then a puff
+    if (killer && killer !== b) killer.cheer();
     this.shakeAt(b.pos.x, b.pos.z, 0.3);
     sfx('death', this.volumeAt(b.pos.x, b.pos.z));
     if (this.camTarget === b && killer && killer.alive) this.camTarget = killer;
@@ -262,6 +262,7 @@ export class Game {
       this.ended = true;
       const w = alive[0];
       w.rank = 1;
+      w.win();
       this.ev({ e: 'win', id: w.id });
       if (w === this.player) { this.state = 'over'; this.resultT = 1.2; }
       if (this.net) this.endT = 5;
@@ -456,7 +457,7 @@ export class Game {
       switch (e.e) {
         case 'atk':
           if (!b || !b.alive) break;
-          b.face(e.dx, e.dz); b.recoil = 1; b.revealT = 1.2; b.lastAttack = this.time;
+          b.face(e.dx, e.dz); b.attacked(!!e.s); b.revealT = 1.2; b.lastAttack = this.time;
           this.combat.attack(b, e.dx, e.dz, _v.set(e.px, 0, e.pz), !!e.s);
           break;
         case 'dmg':
@@ -470,7 +471,7 @@ export class Game {
           if (b.alive) this.killFx(b, this.byId.get(e.by), !!e.sup);
           break;
         case 'win':
-          if (b) { b.rank = 1; if (b === this.player) { this.state = 'over'; this.resultT = 1.2; } }
+          if (b) { b.rank = 1; b.win(); if (b === this.player) { this.state = 'over'; this.resultT = 1.2; } }
           break;
         case 'knock': if (b === this.player) b.knock.set(e.x, 0, e.z); break;
         case 'zap': this.effects.arc(e.pts, new THREE.Color(3.2, 4.2, 5.2)); break;

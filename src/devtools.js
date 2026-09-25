@@ -6,7 +6,7 @@ import { figurineInfo } from './figurines.js';
 //   __dev.setup('blaster', 1)   solo match on map #1 with that brawler, bots frozen, loop stopped
 //   __dev.run(60)               advance 60 frames
 //   __dev.isolate()             hide the bots, put the player in the most open spot
-//   __dev.pose(phase, amp, aim, recoil, facing, yaw, dist, h)   freeze a figurine pose + close-up
+//   __dev.pose('Run', 0.2, facing, yaw, dist, h)   freeze a frame of a figurine clip + close-up
 //   __dev.weights(true)         colour the player's figurine by bone
 
 export function installDevtools(A) {
@@ -61,14 +61,16 @@ export function installDevtools(A) {
       document.body.style.outline = document.body.style.outline ? '' : '0px solid transparent'; // forces a composite so screenshots refresh
       return 'ok';
     },
-    pose(phase = 0, amp = 0, aim = 0, recoil = 0, facing = 0.9, yaw = 1.6, dist = 4.5, h = 0.3) {
+    // one frame of a figurine clip (Idle, Run, Sneak, BushIdle, Aim, Shoot, Super, Death...), filmed close
+    pose(clip = 'Idle', time = 0, facing = 0.9, yaw = 1.6, dist = 4.5, h = 0.3) {
       const p = player();
-      Object.assign(p, { walkAmp: amp, walkPhase: phase, aimHold: aim, recoil });
+      p.model.anim.pose(clip, time);
       p.root.rotation.y = facing;
-      p.poseFigurine(1);
       p.root.updateMatrixWorld(true);
       return dev.close(dist, yaw, h);
     },
+    clips: () => player().model.anim && Object.keys(player().model.anim.clips),
+    get game() { return A.game; },
     weights(on = true) {
       const m = player().model.mesh;
       if (!on) { if (m.userData.mat) { m.material = m.userData.mat; m.geometry = m.userData.geo; } return; }
@@ -76,7 +78,7 @@ export function installDevtools(A) {
       const pal = [[1, 1, 1], [1, 0.5, 0], [1, 1, 0], [0, 0.8, 1], [1, 0, 0], [0.5, 0, 0], [0, 1, 0], [0, 0.45, 0], [1, 0, 1], [0.5, 0, 0.6], [0, 0, 1], [0.3, 0.6, 1]];
       const col = new Float32Array(si.count * 3);
       for (let i = 0; i < si.count; i++) for (let j = 0; j < 4; j++) {
-        const c = pal[si.getComponent(i, j)], w = sw.getComponent(i, j);
+        const c = pal[si.getComponent(i, j) % pal.length], w = sw.getComponent(i, j);
         col[i * 3] += c[0] * w; col[i * 3 + 1] += c[1] * w; col[i * 3 + 2] += c[2] * w;
       }
       m.userData.mat = m.material; m.userData.geo = g;
@@ -84,14 +86,7 @@ export function installDevtools(A) {
       m.geometry.setAttribute('color', new THREE.BufferAttribute(col, 3));
       m.material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, side: THREE.DoubleSide });
     },
-    // joint fit of a figurine, heights as fractions of the model height
-    joints(key = 'blaster') {
-      const J = figurineInfo(key)?.joints;
-      if (!J) return null;
-      const f = v => +(v / 2.5).toFixed(3), prof = e => Array.from(e).filter((_, b) => b % 4 === 0 && b < 64).map(f).join(' ');
-      return { crotch: f(J.crotch), knee: f(J.knee), neck: f(J.neck), shoulder: f(J.shoulderY), elbow: f(J.elbow), cut: J.cutFaces, L: prof(J.edge.L), R: prof(J.edge.R) };
-    },
-    info: figurineInfo, // raw template (geo, joints) of a figurine
+    info: figurineInfo, // loaded template (scene, clips, texture) of a figurine
 
     // Film from the renderer at a fixed size (independent of the window), saving JPEG frames through
     // the dev server's /__capture endpoint (vite.config.js) into .ai3d/capture/<dir>/.
