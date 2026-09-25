@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { radialTexture } from './materials.js';
+import { radialTexture, shared } from './materials.js';
 import { buildModel as buildSculpted, OUTLINES } from './models.js';
 import { hasFigurine, buildFigurine } from './figurines.js';
 
@@ -82,18 +82,8 @@ let BLOB_MAT = null;
 let ICE_MAT = null;
 
 
-// Weapon arm angle (rotation about x, negative = forward/up) while aiming, from the recoil (1 right
-// after a shot, fading to 0): guns kick up, bombs are cocked overhead then flung forward, the staff
-// thrusts, Volt pushes both palms out.
-const RAISE = {
-  gun: r => -1.25 + r * 0.55,
-  throw: r => -2.6 + r * 1.8,
-  staff: r => -0.55 - r * 0.6,
-  cast: r => -1.35 + r * 0.35,
-};
-
-const AXIS_X = new THREE.Vector3(1, 0, 0);
-const _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion();
+const SWAY_WIND = new THREE.Vector2(1, 0.3).normalize(); // the arena's wind blows toward +x
+const _sway = new THREE.Vector3();
 
 const lerpAngle = (a, b, t) => {
   let d = (b - a) % (Math.PI * 2);
@@ -110,6 +100,7 @@ export class Brawler {
     this.isPlayer = isPlayer;
     this.model = hasFigurine(typeKey) ? buildFigurine(typeKey) : buildSculpted(this.type);
     this.blinkT = 1 + Math.random() * 3;
+    this.blinkAge = 9;
     this.root = new THREE.Group();
     this.root.add(this.model.root);
     game.scene.add(this.root);
@@ -141,6 +132,8 @@ export class Brawler {
     this.burst = [];
     this.recoil = 0;
     this.walkPhase = Math.random() * 6;
+    this.walkPhase0 = this.walkPhase;       // per-brawler phase of the wind gusts
+    this.swayVel = new THREE.Vector3();     // spring of the soft parts
     this.walkAmp = 0;
     this.poisonTick = 0;
     this.slowT = 0;     // Frostbite shards
@@ -148,6 +141,12 @@ export class Brawler {
     this.spawnT = 0;
     this.visibleToPlayer = true;
     this.rank = 0;
+    this.won = false;      // last one standing: victory dance
+    this.dieT = 0;         // death fall still playing
+    this.idleT = 0;        // standing still since
+    this.nextFlourish = 4 + Math.random() * 8;
+    this.coughT = 0;
+    this.greet = Math.random() < 0.35; // some wave hello when they pop in
 
     const g = geos();
     this.ring = new THREE.Mesh(g.ring, new THREE.MeshBasicMaterial({
@@ -178,7 +177,14 @@ export class Brawler {
   }
 
   update(dt, t) {
-    if (!this.alive) return;
+    if (!this.alive) {
+      if (this.dieT > 0) {
+        this.dieT -= dt;
+        this.model.anim.update(dt);
+        if (this.dieT <= 0) this.vanish();
+      }
+      return;
+    }
     const T = this.type, A = this.g.arena;
     if (this.ammo < T.ammo) this.ammo = Math.min(T.ammo, this.ammo + dt / T.reload);
     this.fireCd -= dt;
@@ -231,7 +237,7 @@ export class Brawler {
     this.walkAmp += ((speedFrac > 0.15 ? 1 : 0) - this.walkAmp) * (1 - Math.exp(-10 * dt));
     this.walkPhase += dt * 11 * Math.max(speedFrac, 0.2);
     this.recoil = Math.max(0, this.recoil - dt * 6);
-    if (m.figurine) this.poseFigurine(t);
+    if (m.figurine) this.animateFigurine(dt, speedFrac);
     else this.poseRig(dt, t);
 
     // spawn pop + hit squash
@@ -248,50 +254,116 @@ export class Brawler {
     }
   }
 
-  // Figurine on its fitted skeleton (figurines.js). Walk cycle, phase ph:
-  //   thighs swing (left forward when sin > 0), the knee folds while its leg travels forward and is
-  //   straight on contact; the pelvis is highest at mid-stance, twists with the forward leg and dips
-  //   on the swing side; the chest counter-twists, arms swing against the legs with soft elbows.
-  // Aiming lifts the weapon arm(s) (RAISE), each shot kicks it back. Idle: breathing, weight shift,
-  // looking around.
-  poseFigurine(t) {
-    const m = this.model, k = m.bones, a = this.walkAmp, idle = 1 - a, ph = this.walkPhase;
-    const s = Math.sin(ph), c = Math.cos(ph), bob = 0.5 + 0.5 * Math.cos(2 * ph);
-    const breath = Math.sin(t * 2.4), shift = Math.sin(t * 0.9);
-    k.thighL.rotation.set(-s * 0.5 * a, 0, 0.03);
-    k.thighR.rotation.set(s * 0.5 * a, 0, -0.03);
-    k.shinL.rotation.x = Math.max(0, c) * 0.75 * a;
-    k.shinR.rotation.x = Math.max(0, -c) * 0.75 * a;
-    k.hips.position.y = k.hips.userData.rest.y + (bob - 0.6) * 0.07 * a;
-    k.hips.position.x = k.hips.userData.rest.x + shift * 0.015 * idle;
-    k.hips.rotation.set(0.04 * a, -s * 0.16 * a, -c * 0.07 * a + shift * 0.02 * idle);
-    k.spine.rotation.set(0.1 * a - this.recoil * 0.12, s * 0.24 * a, c * 0.05 * a);
-    k.spine.scale.set(1 + breath * 0.012 * idle, 1 + breath * 0.022 * idle, 1);
-    k.head.rotation.set(-0.08 * a + Math.cos(2 * ph) * 0.035 * a, -s * 0.12 * a + idle * Math.sin(t * 0.8) * 0.22, -c * 0.04 * a);
-    const aim = Math.min(1, Math.max(0, this.aimHold * 3) + this.recoil);
-    const aimL = m.weapon !== 'R' ? aim : 0, aimR = m.weapon !== 'L' ? aim : 0;
-    const raised = (RAISE[m.style] || RAISE.gun)(this.recoil);
-    const L = THREE.MathUtils.lerp;
-    // Arms blend between the rig's hang and aim orientations (figurines.js armPoses): the swing is
-    // applied on top, about the shoulder's side axis. Guns swing less (carried low and ready), the
-    // left arm goes back while the left leg is forward, elbows straighten to aim.
-    for (const [side, sign, amt] of [['L', 1, aimL], ['R', -1, aimR]]) {
-      const P = m.arm[side], bone = k['arm' + side];
-      const armed = amt > 0 || (m.weapon === 'both' || m.weapon === side);
-      const swing = sign * s * a * (armed && m.style === 'gun' ? 0.18 : 0.42) + breath * 0.02 * idle;
-      _qa.setFromAxisAngle(AXIS_X, swing).multiply(P.hang);
-      if (amt > 0) {
-        // guns and fists: weapon axis straight ahead, kicked up by the recoil; bombs and staff:
-        // the old raise about the shoulder axis on top of the hang
-        if (P.aim) _qb.setFromAxisAngle(AXIS_X, -this.recoil * 0.45).multiply(P.aim);
-        else _qb.setFromAxisAngle(AXIS_X, raised).multiply(P.hang);
-        _qa.slerp(_qb, amt);
+  // Figurine: pick the clips for what the brawler is doing (animator.js; clips in art-src/rig).
+  animateFigurine(dt, speedFrac) {
+    const A = this.model.anim, moving = speedFrac > 0.15, aiming = this.aimHold > 0;
+    A.mixer.timeScale = this.freezeT > 0 ? 0 : this.slowT > 0 ? 0.6 : 1; // frozen solid mid-pose
+    const sliding = this.onIce && !this.netDriven && Math.hypot(this.vel.x, this.vel.z) > 2 && this.moveIntent.lengthSq() < 0.04;
+    if (this.won) A.setLoop('Victory');
+    else if (sliding) A.setLoop('Slide');
+    else if (moving) A.setLoop(this.inBush ? 'Sneak' : 'Run', this.inBush ? Math.max(0.6, speedFrac) : 1.05 * Math.max(0.45, speedFrac));
+    else A.setLoop(this.inBush ? 'BushIdle' : 'Idle');
+
+    // idle flourishes: now and then, standing around out of the bushes, a sigh or a personal quirk
+    const flourish = A.oneShot === 'Bored' || A.oneShot === 'Fidget' || A.oneShot === 'Wave';
+    if (flourish && (moving || aiming || this.inBush)) A.cancel();
+    if (!moving && !aiming && !this.inBush && !this.won && !A.oneShot && this.g.state === 'playing') {
+      this.idleT += dt;
+      if (this.idleT > this.nextFlourish) {
+        A.once(Math.random() < 0.5 ? 'Bored' : 'Fidget');
+        this.idleT = 0;
+        this.nextFlourish = 6 + Math.random() * 8;
       }
-      bone.quaternion.copy(_qa);
-      k['fore' + side].rotation.x = L(-0.12 - (0.15 + Math.max(0, -sign * s) * 0.35) * a, 0, amt);
+    } else this.idleT = 0;
+    if (this.greet && this.spawnT >= 1) { this.greet = false; if (!moving) A.once('Wave'); }
+
+    A.aim(aiming ? 1 : 0);
+    // in the gas: coughing fits between shots
+    this.coughT -= dt;
+    if (this.inPoison && !aiming && this.coughT <= 0) { A.fire('Cough'); this.coughT = 2 + Math.random() * 1.5; }
+    A.update(dt);
+    this.updateSway(dt, speedFrac);
+    this.updateBlink(dt);
+  }
+
+  // Blinks every 2-5.5 s (sometimes twice in a row); eyes stay shut while knocked out (die()).
+  updateBlink(dt) {
+    const u = this.model.blink;
+    if (!u) return;
+    this.blinkT -= dt;
+    this.blinkAge += dt;
+    if (this.blinkT < 0) {
+      this.blinkAge = 0;
+      this.blinkTwice = Math.random() < 0.2;
+      this.blinkT = 2 + Math.random() * 3.5;
     }
-    const st = (bob - 0.5) * 0.04 * a + this.recoil * 0.03;
-    m.body.scale.set(1 - st * 0.5, 1 + st, 1 - st * 0.5);
+    const one = a => (a >= 0 && a < 0.16 ? Math.sin(Math.PI * a / 0.16) : 0);
+    u.value = Math.max(one(this.blinkAge), this.blinkTwice ? one(this.blinkAge - 0.24) : 0);
+  }
+
+  // Soft parts (leaves, gills, flames, capes, hair, antennas; figurines.js): they lean with the
+  // gusty wind and trail behind the motion, through a spring so they overshoot and settle when the
+  // brawler starts, stops or turns. Model space: the root is turned by `facing`.
+  updateSway(dt) {
+    const push = this.model.sway;
+    if (!push || this.freezeT > 0) return;
+    const t = this.g.time || 0, w = shared.wind.value, seed = this.walkPhase0;
+    const gust = w * (0.55 + 0.3 * Math.sin(t * 0.9 + seed) + 0.15 * Math.sin(t * 2.3 + seed * 2));
+    const tx = SWAY_WIND.x * 0.05 * gust - this.vel.x * 0.016;
+    const tz = SWAY_WIND.y * 0.05 * gust - this.vel.z * 0.016;
+    const a = -this.facing, c = Math.cos(a), s = Math.sin(a);
+    _sway.set(tx * c + tz * s, -0.012 - 0.004 * Math.hypot(this.vel.x, this.vel.z), -tx * s + tz * c);
+    const sv = this.swayVel;
+    const k = Math.min(dt, 1 / 30);
+    sv.addScaledVector(_sway.sub(push), 70 * k).multiplyScalar(Math.exp(-7 * k));
+    push.addScaledVector(sv, k);
+  }
+
+  // Game events (game.js, combat.js): each one also plays its clip on a figurine.
+  attacked(isSuper = false) {
+    this.recoil = 1;
+    const A = this.model.anim;
+    if (!A) return;
+    if (!isSuper) A.fire('Shoot');
+    else if (Math.hypot(this.vel.x, this.vel.z) > 1) A.fire('Super'); // arms only, the legs keep running
+    else A.once('Super');
+  }
+
+  hurt() {
+    this.flash = 1;
+    this.model.anim?.hit();
+  }
+
+  cheer() {
+    if (this.alive) this.model.anim?.fire('Cheer'); // over the aim: it covers the held arms
+  }
+
+  win() {
+    this.won = true;
+  }
+
+  // Knocked out: a figurine in view plays its fall, then vanishes in a puff; otherwise straight away.
+  die() {
+    const A = this.model.anim;
+    this.ring.visible = false;
+    if (this.ice) this.ice.visible = false;
+    // the body falls with its normal look: no hit flash, squash or frost tint left from the last frame
+    this.flash = 0;
+    this.model.root.scale.setScalar(1);
+    for (const mat of this.model.mats) if (!mat.userData.glow) mat.emissive.setRGB(0, 0, 0);
+    if (this.model.blink) this.model.blink.value = 1; // eyes shut
+    if (A && A.has('Death') && this.visibleToPlayer) {
+      A.mixer.timeScale = 1;
+      A.once('Death', { hold: true, fade: 0.08 });
+      this.dieT = 1.25;
+      return;
+    }
+    this.vanish();
+  }
+
+  vanish() {
+    this.setVisible(false);
+    this.g.effects.poof(this.pos.x, this.pos.z, this.type.palette.main);
   }
 
   poseRig(dt, t) {
@@ -336,6 +408,7 @@ export class Brawler {
     this.g.scene.remove(this.root);
     this.g.fx.remove(this.ring, this.blob);
     for (const m of this.model.mats) m.dispose();
+    for (const m of this.model.disposables || []) m.dispose();
     if (this.model.skeleton) this.model.skeleton.dispose(); // bone texture
     this.model.root.traverse(o => { if (o.isMesh && o.userData.baked) o.geometry.dispose(); if (o.userData.outline) OUTLINES.delete(o); }); // outlines share the geometry
     this.ring.material.dispose();

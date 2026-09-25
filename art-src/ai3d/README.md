@@ -11,6 +11,7 @@ Nothing here ships with the game: it produces the GLBs in `art-src/glb/`, which
 | shape | Hunyuan3D-2 DiT turbo + FlashVDM (`tencent/Hunyuan3D-2`) |
 | texture | Hunyuan3D-Paint turbo, baked with `custom_rasterizer/` (OpenGL via moderngl, replaces the CUDA-only kernel) |
 | game files | `python art-src/optimize_models.py --decor` (triangle budget per prop, webp, meshopt) |
+| rig + animations | characters: `art-src/figurines/` → skeleton, skin and clips in Blender (`art-src/rig/README.md`) → `public/assets/models/` |
 
 ## Setup (once)
 

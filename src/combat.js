@@ -190,7 +190,7 @@ export class Combat {
           breakWalls: s.sup, knock: 0, emit: true, col, shape: 'ray',
         });
         this.g.effects.muzzle(mx, BULLET_Y, mz, dx, dz, col);
-        b.recoil = 1;
+        if (s.sup) b.recoil = 1; else b.attacked(); // the volley keeps the Super's arms up
         b.aimFacing = s.a; b.aimHold = 0.3;
         sfx('shot', g.volumeAt(b.pos.x, b.pos.z));
       }

@@ -1,0 +1,58 @@
+{
+ "fit": {"neck": 0.4, "crotch": 0.18},
+ "joints": {
+  "Hips": [0, 0.05, 0.5],
+  "Spine": [0, 0.04, 0.62],
+  "Spine1": [0, 0.04, 0.73],
+  "Spine2": [0, 0.04, 0.83],
+  "Neck": [0, 0.03, 0.93],
+  "Head": [0, 0.02, 1.0],
+  "HeadTop": [0, 0.05, 2.45],
+  "LeftShoulder": [0.12, 0.06, 0.88],
+  "LeftArm": [0.40, 0.10, 0.82],
+  "LeftForeArm": [0.60, 0.10, 0.68],
+  "LeftHand": [0.74, 0.08, 0.62],
+  "LeftHandEnd": [0.88, 0.0, 0.70],
+  "RightShoulder": [-0.12, 0.06, 0.88],
+  "RightArm": [-0.47, 0.05, 0.82],
+  "RightForeArm": [-0.66, 0.05, 0.70],
+  "RightHand": [-0.72, 0.0, 0.53],
+  "RightHandEnd": [-0.68, -0.1, 0.40],
+  "LeftUpLeg": [0.24, 0.05, 0.42],
+  "LeftLeg": [0.28, 0.03, 0.24],
+  "LeftFoot": [0.29, 0.05, 0.11],
+  "LeftToeBase": [0.30, -0.08, 0.04],
+  "LeftToeEnd": [0.30, -0.20, 0.02],
+  "RightUpLeg": [-0.26, 0.05, 0.42],
+  "RightLeg": [-0.31, 0.03, 0.24],
+  "RightFoot": [-0.33, 0.05, 0.11],
+  "RightToeBase": [-0.35, -0.08, 0.04],
+  "RightToeEnd": [-0.35, -0.20, 0.02]
+ },
+ "bands": {"Spine": 0.015, "Spine1": 0.015, "Spine2": 0.015, "Neck": 0.012, "Head": 0.01, "Hips": 0.015, "UpLeg": 0.02, "Leg": 0.015, "Foot": 0.01, "Arm": 0.02, "ForeArm": 0.015, "Hand": 0.012},
+ "head_tilt": 14,
+ "smooth": 2,
+ "weapon_radius": 0.07,
+ "cloth": false,
+ "weapons": {"L": {"grip": {"rotate": [0, 12, 0], "offset": [0.14, -0.08, 0]}}},
+ "poses": {
+  "carry": {"L": [0.64, -0.1, -0.77], "R": [-0.77, -0.1, -0.63]},
+  "watch": [-0.46, 0.04, 0.18],
+  "mouth": [-0.42, 0.34, -0.1],
+  "head_shift": [0, 0.03, -0.15],
+  "head_scale": [0.85, 1, 0.96],
+  "head_margin": 0.03,
+  "head_motion": 0.25,
+  "torso_margin": 0.03,
+  "leg_radius": 0.28,
+  "leg_margin": 0.02,
+  "up_forward": -0.8
+ },
+ "regions": [
+  {"box": [[0.65, -0.5, 0.95], [1.2, 0.1, 1.28]], "part": "armL"}
+ ],
+ "sway": [
+  {"box": [[-0.5, -0.75, 1.55], [0.5, -0.18, 2.6]], "axis": [0, 0, 1], "from": 1.76, "length": 0.56}
+ ],
+ "eyes": {"spheres": [{"sphere": [0.29, -0.40, 1.33], "radius": 0.165}, {"sphere": [-0.26, -0.40, 1.33], "radius": 0.15}]}
+}
