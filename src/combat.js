@@ -10,7 +10,7 @@ const COL = {
   super: new THREE.Color(4.2, 3.1, 0.6),
   ice: new THREE.Color(1.6, 3.4, 4.6),
   volt: new THREE.Color(1.2, 4.2, 4.6),
-  seed: new THREE.Color(1.5, 3.6, 0.7), // Blaster: thorny seeds
+  seed: new THREE.Color(0.75, 1.9, 0.3), // Blaster: thorny seeds (dimmer: the thorns must read through the bloom)
   ray: new THREE.Color(2.6, 1.5, 4.8), // Gunslinger: ray pistol bolts
 };
 const ICE_LIGHT = new THREE.Color(0.55, 0.85, 1), BOLT = new THREE.Color(3.2, 4.2, 5.2);
@@ -60,8 +60,8 @@ export class Combat {
     this.fireballGeo = rockGeometry(0.3, 1, 0.3);
     this.meteorGeo = rockGeometry(0.62, 1, 0.35);
     this.flameGeo = new THREE.IcosahedronGeometry(1, 2);
-    this.rockMat = new THREE.MeshStandardMaterial({ color: 0x3a2a24, roughness: 0.85, emissive: 0xff5a14, emissiveIntensity: 1.6, flatShading: true });
-    this.flameMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(3.6, 1.5, 0.3), transparent: true, opacity: 0.4,
+    this.rockMat = new THREE.MeshStandardMaterial({ color: 0x3a2a24, roughness: 0.85, emissive: 0xff5a14, emissiveIntensity: 0.8, flatShading: true });
+    this.flameMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.6, 0.12), transparent: true, opacity: 0.3,
       blending: THREE.AdditiveBlending, depthWrite: false });
   }
 
@@ -69,7 +69,7 @@ export class Combat {
     const g = new THREE.Group(), core = new THREE.Mesh(sup ? this.meteorGeo : this.fireballGeo, this.rockMat);
     const flame = new THREE.Mesh(this.flameGeo, this.flameMat);
     core.castShadow = true;
-    flame.scale.setScalar(sup ? 0.95 : 0.46);
+    flame.scale.setScalar(sup ? 0.78 : 0.4);
     g.add(core, flame);
     g.userData.flame = flame;
     return g;
@@ -161,8 +161,8 @@ export class Combat {
 
   spawnBullet(owner, x, z, a, o) {
     const m = this.meshFor(o.col, o.shape === 'seed' ? this.seedGeo : this.bulletGeo);
-    if (o.shape === 'seed') m.scale.setScalar(o.r * 0.75);
-    else if (o.shape === 'ray') m.scale.set(o.r * 0.7, o.r * 0.7, o.r * 5);
+    if (o.shape === 'seed') m.scale.setScalar(o.r * 1.15);
+    else if (o.shape === 'ray') m.scale.set(o.r * 0.9, o.r * 0.9, o.r * 5);
     else m.scale.set(o.r, o.r, o.r * 2.6);
     m.rotation.set(0, a, 0);
     m.position.set(x, BULLET_Y, z);
@@ -273,7 +273,7 @@ export class Combat {
         y = B.sy + (0.35 - B.sy) * k + 4 * B.h * k * (1 - k);
       }
       B.mesh.position.set(x, y, z);
-      const core = B.mesh.children[0], size = B.sup ? 0.95 : 0.46;
+      const core = B.mesh.children[0], size = B.sup ? 0.78 : 0.4;
       core.rotation.x += B.spin * dt;
       core.rotation.z += B.spin * 0.4 * dt;
       B.mesh.userData.flame.scale.setScalar(size * (1 + Math.sin(B.t * 40) * 0.08));
@@ -282,8 +282,8 @@ export class Combat {
       for (let n = B.sup ? 3 : 1; n > 0; n--) {
         const hot = Math.random();
         g.effects.fire.spawn(particle(x + rnd(-0.3, 0.3) * size, y + rnd(-0.3, 0.3) * size, z + rnd(-0.3, 0.3) * size,
-          rnd(-0.6, 0.6), rnd(0.4, 1.6), rnd(-0.6, 0.6), rnd(0.18, 0.32), rnd(0.8, 1.2) * size,
-          3.2 + hot * 2, 1.1 + hot * 1.6, 0.25 + hot * 0.4, { drag: 3, grow: 0.3, shrink: 0.9, fade: true }));
+          rnd(-0.6, 0.6), rnd(0.4, 1.6), rnd(-0.6, 0.6), rnd(0.15, 0.28), rnd(0.5, 0.8) * size,
+          1.6 + hot * 1.2, 0.45 + hot * 0.7, 0.08 + hot * 0.15, { drag: 3, grow: 0.3, shrink: 0.9, fade: true }));
       }
       if (Math.random() < (B.sup ? 0.5 : 0.25)) {
         g.effects.smoke.spawn(particle(x, y + 0.2, z, rnd(-0.4, 0.4), rnd(0.6, 1.4), rnd(-0.4, 0.4), rnd(0.5, 0.8), size * 0.8,
@@ -412,7 +412,7 @@ export class Combat {
     for (const B of this.bullets) {
       if (B.emit) pool.add(B.x, BULLET_Y + 0.2, B.z, B.lr, B.lg, B.lb, B.breakWalls ? 12 : 8, 6.5);
     }
-    for (const B of this.bombs) pool.add(B.fx, B.fy, B.fz, 1, 0.55, 0.2, B.sup ? 9 : 6, B.sup ? 7 : 5.5);
+    for (const B of this.bombs) pool.add(B.fx, B.fy, B.fz, 1, 0.55, 0.2, B.sup ? 7 : 5, B.sup ? 6 : 5);
   }
 
   clear() {
