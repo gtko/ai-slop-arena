@@ -24,9 +24,9 @@ Otto brawler si lanciano nell'arena. Nasconditi nell'erba alta, distruggi le cas
 
 [h2]Cinque brawler, cinque stili di combattimento[/h2]
 [list]
-[*][b]Blaster[/b]: una rosa di cinque pallini a corto raggio. Super: un'esplosione che respinge i nemici e sfonda i muri.
-[*][b]Gunslinger[/b]: una raffica di sei proiettili a lungo raggio. Super: una scarica di dodici proiettili che trapassa i muri.
-[*][b]Bomber[/b]: lancia bombe oltre le coperture. Super: un barile gigante che rade al suolo tutto ciò che ha intorno.
+[*][b]Blaster[/b]: un golem-ceppo il cui trombone di tronco spara cinque semi spinosi a corto raggio. Super: un'esplosione che respinge i nemici e sfonda i muri.
+[*][b]Gunslinger[/b]: un axolotl ranger stellare le cui due pistole a raggi sparano una raffica di sei raggi a lunga distanza. Super: una scarica di dodici raggi che trapassa i muri.
+[*][b]Bomber[/b]: un diavoletto di magma che lancia palle di fuoco oltre le coperture. Super: una meteora che rade al suolo tutto ciò che ha intorno.
 [*][b]Frostbite[/b]: tre schegge di ghiaccio che rallentano. Super: una nova gelida che congela chiunque sia vicino.
 [*][b]Volt[/b]: una sfera il cui fulmine rimbalza su due nemici. Super: una tempesta che fa piovere fulmini.
 [/list]

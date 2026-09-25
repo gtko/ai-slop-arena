@@ -24,9 +24,9 @@ Acht Brawler landen in der Arena. Versteck dich im hohen Gras, zerschlag Kisten 
 
 [h2]Fünf Brawler, fünf Kampfstile[/h2]
 [list]
-[*][b]Blaster[/b]: eine Schrotladung aus fünf Kugeln auf kurze Distanz. Super: eine Druckwelle, die Gegner zurückstößt und Mauern zertrümmert.
-[*][b]Gunslinger[/b]: eine Salve aus sechs Kugeln auf große Distanz. Super: zwölf Kugeln, die durch Mauern gehen.
-[*][b]Bomber[/b]: wirft Bomben über Deckungen. Super: ein riesiges Fass, das alles in der Umgebung dem Erdboden gleichmacht.
+[*][b]Blaster[/b]: ein Baumstumpf-Golem, dessen Donnerbüchse aus einem Stamm fünf Dornensamen auf kurze Distanz verschießt. Super: eine Druckwelle, die Gegner zurückstößt und Mauern zertrümmert.
+[*][b]Gunslinger[/b]: ein Axolotl-Sternenranger, dessen zwei Strahlenpistolen eine Salve aus sechs Strahlen auf große Distanz feuern. Super: zwölf Strahlen, die durch Mauern gehen.
+[*][b]Bomber[/b]: ein Magma-Kobold, der Feuerbälle über Deckungen wirft. Super: ein Meteor, der alles in der Umgebung dem Erdboden gleichmacht.
 [*][b]Frostbite[/b]: drei Eissplitter, die verlangsamen. Super: eine Frostnova, die alle in der Nähe einfriert.
 [*][b]Volt[/b]: eine Kugel, deren Blitz auf zwei Gegner überspringt. Super: ein Gewitter, das Blitze einschlagen lässt.
 [/list]

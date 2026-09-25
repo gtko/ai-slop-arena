@@ -24,9 +24,9 @@ Nyolc harcos érkezik az arénába. Bújj el a magas fűben, törd össze a lád
 
 [h2]Öt harcos, ötféle harcmodor[/h2]
 [list]
-[*][b]Blaster[/b]: öt sörétszemet szóró puska közelre. Szuper: robbanás, amely hátralöki az ellenséget és falakat zúz.
-[*][b]Gunslinger[/b]: hat lövedékes sorozat nagy távolságra. Szuper: tizenkét lövedékes sortűz, amely áthatol a falakon.
-[*][b]Bomber[/b]: bombákat hajít a fedezékek fölött. Szuper: óriási hordó, amely mindent eltöröl maga körül.
+[*][b]Blaster[/b]: tuskógólem, akinek rönkmordálya öt tüskés magot szór közelre. Szuper: robbanás, amely hátralöki az ellenséget és falakat zúz.
+[*][b]Gunslinger[/b]: axolotl csillagőr, akinek két sugárpisztolya hat sugaras sorozatot lő nagy távolságra. Szuper: tizenkét sugaras sortűz, amely áthatol a falakon.
+[*][b]Bomber[/b]: magmaördögfióka, aki tűzgolyókat hajít a fedezékek fölött. Szuper: meteor, amely mindent eltöröl maga körül.
 [*][b]Frostbite[/b]: három lassító jégszilánk. Szuper: fagynóva, amely mindenkit lefagyaszt a közelben.
 [*][b]Volt[/b]: gömb, amelynek villáma két ellenségre ugrik át. Szuper: vihar, amely villámokat zúdít le.
 [/list]

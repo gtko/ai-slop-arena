@@ -5,7 +5,7 @@ Package `ch.gtko.aisloparena`. Build the upload bundle with `npm run android:aab
 `~/.android-keys/`, versionCode = major*10000 + minor*100 + patch from package.json).
 
 Graphics in this folder: `icon-512.png`, `feature-graphic.png` (1024x500), phone screenshots
-(2608x1304, captured on a Xiaomi 25102PCBEG, padded to the 2:1 maximum ratio).
+(2608x1304: a landscape touch phone emulated in Electron by `art-src/gp_screenshots.cjs`, French UI).
 
 Privacy policy: https://ai-slop-arena.gtux-prog.workers.dev/privacy.html (`public/privacy.html`).
 Contact: gtux.prog@gmail.com. Category: Game > Action. Free, no ads, no in-app purchases.
@@ -30,9 +30,9 @@ A cute 8-player top-down brawler: hide, loot, blast. Last one standing wins!
 Eight brawlers drop into the arena. Hide in the tall grass, smash crates for power cubes that make you stronger, and keep moving: the poison gas is closing in. Only one walks out.
 
 FIVE BRAWLERS, FIVE WAYS TO FIGHT
-• Blaster: a five-pellet shotgun spread. Super: a blast that knocks enemies back and smashes walls.
-• Gunslinger: a long-range six-bullet burst. Super: a twelve-bullet volley that goes through walls.
-• Bomber: lobs bombs over cover. Super: a giant barrel that levels everything around it.
+• Blaster: a tree-stump golem whose log blunderbuss sprays five thorny seeds at short range. Super: a blast that knocks enemies back and smashes walls.
+• Gunslinger: an axolotl star-ranger whose twin ray pistols fire a long-range six-bolt burst. Super: a twelve-bolt volley that goes through walls.
+• Bomber: a magma imp who lobs fireballs over cover. Super: a meteor that levels everything around it.
 • Frostbite: ice shards that slow. Super: a frost nova that freezes everyone nearby.
 • Volt: an orb whose lightning chains to two enemies. Super: a storm that calls down lightning.
 
@@ -77,9 +77,9 @@ Brawler mignon à 8 en vue de dessus : cache-toi, tire, sois le dernier debout !
 Huit brawlers débarquent dans l'arène. Cachez-vous dans les hautes herbes, cassez des caisses pour ramasser des cubes de puissance qui vous rendent plus fort, et ne restez pas immobile : le gaz empoisonné se referme. Un seul en ressortira.
 
 CINQ BRAWLERS, CINQ FAÇONS DE SE BATTRE
-• Blaster : une gerbe de cinq plombs. Super : une déflagration qui repousse les ennemis et détruit les murs.
-• Gunslinger : une rafale de six balles à longue portée. Super : une salve de douze balles qui traverse les murs.
-• Bomber : lance des bombes par-dessus les obstacles. Super : un baril géant qui rase tout autour de lui.
+• Blaster : un golem-souche dont le tromblon en bûche crache cinq graines épineuses à courte portée. Super : une déflagration qui repousse les ennemis et détruit les murs.
+• Gunslinger : un axolotl star-ranger dont les deux pistolets à rayons tirent une rafale de six rayons à longue portée. Super : une salve de douze rayons qui traverse les murs.
+• Bomber : un diablotin de magma qui lance des boules de feu par-dessus les obstacles. Super : un météore qui rase tout autour de lui.
 • Frostbite : des éclats de glace qui ralentissent. Super : une nova de givre qui gèle tout le monde à proximité.
 • Volt : un orbe dont l'éclair rebondit sur deux ennemis. Super : un orage qui fait tomber la foudre.
 

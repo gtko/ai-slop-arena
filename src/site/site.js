@@ -6,12 +6,12 @@ import { steam } from '../../package.json';
 
 const BASE = import.meta.env.BASE_URL;
 const BRAWLERS = [
-  { key: 'blaster', name: 'Blaster', role: 'Shotgun', color: '#7b4dff', hp: 4800, range: 9.5,
-    desc: 'Une gerbe de 5 plombs à courte portée. Super : une déflagration qui repousse et pulvérise les murs.' },
-  { key: 'gunslinger', name: 'Gunslinger', role: 'Tireur d\'élite', color: '#e8453c', hp: 3600, range: 16,
-    desc: 'Rafale longue portée de 6 balles. Super : une salve de 12 balles qui traverse les murs.' },
-  { key: 'bomber', name: 'Bomber', role: 'Lanceur', color: '#ff9a1f', hp: 3400, range: 13,
-    desc: 'Lance des bombes par-dessus les murs. Super : un baril géant qui rase la couverture.' },
+  { key: 'blaster', name: 'Blaster', role: 'Shotgun', color: '#5fb83a', hp: 4800, range: 9.5,
+    desc: 'Golem-souche : son tromblon en bûche creuse crache 5 graines épineuses à courte portée. Super : une large salve qui repousse les ennemis et pulvérise les murs.' },
+  { key: 'gunslinger', name: 'Gunslinger', role: 'Tireur d\'élite', color: '#f27aa8', hp: 3600, range: 16,
+    desc: 'Axolotl star-ranger : ses deux pistolets à rayons tirent une rafale de 6 rayons à longue portée. Super : une volée de 12 rayons qui traverse les murs.' },
+  { key: 'bomber', name: 'Bomber', role: 'Lanceur', color: '#ff7a1f', hp: 3400, range: 13,
+    desc: 'Diablotin de magma : lance par-dessus les murs des boules de feu qui explosent en zone. Super : un météore qui s\'écrase et rase les abris.' },
   { key: 'frostbite', name: 'Frostbite', role: 'Mage de glace', color: '#5aa9e6', hp: 3300, range: 12,
     desc: 'Trois éclats de glace qui ralentissent. Super : une nova de givre qui gèle tout autour de lui.' },
   { key: 'volt', name: 'Volt', role: 'Robot électrique', color: '#3ec6e0', hp: 3100, range: 13,

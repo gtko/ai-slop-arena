@@ -56,9 +56,9 @@ Every prompt, with its timestamp, is listed on the [website](https://ai-slop-are
   </tr>
 </table>
 
-- **Blaster**: a five-pellet spread at short range. Super: a blast that knocks enemies back and smashes walls.
-- **Gunslinger**: a long-range six-bullet burst. Super: a twelve-bullet volley that goes through walls.
-- **Bomber**: lobs bombs over cover. Super: a giant barrel that levels everything around it.
+- **Blaster**: a tree-stump golem whose log blunderbuss sprays five thorny seeds at short range. Super: a blast that knocks enemies back and smashes walls.
+- **Gunslinger**: an axolotl star-ranger whose twin ray pistols fire a long-range six-bolt burst. Super: a twelve-bolt volley that goes through walls.
+- **Bomber**: a magma imp who lobs fireballs over cover. Super: a meteor that levels everything around it.
 - **Frostbite**: three ice shards that slow. Super: a frost nova that freezes everyone nearby.
 - **Volt**: an orb whose lightning chains to two enemies. Super: a storm that calls down lightning.
 
@@ -260,7 +260,7 @@ src/
   brawler.js    brawler types, movement and animation (figurine walk / aim, procedural rig fallback)
   figurines.js  GLB figurines: auto-rig (joint fit, arm cutting, skin weights), weapon axes, materials
   props.js      decor GLBs (walls, trees, rocks, crates, bushes, lanterns), instancing helpers
-  combat.js     bullets, bursts, lobbed bombs, explosions
+  combat.js     bullets, bursts, lobbed fireballs, explosions
   ai.js         A* pathfinding and bot behaviour
   poison.js     shrinking gas
   game.js       match flow, damage, items, visibility, camera

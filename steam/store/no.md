@@ -24,9 +24,9 @@ En søt brawler sett ovenfra for åtte spillere. Velg en brawler, gjem deg i det
 
 [h2]Fem brawlere, fem måter å slåss på[/h2]
 [list]
-[*][b]Blaster[/b]: en haglespredning med fem hagl på kort hold. Super: et smell som slår fiender tilbake og knuser vegger.
-[*][b]Gunslinger[/b]: en salve på seks kuler på langt hold. Super: en byge på tolv kuler som går rett gjennom vegger.
-[*][b]Bomber[/b]: kaster bomber over dekning. Super: en kjempetønne som jevner alt rundt seg med jorden.
+[*][b]Blaster[/b]: en stubbegolem med en muskedunder av en stokk som sprer fem tornete frø på kort hold. Super: et smell som slår fiender tilbake og knuser vegger.
+[*][b]Gunslinger[/b]: en axolotl-stjerneranger med to strålepistoler som fyrer av en salve på seks stråler på langt hold. Super: en byge på tolv stråler som går rett gjennom vegger.
+[*][b]Bomber[/b]: en magmadjevel som kaster ildkuler over dekning. Super: en meteor som jevner alt rundt seg med jorden.
 [*][b]Frostbite[/b]: tre issplinter som bremser. Super: en frostnova som fryser alle i nærheten.
 [*][b]Volt[/b]: en kule med lyn som hopper videre til to fiender. Super: en storm som kaller ned lynnedslag.
 [/list]

@@ -25,9 +25,9 @@ Ocho brawlers aterrizan en la arena. Escóndete en la hierba alta, rompe cajas p
 
 [h2]Cinco brawlers, cinco formas de pelear[/h2]
 [list]
-[*][b]Blaster[/b]: una ráfaga de cinco perdigones a corta distancia. Súper: una explosión que empuja a los enemigos y destroza muros.
-[*][b]Gunslinger[/b]: una ráfaga de seis balas a larga distancia. Súper: una descarga de doce balas que atraviesa muros.
-[*][b]Bomber[/b]: lanza bombas por encima de las coberturas. Súper: un barril gigante que arrasa todo a su alrededor.
+[*][b]Blaster[/b]: un gólem de tocón cuyo trabuco de tronco dispara cinco semillas espinosas a corta distancia. Súper: una explosión que empuja a los enemigos y destroza muros.
+[*][b]Gunslinger[/b]: un ajolote guardián estelar cuyas dos pistolas de rayos disparan una ráfaga de seis rayos a larga distancia. Súper: una descarga de doce rayos que atraviesa muros.
+[*][b]Bomber[/b]: un diablillo de magma que lanza bolas de fuego por encima de las coberturas. Súper: un meteorito que arrasa todo a su alrededor.
 [*][b]Frostbite[/b]: tres fragmentos de hielo que ralentizan. Súper: una nova de escarcha que congela a todos los que estén cerca.
 [*][b]Volt[/b]: un orbe cuyo rayo salta a dos enemigos. Súper: una tormenta que hace caer rayos.
 [/list]

@@ -24,9 +24,9 @@ Acht brawlers belanden in de arena. Verstop je in het hoge gras, sloop kratten v
 
 [h2]Vijf brawlers, vijf manieren om te knokken[/h2]
 [list]
-[*][b]Blaster[/b]: een shotgunschot met vijf hagelkorrels op korte afstand. Super: een knal die vijanden terugduwt en muren sloopt.
-[*][b]Gunslinger[/b]: een salvo van zes kogels op lange afstand. Super: een salvo van twaalf kogels dat dwars door muren gaat.
-[*][b]Bomber[/b]: gooit bommen over dekking heen. Super: een reusachtige ton die alles in de buurt platlegt.
+[*][b]Blaster[/b]: een boomstronkgolem wiens donderbus van een stam vijf doornige zaden op korte afstand schiet. Super: een knal die vijanden terugduwt en muren sloopt.
+[*][b]Gunslinger[/b]: een axolotl-sterrenranger wiens twee straalpistolen een salvo van zes stralen op lange afstand vuren. Super: een salvo van twaalf stralen dat dwars door muren gaat.
+[*][b]Bomber[/b]: een magmaduiveltje dat vuurballen over dekking heen gooit. Super: een meteoor die alles in de buurt platlegt.
 [*][b]Frostbite[/b]: drie ijsscherven die vertragen. Super: een vorstgolf die iedereen in de buurt bevriest.
 [*][b]Volt[/b]: een bol waarvan de bliksem overspringt naar twee vijanden. Super: een storm die bliksem laat inslaan.
 [/list]

@@ -24,9 +24,9 @@ Otte brawlere lander i arenaen. Gem dig i det høje græs, smadr kasser for kraf
 
 [h2]Fem brawlere, fem måder at slås på[/h2]
 [list]
-[*][b]Blaster[/b]: en haglspredning med fem hagl på tæt hold. Super: et brag, der slår fjender tilbage og smadrer mure.
-[*][b]Gunslinger[/b]: en salve på seks kugler på lang afstand. Super: en byge på tolv kugler, der går lige gennem mure.
-[*][b]Bomber[/b]: kaster bomber hen over dækning. Super: en kæmpetønde, der jævner alt omkring sig med jorden.
+[*][b]Blaster[/b]: en stubbegolem, hvis muskedonner af en træstamme spreder fem tornede frø på tæt hold. Super: et brag, der slår fjender tilbage og smadrer mure.
+[*][b]Gunslinger[/b]: en axolotl-stjerneranger, hvis to strålepistoler affyrer en salve på seks stråler på lang afstand. Super: en byge på tolv stråler, der går lige gennem mure.
+[*][b]Bomber[/b]: en magmadjævel, der kaster ildkugler hen over dækning. Super: en meteor, der jævner alt omkring sig med jorden.
 [*][b]Frostbite[/b]: tre issplinter, der sænker farten. Super: en frostbølge, der fryser alle i nærheden.
 [*][b]Volt[/b]: en kugle, hvis lyn springer videre til to fjender. Super: et uvejr, der kalder lynnedslag ned.
 [/list]

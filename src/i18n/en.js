@@ -60,11 +60,11 @@ export default {
 
   // brawlers (names are proper names and stay as they are)
   'brawler.blaster.role': 'Shotgun',
-  'brawler.blaster.desc': 'Close-range spread of 5 pellets. Super: a wide blast that knocks enemies back and smashes walls.',
+  'brawler.blaster.desc': 'A tree-stump golem whose hollow-log blunderbuss sprays 5 thorny seeds at close range. Super: a wide seed blast that knocks enemies back and smashes walls.',
   'brawler.gunslinger.role': 'Sharpshooter',
-  'brawler.gunslinger.desc': 'Long-range burst of 6 bullets. Super: a 12-bullet volley that tears straight through walls.',
+  'brawler.gunslinger.desc': 'An axolotl star-ranger whose twin ray pistols fire a long-range burst of 6 bolts. Super: a 12-bolt volley that tears straight through walls.',
   'brawler.bomber.role': 'Thrower',
-  'brawler.bomber.desc': 'Lobs bombs over walls that explode in an area. Super: a huge barrel bomb that levels cover.',
+  'brawler.bomber.desc': 'A magma imp who lobs fireballs over walls that explode in an area. Super: a meteor that crashes down and levels cover.',
   'brawler.frostbite.role': 'Ice mage',
   'brawler.frostbite.desc': 'Fires 3 ice shards that slow enemies down. Super: a frost nova around him that freezes everyone close.',
   'brawler.volt.role': 'Electric bot',

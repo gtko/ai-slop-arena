@@ -24,9 +24,9 @@ Oito lutadores caem na arena. Se esconda no mato alto, quebre caixas para pegar 
 
 [h2]Cinco lutadores, cinco jeitos de lutar[/h2]
 [list]
-[*][b]Blaster[/b]: um disparo de cinco chumbos a curta distância. Super: uma explosão que empurra os inimigos e destrói paredes.
-[*][b]Gunslinger[/b]: uma rajada de seis balas de longo alcance. Super: uma saraivada de doze balas que atravessa paredes.
-[*][b]Bomber[/b]: arremessa bombas por cima das coberturas. Super: um barril gigante que arrasa tudo ao redor.
+[*][b]Blaster[/b]: um golem-toco cujo bacamarte de tronco dispara cinco sementes espinhosas a curta distância. Super: uma explosão que empurra os inimigos e destrói paredes.
+[*][b]Gunslinger[/b]: um axolote patrulheiro estelar cujas duas pistolas de raios disparam uma rajada de seis raios de longo alcance. Super: uma saraivada de doze raios que atravessa paredes.
+[*][b]Bomber[/b]: um diabinho de magma que arremessa bolas de fogo por cima das coberturas. Super: um meteoro que arrasa tudo ao redor.
 [*][b]Frostbite[/b]: três estilhaços de gelo que deixam os inimigos lentos. Super: uma onda de gelo que congela todo mundo por perto.
 [*][b]Volt[/b]: uma esfera cujo raio salta para dois inimigos. Super: uma tempestade que faz chover raios.
 [/list]
