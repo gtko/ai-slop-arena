@@ -117,6 +117,7 @@ export class Brawler {
     this.model = hasFigurine(typeKey) ? buildFigurine(typeKey) : buildSculpted(this.type);
     this.blinkT = 1 + Math.random() * 3;
     this.blinkAge = 9;
+    this.lidUp = 0; this.lidLow = 0; this.cheerT = 0; // eye expression (updateBlink)
     this.root = new THREE.Group();
     this.root.add(this.model.root);
     game.scene.add(this.root);
@@ -388,7 +389,25 @@ export class Brawler {
       this.blinkT = 2 + Math.random() * 3.5;
     }
     const one = a => (a >= 0 && a < 0.16 ? Math.sin(Math.PI * a / 0.16) : 0);
-    u.value = Math.max(one(this.blinkAge), this.blinkTwice ? one(this.blinkAge - 0.24) : 0);
+    // expression: upper and lower lid rest positions, eased (the blink still closes over them)
+    const [up, low] = this.expression();
+    const k = 1 - Math.exp(-14 * dt);
+    this.lidUp += (up - this.lidUp) * k;
+    this.lidLow += (low - this.lidLow) * k;
+    u.value = Math.max(one(this.blinkAge), this.blinkTwice ? one(this.blinkAge - 0.24) : 0, this.lidUp);
+    if (this.model.lowLid) this.model.lowLid.value = this.lidLow;
+  }
+
+  // Eye expression [upper lid, lower lid] from what the brawler is going through.
+  expression() {
+    const t = this.g.time;
+    if (this.won || this.cheerT > t) return [0.12, 0.52];      // happy crescents
+    if (t - this.lastHurt < 0.35) return [0.55, 0.3];           // pained squint
+    if (this.freezeT > 0) return [0, 0];                        // frozen wide-eyed
+    if (t - this.lastAttack < 0.5 || this.aimHold > 0) return [0.3, 0.06]; // determined glare
+    if (this.hp < this.maxHp * 0.3) return [0.38, 0.12];        // tired, hurting
+    if (this.inBush) return [0.22, 0.14];                        // sneaky
+    return [0, 0];
   }
 
   // Soft parts (leaves, gills, flames, capes, hair, antennas; figurines.js): they lean with the
@@ -429,6 +448,7 @@ export class Brawler {
   }
 
   cheer() {
+    this.cheerT = this.g.time + 1.4;
     if (this.alive) this.model.anim?.fire('Cheer'); // over the aim: it covers the held arms
   }
 
