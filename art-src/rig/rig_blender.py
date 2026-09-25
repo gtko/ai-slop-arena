@@ -44,9 +44,9 @@ def smooth(e0, e1, x):
 
 # ------------------------------------------------------------------ mesh
 
-def build_mesh(d):
+def build_mesh(d, idx):
     """Weld the UV-seam duplicates (UVs live on the loops in Blender) and keep only used vertices."""
-    P, U, idx = d['position'], d['uv'], d['index']
+    P, U = d['position'], d['uv']
     n = len(P) // 3
     weld, keys, first = [0] * n, {}, []
     for i in range(n):
@@ -263,7 +263,44 @@ def in_shape(r, p):
     return all(lo[k] <= p[k] <= hi[k] for k in range(3))
 
 
-def skin(d, obj, src, m):
+PART_OF = {'root': 'body', 'hips': 'body', 'spine': 'body', 'head': 'body'}
+for _s in 'LR':
+    PART_OF.update({'thigh' + _s: 'leg' + _s, 'shin' + _s: 'leg' + _s, 'arm' + _s: 'arm' + _s, 'fore' + _s: 'arm' + _s})
+
+
+def classify(d, m):
+    """Part of every vertex (body / armL / armR / legL / legR) after the landmark regions, and the
+    bone a region pins it to (or None)."""
+    names, P, parts = d['bones'], d['position'], d['part']
+    part, rigid = [], []
+    for o in range(len(parts)):
+        p = to_b(P[o * 3:o * 3 + 3])
+        pt, rb = PART_OF[names[parts[o]]], None
+        for r in m['regions']:
+            if in_shape(r, p):
+                if 'bone' in r:
+                    rb = r['bone']
+                else:
+                    pt = r['part']
+        part.append(pt)
+        rigid.append(rb)
+    return part, rigid
+
+
+def stitched(d, part, rigid):
+    """The mesh's faces: the cut autorig.mjs made between parts, minus the faces whose three corners
+    the regions put back in one part (or pin to one bone): no crack left inside a fireball or a robe."""
+    idx, cut, back = list(d['index']), d.get('cut', []), 0
+    for f in range(0, len(cut), 3):
+        a, b, c = cut[f:f + 3]
+        if (part[a] == part[b] == part[c]) or (rigid[a] and rigid[a] == rigid[b] == rigid[c]):
+            idx.extend((a, b, c))
+            back += 1
+    print(d['key'], f'cut faces: {len(cut) // 3 - back} kept open, {back} stitched back')
+    return idx
+
+
+def skin(d, obj, src, m, part_of_vertex, rigid_of_vertex):
     """Weights from the body parts found by autorig.mjs (which already cut the arms and legs free),
     each part split along its own chain of landmarks: the torso and head by height (the head boundary
     tilted up toward the nape, so the whole face turns with the head), legs and arms by where the
@@ -271,7 +308,7 @@ def skin(d, obj, src, m):
     H = d['height']
     J, B = m['joints'], m['bands']
     bw = lambda name: B[name.replace('Left', '').replace('Right', '')] * H
-    names, P, parts = d['bones'], d['position'], d['part']
+    P = d['position']
     tilt = math.tan(math.radians(m['head_tilt']))
     torso = [('Spine', 'Hips'), ('Spine1', 'Spine'), ('Spine2', 'Spine1'), ('Neck', 'Spine2'), ('Head', 'Neck')]
     limbs = {}
@@ -285,20 +322,11 @@ def skin(d, obj, src, m):
             [J[side + 'Shoulder'], J[side + 'Arm'], J[side + 'ForeArm'], J[side + 'Hand'], J[side + 'HandEnd']],
             [side + 'Shoulder', side + 'Arm', side + 'ForeArm', side + 'Hand'],
             [0, bw('Arm'), bw('ForeArm'), bw('Hand')])
-    part_of = {'root': 'body', 'hips': 'body', 'spine': 'body', 'head': 'body'}
-    for s in 'LR':
-        part_of.update({'thigh' + s: 'leg' + s, 'shin' + s: 'leg' + s, 'arm' + s: 'arm' + s, 'fore' + s: 'arm' + s})
     armed = lambda s: d['weapon'] in ('both', s)
     groups = {}
     for i, o in enumerate(src):
         p = to_b(P[o * 3:o * 3 + 3])
-        part, rigid = part_of[names[parts[o]]], None
-        for r in m['regions']:
-            if in_shape(r, p):
-                if 'bone' in r:
-                    rigid = r['bone']
-                else:
-                    part = r['part']
+        part, rigid = part_of_vertex[o], rigid_of_vertex[o]
         if rigid:
             w = {rigid: 1.0}
         elif part == 'body':
@@ -355,14 +383,15 @@ def build(key):
     reset()
     with open(os.path.join(WORK, key + '.json')) as f:
         d = json.load(f)
-    me, src = build_mesh(d)
+    marks = load_marks(d)
+    part, rigid = classify(d, marks)
+    me, src = build_mesh(d, stitched(d, part, rigid))
     me.materials.append(build_material(d))
     body = bpy.data.objects.new(key, me)
     bpy.context.scene.collection.objects.link(body)
-    marks = load_marks(d)
     rig = build_armature(d, joint_layout(marks))
     rig.name = key + '_rig'
-    skin(d, body, src, marks)
+    skin(d, body, src, marks, part, rigid)
     body.parent = rig
     mod = body.modifiers.new('Armature', 'ARMATURE')
     mod.object = rig

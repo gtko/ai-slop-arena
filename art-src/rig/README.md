@@ -59,3 +59,22 @@ node art-src/rig/pack.mjs                           # 3. deduplicated keys + mes
   armature, `clips.py` holds every animation (poses written in the armature frame, two-bone IK for
   planted feet). Edit a clip there and rerun steps 2 and 3.
 - `--preview` renders four frames of every clip to `art-src/rig/work/preview/` (workbench, 300 px).
+
+## Joints: landmarks and the test sheet
+
+The automatic fit only finds rough joint heights, so every character has a hand-placed
+`art-src/rig/landmarks/<key>.json` (format in `load_marks`, `rig_blender.py`): the position of every
+joint (chin/neck, shoulders, elbows, wrists, hips, knees, ankles, toes, in Blender coordinates), the
+blend width at each joint, how far the head boundary tilts up toward the nape, and `regions` that
+move pieces of mesh to another part (a cape to the chest, shoulder pads to the arms, a tail to the
+hips) or pin them to one bone (weapons). Faces the automatic cut removed between parts are stitched
+back when the regions put their corners in the same part.
+
+```bash
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b -P art-src/rig/rig_blender.py -- volt --check --quick
+```
+
+renders `work/check/<key>_ortho.png` (front and side with a height grid and the joints),
+`<key>_weights.png` (bone colours) and `<key>_poses.png` (head turns, arms up, elbows, squat, stride)
+in a few seconds, without the clips or the export. Edit the landmarks, rerun, repeat; when `fit`
+changes (it moves the automatic cut), rerun `export_rig.mjs <key>` first.

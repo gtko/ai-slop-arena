@@ -298,6 +298,9 @@ function autoRig(geo, over) {
   for (let f = 0; f < src.length; f += 3) if (!isCut(f)) kept.push(src[f], src[f + 1], src[f + 2]);
   geo.setIndex(kept);
   J.cutFaces = (src.length - kept.length) / 3;
+  // the faces taken out, so the rig can stitch back those whose sides end up in one part
+  J.cut = [];
+  for (let f = 0; f < src.length; f += 3) if (isCut(f)) J.cut.push(src[f], src[f + 1], src[f + 2]);
 
   // diffuse one-hot labels along the remaining surface
   const nb = Array.from({ length: m }, () => new Set());

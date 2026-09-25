@@ -48,6 +48,7 @@ for (const key of keys) {
     joints: { crotch: J.crotch, knee: J.knee, neck: J.neck, shoulderY: J.shoulderY, L: side('L'), R: side('R') },
     position: round(a.position.array), normal: round(a.normal.array, 4), uv: round(a.uv.array),
     index: Array.from(geo.index.array),
+    cut: J.cut, // faces cut between parts (rig_blender.py restores those the landmarks reunite)
     skinIndex: Array.from(a.skinIndex.array), skinWeight: round(a.skinWeight.array, 4),
     // body part of each vertex before the weights are blurred (index into bones): rig_blender.py
     // weights every part along its own chain
