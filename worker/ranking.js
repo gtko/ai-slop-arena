@@ -45,14 +45,16 @@ export function rate(players, { visible = true } = {}) {
 }
 
 // Group players for a match: the oldest player waits the longest, so they anchor the group; the
-// closest MMRs within the window join them. Returns the group (up to size) or null.
-export function pickGroup(queue, now, size = 8, forceAt = 5 * 60 * 1000) {
+// closest MMRs within the window join them. Once the anchor has waited forceAt, the match starts with
+// the closest players queued, whatever their MMR (a match with humans beats one with bots), and bots
+// fill the rest. Returns the group (up to size) or null.
+export function pickGroup(queue, now, size = 8, forceAt = 60 * 1000) {
   if (!queue.length) return null;
   const q = [...queue].sort((a, b) => a.joined - b.joined);
   const anchor = q[0], waited = now - anchor.joined;
   const near = q.filter(p => Math.abs(p.mmr - anchor.mmr) <= mmrWindow(waited))
     .sort((a, b) => Math.abs(a.mmr - anchor.mmr) - Math.abs(b.mmr - anchor.mmr));
   if (near.length >= size) return near.slice(0, size);
-  if (waited >= forceAt) return near.slice(0, size); // waited long enough: go, bots fill up
+  if (waited >= forceAt) return q.sort((a, b) => Math.abs(a.mmr - anchor.mmr) - Math.abs(b.mmr - anchor.mmr)).slice(0, size);
   return null;
 }

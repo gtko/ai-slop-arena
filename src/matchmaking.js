@@ -2,7 +2,7 @@ import { serverBase, identityQuery } from './net.js';
 
 // Quick play: joins the server's cross-platform queue (worker/index.js, Matchmaker). The server
 // sends { t: 'queue', n, need, waited, botsIn, plats } every second, then { t: 'matched', code }
-// with the room to join. After 5 minutes of waiting, bots fill the empty slots; bots() asks for a
+// with the room to join. After 1 minute of waiting, bots fill the empty slots; bots() asks for a
 // match with bots right away.
 export class Matchmaking {
   constructor() { this.ws = null; this.handlers = new Map(); }

@@ -137,7 +137,7 @@ which opens on a loading screen while the models and textures stream in.
 
 ### Online play
 
-**Find a match** puts every platform (web, Steam, Epic, Android, iOS) in one queue; after 5 minutes of
+**Find a match** puts every platform (web, Steam, Epic, Android, iOS) in one queue; after 1 minute of
 waiting, bots fill the empty slots. Room codes still work for playing with friends. Our server runs
 every online match itself (the game rules built headless), validates every move, sends each player
 only what they can see, and handles reports, kicks and bans: see [docs/moderation.md](docs/moderation.md).

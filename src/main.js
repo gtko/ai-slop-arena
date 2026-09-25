@@ -438,7 +438,7 @@ $('#code').addEventListener('keydown', e => { if (e.code === 'Enter') $('#join')
 nick.addEventListener('keydown', e => e.stopPropagation());
 $('#lobbyBack').addEventListener('click', () => { mm.cancel(); net.close(); history.replaceState(null, '', location.pathname); status(''); toMenu(); });
 
-/* ---- matchmaking: one queue for every platform; bots fill the match after 5 minutes ---- */
+/* ---- matchmaking: one queue for every platform; bots fill the match after 1 minute ---- */
 
 const mm = new Matchmaking();
 let queuedAt = 0;

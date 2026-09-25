@@ -21,7 +21,7 @@ import { rate, tierOf, pickGroup, botLevelFor, START_MMR } from './ranking.js';
 const PROTOCOL = 3;          // clients send ?v=3; older builds are told to update
 const MAX_PLAYERS = 8;
 const CODE = /^[A-Z0-9]{4,6}$/;
-const QUEUE_BOTS_AFTER = 5 * 60 * 1000; // matchmaking: after 5 minutes, bots fill the match
+const QUEUE_BOTS_AFTER = 60 * 1000;     // matchmaking: after 1 minute, whoever is queued plays and bots fill up
 const MATCHED_WAIT = 15 * 1000;         // a matched room starts when everyone is in, or after 15 s
 const LOAD_WAIT = 25 * 1000;  // the pre-match loading screen waits at most this long for everyone
 const COUNTDOWN = 3000;       // then 3-2-1, and the match starts on every screen at once
