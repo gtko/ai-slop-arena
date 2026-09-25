@@ -114,8 +114,22 @@ body.touch #killfeed { right: calc(70px + env(safe-area-inset-right)); top: calc
 #super.ready { animation: ready 0.8s ease-in-out infinite alternate; }
 @keyframes ready { to { transform: scale(1.07); filter: drop-shadow(0 0 16px rgba(255, 210, 63, 0.7)); } }
 
-#keys { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); font-size: 12px; color: var(--muted); background: rgba(10, 8, 20, 0.55); padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
-#keys b { color: var(--text); }
+/* your health, big, bottom centre (it replaced the key hints) */
+#myhp { position: absolute; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(420px, 42vw); display: flex; flex-direction: column; gap: 5px; transition: opacity 0.3s; }
+#myhp.off { opacity: 0; }
+#myhp .mh-bar { position: relative; height: 26px; border-radius: 13px; background: rgba(12, 9, 24, 0.75); border: 3px solid var(--ink); overflow: hidden; box-shadow: 0 4px 0 rgba(0,0,0,0.35); }
+#myhp .mh-fill, #myhp .mh-lag { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; }
+#myhp .mh-lag { background: #fff3c4; opacity: 0.8; }
+#myhp .mh-fill { background: linear-gradient(#7dffa8, #1fc45a); transition: background 0.3s; }
+#myhp.mid .mh-fill { background: linear-gradient(#ffe36b, #f0a800); }
+#myhp.low .mh-fill { background: linear-gradient(#ff8a7a, #e0342e); animation: mhPulse 0.85s ease-in-out infinite; }
+#myhp.regen .mh-fill { box-shadow: 0 0 14px rgba(120, 255, 170, 0.95) inset; filter: brightness(1.15); }
+#myhp .mh-num { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--display); font-weight: 400; font-size: 18px; color: #fff; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; }
+#myhp .mh-ammo { display: flex; gap: 5px; justify-content: center; }
+#myhp .mh-ammo i { width: 64px; height: 9px; border-radius: 5px; background: rgba(12, 9, 24, 0.75); border: 2px solid var(--ink); overflow: hidden; }
+#myhp .mh-ammo b { display: block; height: 100%; width: 0; background: linear-gradient(#ffd98a, #ff9f1c); }
+@keyframes mhPulse { 50% { filter: brightness(1.35); } }
+body.cb #myhp .mh-fill { background: linear-gradient(#7ec4ff, #2a78e0); }
 
 #flash { position: absolute; inset: 0; opacity: 0; background: radial-gradient(circle at 50% 20%, #eef3ff, #a9b8e8); mix-blend-mode: screen; }
 #vignette { position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s; box-shadow: inset 0 0 160px 40px rgba(40, 220, 90, 0.55); }
@@ -205,7 +219,6 @@ body.touch #killfeed { right: calc(70px + env(safe-area-inset-right)); top: calc
   .menu-card h1 { font-size: 60px; }
   .menu-card h1 span { font-size: 46px; }
   .panel { width: 220px; }
-  #keys { display: none; }
 }
 
 /* ------------------------------ maps + lobby ------------------------------ */
@@ -332,7 +345,8 @@ button:focus-visible, .map:focus-visible, .card:focus-visible { outline: 4px sol
 
 /* ------------------------------ touch screens (touch.js) ------------------------------ */
 body.touch, body.touch #c { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-body.touch #keys, body.touch #super { display: none; }
+body.touch #super { display: none; }
+body.touch #myhp { width: min(300px, 34vw); bottom: calc(10px + env(safe-area-inset-bottom)); }
 #touch { position: absolute; inset: 0; pointer-events: none; }
 #touch .t-zone { position: absolute; left: 0; top: 0; bottom: 0; width: 50%; pointer-events: auto; }
 #touch .t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%;
@@ -470,7 +484,6 @@ body.touch .overlay { overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .ghost { margin-top: 0; font-size: 15px; padding: 7px 14px; box-shadow: 0 4px 0 var(--ink); }
   .hint { margin-top: 6px; font-size: 11px; }
   .lbl-row { margin: 4px 0 3px; font-size: 10px; }
-  #keys { display: none; }
 
   /* boot loading screen */
   #loader { gap: 8px; }

@@ -19,6 +19,8 @@ export class Hud {
     this.superEl = $('#super');
     this.cubeEl = $('#cubeCount');
     this.vignette = $('#vignette');
+    const mh = this.myhp = $('#myhp');
+    this.mh = { fill: mh.querySelector('.mh-fill'), lag: mh.querySelector('.mh-lag'), num: mh.querySelector('.mh-num'), ammo: [...mh.querySelectorAll('.mh-ammo b')], lagV: 1, hp: -1, cls: '' };
     this.items = new Map();
     this.lastAlive = -1;
     this.merge = new Map(); // counting damage numbers: 'source>target' -> { el, total, t }
@@ -44,6 +46,7 @@ export class Hud {
     this.banner.className = '';
     this.merge.clear();
     this.floaters.innerHTML = '';
+    Object.assign(this.mh, { lagV: 1, hp: -1, cls: '_' });
     this.play = !!player;
     for (const b of brawlers) {
       const el = document.createElement('div');
@@ -113,6 +116,14 @@ export class Hud {
       this.superEl.classList.toggle('ready', p.superCharge >= 1);
       this.cubeEl.textContent = p.cubes;
       this.vignette.style.opacity = p.alive && p.inPoison ? '1' : '0';
+      // big health bar, bottom centre
+      const M = this.mh, f = Math.max(0, p.hp / p.maxHp), hp = Math.ceil(Math.max(0, p.hp));
+      M.lagV = Math.max(f, M.lagV - dt * 0.6);
+      if (hp !== M.hp) { M.fill.style.width = (f * 100).toFixed(1) + '%'; M.num.textContent = hp; M.hp = hp; }
+      M.lag.style.width = (M.lagV * 100).toFixed(1) + '%';
+      const cls = (p.alive ? '' : 'off ') + (f < 0.3 ? 'low' : f < 0.6 ? 'mid' : '') + (p.regen && f < 1 ? ' regen' : '');
+      if (cls !== M.cls) { this.myhp.className = cls; M.cls = cls; }
+      for (let k = 0; k < M.ammo.length; k++) M.ammo[k].style.width = (Math.min(1, Math.max(0, p.ammo - k)) * 100).toFixed(0) + '%';
       const low = p.alive && !game.ended && p.hp / p.maxHp < 0.3;
       if (low !== this.low) { this.lowEl.classList.toggle('on', low); this.low = low; }
       if (low) this.lowEl.style.animationDuration = p.hp / p.maxHp < 0.15 ? '0.6s' : '0.85s';
