@@ -59,6 +59,7 @@ export class Combat {
     this.bombs = [];
     this.strikes = []; // Volt super: scheduled lightning strikes
     this.zones = [];   // ground hazards: lava puddles, zap traps (gadgets, star powers)
+    this.windups = []; // area supers announce themselves on the ground before they hit
     this.free = new Map(); // geometry -> spare bullet meshes
     this.bulletGeo = new THREE.SphereGeometry(1, 12, 8);
     this.seedGeo = seedGeometry();
@@ -136,7 +137,7 @@ export class Combat {
       const n = sup ? 12 : 6;
       for (let k = 0; k < n; k++) b.burst.push({ t: k * (sup ? 0.055 : 0.075), a: base, sup });
     } else if (T === 'frostbite') {
-      if (sup) { this.nova(b); return; }
+      if (sup) { this.windup(b, 0.2, hasStar(b, 'permafrost') ? 6.25 : 5, COL.ice, () => this.nova(b)); return; } // telegraphed
       for (let k = -1; k <= 1; k++) {
         this.spawnBullet(b, mx, mz, base + k * 0.11, {
           speed: 21, range: 12, dmg: 300, r: 0.21, breakWalls: false, knock: 0, emit: k === 0, col, slow: 1.5,
@@ -213,6 +214,7 @@ export class Combat {
     this.updateBombs(dt);
     this.updateStrikes(dt);
     this.updateZones(dt);
+    this.updateWindups(dt);
   }
 
   updateBullets(dt) {
@@ -295,6 +297,17 @@ export class Combat {
       core.rotation.z += B.spin * 0.4 * dt;
       B.mesh.userData.flame.scale.setScalar(size * (1 + Math.sin(B.t * 40) * 0.08));
       B.fx = x; B.fy = y + 0.4; B.fz = z;
+      if (B.sup) { // the meteor's shadow grows where it will land
+        if (!B.shadow) {
+          B.shadow = new THREE.Mesh(this.zoneGeo || (this.zoneGeo = new THREE.CircleGeometry(1, 32).rotateX(-Math.PI / 2)),
+            new THREE.MeshBasicMaterial({ color: 0x1a0a06, transparent: true, opacity: 0, depthWrite: false }));
+          B.shadow.position.set(B.tx, 0.06, B.tz);
+          B.shadow.renderOrder = 1;
+          g.fx.add(B.shadow);
+        }
+        B.shadow.scale.setScalar(B.radius * (0.3 + 0.7 * k));
+        B.shadow.material.opacity = 0.15 + 0.4 * k;
+      }
       // flame trail and a little smoke
       for (let n = B.sup ? 3 : 1; n > 0; n--) {
         const hot = Math.random();
@@ -309,6 +322,7 @@ export class Combat {
       if (B.t >= 1) {
         this.explode(B);
         g.fx.remove(B.mesh);
+        if (B.shadow) { g.fx.remove(B.shadow); B.shadow.material.dispose(); }
         this.bombs.splice(i, 1);
       }
     }
@@ -349,6 +363,30 @@ export class Combat {
     for (const s of [-0.5, 0.5]) {
       this.spawnBullet(B.owner, x, z, back + s + rnd(-0.1, 0.1), { speed: 20, range: 3, dmg: 110, r: 0.14, breakWalls: false, knock: 0,
         emit: false, col: B.col, shape: 'seed', shard: true });
+    }
+  }
+
+  // A ring grows under the caster for `time` seconds (visible if you can see the caster), then fn().
+  windup(b, time, r, col, fn) {
+    const m = new THREE.Mesh(this.zoneGeo || (this.zoneGeo = new THREE.CircleGeometry(1, 32).rotateX(-Math.PI / 2)),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+    m.renderOrder = 1;
+    m.visible = this.g.fxVisible(b);
+    this.g.fx.add(m);
+    this.windups.push({ b, t: time, T: time, r, mesh: m, fn });
+  }
+
+  updateWindups(dt) {
+    for (let i = this.windups.length - 1; i >= 0; i--) {
+      const W = this.windups[i], k = 1 - Math.max(0, W.t) / W.T;
+      W.mesh.position.set(W.b.pos.x, 0.08, W.b.pos.z);
+      W.mesh.scale.setScalar(W.r * (0.25 + 0.75 * k));
+      W.mesh.material.opacity = 0.2 + 0.35 * k;
+      if ((W.t -= dt) > 0) continue;
+      this.g.fx.remove(W.mesh);
+      W.mesh.material.dispose();
+      this.windups.splice(i, 1);
+      if (W.b.alive) W.fn();
     }
   }
 
@@ -496,5 +534,8 @@ export class Combat {
     this.strikes.length = 0;
     for (const Z of this.zones) this.g.fx.remove(Z.mesh);
     this.zones.length = 0;
+    for (const W of this.windups) this.g.fx.remove(W.mesh);
+    this.windups.length = 0;
+    for (const B of this.bombs) if (B.shadow) this.g.fx.remove(B.shadow);
   }
 }

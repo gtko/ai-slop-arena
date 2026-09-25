@@ -215,7 +215,7 @@ export class Game {
     }
     b.lastAttack = this.time;
     b.revealT = 1.2;
-    if (isSuper && b === this.player) { this.feel.punchTo(0.92, 0.3); duckMusic(); } // own super: a quick punch-in
+    if (isSuper && b === this.player) { this.feel.punchTo(0.92, 0.3); duckMusic(); this.hud.superCutIn(b.type.key); } // own super: punch-in + portrait
     b.face(dx, dz);
     b.attacked(isSuper);
     this.combat.attack(b, dx, dz, point, isSuper);
@@ -547,7 +547,7 @@ export class Game {
         case 'atk':
           if (!b || !b.alive) break;
           b.face(e.dx, e.dz); b.attacked(!!e.s); b.revealT = 1.2; b.lastAttack = this.time;
-          if (e.s && b === this.player) { this.feel.punchTo(0.92, 0.3); duckMusic(); }
+          if (e.s && b === this.player) { this.feel.punchTo(0.92, 0.3); duckMusic(); this.hud.superCutIn(b.type.key); }
           this.combat.attack(b, e.dx, e.dz, _v.set(e.px, 0, e.pz), !!e.s);
           break;
         case 'dmg':

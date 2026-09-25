@@ -202,6 +202,16 @@ export class Hud {
     setTimeout(() => row.remove(), FEED_LIFE + 500);
   }
 
+  // Your super: your portrait slashes across the screen for half a second.
+  superCutIn(key) {
+    const el = document.createElement('div');
+    el.className = 'cutin';
+    el.innerHTML = `<i></i><img src="${BASE}assets/ui/${key}.png" alt="" />`;
+    el.addEventListener('animationend', e => { if (e.target === el) el.remove(); });
+    setTimeout(() => el.remove(), 1500);
+    this.root.appendChild(el);
+  }
+
   gadgetUsed() {
     this.gadgetEl.classList.remove('bump');
     void this.gadgetEl.offsetWidth;
