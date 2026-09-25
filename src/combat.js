@@ -342,7 +342,10 @@ export class Combat {
         if (o === b || !o.alive || Math.hypot(o.pos.x - x, o.pos.z - z) > R) continue;
         g.damage(o, 900 * b.dmgMul, b, true);
         if (!o.alive) continue;
-        if (o.ccImmuneT > 0) { if (o.visibleToPlayer) g.hud.floater(g.camera, o.pos.x, 3.1, o.pos.z, t('hud.immune'), 'immune'); }
+        if (o.ccImmuneT > 0) {
+          if (o.visibleToPlayer) g.hud.floater(g.camera, o.pos.x, 3.1, o.pos.z, t('hud.immune'), 'immune');
+          g.ev({ e: 'imm', id: o.id });
+        }
         else o.freezeT = Math.max(o.freezeT, 1.4);
       }
     }

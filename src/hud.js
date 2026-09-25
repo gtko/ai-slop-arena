@@ -35,6 +35,7 @@ export class Hud {
   }
 
   show(on) { this.root.classList.toggle('hidden', !on); }
+  get live() { return this.play && !this.root.classList.contains('hidden'); }
 
   setup(brawlers, player) {
     this.bars.innerHTML = '';
@@ -42,6 +43,7 @@ export class Hud {
     this.feed.innerHTML = '';
     this.banner.className = '';
     this.merge.clear();
+    this.floaters.innerHTML = '';
     this.play = !!player;
     for (const b of brawlers) {
       const el = document.createElement('div');
@@ -119,6 +121,7 @@ export class Hud {
 
   // key: hits with the same key within 0.32 s add up into one number that counts up and pops again
   floater(camera, x, y, z, text, cls, key = null) {
+    if (!this.live) return;
     _v.set(x, y, z).project(camera);
     if (_v.z > 1) return;
     const now = performance.now(), m = key && this.merge.get(key);
@@ -137,12 +140,14 @@ export class Hud {
     el.style.left = ((_v.x * 0.5 + 0.5) * innerWidth + (Math.random() - 0.5) * 30) + 'px';
     el.style.top = ((-_v.y * 0.5 + 0.5) * innerHeight) + 'px';
     el.addEventListener('animationend', () => el.remove());
+    setTimeout(() => el.remove(), 3000); // in case the animation never runs
     this.floaters.appendChild(el);
     if (key) this.merge.set(key, { el, total: +text, t: now, hits: 1 });
   }
 
   // A K.O. stamp where your victim fell.
   koStamp(camera, x, z) {
+    if (!this.live) return;
     _v.set(x, 1.6, z).project(camera);
     if (_v.z > 1) return;
     const el = document.createElement('div');
@@ -151,6 +156,7 @@ export class Hud {
     el.style.left = ((_v.x * 0.5 + 0.5) * innerWidth) + 'px';
     el.style.top = ((-_v.y * 0.5 + 0.5) * innerHeight) + 'px';
     el.addEventListener('animationend', () => el.remove());
+    setTimeout(() => el.remove(), 3000);
     this.floaters.appendChild(el);
   }
 

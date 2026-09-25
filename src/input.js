@@ -46,7 +46,7 @@ export class Input {
     });
     addEventListener('pointerup', e => {
       if (e.pointerType === 'touch') return;
-      if (e.button === 0) { this.lmb = false; this.tapT = performance.now(); }
+      if (e.button === 0) { if (this.lmb) this.tapT = performance.now(); this.lmb = false; }
       if (e.button === 2) { if (this.rmb) this.rmbReleased = true; this.rmb = false; }
     });
     el.addEventListener('contextmenu', e => e.preventDefault());

@@ -179,6 +179,7 @@ function figurineOutline(width, flames, U) {
   const base = outlineMaterial(width);
   if (!flames && !U) return base;
   const m = base.clone();
+  delete m.userData.shared; // already this brawler's own copy
   m.onBeforeCompile = sh => { base.onBeforeCompile(sh); if (flames) flamePatch(sh); if (U) swayPatch(sh, U); };
   m.customProgramCacheKey = () => `outline-${flames ? 'f' : ''}${U ? 's' : ''}${width}`;
   m.userData.outline = true;

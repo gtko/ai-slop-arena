@@ -335,7 +335,7 @@ export class Game {
       const w = alive[0];
       w.rank = 1;
       w.win();
-      if (this.mode === 'play') this.feel.finalKo();
+      if (this.mode === 'play') this.feel.finalKo(!this.net); // slow motion offline only: online the rules keep real time
       this.ev({ e: 'win', id: w.id });
       if (w === this.player) { this.state = 'over'; this.resultT = 1.2; }
       if (this.net) this.endT = 5;
@@ -508,7 +508,7 @@ export class Game {
       b.revealT = flags & 2 ? 0.3 : 0;
       // status effects are decided by the host; our own brawler needs them too (we move it locally)
       b.slowT = flags & 4 ? 0.2 : Math.min(b.slowT, 0);
-      b.freezeT = flags & 8 ? 0.2 : Math.min(b.freezeT, 0);
+      b.freezeT = flags & 8 ? 0.2 : Math.min(b.freezeT, 1e-4); // a tiny rest so update() still sees the thaw (immunity fx)
       if (b !== this.player) {
         b.net.set(x, z); b.netFacing = f;
         if (b.netHidden) { b.pos.x = x; b.pos.z = z; } // back in sight: appear where it is, don't glide there through the wall
@@ -534,7 +534,7 @@ export class Game {
         case 'atk':
           if (!b || !b.alive) break;
           b.face(e.dx, e.dz); b.attacked(!!e.s); b.revealT = 1.2; b.lastAttack = this.time;
-          if (e.s && b === this.player) this.feel.punchTo(0.92, 0.3);
+          if (e.s && b === this.player) { this.feel.punchTo(0.92, 0.3); duckMusic(); }
           this.combat.attack(b, e.dx, e.dz, _v.set(e.px, 0, e.pz), !!e.s);
           break;
         case 'dmg':
@@ -548,9 +548,11 @@ export class Game {
           if (b.alive) this.killFx(b, this.byId.get(e.by), !!e.sup);
           break;
         case 'win':
-          if (b) { b.rank = 1; b.win(); this.feel.finalKo(); if (b === this.player) { this.state = 'over'; this.resultT = 1.2; } }
+          this.ended = true;
+          if (b) { b.rank = 1; b.win(); this.feel.finalKo(false); if (b === this.player) { this.state = 'over'; this.resultT = 1.2; } }
           break;
         case 'knock': if (b === this.player) b.knock.set(e.x, 0, e.z); break;
+        case 'imm': if (b && b.visibleToPlayer) this.hud.floater(this.camera, b.pos.x, 3.1, b.pos.z, t('hud.immune'), 'immune'); break;
         case 'zap': this.effects.arc(e.pts, new THREE.Color(3.2, 4.2, 5.2)); break;
         case 'wall': this.breakWall(e.i, e.j, true); break;
         case 'crate': if (this.arena.hitCrate(e.i, e.j, 1e9)) this.crateFx(e.i, e.j, this.byId.get(e.by)); break;
@@ -589,7 +591,8 @@ export class Game {
 
   step(dt, t) {
     const P = this.player;
-    if (P && P.alive) this.controlPlayer();
+    if (P && P.alive && !this.ended) this.controlPlayer();
+    else if (P && P.alive) P.moveIntent.set(0, 0, 0);
     else this.aim.visible = this.aimTarget.visible = false;
     if (this.authority) {
       for (const brain of this.brains.values()) brain.update(dt);

@@ -47,7 +47,6 @@ export function findPath(arena, poison, si, sj, gi, gj) {
 }
 
 const _v = new THREE.Vector3();
-// distance from point p to the segment a-b on the ground plane
 // Is o inside the cone a spread weapon fired at point p sweeps (up to full range, with a margin)?
 function inFan(b, p, o) {
   const half = { blaster: 0.36, frostbite: 0.2 }[b.type.key];
@@ -57,6 +56,7 @@ function inFan(b, p, o) {
   const diff = Math.atan2(dx, dz) - Math.atan2(p.x - b.pos.x, p.z - b.pos.z);
   return Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff))) < half + Math.atan2(1.2, Math.max(d, 0.5));
 }
+// distance from point p to the segment a-b on the ground plane
 const segDist = (p, a, b) => {
   const dx = b.x - a.x, dz = b.z - a.z, l2 = dx * dx + dz * dz || 1;
   const k = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.z - a.z) * dz) / l2));

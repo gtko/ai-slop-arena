@@ -52,8 +52,9 @@ export class Feel {
     return this.ladder;
   }
 
-  finalKo() {
-    this.slowT = 1;
+  // slow: the render slow motion (offline only; online the match keeps real time)
+  finalKo(slow = true) {
+    this.slowT = slow ? 1 : 0;
     this.orbitWant = 2.1; // ~120° around the winner while the result comes in
   }
 

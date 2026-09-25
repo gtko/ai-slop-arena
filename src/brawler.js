@@ -251,6 +251,7 @@ export class Brawler {
             if (!this.g.arena.blocksMoveAt(nx, nz)) { this.pos.x = nx; this.pos.z = nz; } // stops against walls
             L.vy -= 22 * dt;
             this.pos.y = Math.max(0, this.pos.y + L.vy * dt);
+            this.blob.position.set(this.pos.x, 0.03, this.pos.z);
           }
           if (this.dieT <= 0) this.vanish();
         }

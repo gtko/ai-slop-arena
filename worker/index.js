@@ -396,7 +396,7 @@ class RoomObject extends DurableObject {
 /* ------------------------------ Matchmaker ------------------------------ */
 
 // One global queue for every platform (web, Steam, Epic, Android, iOS). 8 players -> a match right
-// away; otherwise the oldest player's wait decides: after 5 minutes, whoever is queued plays and
+// away; otherwise the oldest player's wait decides: after 1 minute, whoever is queued plays and
 // bots fill the empty slots. "Play now with bots" skips the wait for one player.
 class MatchmakerObject extends DurableObject {
   sockets() { return this.ctx.getWebSockets().filter(ws => ws.readyState === 1 && !this.info(ws).matched); }
