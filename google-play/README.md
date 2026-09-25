@@ -5,7 +5,7 @@ Package `ch.gtko.aisloparena`. Build the upload bundle with `npm run android:aab
 `~/.android-keys/`, versionCode = major*10000 + minor*100 + patch from package.json).
 
 Graphics in this folder: `icon-512.png`, `feature-graphic.png` (1024x500), phone screenshots
-(2608x1304, captured on a Xiaomi 25102PCBEG, padded to the 2:1 maximum ratio).
+(2608x1304: a landscape touch phone emulated in Electron by `art-src/gp_screenshots.cjs`, French UI).
 
 Privacy policy: https://ai-slop-arena.gtux-prog.workers.dev/privacy.html (`public/privacy.html`).
 Contact: gtux.prog@gmail.com. Category: Game > Action. Free, no ads, no in-app purchases.
