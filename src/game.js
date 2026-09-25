@@ -57,7 +57,8 @@ export class Game {
     this.state = 'idle';
     this.camFocus = new THREE.Vector3(0, 0, 4);
     this.camTarget = null;
-    this.camOffset = new THREE.Vector3(0, 22.8, 20.8); // ~47° pitch (hack'n'slash), 20% further than the old 57° view
+    this.camOffset = new THREE.Vector3(0, 27.4, 25); // ~47° pitch (hack'n'slash), 1.44x further than the old 57° view
+    lighting.fogShift = Math.max(0, this.camOffset.length() - 22); // keep the air around the player clear
     this.shake = 0;
     this.aimPoint = new THREE.Vector3();
     this.aimDir = new THREE.Vector3(0, 0, -1);
@@ -156,13 +157,28 @@ export class Game {
     if (this.mode === 'play' && k > 0.08) this.input.rumble(Math.min(1, k * 1.4), Math.min(1, k), 120 + k * 250);
   }
 
-  // Bushes hide brawlers unless you are close, or they recently fired / got hit.
-  // On limited-vision maps nobody (players or bots) sees past the fog wall.
+  // Walls, trees and crates block the line of sight. Bushes hide brawlers unless you are close,
+  // or they recently fired / got hit. On limited-vision maps nobody sees past the fog wall.
   canSee(viewer, target) {
     const d = Math.hypot(viewer.pos.x - target.pos.x, viewer.pos.z - target.pos.z);
     if (this.visionRadius && d > this.visionRadius * 0.92) return false;
+    if (!this.inSight(viewer.pos, target.pos)) return false;
     if (!target.inBush || target.revealT > 0) return true;
     return d < 3.6;
+  }
+
+  // Clear line to the target's centre or either shoulder, so a brawler peeking past a corner shows.
+  inSight(a, b) {
+    const A = this.arena;
+    if (A.los(a.x, a.z, b.x, b.z)) return true;
+    const dx = b.x - a.x, dz = b.z - a.z, l = Math.hypot(dx, dz) || 1, px = -dz / l * 0.5, pz = dx / l * 0.5;
+    return A.los(a.x, a.z, b.x + px, b.z + pz) || A.los(a.x, a.z, b.x - px, b.z - pz);
+  }
+
+  // Whose eyes the screen shows: you, or on fog maps whoever the camera follows once you are out.
+  get sightViewer() {
+    const P = this.player;
+    return P && P.alive ? P : (this.visionRadius ? this.camTarget : null);
   }
 
   // Where the fog wall is centred: you, or whoever the camera follows once you are out.
@@ -668,10 +684,9 @@ export class Game {
   }
 
   updateVisibility() {
-    const P = this.player;
+    const viewer = this.sightViewer;
     for (const b of this.brawlers) {
       if (!b.alive) { b.visibleToPlayer = false; continue; }
-      const viewer = P && P.alive ? P : (this.visionRadius ? this.camTarget : null);
       const v = !b.netHidden && (!viewer || b === viewer || this.canSee(viewer, b));
       if (v !== b.visibleToPlayer) b.setVisible(v);
       b.visibleToPlayer = v;

@@ -25,6 +25,7 @@ import { t, translateDom } from './i18n/index.js';
 import { TouchControls, isTouchDevice } from './touch.js';
 import { AutoQuality } from './autoquality.js';
 import { VisionFog } from './visionfog.js';
+import { Sight } from './sight.js';
 import { initAudio, playMusic, setAmbience, sfx, toggleMute, setVolume, setMuted, setTrack, settings as audio } from './audio.js';
 import { loadTextures, ASSET_BASE, TEX_FILES } from './assets.js';
 import { shared } from './materials.js';
@@ -89,6 +90,8 @@ gtao._overrideVisibility = () => {
   if (lighting.helper && lighting.helper.visible) { lighting.helper.visible = false; gtao._visibilityCache.push(lighting.helper); }
 };
 composer.addPass(gtao);
+const sight = new Sight(); // dims what walls, trees and crates hide from you
+composer.addPass(sight.pass);
 const visionFog = new VisionFog(); // limited field of view on fog maps, before bloom so lights glow through
 composer.addPass(visionFog.pass);
 
@@ -927,6 +930,8 @@ function frame(ts) {
   shared.sunDirView.value.copy(lighting.sunDir).transformDirection(camera.matrixWorldInverse);
   shared.sunColor.value.copy(lighting.sun.color).multiplyScalar(lighting.sun.intensity);
   setAmbience(lighting.night);
+  sight.update(dt, camera, game.arena, game.mode === 'play' ? game.sightViewer : null,
+    game.weather && game.weather.kind === 'sandstorm' ? scene.fog.color : null);
   visionFog.update(dt, camera, game.visionRadius || 0, game.visionCenter, scene.fog.color, game.time);
   bloom.strength = lighting.bloom;
   composer.render(dt);

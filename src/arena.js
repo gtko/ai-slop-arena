@@ -98,6 +98,7 @@ export class Arena {
   walkable(i, j) { return !MOVE_BLOCK.has(this.get(i, j)); }
   blocksMoveAt(x, z) { return MOVE_BLOCK.has(this.charAt(x, z)); }
   blocksShotAt(x, z) { return SHOT_BLOCK.has(this.charAt(x, z)); }
+  blocksSight(i, j) { return SHOT_BLOCK.has(this.get(i, j)); } // walls, trees, crates, props: what stops a bullet stops the eye
   isBushAt(x, z) { return this.charAt(x, z) === 'B'; }
   isWaterAt(x, z) { return this.charAt(x, z) === 'W'; }
   isIceAt(x, z) { return this.charAt(x, z) === 'I'; }

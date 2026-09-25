@@ -80,7 +80,8 @@ export class Lighting {
     this.cycle = false;
     this.follow = true;  // fit the shadow frustum to the view instead of the whole map
     this.snap = true;    // snap that frustum to shadow-map texels (kills shimmering)
-    this.halfSize = 27;
+    this.halfSize = 32;
+    this.fogShift = 0;   // camera distance beyond 22 m, so weather fog starts past the player (set by Game)
     this.exposureMul = 1;
     this.shadowSize = 2048;
     this.state = {};
@@ -125,8 +126,8 @@ export class Lighting {
     this.hemi.intensity = S.hemiI * (st.hemi ?? 1);
     this.scene.environmentIntensity = S.env * (st.env ?? 1);
     this.scene.fog.color.copy(S.fog);
-    this.scene.fog.near = S.fogNear;
-    this.scene.fog.far = S.fogFar;
+    this.scene.fog.near = S.fogNear + this.fogShift; // fog distances were tuned for a camera 22 m from the action
+    this.scene.fog.far = S.fogFar + this.fogShift;
     this.scene.background.copy(S.fog);
     this.renderer.toneMappingExposure = S.exposure * this.exposureMul * (st.exposure ?? 1);
     shared.rimColor.value.copy(S.rimC);
@@ -159,7 +160,7 @@ export class Lighting {
       cam.updateProjectionMatrix();
     }
     const c = _c.set(0, 0, 0);
-    if (this.follow) c.set(focus.x, 0, focus.z - 6);
+    if (this.follow) c.set(focus.x, 0, focus.z - 7);
     const d = this.sunDir;
     if (this.follow && this.snap) {
       _r.crossVectors(UP, d).normalize();
