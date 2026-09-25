@@ -3,6 +3,15 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.10.0](docs/releases/v0.10.0.md): Line of sight
+
+<a href="docs/releases/v0.10.0.md"><img src="docs/releases/img/v0.10.0-banner.png" alt="v0.10.0: line of sight" width="100%"></a>
+
+- 🧱 Walls, trees and crates hide brawlers; what you cannot see is greyed out.
+- 👁️ 14 m of vision (11 m in the sandstorm); bots and online play follow the same rules.
+- 🎥 Lower, wider camera: you see the brawlers' faces.
+- 🌪️ Rain and sandstorm no longer bury your brawler in fog.
+
 ## [v0.9.0](docs/releases/v0.9.0.md): Alive!
 
 <a href="docs/releases/v0.9.0.md"><img src="docs/releases/img/v0.9.0-banner.png" alt="v0.9.0: alive!" width="100%"></a>

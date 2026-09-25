@@ -719,8 +719,146 @@ def v090():
     img.convert('RGB').save(os.path.join(OUT, 'v0.9.0-alive.png'), optimize=True)
 
 
+# ------------------------------ v0.10.0: line of sight ------------------------------
+
+def sight_fan(grid, ox, oz, rays=720, into=0.7):
+    """Same grid DDA as src/sight.js: visibility polygon (tile units) from (ox, oz)."""
+    import math
+    H, W = len(grid), len(grid[0])
+    block = lambda i, j: i < 0 or j < 0 or i >= W or j >= H or grid[j][i] in '#TC'
+    pts = []
+    for k in range(rays):
+        a = k / rays * math.tau
+        dx, dz = math.cos(a) or 1e-6, math.sin(a) or 1e-6
+        i, j = int(ox), int(oz)
+        si, sj = (1 if dx > 0 else -1), (1 if dz > 0 else -1)
+        tdx, tdz = abs(1 / dx), abs(1 / dz)
+        tx = ((i + 1 - ox) if dx > 0 else (ox - i)) * tdx
+        tz = ((j + 1 - oz) if dz > 0 else (oz - j)) * tdz
+        t, hit = 0, None
+        while t < 60:
+            if tx < tz: t = tx; tx += tdx; i += si
+            else: t = tz; tz += tdz; j += sj
+            b = block(i, j)
+            if hit is None:
+                if b: hit = t
+            elif not b or t - hit >= into:
+                t = min(t, hit + into); break
+        pts.append((ox + dx * t, oz + dz * t))
+    return pts
+
+
+def v0100():
+    banner('v0.10.0', 'LINE OF SIGHT', 'Walls hide you. The camera shows faces.',
+           [('🧱', 'Walls block sight'), ('👁️', '14 m vision'), ('🎥', 'New camera'), ('🌪️', 'Clearer storms')],
+           'v0.10.0-banner.png', ('gunslinger', 'frostbite', 'bomber'))
+
+    # top-down diagram: the real ray fan over a small patch of arena, a range circle, three enemies
+    grid = ['................',
+            '..###......BB...',
+            '..#........BB...',
+            '..#...C.........',
+            '..........T.....',
+            '....###.........',
+            '................',
+            '.......P........',
+            '................',
+            '...T......###...',
+            '..........#.....',
+            '................']
+    TS = 52
+    GW, GH = len(grid[0]) * TS, len(grid) * TS
+    W, H = 1600, 900
+    img = background(W, H, glow=(0.35, 0.4))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'WHAT YOU SEE IS WHAT YOU GET', display(56), YELLOW, anchor='ma')
+    gx, gy = 70, 140
+    px, pz = 7.5, 7.5
+    # ground, then the dimmed "hidden" layer, then the lit fan clipped to the sight range
+    board = Image.new('RGBA', (GW, GH), (214, 170, 110, 255))
+    bd = ImageDraw.Draw(board)
+    for j in range(len(grid)):
+        for i in range(len(grid[0])):
+            if (i + j) % 2: bd.rectangle((i * TS, j * TS, i * TS + TS - 1, j * TS + TS - 1), fill=(204, 160, 100, 255))
+    hidden = Image.new('RGBA', (GW, GH), (40, 34, 70, 170))
+    mask = Image.new('L', (GW, GH), 0)
+    ImageDraw.Draw(mask).polygon([(x * TS, z * TS) for x, z in sight_fan(grid, px, pz)], fill=255)
+    rng = Image.new('L', (GW, GH), 0)
+    R = 7 * TS  # 14 m = 7 tiles
+    ImageDraw.Draw(rng).ellipse((px * TS - R, pz * TS - R, px * TS + R, pz * TS + R), fill=255)
+    lit = Image.fromarray(np.minimum(np.array(mask), np.array(rng)))
+    board.alpha_composite(hidden)
+    base = Image.new('RGBA', (GW, GH), (214, 170, 110, 255))
+    bd2 = ImageDraw.Draw(base)
+    for j in range(len(grid)):
+        for i in range(len(grid[0])):
+            if (i + j) % 2: bd2.rectangle((i * TS, j * TS, i * TS + TS - 1, j * TS + TS - 1), fill=(204, 160, 100, 255))
+    board.paste(base, (0, 0), lit.filter(ImageFilter.GaussianBlur(3)))
+    bd = ImageDraw.Draw(board)
+    bd.ellipse((px * TS - R, pz * TS - R, px * TS + R, pz * TS + R), outline=(255, 255, 255, 150), width=3)
+    for j, row in enumerate(grid):
+        for i, ch in enumerate(row):
+            box = (i * TS + 3, j * TS + 3, i * TS + TS - 3, j * TS + TS - 3)
+            if ch == '#': bd.rounded_rectangle(box, 8, fill=(170, 84, 60, 255), outline=INK, width=3)
+            elif ch == 'C': bd.rounded_rectangle(box, 8, fill=(150, 104, 58, 255), outline=INK, width=3)
+            elif ch == 'T': bd.ellipse(box, fill=(70, 150, 70, 255), outline=INK, width=3)
+            elif ch == 'B': bd.rounded_rectangle((i * TS, j * TS, i * TS + TS, j * TS + TS), 14, fill=(120, 180, 60, 200))
+    def dot(x, z, col, label, ghost=False):
+        c = (int(x * TS), int(z * TS)); r = 17
+        bd.ellipse((c[0] - r, c[1] - r, c[0] + r, c[1] + r), fill=col + ((110,) if ghost else (255,)),
+                   outline=INK + ((110,) if ghost else (255,)), width=4)
+        bd.text((c[0], c[1] - 28), label, font=body(20, 'Black'), fill=(255, 255, 255, 140 if ghost else 255),
+                anchor='md', stroke_width=4, stroke_fill=INK)
+    dot(px, pz, (80, 200, 255), 'YOU')
+    dot(11.5, 6.5, (255, 90, 90), 'SEEN')
+    dot(4.5, 3.5, (255, 90, 90), 'BEHIND A WALL', ghost=True)
+    dot(12.0, 1.5, (255, 90, 90), 'IN A BUSH', ghost=True)
+    dot(14.5, 10.5, (255, 90, 90), 'TOO FAR', ghost=True)
+    frame = Image.new('RGBA', (GW + 12, GH + 12), (0, 0, 0, 0))
+    ImageDraw.Draw(frame).rounded_rectangle((0, 0, GW + 11, GH + 11), 18, fill=INK)
+    img.alpha_composite(frame, (gx - 6, gy - 6))
+    img.alpha_composite(board, (gx, gy))
+    # the rules, on the right
+    x = gx + GW + 50
+    rules = [('🧱', 'Walls, trees, crates', 'stop the eye like they stop bullets'),
+             ('👁️', '14 m of vision', '11 m inside the sandstorm'),
+             ('🌿', 'Bushes still hide', 'unless you are close or they shoot'),
+             ('🤖', 'Bots play fair', 'same rules, short memory: 2.5 s'),
+             ('🌐', 'No wallhacks online', 'the server only sends what you see')]
+    for k, (icon, title, sub) in enumerate(rules):
+        y = gy + 8 + k * 125
+        d.text((x, y + 4), icon, font=emoji(46), embedded_color=True)
+        d.text((x + 70, y), title, font=display(34), fill=YELLOW)
+        for li, line in enumerate(wrap(d, sub, body(23, 'Bold'), W - x - 110)):
+            d.text((x + 70, y + 46 + li * 28), line, font=body(23, 'Bold'), fill=TEXT)
+    img.convert('RGB').save(os.path.join(OUT, 'v0.10.0-sight.png'), optimize=True)
+
+    # camera and weather, in numbers (src/game.js camOffset, lighting.fogShift)
+    feats = [('🎥', 'Lower camera', ['57° down to 47°', 'you see faces, not hats', 'hack\'n\'slash framing']),
+             ('🔭', 'Wider view', ['camera 25 m to 37 m away', 'about twice the arena on screen', 'shadows follow the view']),
+             ('🌪️', 'Clear storms', ['rain & sand fog now start', 'past you, not on top of you', 'dust closes in beyond 11 m'])]
+    W, H = 1600, 520
+    img = background(W, H, glow=(0.5, 0.3))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'A NEW VIEW OF THE ARENA', display(56), YELLOW, anchor='ma')
+    cw, chh, gxx = 470, 330, 30
+    x0 = (W - (3 * cw + 2 * gxx)) // 2
+    for i, (icon, title, lines) in enumerate(feats):
+        x, y = x0 + i * (cw + gxx), 140
+        card(img, (x, y, x + cw, y + chh), outline=(150, 120, 230), radius=26)
+        d.text((x + cw // 2, y + 26), icon, font=emoji(64), embedded_color=True, anchor='ma')
+        d.text((x + cw // 2, y + 120), title, font=display(38), fill=YELLOW, anchor='ma')
+        for li, line in enumerate(lines):
+            d.text((x + cw // 2, y + 185 + li * 40), line, font=body(25, 'Bold'), fill=TEXT, anchor='ma')
+    img.convert('RGB').save(os.path.join(OUT, 'v0.10.0-camera.png'), optimize=True)
+
+
 if __name__ == '__main__':
+    import sys
     os.makedirs(OUT, exist_ok=True)
+    if len(sys.argv) > 1:  # e.g. `make_release_art.py v0100`: only that release
+        for name in sys.argv[1:]: globals()[name]()
+        sys.exit()
     v020()
     v030()
     v040()
@@ -731,5 +869,6 @@ if __name__ == '__main__':
     v070()
     v080()
     v090()
+    v0100()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')
