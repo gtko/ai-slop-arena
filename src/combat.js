@@ -8,6 +8,7 @@ import { t } from './i18n/index.js';
 const COL = {
   player: new THREE.Color(0.45, 2.6, 4.2),
   enemy: new THREE.Color(4.2, 0.9, 0.35),
+  enemyCb: new THREE.Color(4.2, 2.2, 0.1), // colour-blind option: orange instead of red
   super: new THREE.Color(4.2, 3.1, 0.6),
   ice: new THREE.Color(1.6, 3.4, 4.6),
   volt: new THREE.Color(1.2, 4.2, 4.6),
@@ -76,12 +77,14 @@ export class Combat {
     return g;
   }
 
+  get enemyCol() { return this.g.colorblind ? COL.enemyCb : COL.enemy; }
+
   colorFor(b, sup) {
-    if (b.type.key === 'blaster' && !sup) return b.isPlayer ? COL.seed : COL.enemy;
-    if (b.type.key === 'gunslinger' && !sup) return b.isPlayer ? COL.ray : COL.enemy;
-    if (b.type.key === 'frostbite' && !sup) return b.isPlayer ? COL.ice : COL.enemy;
-    if (b.type.key === 'volt' && !sup) return b.isPlayer ? COL.volt : COL.enemy;
-    return sup ? COL.super : (b.isPlayer ? COL.player : COL.enemy);
+    if (b.type.key === 'blaster' && !sup) return b.isPlayer ? COL.seed : this.enemyCol;
+    if (b.type.key === 'gunslinger' && !sup) return b.isPlayer ? COL.ray : this.enemyCol;
+    if (b.type.key === 'frostbite' && !sup) return b.isPlayer ? COL.ice : this.enemyCol;
+    if (b.type.key === 'volt' && !sup) return b.isPlayer ? COL.volt : this.enemyCol;
+    return sup ? COL.super : (b.isPlayer ? COL.player : this.enemyCol);
   }
 
   meshFor(col, geo) {

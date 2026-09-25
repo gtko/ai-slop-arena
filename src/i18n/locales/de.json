@@ -189,6 +189,8 @@
   "opt.weather": "Wetterpartikel",
   "opt.sec.gameplay": "Gameplay & Oberfläche",
   "opt.shake": "Kamerawackeln",
+  "opt.colorblind": "Farben für Farbenblinde",
+  "opt.colorblind.hint": "Du in Blau, Gegner in Orange statt Rot",
   "opt.fps": "FPS-Anzeige",
   "opt.sec.advanced": "Erweitert",
   "opt.fitFrustum": "Kameraangepasste Schatten",

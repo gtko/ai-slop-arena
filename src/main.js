@@ -141,6 +141,7 @@ function applySetting(k) {
       if (v !== 'cycle') lighting.setPreset(+v);
       break;
     case 'shake': game.shakeEnabled = v; break;
+    case 'colorblind': document.body.classList.toggle('cb', v); game.colorblind = v; for (const b of game.brawlers) b.teamColors(); break;
     case 'fps': $('#fpsBadge').classList.toggle('hidden', !v); break;
     case 'debugPanel': $('#panel').classList.toggle('off', !v); break;
     case 'art': if ((v === 'cartoon') !== CARTOON) setTimeout(() => location.reload(), 150); break;

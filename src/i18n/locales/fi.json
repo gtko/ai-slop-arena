@@ -189,6 +189,8 @@
   "opt.weather": "Sääpartikkelit",
   "opt.sec.gameplay": "Pelattavuus ja käyttöliittymä",
   "opt.shake": "Kameran tärinä",
+  "opt.colorblind": "Värisokeat värit",
+  "opt.colorblind.hint": "Sinä sinisenä, viholliset oransseina punaisen sijaan",
   "opt.fps": "FPS-laskuri",
   "opt.sec.advanced": "Lisäasetukset",
   "opt.fitFrustum": "Kameraan sovitetut varjot",

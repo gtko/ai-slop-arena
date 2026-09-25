@@ -190,6 +190,8 @@
   "opt.weather": "Particule meteo",
   "opt.sec.gameplay": "Gameplay și interfață",
   "opt.shake": "Tremurul camerei",
+  "opt.colorblind": "Culori pentru daltoniști",
+  "opt.colorblind.hint": "Tu în albastru, inamicii în portocaliu în loc de roșu",
   "opt.fps": "Contor FPS",
   "opt.sec.advanced": "Avansat",
   "opt.fitFrustum": "Umbre ajustate la cameră",

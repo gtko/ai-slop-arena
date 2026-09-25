@@ -191,6 +191,8 @@
   "opt.weather": "Částice počasí",
   "opt.sec.gameplay": "Hratelnost a rozhraní",
   "opt.shake": "Otřesy kamery",
+  "opt.colorblind": "Barvy pro barvoslepé",
+  "opt.colorblind.hint": "Ty modře, nepřátelé oranžově místo červeně",
   "opt.fps": "Počítadlo FPS",
   "opt.sec.advanced": "Pokročilé",
   "opt.fitFrustum": "Stíny přizpůsobené kameře",

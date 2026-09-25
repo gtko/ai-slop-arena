@@ -188,6 +188,8 @@
   "opt.weather": "天气粒子",
   "opt.sec.gameplay": "玩法与界面",
   "opt.shake": "镜头震动",
+  "opt.colorblind": "色盲配色",
+  "opt.colorblind.hint": "自己为蓝色，敌人为橙色而不是红色",
   "opt.fps": "FPS 计数器",
   "opt.sec.advanced": "高级",
   "opt.fitFrustum": "贴合镜头的阴影",

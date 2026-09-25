@@ -188,6 +188,8 @@
   "opt.weather": "Hạt thời tiết",
   "opt.sec.gameplay": "Lối chơi & giao diện",
   "opt.shake": "Rung camera",
+  "opt.colorblind": "Màu cho người mù màu",
+  "opt.colorblind.hint": "Bạn màu xanh, kẻ địch màu cam thay vì đỏ",
   "opt.fps": "Bộ đếm FPS",
   "opt.sec.advanced": "Nâng cao",
   "opt.fitFrustum": "Bóng theo camera",

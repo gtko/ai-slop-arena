@@ -271,6 +271,8 @@ export default {
   'opt.weather': 'Weather particles',
   'opt.sec.gameplay': 'Gameplay & interface',
   'opt.shake': 'Camera shake',
+  'opt.colorblind': "Colour-blind colours",
+  'opt.colorblind.hint': "You in blue, enemies in orange instead of red",
   'opt.fps': 'FPS counter',
   'opt.sec.advanced': 'Advanced',
   'opt.fitFrustum': 'Camera-fitted shadows',

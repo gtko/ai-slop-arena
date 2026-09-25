@@ -188,6 +188,8 @@
   "opt.weather": "天候パーティクル",
   "opt.sec.gameplay": "ゲームプレイ＆UI",
   "opt.shake": "画面の揺れ",
+  "opt.colorblind": "色覚サポート",
+  "opt.colorblind.hint": "自分は青、敵は赤ではなくオレンジで表示",
   "opt.fps": "FPS表示",
   "opt.sec.advanced": "詳細設定",
   "opt.fitFrustum": "カメラに合わせた影",

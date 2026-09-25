@@ -189,6 +189,8 @@
   "opt.weather": "Väderpartiklar",
   "opt.sec.gameplay": "Spel & gränssnitt",
   "opt.shake": "Kameraskakning",
+  "opt.colorblind": "Färger för färgblinda",
+  "opt.colorblind.hint": "Du i blått, fiender i orange i stället för rött",
   "opt.fps": "FPS-räknare",
   "opt.sec.advanced": "Avancerat",
   "opt.fitFrustum": "Kameraanpassade skuggor",

@@ -189,6 +189,8 @@
   "opt.weather": "Weerdeeltjes",
   "opt.sec.gameplay": "Gameplay & interface",
   "opt.shake": "Camerabeving",
+  "opt.colorblind": "Kleurenblinde kleuren",
+  "opt.colorblind.hint": "Jij in blauw, vijanden in oranje in plaats van rood",
   "opt.fps": "FPS-teller",
   "opt.sec.advanced": "Geavanceerd",
   "opt.fitFrustum": "Camera-passende schaduwen",

@@ -191,6 +191,8 @@
   "opt.weather": "Cząsteczki pogody",
   "opt.sec.gameplay": "Rozgrywka i interfejs",
   "opt.shake": "Drgania kamery",
+  "opt.colorblind": "Kolory dla daltonistów",
+  "opt.colorblind.hint": "Ty na niebiesko, wrogowie na pomarańczowo zamiast na czerwono",
   "opt.fps": "Licznik FPS",
   "opt.sec.advanced": "Zaawansowane",
   "opt.fitFrustum": "Cienie dopasowane do kamery",

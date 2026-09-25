@@ -94,6 +94,16 @@ const lerpAngle = (a, b, t) => {
 
 // Seconds of immunity to crowd control once a freeze ends, so two novas can't chain-lock anyone.
 export const CC_IMMUNE = 1.5;
+const RING = { me: new THREE.Color(0.3, 1.6, 2.0), foe: new THREE.Color(1.8, 0.25, 0.2), meCb: new THREE.Color(0.35, 0.9, 2.4), foeCb: new THREE.Color(2.2, 1.0, 0.05) };
+const LINE = { me: new THREE.Color(0x19b6ff), foe: new THREE.Color(0x5c0d14), meCb: new THREE.Color(0x3a8dff), foeCb: new THREE.Color(0x8a4400) };
+// A per-brawler copy of a shared outline material (same shader, own colour).
+function teamOutline(base) {
+  const m = base.clone();
+  m.onBeforeCompile = base.onBeforeCompile;
+  m.customProgramCacheKey = base.customProgramCacheKey;
+  m.userData = { outline: true, team: true };
+  return m;
+}
 const IMMUNE_COL = new THREE.Color(2.2, 3, 3.6);
 
 export class Brawler {
@@ -168,6 +178,7 @@ export class Brawler {
     }
     this.blob = new THREE.Mesh(g.blob, BLOB_MAT);
     game.fx.add(this.ring, this.blob);
+    this.teamColors();
   }
 
   get radius() { return 0.62; }
@@ -184,6 +195,19 @@ export class Brawler {
   // each power cube adds 10% damage
   refreshDmg() {
     this.dmgMul = this.baseDmg + 0.1 * this.cubes;
+  }
+
+  // Readability: your brawler has a bright outline and ring, enemies a dark red one (the colour-blind
+  // option makes it blue against orange). Outline materials shared between brawlers get a copy.
+  teamColors() {
+    const cb = this.g.colorblind, me = this.isPlayer;
+    this.ring.material.color.copy(me ? (cb ? RING.meCb : RING.me) : (cb ? RING.foeCb : RING.foe));
+    const line = me ? (cb ? LINE.meCb : LINE.me) : (cb ? LINE.foeCb : LINE.foe);
+    this.model.root.traverse(o => {
+      if (!o.userData.outline || !o.material) return;
+      if (o.material.userData.shared) o.material = teamOutline(o.material);
+      o.material.color.copy(line);
+    });
   }
 
   setVisible(v) {
@@ -460,7 +484,7 @@ export class Brawler {
     for (const m of this.model.mats) m.dispose();
     for (const m of this.model.disposables || []) m.dispose();
     if (this.model.skeleton) this.model.skeleton.dispose(); // bone texture
-    this.model.root.traverse(o => { if (o.isMesh && o.userData.baked) o.geometry.dispose(); if (o.userData.outline) OUTLINES.delete(o); }); // outlines share the geometry
+    this.model.root.traverse(o => { if (o.isMesh && o.userData.baked) o.geometry.dispose(); if (o.userData.outline) { OUTLINES.delete(o); if (o.material.userData.team) o.material.dispose(); } }); // outlines share the geometry
     this.ring.material.dispose();
   }
 }

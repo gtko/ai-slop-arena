@@ -189,6 +189,8 @@
   "opt.weather": "Particules météo",
   "opt.sec.gameplay": "Jeu et interface",
   "opt.shake": "Tremblement de caméra",
+  "opt.colorblind": "Couleurs daltonien",
+  "opt.colorblind.hint": "Toi en bleu, les ennemis en orange au lieu de rouge",
   "opt.fps": "Compteur FPS",
   "opt.sec.advanced": "Avancé",
   "opt.fitFrustum": "Ombres ajustées à la caméra",

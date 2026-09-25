@@ -189,6 +189,8 @@
   "opt.weather": "Σωματίδια καιρού",
   "opt.sec.gameplay": "Gameplay & διεπαφή",
   "opt.shake": "Κούνημα κάμερας",
+  "opt.colorblind": "Χρώματα για αχρωματοψία",
+  "opt.colorblind.hint": "Εσύ με μπλε, οι αντίπαλοι με πορτοκαλί αντί για κόκκινο",
   "opt.fps": "Μετρητής FPS",
   "opt.sec.advanced": "Για προχωρημένους",
   "opt.fitFrustum": "Σκιές προσαρμοσμένες στην κάμερα",

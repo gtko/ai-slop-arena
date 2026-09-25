@@ -189,6 +189,8 @@
   "opt.weather": "Метеочастици",
   "opt.sec.gameplay": "Геймплей и интерфейс",
   "opt.shake": "Разтърсване на камерата",
+  "opt.colorblind": "Цветове за далтонисти",
+  "opt.colorblind.hint": "Ти в синьо, враговете в оранжево вместо в червено",
   "opt.fps": "Брояч на FPS",
   "opt.sec.advanced": "Разширени",
   "opt.fitFrustum": "Сенки по камерата",

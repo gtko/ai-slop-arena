@@ -189,6 +189,8 @@
   "opt.weather": "Időjárás-részecskék",
   "opt.sec.gameplay": "Játékmenet és felület",
   "opt.shake": "Kamerarázkódás",
+  "opt.colorblind": "Színtévesztő színek",
+  "opt.colorblind.hint": "Te kékben, az ellenfelek narancssárgában piros helyett",
   "opt.fps": "FPS-számláló",
   "opt.sec.advanced": "Haladó",
   "opt.fitFrustum": "Kamerához illesztett árnyékok",

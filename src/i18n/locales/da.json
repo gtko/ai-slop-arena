@@ -189,6 +189,8 @@
   "opt.weather": "Vejrpartikler",
   "opt.sec.gameplay": "Gameplay & brugerflade",
   "opt.shake": "Kamerarystelser",
+  "opt.colorblind": "Farver for farveblinde",
+  "opt.colorblind.hint": "Dig i blå, fjender i orange i stedet for rød",
   "opt.fps": "FPS-tæller",
   "opt.sec.advanced": "Avanceret",
   "opt.fitFrustum": "Kameratilpassede skygger",

@@ -191,6 +191,8 @@
   "opt.weather": "Погодні частинки",
   "opt.sec.gameplay": "Геймплей та інтерфейс",
   "opt.shake": "Трусіння камери",
+  "opt.colorblind": "Кольори для дальтоніків",
+  "opt.colorblind.hint": "Ти синій, вороги помаранчеві замість червоних",
   "opt.fps": "Лічильник FPS",
   "opt.sec.advanced": "Розширені",
   "opt.fitFrustum": "Тіні за камерою",

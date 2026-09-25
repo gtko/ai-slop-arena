@@ -191,6 +191,8 @@
   "opt.weather": "Погодные частицы",
   "opt.sec.gameplay": "Игровой процесс и интерфейс",
   "opt.shake": "Тряска камеры",
+  "opt.colorblind": "Цвета для дальтоников",
+  "opt.colorblind.hint": "Ты синий, враги оранжевые вместо красных",
   "opt.fps": "Счётчик FPS",
   "opt.sec.advanced": "Расширенные",
   "opt.fitFrustum": "Тени по камере",

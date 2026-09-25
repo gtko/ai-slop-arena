@@ -188,6 +188,8 @@
   "opt.weather": "Partikel cuaca",
   "opt.sec.gameplay": "Gameplay & antarmuka",
   "opt.shake": "Guncangan kamera",
+  "opt.colorblind": "Warna buta warna",
+  "opt.colorblind.hint": "Kamu biru, musuh oranye, bukan merah",
   "opt.fps": "Penghitung FPS",
   "opt.sec.advanced": "Lanjutan",
   "opt.fitFrustum": "Bayangan sesuai kamera",

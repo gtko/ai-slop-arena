@@ -193,6 +193,8 @@
   "opt.weather": "جسيمات الطقس",
   "opt.sec.gameplay": "اللعب والواجهة",
   "opt.shake": "اهتزاز الكاميرا",
+  "opt.colorblind": "ألوان لعمى الألوان",
+  "opt.colorblind.hint": "أنت بالأزرق والأعداء بالبرتقالي بدل الأحمر",
   "opt.fps": "عداد FPS",
   "opt.sec.advanced": "متقدم",
   "opt.fitFrustum": "ظلال مطابقة للكاميرا",
