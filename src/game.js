@@ -338,7 +338,7 @@ export class Game {
 
   pickItem(it, b) {
     b.cubes++;
-    b.dmgMul = b.baseDmg + 0.1 * b.cubes;
+    b.refreshDmg();
     b.maxHp += 400;
     b.hp += 400;
     this.fx.remove(it.mesh);

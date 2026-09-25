@@ -170,7 +170,12 @@ export class Brawler {
   setHuman(v) {
     this.human = v;
     this.baseDmg = v ? 1 : 0.85;
-    this.dmgMul = this.baseDmg + 0.1 * (this.cubes || 0);
+    this.refreshDmg();
+  }
+
+  // each power cube adds 10% damage
+  refreshDmg() {
+    this.dmgMul = this.baseDmg + 0.1 * this.cubes;
   }
 
   setVisible(v) {

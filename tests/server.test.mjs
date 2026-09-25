@@ -67,7 +67,7 @@ await test('every human hits at full strength online, bots a bit softer', () => 
   assert.equal(a.dmgMul, 1, 'a human deals less than full damage on the server');
   assert.equal(b.dmgMul, 1, 'humans do not deal the same damage');
   assert.ok(g.brawlers.filter(o => !o.human).every(o => o.dmgMul === 0.85), 'bot damage changed');
-  b.cubes = 2; b.dmgMul = b.baseDmg + 0.2;
+  b.cubes = 2; b.refreshDmg();
   g.onLeft('bob');
   assert.ok(Math.abs(b.dmgMul - 1.05) < 1e-9, 'a player who left keeps full damage or loses their cubes');
   g.onRejoin('bob');
