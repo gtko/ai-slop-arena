@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { t } from './i18n/index.js';
+import { sfx } from './audio.js';
 
 const $ = s => document.querySelector(s);
 const _v = new THREE.Vector3();
@@ -88,8 +89,8 @@ export class Hud {
     const alive = game.brawlers.filter(b => b.alive).length;
     if (alive !== this.lastAlive) {
       if (this.play && !game.ended && alive < this.lastAlive) {
-        if (alive === 3) this.showBanner(t('hud.threeLeft'), 'three');
-        else if (alive === 2) this.showBanner(t('hud.finalDuel'), 'duel');
+        if (alive === 3) { this.showBanner(t('hud.threeLeft'), 'three'); sfx('sting_three'); }
+        else if (alive === 2) { this.showBanner(t('hud.finalDuel'), 'duel'); sfx('sting_duel'); }
       }
       this.aliveEl.textContent = alive;
       this.lastAlive = alive;

@@ -21,7 +21,11 @@ const JINGLES = ['fanfare', 'victory', 'defeat'];
 let jingle = null;
 
 const SFX = ['shot', 'shotgun', 'throw', 'boom', 'boom_big', 'hit', 'hurt', 'break', 'crate', 'pickup',
-  'super', 'ready', 'death', 'gas', 'victory', 'defeat', 'click', 'thunder', 'thunder2', 'join'];
+  'super', 'ready', 'death', 'gas', 'victory', 'defeat', 'click', 'thunder', 'thunder2', 'join',
+  // v0.11 sound pass (ElevenLabs): per-brawler shots, hit confirm, KO, match stings, footsteps, voice barks
+  'shot_ray', 'shot_ice', 'shot_zap', 'hit_confirm', 'ko', 'sting_three', 'sting_duel', 'heartbeat', 'immune',
+  'step_sand', 'step_grass', 'step_snow', 'step_stone', 'step_mud',
+  ...['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt'].flatMap(k => [`bark_${k}_super`, `bark_${k}_cheer`])];
 const LOOPS = {
   amb_day: 'music/amb_day', amb_night: 'music/amb_night',
   amb_rain: 'music/amb_rain', amb_storm: 'music/amb_storm', amb_snow: 'music/amb_snow', amb_marsh: 'music/amb_marsh',
@@ -38,7 +42,8 @@ const PLAYLISTS = {
 };
 const BEDS = ['amb_rain', 'amb_storm', 'amb_snow', 'amb_marsh'];
 let weatherBed = null;
-const GAIN = { shot: 0.5, hit: 0.7, hurt: 0.8, click: 0.6, victory: 0.9, defeat: 0.9, gas: 0.6 };
+const GAIN = { shot: 0.5, hit: 0.7, hurt: 0.8, click: 0.6, victory: 0.9, defeat: 0.9, gas: 0.6,
+  shot_ray: 0.45, shot_ice: 0.5, shot_zap: 0.5, hit_confirm: 0.75, ko: 0.8, heartbeat: 0.9, sting_three: 0.7, sting_duel: 0.75 };
 
 export function initAudio() {
   if (ctx) { ctx.resume(); return; }
@@ -243,8 +248,9 @@ export function sfx(name, vol = 1, rate = 1) {
     if (JINGLES.includes(name)) { stopJingle(); jingle = { src, g }; src.onended = () => { if (jingle && jingle.src === src) jingle = null; }; }
     return;
   }
-  synth(name, vol);
+  synth(FALLBACK[name] || name, vol);
 }
+const FALLBACK = { shot_ray: 'shot', shot_ice: 'shot', shot_zap: 'shot', hit_confirm: 'hit', ko: 'death' };
 
 // Fades out the result jingle still playing, if any (new match, back to the menu...).
 function stopJingle() {

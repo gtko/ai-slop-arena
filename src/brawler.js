@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { radialTexture, shared } from './materials.js';
 import { buildModel as buildSculpted, OUTLINES } from './models.js';
 import { hasFigurine, buildFigurine } from './figurines.js';
+import { sfx } from './audio.js';
 
 export const TYPES = {
   blaster: {
@@ -94,6 +95,7 @@ const lerpAngle = (a, b, t) => {
 
 // Seconds of immunity to crowd control once a freeze ends, so two novas can't chain-lock anyone.
 export const CC_IMMUNE = 1.5;
+const GROUND = { oasis: 'sand', dunes: 'sand', grove: 'grass', frost: 'snow', marsh: 'mud' };
 const RING = { me: new THREE.Color(0.3, 1.6, 2.0), foe: new THREE.Color(1.8, 0.25, 0.2), meCb: new THREE.Color(0.35, 0.9, 2.4), foeCb: new THREE.Color(2.2, 1.0, 0.05) };
 const LINE = { me: new THREE.Color(0x19b6ff), foe: new THREE.Color(0x5c0d14), meCb: new THREE.Color(0x3a8dff), foeCb: new THREE.Color(0x8a4400) };
 // A per-brawler copy of a shared outline material (same shader, own colour).
@@ -197,6 +199,20 @@ export class Brawler {
     this.dmgMul = this.baseDmg + 0.1 * this.cubes;
   }
 
+  // One footstep per half walk cycle, on the map's ground (grass in bushes): yours, and the brawlers
+  // you can see close by, softer. A footstep never gives away someone hidden.
+  footsteps() {
+    const ph = Math.floor(this.walkPhase / Math.PI);
+    if (ph === this.stepPh) return;
+    this.stepPh = ph;
+    const g = this.g;
+    if (this.walkAmp < 0.5 || g.mode !== 'play' || this.pos.y > 0.05) return;
+    const me = this === g.player;
+    if (!me && !(this.visibleToPlayer && Math.hypot(this.pos.x - g.camFocus.x, this.pos.z - g.camFocus.z) < 8)) return;
+    const ground = this.inBush ? 'grass' : GROUND[g.mapKey] || 'stone';
+    sfx('step_' + ground, (me ? 0.35 : 0.2 * g.volumeAt(this.pos.x, this.pos.z)) * (this.inBush ? 0.6 : 1));
+  }
+
   // Readability: your brawler has a bright outline and ring, enemies a dark red one (the colour-blind
   // option makes it blue against orange). Outline materials shared between brawlers get a copy.
   teamColors() {
@@ -252,7 +268,10 @@ export class Brawler {
     this.ccImmuneT -= dt;
     if (wasFrozen && this.freezeT <= 0) {
       this.ccImmuneT = CC_IMMUNE;
-      if (this.visibleToPlayer) this.g.effects.ring(this.pos.x, this.pos.z, 1.4, IMMUNE_COL, 0.5); // the ice breaks: immune
+      if (this.visibleToPlayer) { // the ice breaks: immune
+        this.g.effects.ring(this.pos.x, this.pos.z, 1.4, IMMUNE_COL, 0.5);
+        sfx('immune', this.g.volumeAt(this.pos.x, this.pos.z));
+      }
     }
     const statusMul = this.freezeT > 0 ? 0 : this.slowT > 0 ? 0.55 : 1;
 
@@ -299,6 +318,7 @@ export class Brawler {
     const m = this.model;
     this.walkAmp += ((speedFrac > 0.15 ? 1 : 0) - this.walkAmp) * (1 - Math.exp(-10 * dt));
     this.walkPhase += dt * 11 * Math.max(speedFrac, 0.2);
+    this.footsteps();
     this.recoil = Math.max(0, this.recoil - dt * 6);
     if (m.figurine) this.animateFigurine(dt, speedFrac);
     else this.poseRig(dt, t);

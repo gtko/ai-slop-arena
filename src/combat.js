@@ -111,8 +111,9 @@ export class Combat {
   attack(b, dx, dz, point, sup) {
     const T = b.type.key, base = Math.atan2(dx, dz), col = this.colorFor(b, sup);
     const mx = b.pos.x + dx * 0.9, mz = b.pos.z + dz * 0.9;
-    const vol = this.g.volumeAt(b.pos.x, b.pos.z);
-    if (sup) sfx('super', vol);
+    // what you cannot see you do not hear either (the bullets still fly)
+    const vol = this.g.fxVisible(b) ? this.g.volumeAt(b.pos.x, b.pos.z) : 0;
+    if (sup) { sfx('super', vol); sfx(`bark_${T}_super`, vol * 0.9); }
     if (T === 'blaster') {
       const n = sup ? 9 : 5, spread = sup ? 0.72 : 0.52;
       for (let k = 0; k < n; k++) {
@@ -136,12 +137,12 @@ export class Combat {
         });
       }
       this.g.effects.muzzle(mx, BULLET_Y, mz, dx, dz, col);
-      sfx('shot', vol);
+      sfx('shot_ice', vol);
     } else if (T === 'volt') {
       if (sup) { this.storm(b, point); return; }
       this.spawnBullet(b, mx, mz, base, { speed: 26, range: 13, dmg: 650, r: 0.3, breakWalls: false, knock: 0, emit: true, col, chain: 2 });
       this.g.effects.muzzle(mx, BULLET_Y, mz, dx, dz, col);
-      sfx('shot', vol);
+      sfx('shot_zap', vol);
     } else {
       let tx = point.x - b.pos.x, tz = point.z - b.pos.z;
       let d = Math.hypot(tx, tz);
@@ -196,7 +197,7 @@ export class Combat {
         this.g.effects.muzzle(mx, BULLET_Y, mz, dx, dz, col);
         if (s.sup) b.recoil = 1; else b.attacked(); // the volley keeps the Super's arms up
         b.aimFacing = s.a; b.aimHold = 0.3;
-        sfx('shot', g.volumeAt(b.pos.x, b.pos.z));
+        sfx('shot_ray', g.fxVisible(b) ? g.volumeAt(b.pos.x, b.pos.z) : 0);
       }
     }
     this.updateBullets(dt);

@@ -259,7 +259,7 @@ export class Game {
       this.feel.add(taken);
       this.input.rumble(0.55, 0.35, 140);
     } else if (source && source.isPlayer) {
-      sfx('hit', 1, 1 + this.feel.nextHit() * 0.07);
+      sfx('hit_confirm', 1, 1 + this.feel.nextHit() * 0.07);
       this.feel.add(dealt);
       this.input.rumble(0.15, 0.3, 40, 80);
     }
@@ -297,7 +297,10 @@ export class Game {
     b.hp = 0;
     b.burst.length = 0;
     b.die(); // death fall, then a puff
-    if (killer && killer !== b) killer.cheer();
+    if (killer && killer !== b) {
+      killer.cheer();
+      if (this.fxVisible(killer)) sfx(`bark_${killer.type.key}_cheer`, this.volumeAt(killer.pos.x, killer.pos.z) * 0.8);
+    }
     if (seen) {
       // KO beat: the body holds for 150 ms, then flies off away from the killer
       b.hitstopT = 0.15;
@@ -312,6 +315,7 @@ export class Game {
       this.feel.punchTo(0.94, 0.25);
       this.hud.koStamp(this.camera, b.pos.x, b.pos.z);
       duckMusic();
+      sfx('ko');
       this.input.rumble(0.9, 0.6, 180);
     }
     if (b === this.player) this.feel.add(0.4);
