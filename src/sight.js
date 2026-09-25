@@ -24,7 +24,7 @@ const SightShader = {
     uCenter: { value: new THREE.Vector2() },
     uDust: { value: new THREE.Color() },
     uDustAmt: { value: 0 },  // sandstorm: hidden ground drowns in dust instead of going dark
-    uClearR: { value: 0 },   // sandstorm: metres around you that stay clear, then the storm closes in
+    uClearR: { value: 0 },   // how far you see (m); past it the view dims like a hidden area
   },
   vertexShader: /* glsl */`
     varying vec2 vUv;
@@ -55,7 +55,7 @@ const SightShader = {
               + ( vis( uv + vec2( r, 0.0 ) ) + vis( uv - vec2( r, 0.0 ) ) + vis( uv + vec2( 0.0, r ) ) + vis( uv - vec2( 0.0, r ) ) ) * 0.12
               + ( vis( uv + vec2( r, r ) ) + vis( uv - vec2( r, r ) ) + vis( uv + vec2( r, -r ) ) + vis( uv - vec2( r, -r ) ) ) * 0.06;
       float hide = 1.0 - v;
-      if ( uClearR > 0.0 ) hide = max( hide, smoothstep( uClearR * 0.75, uClearR * 1.35, distance( hit, uCenter ) ) );
+      if ( uClearR > 0.0 ) hide = max( hide, smoothstep( uClearR * 0.85, uClearR * 1.1, distance( hit, uCenter ) ) );
       hide *= uAmount;
       float l = dot( col.rgb, vec3( 0.299, 0.587, 0.114 ) );
       vec3 shade = mix( col.rgb, vec3( l ), 0.5 ) * vec3( 0.58, 0.61, 0.7 );
@@ -84,8 +84,9 @@ export class Sight {
   }
 
   // viewer: the brawler whose eyes the screen shows, or null (menus, spectating) for no mask.
-  // dust: the storm colour on sandstorm maps (hidden = dusty, clear field around you), else null.
-  update(dt, camera, arena, viewer, dust = null) {
+  // dust: the storm colour on sandstorm maps (hidden = dusty), else null.
+  // range: sight distance in metres (0 = unlimited).
+  update(dt, camera, arena, viewer, dust = null, range = 0) {
     const want = viewer && arena ? 1 : 0;
     this.amount += (want - this.amount) * (1 - Math.exp(-4 * dt));
     this.pass.enabled = this.amount > 0.005;
@@ -96,7 +97,7 @@ export class Sight {
     const d = dust ? 1 : 0;
     this.u.uDustAmt.value += (d * 0.92 - this.u.uDustAmt.value) * (1 - Math.exp(-2 * dt));
     if (dust) this.u.uDust.value.copy(dust);
-    this.u.uClearR.value = dust ? 17 : 0;
+    this.u.uClearR.value = range;
     if (viewer) this.u.uCenter.value.set(viewer.pos.x, viewer.pos.z);
     if (viewer && arena) this.trace(arena, viewer.pos.x, viewer.pos.z);
   }

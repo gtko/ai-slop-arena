@@ -931,7 +931,7 @@ function frame(ts) {
   shared.sunColor.value.copy(lighting.sun.color).multiplyScalar(lighting.sun.intensity);
   setAmbience(lighting.night);
   sight.update(dt, camera, game.arena, game.mode === 'play' ? game.sightViewer : null,
-    game.weather && game.weather.kind === 'sandstorm' ? scene.fog.color : null);
+    game.weather && game.weather.kind === 'sandstorm' ? scene.fog.color : null, game.sightRange || 0);
   visionFog.update(dt, camera, game.visionRadius || 0, game.visionCenter, scene.fog.color, game.time);
   bloom.strength = lighting.bloom;
   composer.render(dt);

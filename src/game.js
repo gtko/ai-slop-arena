@@ -110,6 +110,8 @@ export class Game {
     const real = !!localId || headless;
     this.poison = new Poison(this, real ? {} : { startAt: 18, interval: 6 });
     this.visionRadius = MAPS[this.mapKey].vision || 0;
+    // How far anyone sees (fog maps use their fog wall instead); the sandstorm cuts it shorter.
+    this.sightRange = this.visionRadius ? 0 : MAPS[this.mapKey].weather === 'sandstorm' ? 11 : 14;
     roster = roster || makeRoster([]);
     this.player = null;
     for (const r of roster) {
@@ -162,6 +164,7 @@ export class Game {
   canSee(viewer, target) {
     const d = Math.hypot(viewer.pos.x - target.pos.x, viewer.pos.z - target.pos.z);
     if (this.visionRadius && d > this.visionRadius * 0.92) return false;
+    if (this.sightRange && d > this.sightRange) return false;
     if (!this.inSight(viewer.pos, target.pos)) return false;
     if (!target.inBush || target.revealT > 0) return true;
     return d < 3.6;
