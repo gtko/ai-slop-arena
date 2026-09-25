@@ -49,6 +49,7 @@ function tabs(ctx) {
         fullscreenRow,
         toggle('fps', t('opt.fps')),
         toggle('shake', t('opt.shake')),
+        toggle('colorblind', t('opt.colorblind'), t('opt.colorblind.hint')),
         presetRow,
         toggle('crashReports', t('opt.crashReports'), t('opt.crashReports.hint')),
         toggle('analytics', t('opt.analytics'), t('opt.analytics.hint')),

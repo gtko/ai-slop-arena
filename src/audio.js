@@ -21,7 +21,11 @@ const JINGLES = ['fanfare', 'victory', 'defeat'];
 let jingle = null;
 
 const SFX = ['shot', 'shotgun', 'throw', 'boom', 'boom_big', 'hit', 'hurt', 'break', 'crate', 'pickup',
-  'super', 'ready', 'death', 'gas', 'victory', 'defeat', 'click', 'thunder', 'thunder2', 'join'];
+  'super', 'ready', 'death', 'gas', 'victory', 'defeat', 'click', 'thunder', 'thunder2', 'join',
+  // v0.11 sound pass (ElevenLabs): per-brawler shots, hit confirm, KO, match stings, footsteps, voice barks
+  'shot_ray', 'shot_ice', 'shot_zap', 'hit_confirm', 'ko', 'sting_three', 'sting_duel', 'sting_finalko', 'heartbeat', 'immune',
+  'step_sand', 'step_grass', 'step_snow', 'step_stone', 'step_mud',
+  ...['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt'].flatMap(k => [`bark_${k}_super`, `bark_${k}_cheer`])];
 const LOOPS = {
   amb_day: 'music/amb_day', amb_night: 'music/amb_night',
   amb_rain: 'music/amb_rain', amb_storm: 'music/amb_storm', amb_snow: 'music/amb_snow', amb_marsh: 'music/amb_marsh',
@@ -38,7 +42,8 @@ const PLAYLISTS = {
 };
 const BEDS = ['amb_rain', 'amb_storm', 'amb_snow', 'amb_marsh'];
 let weatherBed = null;
-const GAIN = { shot: 0.5, hit: 0.7, hurt: 0.8, click: 0.6, victory: 0.9, defeat: 0.9, gas: 0.6 };
+const GAIN = { shot: 0.5, hit: 0.7, hurt: 0.8, click: 0.6, victory: 0.9, defeat: 0.9, gas: 0.6,
+  shot_ray: 0.45, shot_ice: 0.5, shot_zap: 0.5, hit_confirm: 0.75, ko: 0.8, heartbeat: 0.9, sting_three: 0.7, sting_duel: 0.75, sting_finalko: 0.8 };
 
 export function initAudio() {
   if (ctx) { ctx.resume(); return; }
@@ -48,7 +53,10 @@ export function initAudio() {
   ctx = new AC();
   master = ctx.createGain(); master.connect(ctx.destination);
   sfxBus = ctx.createGain(); sfxBus.connect(master);
-  musicBus = ctx.createGain(); musicBus.connect(master);
+  // music -> duck (own super, KOs) -> low-pass (low health: the world goes muffled) -> master
+  musicDuck = ctx.createGain();
+  musicLP = ctx.createBiquadFilter(); musicLP.type = 'lowpass'; musicLP.frequency.value = 20000;
+  musicBus = ctx.createGain(); musicBus.connect(musicDuck).connect(musicLP).connect(master);
   ambBus = ctx.createGain(); ambBus.connect(master);
   applyMix(true);
   noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
@@ -200,9 +208,30 @@ export function setWeatherBed(name) {
   setAmbience(amb.night, true);
 }
 
+/* ------------------------------ mix moments ------------------------------ */
+
+let musicDuck = null, musicLP = null, danger = 0;
+
+// Music dips by 6 dB for a moment (your super, your KOs), back over `sec`.
+export function duckMusic(sec = 0.6) {
+  if (!ctx) return;
+  const g = musicDuck.gain, now = ctx.currentTime;
+  g.cancelScheduledValues(now);
+  g.setTargetAtTime(0.5, now, 0.05);
+  g.setTargetAtTime(1, now + 0.15, sec / 3);
+}
+
+// Low health (0..1): the music closes down to a 1200 Hz low-pass.
+export function setDanger(v) {
+  if (!ctx || Math.abs(v - danger) < 0.01) return;
+  danger = v;
+  musicLP.frequency.setTargetAtTime(20000 * Math.pow(1200 / 20000, v), ctx.currentTime, 0.25);
+}
+
 /* ------------------------------ one-shots ------------------------------ */
 
-export function sfx(name, vol = 1) {
+// rate: playback speed (the hit-confirm ladder rises in pitch); 1 = a small random jitter
+export function sfx(name, vol = 1, rate = 1) {
   if (!ctx || vol < 0.03) return;
   if (name === 'victory' && buffers.fanfare) name = 'fanfare';
   const now = ctx.currentTime;
@@ -212,15 +241,16 @@ export function sfx(name, vol = 1) {
   if (buf) {
     const src = ctx.createBufferSource(), g = ctx.createGain();
     src.buffer = buf;
-    src.playbackRate.value = 0.94 + Math.random() * 0.12; // small pitch jitter so repeats don't machine-gun
+    src.playbackRate.value = rate !== 1 ? rate : 0.94 + Math.random() * 0.12; // small pitch jitter so repeats don't machine-gun
     g.gain.value = vol * (GAIN[name] ?? 1);
     src.connect(g).connect(sfxBus);
     src.start(now);
     if (JINGLES.includes(name)) { stopJingle(); jingle = { src, g }; src.onended = () => { if (jingle && jingle.src === src) jingle = null; }; }
     return;
   }
-  synth(name, vol);
+  synth(FALLBACK[name] || name, vol);
 }
+const FALLBACK = { shot_ray: 'shot', shot_ice: 'shot', shot_zap: 'shot', hit_confirm: 'hit', ko: 'death' };
 
 // Fades out the result jingle still playing, if any (new match, back to the menu...).
 function stopJingle() {
@@ -273,5 +303,6 @@ function synth(name, vol) {
     case 'gas': tone(80, 60, 0.6, 'sine', 0.25 * vol); break;
     case 'victory': tone(523, 1046, 0.5, 'triangle', 0.3 * vol); break;
     case 'defeat': tone(330, 110, 0.8, 'triangle', 0.3 * vol); break;
+    case 'heartbeat': tone(80, 48, 0.1, 'sine', 0.55 * vol); setTimeout(() => tone(72, 44, 0.12, 'sine', 0.4 * vol), 170); break;
   }
 }

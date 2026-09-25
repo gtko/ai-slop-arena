@@ -107,7 +107,7 @@ export class TouchControls {
       if (!cancel && (dragged || tap)) {
         if (!dragged) this.T.autoAim = true; // quick tap: nearest enemy
         if (isSuper) this.T.superFired = true;
-        else this.T.fireUntil = performance.now() + 150; // long enough for the 20 Hz client input tick
+        else this.T.fireUntil = performance.now() + 200; // long enough for the 20 Hz client input tick, and a 120 ms buffer
       }
       if (isSuper) this.T.superAiming = false; else this.T.aiming = false;
     };

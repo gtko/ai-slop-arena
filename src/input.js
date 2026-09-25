@@ -46,7 +46,7 @@ export class Input {
     });
     addEventListener('pointerup', e => {
       if (e.pointerType === 'touch') return;
-      if (e.button === 0) this.lmb = false;
+      if (e.button === 0) { if (this.lmb) this.tapT = performance.now(); this.lmb = false; }
       if (e.button === 2) { if (this.rmb) this.rmbReleased = true; this.rmb = false; }
     });
     el.addEventListener('contextmenu', e => e.preventDefault());
@@ -95,10 +95,19 @@ export class Input {
   padHit(i) { return this.btn[i] && !this.btnPrev[i]; }
   padReleased(i) { return !this.btn[i] && this.btnPrev[i]; }
 
-  rumble(strong, weak, ms) {
+  // Gamepad rumble, or on a touch screen a short vibration (Android; iOS web views have none).
+  // every: minimum ms between two of these calls (a fast burst of hits buzzes once).
+  rumble(strong, weak, ms, every = 0) {
+    if (!settings.vibration) return;
+    const now = performance.now();
+    if (every && now - (this.rumbleT || 0) < every) return;
+    this.rumbleT = now;
     const act = this.pad && this.pad.vibrationActuator;
-    if (!act || !settings.vibration) return;
-    try { act.playEffect('dual-rumble', { duration: ms, strongMagnitude: strong, weakMagnitude: weak }); } catch { /* unsupported */ }
+    if (act) {
+      try { act.playEffect('dual-rumble', { duration: ms, strongMagnitude: strong, weakMagnitude: weak }); } catch { /* unsupported */ }
+    } else if (this.usingTouch && navigator.vibrate) {
+      try { navigator.vibrate(Math.max(8, Math.round(ms * Math.max(strong, weak) * 0.6))); } catch { /* blocked */ }
+    }
   }
 
   /* ------------------------------ combined ------------------------------ */
@@ -115,7 +124,9 @@ export class Input {
     return out;
   }
 
-  get attackHeld() { return this.lmb || this.btn[PAD.RT] || (!!this.touch && this.touch.fireUntil > performance.now()); }
+  // A click still counts for 120 ms after its release (input buffer): a quick tap during the
+  // reload fires as soon as the weapon is ready instead of being lost.
+  get attackHeld() { return this.lmb || this.btn[PAD.RT] || performance.now() - (this.tapT || -1e9) < 120 || (!!this.touch && this.touch.fireUntil > performance.now()); }
   get superAimHeld() { return this.rmb || this.btn[PAD.LT] || (!!this.touch && this.touch.superAiming); }
   get superFired() {
     return this.hitAction('super') || this.rmbReleased || this.padHit(PAD.RB) || this.padReleased(PAD.LT) || (!!this.touch && this.touch.superFired);

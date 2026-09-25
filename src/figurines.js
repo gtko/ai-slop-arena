@@ -174,11 +174,15 @@ ${SWAY_PARS}`)
 ${SWAY_VERT}`);
 }
 
+// Weapons read small from the high game camera (v0.11 readability pass): scaled up around the grip.
+const WEAPON_SCALE = { blaster: 1.25, gunslinger: 1.3, bomber: 1.2, frostbite: 1.1 };
+
 // The outline hull deforms like the figurine (flames, soft parts): its own material then.
 function figurineOutline(width, flames, U) {
   const base = outlineMaterial(width);
   if (!flames && !U) return base;
   const m = base.clone();
+  delete m.userData.shared; // already this brawler's own copy
   m.onBeforeCompile = sh => { base.onBeforeCompile(sh); if (flames) flamePatch(sh); if (U) swayPatch(sh, U); };
   m.customProgramCacheKey = () => `outline-${flames ? 'f' : ''}${U ? 's' : ''}${width}`;
   m.userData.outline = true;
@@ -212,17 +216,24 @@ function textureGain(map) {
 // inside wall shadows. `emissive` stays free for the hit flash and frost tint in brawler.js.
 // Blinks: the eyes are painted, so a lid of skin colour slides down over them (aEye: 0 at the bottom
 // of an eye .. 1 at its top), with a darker lash line along its edge. uBlink: 0 open .. 1 shut.
+// uLow: a lower lid rising from the bottom (0 none .. 1 shut): with the upper one it makes the
+// expressions of brawler.js (happy crescents, a pained squint, a determined glare, tired eyes).
 const EYE_PARS_V = `
 attribute float aEye;
 varying float vEye;`;
 const EYE_PARS_F = `
 varying float vEye;
 uniform float uBlink;
+uniform float uLow;
 uniform vec3 uLid;`;
 const EYE_FRAG = /* glsl */`
 if ( vEye > 0.0 && uBlink > 0.0 ) {
   float lidEdge = 1.0 - uBlink * 1.08;
   if ( vEye > lidEdge ) diffuseColor.rgb = uLid * ( vEye < lidEdge + 0.07 ? 0.45 : 1.0 );
+}
+if ( vEye > 0.0 && uLow > 0.0 ) {
+  float lowEdge = uLow * 1.08;
+  if ( vEye < lowEdge ) diffuseColor.rgb = uLid * ( vEye > lowEdge - 0.07 ? 0.55 : 1.0 );
 }`;
 
 function figurineMaterial(map, gain, flames = false, sway = null, eyes = null) {
@@ -271,7 +282,7 @@ export function buildFigurine(key) {
   rig.traverse(o => { if (o.isSkinnedMesh && !mesh) mesh = o; });
   // per brawler: its own lean of the soft parts
   const sway = T.sway ? { uSwayPush: { value: new THREE.Vector3() }, uSwayWind: shared.wind, uSwayTime: shared.time } : null;
-  const eyes = T.lid ? { uBlink: { value: 0 }, uLid: { value: T.lid } } : null;
+  const eyes = T.lid ? { uBlink: { value: 0 }, uLow: { value: 0 }, uLid: { value: T.lid } } : null;
   const mat = figurineMaterial(T.map, T.gain, T.flames, sway, eyes); // own material: hit flash and frost tint are per brawler
   mesh.material = mat;
   mesh.castShadow = mesh.receiveShadow = true;
@@ -288,6 +299,7 @@ export function buildFigurine(key) {
   const weapons = [];
   rig.traverse(o => { if (o.isMesh && !o.isSkinnedMesh && !o.userData.outline) weapons.push(o); });
   for (const w of weapons) {
+    w.scale.multiplyScalar(WEAPON_SCALE[key] || 1); // bigger weapons read better from the game camera
     w.material = mat;
     w.castShadow = w.receiveShadow = true;
     const hull = new THREE.Mesh(w.geometry, outlineMaterial(0.02));
@@ -297,5 +309,5 @@ export function buildFigurine(key) {
   }
   const anim = new Animator(rig, T.clips);
   return { figurine: true, root, body, rig, mesh, skeleton: mesh.skeleton, anim, weapon: RIGS[key]?.weapon, style: RIGS[key]?.style, mats: [mat],
-    sway: sway && sway.uSwayPush.value, blink: eyes && eyes.uBlink, disposables: lineMat === outlineMaterial(0.02) ? [] : [lineMat] };
+    sway: sway && sway.uSwayPush.value, blink: eyes && eyes.uBlink, lowLid: eyes && eyes.uLow, disposables: lineMat === outlineMaterial(0.02) ? [] : [lineMat] };
 }

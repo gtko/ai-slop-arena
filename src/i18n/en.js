@@ -28,6 +28,10 @@ export default {
   'hud.keys': '<b>WASD</b> move · <b>Mouse</b> aim · <b>Hold LMB</b> attack · <b>RMB / Space</b> super · <b>T</b> time of day · <b>Esc</b> pause · <b>M</b> mute · 🎮 supported',
   'hud.you': 'YOU',
   'hud.power': '+POWER',
+  'hud.immune': "IMMUNE",
+  'hud.ko': "K.O.",
+  'hud.threeLeft': "3 LEFT",
+  'hud.finalDuel': "FINAL DUEL",
   'mobile.rotate': 'Turn your phone sideways',
 
   // sound pop-up
@@ -267,6 +271,8 @@ export default {
   'opt.weather': 'Weather particles',
   'opt.sec.gameplay': 'Gameplay & interface',
   'opt.shake': 'Camera shake',
+  'opt.colorblind': "Colour-blind colours",
+  'opt.colorblind.hint': "You in blue, enemies in orange instead of red",
   'opt.fps': 'FPS counter',
   'opt.sec.advanced': 'Advanced',
   'opt.fitFrustum': 'Camera-fitted shadows',

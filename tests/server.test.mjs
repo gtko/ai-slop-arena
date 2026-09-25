@@ -74,6 +74,22 @@ await test('every human hits at full strength online, bots a bit softer', () => 
   assert.ok(Math.abs(b.dmgMul - 1.2) < 1e-9, 'a player who came back does not get full damage back');
 });
 
+await test('a frost nova cannot freeze someone who just thawed', () => {
+  const { m, g } = match('frost', ['alice']);
+  while (g.time < 6) m.advance(0.05); // past the spawn shield
+  g.brains.clear();
+  const a = g.byId.get('alice'), f = g.brawlers.find(b => b !== a);
+  f.pos.set(a.pos.x + 1, f.pos.y, a.pos.z);
+  a.hp = a.maxHp = 1e6;
+  g.combat.nova(f);
+  assert.ok(a.freezeT > 1, 'the first nova did not freeze');
+  while (a.freezeT > 0) m.advance(0.05);
+  assert.ok(a.ccImmuneT > 1, 'no immunity after the freeze');
+  f.pos.set(a.pos.x + 1, f.pos.y, a.pos.z);
+  g.combat.nova(f);
+  assert.ok(a.freezeT <= 0, 'frozen again while immune');
+});
+
 await test('nobody is hurt during the opening seconds (spawn shield + calm bots)', () => {
   for (const map of ['oasis', 'dunes', 'grove', 'frost', 'marsh']) {
     for (let k = 0; k < 4; k++) {
@@ -86,7 +102,16 @@ await test('nobody is hurt during the opening seconds (spawn shield + calm bots)
   }
 });
 
-await test('sharper bots beat clumsy ones (adaptive difficulty has teeth)', () => {
+// Seeded Math.random for statistical tests: the same matches every run, so a failure means the
+// rules changed, not bad luck.
+function seeded(seed, fn) {
+  const random = Math.random;
+  let a = seed >>> 0;
+  Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  try { return fn(); } finally { Math.random = random; }
+}
+
+await test('sharper bots beat clumsy ones (adaptive difficulty has teeth)', () => seeded(20260926, () => {
   let sharp = 0;
   for (let i = 0; i < 16; i++) {
     const roster = makeRoster([], { level: 0.5 });
@@ -98,7 +123,7 @@ await test('sharper bots beat clumsy ones (adaptive difficulty has teeth)', () =
     if (w && w.skill >= 0.9) sharp++;
   }
   assert.ok(sharp >= 10, `sharp bots won only ${sharp}/16`);
-});
+}));
 
 if (failed) { console.error(`\n${failed} test(s) failed`); process.exit(1); }
 console.log('\nall server tests passed');

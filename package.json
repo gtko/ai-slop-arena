@@ -18,6 +18,7 @@
     "deploy": "npm run build && wrangler deploy",
     "test": "vite build --mode server && node tests/server.test.mjs && node tests/ranking.test.mjs && node tests/i18n.test.mjs",
     "check:prod": "node scripts/check-prod.mjs",
+    "balance": "vite build --mode server && node scripts/balance.mjs",
     "desktop": "vite build && electron .",
     "desktop:dev": "electron . --dev-server=http://localhost:5173/play.html",
     "dist:steam": "vite build && electron-builder --win --x64 --dir",

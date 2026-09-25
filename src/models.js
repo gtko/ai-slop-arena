@@ -59,6 +59,7 @@ export function outlineMaterial(width = 0.032) {
   };
   m.customProgramCacheKey = () => 'outline' + width;
   m.userData.outline = true;
+  m.userData.shared = true;
   OUTLINE_MATS.set(width, m);
   return m;
 }

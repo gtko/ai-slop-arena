@@ -141,6 +141,7 @@ function applySetting(k) {
       if (v !== 'cycle') lighting.setPreset(+v);
       break;
     case 'shake': game.shakeEnabled = v; break;
+    case 'colorblind': document.body.classList.toggle('cb', v); game.colorblind = v; for (const b of game.brawlers) b.teamColors(); break;
     case 'fps': $('#fpsBadge').classList.toggle('hidden', !v); break;
     case 'debugPanel': $('#panel').classList.toggle('off', !v); break;
     case 'art': if ((v === 'cartoon') !== CARTOON) setTimeout(() => location.reload(), 150); break;
@@ -438,7 +439,7 @@ $('#code').addEventListener('keydown', e => { if (e.code === 'Enter') $('#join')
 nick.addEventListener('keydown', e => e.stopPropagation());
 $('#lobbyBack').addEventListener('click', () => { mm.cancel(); net.close(); history.replaceState(null, '', location.pathname); status(''); toMenu(); });
 
-/* ---- matchmaking: one queue for every platform; bots fill the match after 5 minutes ---- */
+/* ---- matchmaking: one queue for every platform; bots fill the match after 1 minute ---- */
 
 const mm = new Matchmaking();
 let queuedAt = 0;

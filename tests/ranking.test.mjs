@@ -51,7 +51,9 @@ test('matchmaking groups close MMRs and waits for them', () => {
   assert.equal(g.length, 8);
   assert.ok(!g.some(p => p.id === 'far'), 'a far MMR was grouped early');
   assert.equal(pickGroup(q.slice(0, 3), now), null, 'started without enough players');
-  assert.equal(pickGroup(q.slice(0, 3), now + 5 * 60 * 1000).length, 3, 'did not start after 5 minutes');
+  assert.equal(pickGroup(q.slice(0, 3), now + 60 * 1000).length, 3, 'did not start after 1 minute');
+  const two = [{ id: 'a', mmr: 900, joined: now - 61 * 1000 }, { id: 'b', mmr: 1800, joined: now - 1000 }];
+  assert.equal(pickGroup(two, now).length, 2, 'after 1 minute, two far MMRs play together instead of with bots only');
 });
 
 test('bot level follows MMR', () => {

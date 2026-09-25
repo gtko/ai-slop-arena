@@ -6,10 +6,11 @@ import { Poison } from './poison.js';
 import { BotBrain } from './ai.js';
 import { Effects } from './effects.js';
 import { shared } from './materials.js';
-import { sfx } from './audio.js';
+import { sfx, duckMusic, setDanger } from './audio.js';
 import { MAPS, MAP_KEYS } from './maps.js';
 import { Weather } from './weather.js';
 import { t } from './i18n/index.js';
+import { Feel, weapon } from './feel.js';
 
 const NAMES = ['Bolt', 'Nova', 'Rex', 'Juno', 'Pix', 'Kai', 'Moxie', 'Zed', 'Luna', 'Taro', 'Fizz', 'Oona', 'Brick', 'Echo'];
 const TYPE_KEYS = Object.keys(TYPES);
@@ -59,7 +60,9 @@ export class Game {
     this.camTarget = null;
     this.camOffset = new THREE.Vector3(0, 27.4, 25); // ~47° pitch (hack'n'slash), 1.44x further than the old 57° view
     lighting.fogShift = Math.max(0, this.camOffset.length() - 22); // keep the air around the player clear
-    this.shake = 0;
+    this.feel = new Feel();   // hit freeze, camera trauma, zoom punches (cosmetic)
+    this.bushIdleT = 0;
+    this.heartT = 0;          // low health: heartbeat timer
     this.aimPoint = new THREE.Vector3();
     this.aimDir = new THREE.Vector3(0, 0, -1);
     this.aimDist = 0;
@@ -138,6 +141,7 @@ export class Game {
     this.restartT = -1;
     this.camTarget = this.player || this.brawlers[0];
     this.camFocus.copy(this.camTarget.pos);
+    this.feel.reset();
     this.hud.setup(this.brawlers, this.player);
     this.aim.visible = this.aimTarget.visible = !!this.player;
   }
@@ -155,7 +159,7 @@ export class Game {
 
   shakeAt(x, z, amount) {
     const d = Math.hypot(x - this.camFocus.x, z - this.camFocus.z), k = amount / (1 + d * d / 120);
-    this.shake = Math.min(1, this.shake + k);
+    this.feel.add(k);
     if (this.mode === 'play' && k > 0.08) this.input.rumble(Math.min(1, k * 1.4), Math.min(1, k), 120 + k * 250);
   }
 
@@ -204,6 +208,7 @@ export class Game {
     }
     b.lastAttack = this.time;
     b.revealT = 1.2;
+    if (isSuper && b === this.player) { this.feel.punchTo(0.92, 0.3); duckMusic(); } // own super: a quick punch-in
     b.face(dx, dz);
     b.attacked(isSuper);
     this.combat.attack(b, dx, dz, point, isSuper);
@@ -231,22 +236,49 @@ export class Game {
     if (source && source !== target && !fromSuper) {
       const before = source.superCharge;
       source.superCharge = Math.min(1, source.superCharge + amount / source.type.superCost);
-      if (source.isPlayer && before < 1 && source.superCharge >= 1) sfx('ready');
+      if (source.isPlayer && before < 1 && source.superCharge >= 1) { sfx('ready'); this.input.rumble(0.5, 0.5, 90); }
     }
-    this.ev({ e: 'dmg', id: target.id, a: amount, s: source ? source.id : null });
-    this.damageFx(target, amount, source);
+    this.ev({ e: 'dmg', id: target.id, a: amount, s: source ? source.id : null, u: fromSuper ? 1 : 0 });
+    this.damageFx(target, amount, source, fromSuper);
     if (target.hp <= 0) this.kill(target, source, fromSuper);
   }
 
-  damageFx(target, amount, source) {
-    target.hurt();
+  // Confirmed hit (solo / host at once, clients when the host's event arrives): freeze, squash, number,
+  // camera trauma and the rising hit-confirm sound. What you cannot see gives you no juice either.
+  damageFx(target, amount, source, sup = false) {
+    const seen = this.fxVisible(target), [stop, dealt, taken] = weapon(source, sup);
+    target.hurt(seen ? stop : 0);
     target.revealT = Math.max(target.revealT, 0.8);
-    if (target.visibleToPlayer) {
+    if (seen) {
       const cls = target.isPlayer ? 'dmg-in' : source && source.isPlayer ? 'dmg-out' : 'dmg-other';
-      this.hud.floater(this.camera, target.pos.x, 2.6, target.pos.z, amount, cls);
+      // pellets and bursts of one attack add up into a single counting number
+      this.hud.floater(this.camera, target.pos.x, 2.6, target.pos.z, amount, cls, source ? source.id + '>' + target.id : null);
     }
-    if (target.isPlayer) { sfx('hurt'); this.shake = Math.min(1, this.shake + 0.18); this.input.rumble(0.55, 0.35, 140); }
-    else if (source && source.isPlayer) sfx('hit');
+    if (target.isPlayer) {
+      sfx('hurt');
+      this.feel.add(taken);
+      this.hud.hurtFlash(taken);
+      this.input.rumble(0.55, 0.35, 140);
+    } else if (source && source.isPlayer) {
+      sfx('hit_confirm', 1, 1 + this.feel.nextHit() * 0.07);
+      this.feel.add(dealt);
+      this.input.rumble(0.15, 0.3, 40, 80);
+    }
+  }
+
+  // Under 30% health: red pulsing edges (hud.js), a heartbeat (faster under 15%), muffled music.
+  lowHealth(dt) {
+    const P = this.player, f = P && P.alive && this.mode === 'play' && !this.ended ? P.hp / P.maxHp : 1;
+    const low = f < 0.3 ? Math.min(1, (0.3 - f) / 0.2 + 0.4) : 0;
+    setDanger(low);
+    if (!low) { this.heartT = 0; return; }
+    this.heartT -= dt;
+    if (this.heartT <= 0) { sfx('heartbeat', 0.8); this.heartT = f < 0.15 ? 0.6 : 0.85; }
+  }
+
+  // Effects and sounds of a brawler only play when you can see it (or with no local player).
+  fxVisible(b) {
+    return !this.player || b === this.player || b.visibleToPlayer;
   }
 
   kill(b, killer, bySuper = false) {
@@ -261,13 +293,34 @@ export class Game {
   }
 
   killFx(b, killer, bySuper = false) {
+    const seen = this.fxVisible(b);
     b.alive = false;
     b.hp = 0;
     b.burst.length = 0;
     b.die(); // death fall, then a puff
-    if (killer && killer !== b) killer.cheer();
-    this.shakeAt(b.pos.x, b.pos.z, 0.3);
-    sfx('death', this.volumeAt(b.pos.x, b.pos.z));
+    if (killer && killer !== b) {
+      killer.cheer();
+      if (this.fxVisible(killer)) sfx(`bark_${killer.type.key}_cheer`, this.volumeAt(killer.pos.x, killer.pos.z) * 0.8);
+    }
+    if (seen) {
+      // KO beat: the body holds for 150 ms, then flies off away from the killer
+      b.hitstopT = 0.15;
+      const kx = killer && killer !== b ? b.pos.x - killer.pos.x : Math.sin(b.facing), kz = killer && killer !== b ? b.pos.z - killer.pos.z : Math.cos(b.facing);
+      const l = Math.hypot(kx, kz) || 1;
+      b.launch = { vx: kx / l * 3.2, vz: kz / l * 3.2, vy: 4.2 };
+      this.shakeAt(b.pos.x, b.pos.z, 0.3);
+      sfx('death', this.volumeAt(b.pos.x, b.pos.z));
+    }
+    if (killer && killer === this.player && b !== killer) {
+      this.feel.add(0.25);
+      this.feel.punchTo(0.94, 0.25);
+      this.hud.koStamp(this.camera, b.pos.x, b.pos.z);
+      duckMusic();
+      sfx('ko');
+      this.input.rumble(0.9, 0.6, 180);
+    }
+    if (b === this.player) this.feel.add(0.4);
+    if (this.player) this.hud.killFeed(killer && killer !== b ? killer : null, b, this.player, bySuper);
     if (this.camTarget === b && killer && killer.alive) this.camTarget = killer;
     if (killer && killer === this.player && b !== killer && this.onFeat) { this.onFeat('ko'); if (bySuper) this.onFeat('superko'); }
     if (b === this.player) { this.state = 'over'; this.resultT = 1.6; }
@@ -282,6 +335,7 @@ export class Game {
       const w = alive[0];
       w.rank = 1;
       w.win();
+      if (this.mode === 'play') { this.feel.finalKo(!this.net); if (this.player) sfx('sting_finalko'); } // slow motion offline only: online the rules keep real time
       this.ev({ e: 'win', id: w.id });
       if (w === this.player) { this.state = 'over'; this.resultT = 1.2; }
       if (this.net) this.endT = 5;
@@ -454,7 +508,7 @@ export class Game {
       b.revealT = flags & 2 ? 0.3 : 0;
       // status effects are decided by the host; our own brawler needs them too (we move it locally)
       b.slowT = flags & 4 ? 0.2 : Math.min(b.slowT, 0);
-      b.freezeT = flags & 8 ? 0.2 : Math.min(b.freezeT, 0);
+      b.freezeT = flags & 8 ? 0.2 : Math.min(b.freezeT, 1e-4); // a tiny rest so update() still sees the thaw (immunity fx)
       if (b !== this.player) {
         b.net.set(x, z); b.netFacing = f;
         if (b.netHidden) { b.pos.x = x; b.pos.z = z; } // back in sight: appear where it is, don't glide there through the wall
@@ -480,12 +534,13 @@ export class Game {
         case 'atk':
           if (!b || !b.alive) break;
           b.face(e.dx, e.dz); b.attacked(!!e.s); b.revealT = 1.2; b.lastAttack = this.time;
+          if (e.s && b === this.player) { this.feel.punchTo(0.92, 0.3); duckMusic(); }
           this.combat.attack(b, e.dx, e.dz, _v.set(e.px, 0, e.pz), !!e.s);
           break;
         case 'dmg':
           if (!b || !b.alive) break;
           b.hp -= e.a; b.lastHurt = this.time;
-          this.damageFx(b, e.a, this.byId.get(e.s));
+          this.damageFx(b, e.a, this.byId.get(e.s), !!e.u);
           break;
         case 'kill':
           if (!b) break;
@@ -493,9 +548,11 @@ export class Game {
           if (b.alive) this.killFx(b, this.byId.get(e.by), !!e.sup);
           break;
         case 'win':
-          if (b) { b.rank = 1; b.win(); if (b === this.player) { this.state = 'over'; this.resultT = 1.2; } }
+          this.ended = true;
+          if (b) { b.rank = 1; b.win(); if (!this.feel.orbitWant) sfx('sting_finalko'); this.feel.finalKo(false); if (b === this.player) { this.state = 'over'; this.resultT = 1.2; } }
           break;
         case 'knock': if (b === this.player) b.knock.set(e.x, 0, e.z); break;
+        case 'imm': if (b && b.visibleToPlayer) this.hud.floater(this.camera, b.pos.x, 3.1, b.pos.z, t('hud.immune'), 'immune'); break;
         case 'zap': this.effects.arc(e.pts, new THREE.Color(3.2, 4.2, 5.2)); break;
         case 'wall': this.breakWall(e.i, e.j, true); break;
         case 'crate': if (this.arena.hitCrate(e.i, e.j, 1e9)) this.crateFx(e.i, e.j, this.byId.get(e.by)); break;
@@ -518,11 +575,13 @@ export class Game {
   }
 
   update(dt) {
+    dt *= this.feel.timeScale(dt);
     const t = (this.time += dt);
     shared.time.value = t;
     const frozen = this.paused && !this.net;
     if (!frozen && (this.state === 'playing' || this.state === 'over')) this.step(dt, t);
     this.effects.update(frozen ? 0 : dt);
+    this.lowHealth(dt);
     if (this.arena) this.arena.update(dt, t);
     this.updateCamera(dt);
     this.updateLights(frozen ? 0 : dt);
@@ -532,7 +591,8 @@ export class Game {
 
   step(dt, t) {
     const P = this.player;
-    if (P && P.alive) this.controlPlayer();
+    if (P && P.alive && !this.ended) this.controlPlayer();
+    else if (P && P.alive) P.moveIntent.set(0, 0, 0);
     else this.aim.visible = this.aimTarget.visible = false;
     if (this.authority) {
       for (const brain of this.brains.values()) brain.update(dt);
@@ -776,10 +836,20 @@ export class Game {
         if (tgt && tgt.alive) this.camTarget = tgt;
       }
     }
-    const desired = _v.set(0, 0, 2);
+    const desired = _v.set(0, 0, 2), P = this.player, F = this.feel;
+    // look-ahead: toward where you aim (mouse, or a stick being dragged), else toward where you walk
+    let lx = 0, lz = 0;
+    if (tgt === P && P && P.alive) {
+      const I = this.input, T = I.touch;
+      const aiming = !I.usingTouch && !I.usingPad ? true : I.usingPad ? I.stickR.lengthSq() > 0.09 : !!T && (T.aiming || T.superAiming);
+      if (aiming) { const d = Math.min(2.6, 0.18 * P.type.range); lx = this.aimDir.x * d; lz = this.aimDir.z * d; }
+      else if (P.moveIntent.lengthSq() > 0.05) { const l = P.moveIntent.length(); lx = P.moveIntent.x / l * 1.2; lz = P.moveIntent.z / l * 1.2; }
+    }
+    const kl = 1 - Math.exp(-dt / 0.25);
+    F.lookX += (lx - F.lookX) * kl; F.lookZ += (lz - F.lookZ) * kl;
     if (tgt) {
       desired.copy(tgt.pos);
-      if (tgt === this.player && tgt.alive) desired.addScaledVector(this.aimDir, Math.min(this.aimDist, 10) * 0.18);
+      if (tgt === P && tgt.alive) { desired.x += F.lookX; desired.z += F.lookZ; }
     }
     if (this.mode === 'attract') desired.x -= 5;
     desired.x = THREE.MathUtils.clamp(desired.x, -(HALF - 9), HALF - 9);
@@ -787,15 +857,24 @@ export class Game {
     desired.y = 0;
     const speed = tgt === this.player ? 6 : 2.2;
     this.camFocus.lerp(desired, 1 - Math.exp(-speed * dt));
-    this.shake = Math.max(0, this.shake - dt * 1.8);
-    const s = this.shakeEnabled === false ? 0 : this.shake * this.shake * 0.7;
-    this.camera.position.copy(this.camFocus).add(this.camOffset);
-    if (s > 0) {
-      this.camera.position.x += (Math.random() - 0.5) * s;
-      this.camera.position.y += (Math.random() - 0.5) * s;
-      this.camera.position.z += (Math.random() - 0.5) * s;
+    // zoom: out a little for the last 3 (more for the final duel), in when you lurk in a bush
+    let zoom = 1;
+    if (this.mode === 'play' && !this.ended) {
+      const alive = this.brawlers.reduce((n, b) => n + (b.alive ? 1 : 0), 0);
+      zoom = alive === 2 ? 1.1 : alive === 3 ? 1.06 : 1;
     }
+    this.bushIdleT = P && P.alive && P.inBush && P.moveIntent.lengthSq() < 0.02 ? this.bushIdleT + dt : 0;
+    if (this.bushIdleT > 1.5) zoom *= 0.94;
+    F.update(dt, zoom);
+    const dist = F.zoom * F.punch, ca = Math.cos(F.orbit), sa = Math.sin(F.orbit), o = this.camOffset;
+    const sh = F.shake(this.shakeEnabled);
+    this.camera.position.set(
+      this.camFocus.x + (o.x * ca + o.z * sa) * dist + sh.x,
+      this.camFocus.y + o.y * dist + sh.y,
+      this.camFocus.z + (o.z * ca - o.x * sa) * dist + sh.z);
+    this.lighting.fogShift = Math.max(0, o.length() * dist - 22);
     this.camera.lookAt(this.camFocus.x, 0.5, this.camFocus.z);
+    if (sh.roll) this.camera.rotateZ(sh.roll);
   }
 
   updateLights(dt) {
