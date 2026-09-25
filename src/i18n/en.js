@@ -29,6 +29,9 @@ export default {
   'hud.you': 'YOU',
   'hud.power': '+POWER',
   'hud.immune': "IMMUNE",
+  'hud.ko': "K.O.",
+  'hud.threeLeft': "3 LEFT",
+  'hud.finalDuel': "FINAL DUEL",
   'mobile.rotate': 'Turn your phone sideways',
 
   // sound pop-up

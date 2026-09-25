@@ -202,7 +202,8 @@ export function setWeatherBed(name) {
 
 /* ------------------------------ one-shots ------------------------------ */
 
-export function sfx(name, vol = 1) {
+// rate: playback speed (the hit-confirm ladder rises in pitch); 1 = a small random jitter
+export function sfx(name, vol = 1, rate = 1) {
   if (!ctx || vol < 0.03) return;
   if (name === 'victory' && buffers.fanfare) name = 'fanfare';
   const now = ctx.currentTime;
@@ -212,7 +213,7 @@ export function sfx(name, vol = 1) {
   if (buf) {
     const src = ctx.createBufferSource(), g = ctx.createGain();
     src.buffer = buf;
-    src.playbackRate.value = 0.94 + Math.random() * 0.12; // small pitch jitter so repeats don't machine-gun
+    src.playbackRate.value = rate !== 1 ? rate : 0.94 + Math.random() * 0.12; // small pitch jitter so repeats don't machine-gun
     g.gain.value = vol * (GAIN[name] ?? 1);
     src.connect(g).connect(sfxBus);
     src.start(now);

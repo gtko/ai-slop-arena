@@ -131,6 +131,9 @@ export class Brawler {
     this.inBush = false;
     this.inPoison = false;
     this.flash = 0;
+    this.hitstopT = 0;  // hit freeze: the pose holds for a few frames (cosmetic, the sim keeps running)
+    this.squash = 0;    // hit squash spring: 1 = fully squashed, springs back through 0
+    this.squashV = 0;
     this.fireCd = 0;
     this.burst = [];
     this.recoil = 0;
@@ -197,9 +200,20 @@ export class Brawler {
   update(dt, t) {
     if (!this.alive) {
       if (this.dieT > 0) {
-        this.dieT -= dt;
-        this.model.anim.update(dt);
-        if (this.dieT <= 0) this.vanish();
+        const hold = this.hitstopT > 0;
+        this.hitstopT -= dt;
+        if (!hold) {
+          this.dieT -= dt;
+          this.model.anim.update(dt);
+          const L = this.launch;
+          if (L && (L.vy > 0 || this.pos.y > 0)) { // knocked off its feet, lands a little further
+            const nx = this.pos.x + L.vx * dt, nz = this.pos.z + L.vz * dt;
+            if (!this.g.arena.blocksMoveAt(nx, nz)) { this.pos.x = nx; this.pos.z = nz; } // stops against walls
+            L.vy -= 22 * dt;
+            this.pos.y = Math.max(0, this.pos.y + L.vy * dt);
+          }
+          if (this.dieT <= 0) this.vanish();
+        }
       }
       return;
     }
@@ -264,16 +278,22 @@ export class Brawler {
     if (m.figurine) this.animateFigurine(dt, speedFrac);
     else this.poseRig(dt, t);
 
-    // spawn pop + hit squash
+    // spawn pop + hit squash: a spring (k 320, damping 18) that overshoots once, like jelly
     this.spawnT = Math.min(1, this.spawnT + dt * 3);
     const pop = this.spawnT < 1 ? 1 + Math.sin(this.spawnT * Math.PI) * 0.25 : 1;
-    const sq = this.flash * 0.08;
-    m.root.scale.set(pop * (1 + sq), this.spawnT * pop * (1 - sq), pop * (1 + sq));
+    for (let rest = Math.min(dt, 0.1); rest > 1e-5; rest -= 1 / 120) {
+      const h = Math.min(rest, 1 / 120);
+      this.squashV += (-320 * this.squash - 18 * this.squashV) * h;
+      this.squash += this.squashV * h;
+    }
+    const sq = this.squash;
+    m.root.scale.set(pop * (1 + 0.1 * sq), this.spawnT * pop * (1 - 0.14 * sq), pop * (1 + 0.1 * sq));
+    this.hitstopT -= dt;
 
     if (this.flash > 0) {
       this.flash = Math.max(0, this.flash - dt * 7);
-      const f = this.flash * 0.9;
-      for (const mat of m.mats) if (!mat.userData.glow) mat.emissive.setRGB(f, f * 0.9, f * 0.9);
+      const f = this.flash > 0.75 ? 1 : this.flash * 0.9; // white, two frames at full
+      for (const mat of m.mats) if (!mat.userData.glow) mat.emissive.setRGB(f, f, f);
       if (this.flash === 0) this.coldShown = -1; // let the frost tint repaint
     }
   }
@@ -281,7 +301,7 @@ export class Brawler {
   // Figurine: pick the clips for what the brawler is doing (animator.js; clips in art-src/rig).
   animateFigurine(dt, speedFrac) {
     const A = this.model.anim, moving = speedFrac > 0.15, aiming = this.aimHold > 0;
-    A.mixer.timeScale = this.freezeT > 0 ? 0 : this.slowT > 0 ? 0.6 : 1; // frozen solid mid-pose
+    A.mixer.timeScale = this.freezeT > 0 || this.hitstopT > 0 ? 0 : this.slowT > 0 ? 0.6 : 1; // frozen solid mid-pose
     const sliding = this.onIce && !this.netDriven && Math.hypot(this.vel.x, this.vel.z) > 2 && this.moveIntent.lengthSq() < 0.04;
     if (this.won) A.setLoop('Victory');
     else if (sliding) A.setLoop('Slide');
@@ -353,8 +373,12 @@ export class Brawler {
     else A.once('Super');
   }
 
-  hurt() {
+  // stop: seconds of hit freeze for this hit (feel.js), 0 for none
+  hurt(stop = 0) {
     this.flash = 1;
+    this.squash = 1;
+    this.squashV = 0;
+    this.hitstopT = Math.max(this.hitstopT, stop);
     this.model.anim?.hit();
   }
 
@@ -373,6 +397,7 @@ export class Brawler {
     if (this.ice) this.ice.visible = false;
     // the body falls with its normal look: no hit flash, squash or frost tint left from the last frame
     this.flash = 0;
+    this.squash = 0; this.hitstopT = 0;
     this.model.root.scale.setScalar(1);
     for (const mat of this.model.mats) if (!mat.userData.glow) mat.emissive.setRGB(0, 0, 0);
     if (this.model.blink) this.model.blink.value = 1; // eyes shut

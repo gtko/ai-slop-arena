@@ -95,10 +95,19 @@ export class Input {
   padHit(i) { return this.btn[i] && !this.btnPrev[i]; }
   padReleased(i) { return !this.btn[i] && this.btnPrev[i]; }
 
-  rumble(strong, weak, ms) {
+  // Gamepad rumble, or on a touch screen a short vibration (Android; iOS web views have none).
+  // every: minimum ms between two of these calls (a fast burst of hits buzzes once).
+  rumble(strong, weak, ms, every = 0) {
+    if (!settings.vibration) return;
+    const now = performance.now();
+    if (every && now - (this.rumbleT || 0) < every) return;
+    this.rumbleT = now;
     const act = this.pad && this.pad.vibrationActuator;
-    if (!act || !settings.vibration) return;
-    try { act.playEffect('dual-rumble', { duration: ms, strongMagnitude: strong, weakMagnitude: weak }); } catch { /* unsupported */ }
+    if (act) {
+      try { act.playEffect('dual-rumble', { duration: ms, strongMagnitude: strong, weakMagnitude: weak }); } catch { /* unsupported */ }
+    } else if (this.usingTouch && navigator.vibrate) {
+      try { navigator.vibrate(Math.max(8, Math.round(ms * Math.max(strong, weak) * 0.6))); } catch { /* blocked */ }
+    }
   }
 
   /* ------------------------------ combined ------------------------------ */

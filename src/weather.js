@@ -260,7 +260,7 @@ export class Weather {
     this.group.add(this.boltMesh);
     const d = Math.hypot(x - focus.x, z - focus.z);
     setTimeout(() => sfx(Math.random() < 0.5 ? 'thunder' : 'thunder2', 1), 250 + d * 60);
-    this.g.shake = Math.min(1, this.g.shake + 0.15);
+    this.g.feel.add(0.15);
   }
 
   updateSnow(dt, focus) {
