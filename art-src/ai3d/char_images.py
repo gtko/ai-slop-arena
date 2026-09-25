@@ -66,6 +66,79 @@ CHARS = {
         'winding up to throw overhand, one arm raised high above the shoulder holding the fireball, the other arm pointing '
         'forward at the target, mischievous grin',
     ),
+    # Roadmap brawlers (docs/roadmap.md): concept art for the /roadmap page, then 3D when each one ships.
+    'pipchomp': (
+        'a shy little MUSHROOM KID riding a big friendly CARNIVOROUS PLANT pet. The kid: a small droopy lavender-purple '
+        'bell-shaped mushroom cap with tiny cream freckles and a frilly underside as a hat (not red, no big dots), cream skin, big dark round eyes with a shy smile, a knitted teal scarf, a leaf-green tunic, '
+        'brown boots. The pet, which the kid sits on: a big round leaf-green venus-flytrap head as wide as the kid is tall, '
+        'the jaws open in a happy grin with a magenta-red inside and rows of short rounded white teeth, two small leaf ears, '
+        'short stubby root legs, a curly vine tail with a small leaf.',
+        'no weapon: the pet\'s jaws are the weapon; the kid holds a small brown leather spore pouch tied with string.',
+        'the kid seated on top of the plant, both arms held out to the sides away from the body, the spore pouch in the '
+        'right hand; the plant\'s four root legs apart with gaps between them',
+        'the plant lunging forward mid-bite with the jaws wide open, the kid leaning forward holding on to a leaf with one '
+        'hand, the other arm up, an apologetic face',
+    ),
+    'glitch': (
+        'a cheeky little GLITCH ROBOT made of off-white vinyl. A big cube-shaped head whose front is a black screen showing '
+        'two simple white square pixel eyes and a pixel grin; above the head a chunky white computer-cursor arrow on a short '
+        'thin stem attached to the top of the head. The body is small and boxy with stepped pixel-stair edges on the '
+        'shoulders and feet, magenta and cyan offset paint stripes along the edges like a misprint, one arm painted as if '
+        'melting with drips, and that hand has six stubby fingers. Small rectangular floating-window shaped panels are '
+        'sculpted onto the chest and back like stickers.',
+        'a chunky retro KEYBOARD-BLASTER: a short keyboard-shaped gun with big square keys, a thick cable coiled around the '
+        'arm and a square nozzle.',
+        'the keyboard-blaster in the right hand, held out to the side pointing down (not in front of the body)',
+        'leaning back cockily with one leg raised, firing pose with the keyboard-blaster pointed forward, the other hand '
+        'doing a peace sign with its six fingers, big pixel grin, nothing flying out of the weapon',
+    ),
+    'mochi': (
+        'a big round gentle SUMO SEAL made of soft pastel pink strawberry mochi. Pear-shaped body much wider than tall, a '
+        'matte powdery surface, a thick rose-red sumo belt tied around the belly with a big knot at the back, small flipper '
+        'arms, short stubby feet, a tiny white chef hat on top of the head, closed happy curved eyes, rosy cheeks with a few '
+        'brown sesame seed dots, small whiskers.',
+        'no weapon: it fights with its belly; it holds a small wooden rice paddle.',
+        'flipper arms held out to the sides away from the body, the wooden rice paddle in the right flipper pointing down, '
+        'feet apart',
+        'sumo stance with knees bent, one foot raised high to stomp, flippers spread wide, determined happy face',
+    ),
+    'kappa': (
+        'a bossy little KAPPA NURSE, a Japanese river-imp creature with smooth lime-green skin, a short yellow duck-like beak '
+        'with a confident smile, big round black eyes, a flat round dish of light-blue water sculpted as a solid resin disc '
+        'sitting on top of the head surrounded by a ring of short green hair, a teal turtle shell on the back, webbed hands '
+        'and feet. Wears a white nurse dress with a rounded coral-red plus sign on the chest, a small white nurse cap pinned '
+        'next to the water dish, coral belt.',
+        'a big chunky BUBBLE SYRINGE LAUNCHER: a toy-like oversized syringe with a clear light-blue tank filled with solid '
+        'sculpted bubbles, a coral plunger and a round nozzle.',
+        'the bubble syringe held in the right hand out to the side pointing down, the left arm out to the side, feet apart',
+        'leaning forward on one foot, lobbing underarm with the bubble syringe, the other hand on the hip, a bossy wink',
+    ),
+    'hopper': (
+        'a hyper little FROG COURIER on roller skates. Warm yellow-orange smooth frog skin, very big round bulging eyes on '
+        'top of the head with a cheeky grin, a navy blue courier cap worn backwards, a navy messenger bag with a big buckle '
+        'across the chest, a white t-shirt with a navy stripe, knee pads, chunky red quad roller skates with white wheels.',
+        'a big wooden Y-shaped SLINGSHOT with a thick red rubber band and a leather pouch.',
+        'the slingshot in the right hand held out to the side pointing down, the left arm out to the side, skates apart',
+        'skating fast leaning forward on one skate, pulling the slingshot band back to aim forward, tongue out in '
+        'concentration',
+    ),
+    'clawdia': (
+        'a small feisty HERMIT CRAB whose shell is a tiny red-roofed Japanese tea-house with round paper lanterns sculpted '
+        'on the corners, coral-orange crab body, one big claw and one small claw, eyes on short stalks with a sassy look, a '
+        'little green headband, short pointed legs.',
+        'her big coral claw with a small brass bubble nozzle built into it.',
+        'both claws held out to the sides away from the body, legs apart with gaps between them',
+        'crouched low and sideways in a scuttling pose, the big claw raised and aimed forward, the small claw up in a '
+        'cheeky wave, sassy grin, nothing flying out of the claw',
+    ),
+    'nimbus': (
+        'a sleepy fluffy CLOUD SHEEP: a round body of puffy white sculpted cloud wool, a small slate-grey face and legs, '
+        'droopy half-closed eyes, a thin golden lightning-bolt shaped horn on top of the head, a tiny yellow raincoat hood.',
+        'a long brass UMBRELLA-RIFLE: a closed yellow umbrella with a brass barrel at its tip.',
+        'the umbrella-rifle in the right hoof held out to the side pointing down, the left arm out to the side, legs apart',
+        'kneeling on one knee, aiming the umbrella-rifle forward like a sniper, one eye closed, sleepy but focused, nothing '
+        'flying out of the weapon',
+    ),
 }
 
 
