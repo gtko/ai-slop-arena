@@ -48,6 +48,15 @@ export function findPath(arena, poison, si, sj, gi, gj) {
 
 const _v = new THREE.Vector3();
 // distance from point p to the segment a-b on the ground plane
+// Is o inside the cone a spread weapon fired at point p sweeps (up to full range, with a margin)?
+function inFan(b, p, o) {
+  const half = { blaster: 0.36, frostbite: 0.2 }[b.type.key];
+  if (!half) return false;
+  const dx = o.pos.x - b.pos.x, dz = o.pos.z - b.pos.z, d = Math.hypot(dx, dz);
+  if (d > b.type.range + 1.5) return false;
+  const diff = Math.atan2(dx, dz) - Math.atan2(p.x - b.pos.x, p.z - b.pos.z);
+  return Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff))) < half + Math.atan2(1.2, Math.max(d, 0.5));
+}
 const segDist = (p, a, b) => {
   const dx = b.x - a.x, dz = b.z - a.z, l2 = dx * dx + dz * dz || 1;
   const k = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.z - a.z) * dz) / l2));
@@ -234,8 +243,9 @@ export class BotBrain {
       }
     } else if (this.crate && this.fireCd <= 0 && b.ammo >= 2) {
       const cp = this.crate.group.position, d = cp.distanceTo(b.pos);
-      // opening grace: no crate shots that could hit someone standing in the way or next to it
-      if (g.time < this.graceUntil && g.brawlers.some(o => o !== b && o.alive && segDist(o.pos, b.pos, cp) < 2.4)) return;
+      // opening grace: no crate shots that could hit someone standing in the way or next to it; spread
+      // weapons (Blaster pellets, Frostbite's side shards) can miss the crate and fly on to full range
+      if (g.time < this.graceUntil && g.brawlers.some(o => o !== b && o.alive && (segDist(o.pos, b.pos, cp) < 2.4 || inFan(b, cp, o)))) return;
       if (d < T.range * 0.9 && (T.key === 'bomber' || A.los(b.pos.x, b.pos.z, cp.x, cp.z, 1.1))) {
         if (g.tryAttack(b, cp.x - b.pos.x, cp.z - b.pos.z, cp, false)) this.fireCd = 0.5 + Math.random() * 0.5;
       }
