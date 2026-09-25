@@ -39,8 +39,10 @@ Built in the open by an AI pipeline, and proud of it: new brawlers, arenas and c
 **Teaser:** "Every hit lands. You'll feel it."
 **Promise:** Every shot you land and every KO you score, you feel it in your hands and ears, and you're in a match within a minute.
 **Headline features:** two-stage hit confirm + hitstop + squash; trauma camera + look-ahead + endgame zoom; KO beat + final-KO slow-mo; per-brawler audio and barks; team/self outline colours + readability pass; kill feed and "3 LEFT"; bots fill matchmaking after 60 s.
-**Items:** F01, F02, F03, F04, G01, G02, G03, G04, G05, G06, G08, G09 (flagged), V01, V04 (core presets: hit spark/disc, KO stamp, launch arc, decal layer), V05, U01, U02 (barks + surface footsteps, both LoS-gated), T01.
+**Items:** F01, F02, F03, F04, G01, G02, G03, G04, G05, G06, G08 (no off-screen enemy arrows), V01, V04 (core presets: hit spark/disc, KO stamp, launch arc, decal layer), V05, U01, U02 (barks + surface footsteps, both LoS-gated), T01.
 **New brawlers / maps:** none (polish release on the same content, so we can measure the before/after).
+**Dropped:** G09 (gunfire noise arc) and the off-screen enemy arrows of G08: the user wants hide and seek to stay intact, so nothing reveals where enemies are.
+**Balance tool (T01):** `npm run balance [-- matches]` plays headless bot tournaments and reports placement, win and top-4 rates per brawler and map.
 
 **Art/content production:**
 
