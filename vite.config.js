@@ -59,7 +59,7 @@ const serverBuild = {
 const { version } = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8'));
 const SOURCE_MAPS = !!process.env.SENTRY_AUTH_TOKEN;
 const sourceMaps = out => SOURCE_MAPS ? [sentryVitePlugin({
-  org: 'odykit', project: 'ai-slop-arena', url: 'https://de.sentry.io/',
+  org: 'odykit', project: 'ai-slop-arena', // the token also names the region (de.sentry.io)
   authToken: process.env.SENTRY_AUTH_TOKEN,
   release: { name: `ai-slop-arena@${version}` },
   sourcemaps: { filesToDeleteAfterUpload: [`${out}/**/*.map`] },
