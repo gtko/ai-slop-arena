@@ -103,7 +103,8 @@ export class Sight {
   }
 
   trace(A, x, z) {
-    const key = `${x.toFixed(2)},${z.toFixed(2)},${A.crates.size}`;
+    if (A !== this.arena) { this.arena = A; this.key = ''; } // new match, new map
+    const key = `${x.toFixed(2)},${z.toFixed(2)},${A.rev}`;
     if (key === this.key) return; // nothing moved, nothing broke: the mask still holds
     this.key = key;
     const ux = x / TILE + N / 2, uz = z / TILE + N / 2, into = INTO_WALL / TILE, pts = this.pts;

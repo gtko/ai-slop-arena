@@ -71,6 +71,7 @@ export class Arena {
       this.grid.push(row);
     }
     this.crates = new Map();
+    this.rev = 0; // bumped whenever a tile opens up (line-of-sight caches key on it)
     this.torches = [];
     this.buildGround();
     this.buildWalls();
@@ -535,6 +536,7 @@ export class Arena {
     this.walls.setMatrixAt(idx, ZERO);
     this.walls.instanceMatrix.needsUpdate = true;
     this.grid[j][i] = '.';
+    this.rev++;
     return this.wallColors[idx];
   }
 
@@ -549,6 +551,7 @@ export class Arena {
     this.group.remove(c.group);
     this.crates.delete(this.key(i, j));
     this.grid[j][i] = '.';
+    this.rev++;
     return true;
   }
 

@@ -110,7 +110,7 @@ export class BotBrain {
       const s = d + (o.hp / o.maxHp) * 4 - (o === this.target ? 2 : 0);
       if (s < bestS) { bestS = s; best = o; }
     }
-    if (best !== this.target) this.seen = 0;
+    if (best !== this.target) { this.seen = 0; this.seenAt = g.time; } // memory starts with the new target
     this.target = best;
     this.crate = null;
 

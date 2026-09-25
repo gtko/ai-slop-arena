@@ -455,9 +455,12 @@ export class Game {
       // status effects are decided by the host; our own brawler needs them too (we move it locally)
       b.slowT = flags & 4 ? 0.2 : Math.min(b.slowT, 0);
       b.freezeT = flags & 8 ? 0.2 : Math.min(b.freezeT, 0);
-      if (b !== this.player) { b.net.set(x, z); b.netFacing = f; }
+      if (b !== this.player) {
+        b.net.set(x, z); b.netFacing = f;
+        if (b.netHidden) { b.pos.x = x; b.pos.z = z; } // back in sight: appear where it is, don't glide there through the wall
+      }
     }
-    // Brawlers the host left out are hidden from us (bush / fog): keep them invisible.
+    // Brawlers the host left out are hidden from us (bush / wall / range / fog): keep them invisible.
     for (const b of this.brawlers) b.netHidden = b !== this.player && !seen.has(b);
     // The host refused one of our moves (too fast, through a wall...): snap back to where it says.
     const P = this.player;
