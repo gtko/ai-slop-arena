@@ -233,7 +233,8 @@ export class Brawler {
     const statusMul = this.freezeT > 0 ? 0 : this.slowT > 0 ? 0.55 : 1;
 
     // Brawl-style regen: 13%/s after 3s without dealing or taking damage.
-    if (t - this.lastHurt > 3 && t - this.lastAttack > 3 && !this.inPoison && this.hp < this.maxHp) {
+    this.regen = t - this.lastHurt > 3 && t - this.lastAttack > 3 && !this.inPoison;
+    if (this.regen && this.hp < this.maxHp) {
       this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.13 * dt);
     }
 

@@ -26,7 +26,9 @@ export class Hud {
     this.feed.id = 'killfeed';
     this.banner = document.createElement('div');
     this.banner.id = 'banner';
-    this.root.append(this.feed, this.banner);
+    this.lowEl = document.createElement('div');
+    this.lowEl.id = 'lowhp';
+    this.root.append(this.feed, this.banner, this.lowEl);
   }
 
   show(on) { this.root.classList.toggle('hidden', !on); }
@@ -79,6 +81,8 @@ export class Hud {
         o.ammo[k].style.width = (Math.min(1, Math.max(0, b.ammo - k)) * 100).toFixed(0) + '%';
       }
       o.el.classList.toggle('hidden-bush', b.inBush);
+      const regen = b.regen && b.hp < b.maxHp;
+      if (regen !== o.regen) { o.el.classList.toggle('regen', regen); o.regen = regen; } // healing: the bar glows
     }
 
     const alive = game.brawlers.filter(b => b.alive).length;
@@ -104,6 +108,9 @@ export class Hud {
       this.superEl.classList.toggle('ready', p.superCharge >= 1);
       this.cubeEl.textContent = p.cubes;
       this.vignette.style.opacity = p.alive && p.inPoison ? '1' : '0';
+      const low = p.alive && !game.ended && p.hp / p.maxHp < 0.3;
+      if (low !== this.low) { this.lowEl.classList.toggle('on', low); this.low = low; }
+      if (low) this.lowEl.style.animationDuration = p.hp / p.maxHp < 0.15 ? '0.6s' : '0.85s';
     }
   }
 

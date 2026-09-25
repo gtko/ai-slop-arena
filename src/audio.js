@@ -48,7 +48,10 @@ export function initAudio() {
   ctx = new AC();
   master = ctx.createGain(); master.connect(ctx.destination);
   sfxBus = ctx.createGain(); sfxBus.connect(master);
-  musicBus = ctx.createGain(); musicBus.connect(master);
+  // music -> duck (own super, KOs) -> low-pass (low health: the world goes muffled) -> master
+  musicDuck = ctx.createGain();
+  musicLP = ctx.createBiquadFilter(); musicLP.type = 'lowpass'; musicLP.frequency.value = 20000;
+  musicBus = ctx.createGain(); musicBus.connect(musicDuck).connect(musicLP).connect(master);
   ambBus = ctx.createGain(); ambBus.connect(master);
   applyMix(true);
   noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
@@ -200,6 +203,26 @@ export function setWeatherBed(name) {
   setAmbience(amb.night, true);
 }
 
+/* ------------------------------ mix moments ------------------------------ */
+
+let musicDuck = null, musicLP = null, danger = 0;
+
+// Music dips by 6 dB for a moment (your super, your KOs), back over `sec`.
+export function duckMusic(sec = 0.6) {
+  if (!ctx) return;
+  const g = musicDuck.gain, now = ctx.currentTime;
+  g.cancelScheduledValues(now);
+  g.setTargetAtTime(0.5, now, 0.05);
+  g.setTargetAtTime(1, now + 0.15, sec / 3);
+}
+
+// Low health (0..1): the music closes down to a 1200 Hz low-pass.
+export function setDanger(v) {
+  if (!ctx || Math.abs(v - danger) < 0.01) return;
+  danger = v;
+  musicLP.frequency.setTargetAtTime(20000 * Math.pow(1200 / 20000, v), ctx.currentTime, 0.25);
+}
+
 /* ------------------------------ one-shots ------------------------------ */
 
 // rate: playback speed (the hit-confirm ladder rises in pitch); 1 = a small random jitter
@@ -274,5 +297,6 @@ function synth(name, vol) {
     case 'gas': tone(80, 60, 0.6, 'sine', 0.25 * vol); break;
     case 'victory': tone(523, 1046, 0.5, 'triangle', 0.3 * vol); break;
     case 'defeat': tone(330, 110, 0.8, 'triangle', 0.3 * vol); break;
+    case 'heartbeat': tone(80, 48, 0.1, 'sine', 0.55 * vol); setTimeout(() => tone(72, 44, 0.12, 'sine', 0.4 * vol), 170); break;
   }
 }

@@ -6,7 +6,7 @@ import { Poison } from './poison.js';
 import { BotBrain } from './ai.js';
 import { Effects } from './effects.js';
 import { shared } from './materials.js';
-import { sfx } from './audio.js';
+import { sfx, duckMusic, setDanger } from './audio.js';
 import { MAPS, MAP_KEYS } from './maps.js';
 import { Weather } from './weather.js';
 import { t } from './i18n/index.js';
@@ -62,6 +62,7 @@ export class Game {
     lighting.fogShift = Math.max(0, this.camOffset.length() - 22); // keep the air around the player clear
     this.feel = new Feel();   // hit freeze, camera trauma, zoom punches (cosmetic)
     this.bushIdleT = 0;
+    this.heartT = 0;          // low health: heartbeat timer
     this.aimPoint = new THREE.Vector3();
     this.aimDir = new THREE.Vector3(0, 0, -1);
     this.aimDist = 0;
@@ -207,7 +208,7 @@ export class Game {
     }
     b.lastAttack = this.time;
     b.revealT = 1.2;
-    if (isSuper && b === this.player) this.feel.punchTo(0.92, 0.3); // own super: a quick punch-in
+    if (isSuper && b === this.player) { this.feel.punchTo(0.92, 0.3); duckMusic(); } // own super: a quick punch-in
     b.face(dx, dz);
     b.attacked(isSuper);
     this.combat.attack(b, dx, dz, point, isSuper);
@@ -264,6 +265,16 @@ export class Game {
     }
   }
 
+  // Under 30% health: red pulsing edges (hud.js), a heartbeat (faster under 15%), muffled music.
+  lowHealth(dt) {
+    const P = this.player, f = P && P.alive && this.mode === 'play' && !this.ended ? P.hp / P.maxHp : 1;
+    const low = f < 0.3 ? Math.min(1, (0.3 - f) / 0.2 + 0.4) : 0;
+    setDanger(low);
+    if (!low) { this.heartT = 0; return; }
+    this.heartT -= dt;
+    if (this.heartT <= 0) { sfx('heartbeat', 0.8); this.heartT = f < 0.15 ? 0.6 : 0.85; }
+  }
+
   // Effects and sounds of a brawler only play when you can see it (or with no local player).
   fxVisible(b) {
     return !this.player || b === this.player || b.visibleToPlayer;
@@ -300,6 +311,7 @@ export class Game {
       this.feel.add(0.25);
       this.feel.punchTo(0.94, 0.25);
       this.hud.koStamp(this.camera, b.pos.x, b.pos.z);
+      duckMusic();
       this.input.rumble(0.9, 0.6, 180);
     }
     if (b === this.player) this.feel.add(0.4);
@@ -562,6 +574,7 @@ export class Game {
     const frozen = this.paused && !this.net;
     if (!frozen && (this.state === 'playing' || this.state === 'over')) this.step(dt, t);
     this.effects.update(frozen ? 0 : dt);
+    this.lowHealth(dt);
     if (this.arena) this.arena.update(dt, t);
     this.updateCamera(dt);
     this.updateLights(frozen ? 0 : dt);

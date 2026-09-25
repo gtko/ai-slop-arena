@@ -117,6 +117,11 @@ body.touch #killfeed { right: calc(70px + env(safe-area-inset-right)); top: calc
 
 #flash { position: absolute; inset: 0; opacity: 0; background: radial-gradient(circle at 50% 20%, #eef3ff, #a9b8e8); mix-blend-mode: screen; }
 #vignette { position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s; box-shadow: inset 0 0 160px 40px rgba(40, 220, 90, 0.55); }
+/* under 30% health: red edges beating with the heart */
+#lowhp { position: absolute; inset: 0; opacity: 0; transition: opacity 0.4s; box-shadow: inset 0 0 140px 30px rgba(230, 30, 40, 0.55); }
+#lowhp.on { opacity: 1; animation: lowBeat 0.85s ease-out infinite; }
+@keyframes lowBeat { 0%, 100% { opacity: 0.55; } 12% { opacity: 1; } 30% { opacity: 0.7; } 42% { opacity: 0.95; } }
+.ov.regen .ov-fill { filter: brightness(1.25); box-shadow: 0 0 8px rgba(110, 255, 160, 0.9); }
 
 /* ------------------------------ panel ------------------------------ */
 .panel { position: fixed; top: 12px; right: 12px; width: 262px; max-height: calc(100vh - 24px); overflow: auto; background: var(--panel); backdrop-filter: blur(8px); border: 2px solid var(--ink); border-radius: 14px; box-shadow: 0 4px 0 rgba(0,0,0,0.4); font-size: 13px; z-index: 20; }
