@@ -625,6 +625,46 @@ def v070():
     img.convert('RGB').save(os.path.join(OUT, 'v0.7.0-feedback.png'), optimize=True)
 
 
+def v080():
+    banner('v0.8.0', 'NEW LOOKS', 'Same moves, all-new characters.',
+           [('🌳', 'Stump golem'), ('🦎', 'Axolotl ranger'), ('🔥', 'Magma imp'), ('☄️', 'Meteor super')],
+           'v0.8.0-banner.png', ('blaster', 'gunslinger', 'bomber'))
+
+    # one card per redesigned brawler: portrait, who they are now, what they shoot (numbers from combat.js)
+    cols = [('blaster', 'Blaster', 'Tree-stump golem', (95, 184, 58),
+             ['Hollow-log blunderbuss', '5 thorny seeds per shot', 'Super: 9 seeds, knockback']),
+            ('gunslinger', 'Gunslinger', 'Axolotl star-ranger', (242, 122, 168),
+             ['Twin ray pistols', 'Bursts of 6 ray bolts', 'Super: 12 bolts through walls']),
+            ('bomber', 'Bomber', 'Magma imp', (255, 122, 31),
+             ['Fireballs over walls', '800 damage, 2 m blast', 'Super: a 1800-damage meteor'])]
+    W, H = 1600, 900
+    img = background(W, H, glow=(0.5, 0.3))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 36), 'THREE NEW CHARACTERS', display(58), YELLOW, anchor='ma')
+    cw, gap = 460, 30
+    x0 = (W - (3 * cw + 2 * gap)) // 2
+    for i, (key, name, who, col, lines) in enumerate(cols):
+        x = x0 + i * (cw + gap)
+        card(img, (x, 130, x + cw, 720), outline=col, radius=26)
+        p = Image.open(os.path.join(UI, f'{key}.png')).convert('RGBA')
+        ph = 290
+        p = p.resize((int(p.width * ph / p.height), ph), Image.LANCZOS)
+        if p.width > cw - 40:
+            p = p.resize((cw - 40, int(p.height * (cw - 40) / p.width)), Image.LANCZOS)
+        img.alpha_composite(p, (x + (cw - p.width) // 2, 150 + ph - p.height))
+        d.text((x + cw // 2, 470), name, font=display(44), fill=YELLOW, anchor='ma')
+        pill_w = d.textlength(who, font=body(24, 'Black')) + 36
+        pill(img, (int(x + (cw - pill_w) // 2), 528), who, body(24, 'Black'), col + (255,), color=INK, pad=(18, 8))
+        for li, line in enumerate(lines):
+            d.text((x + cw // 2, 598 + li * 38), line, font=body(25, 'Bold'), fill=TEXT, anchor='ma')
+    by = 750
+    card(img, (x0, by, W - x0, by + 120), fill=(255, 210, 63, 255), outline=INK, radius=26)
+    d.text((W // 2, by + 38), 'Same stats, same controls, same range', font=display(38), fill=INK, anchor='mm')
+    d.text((W // 2, by + 88), 'Only the looks changed: models, portraits, projectiles, colours and texts in 30 languages',
+           font=body(25, 'Bold'), fill=INK, anchor='mm')
+    img.convert('RGB').save(os.path.join(OUT, 'v0.8.0-brawlers.png'), optimize=True)
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     v020()
@@ -635,5 +675,6 @@ if __name__ == '__main__':
     v061()
     v062()
     v070()
+    v080()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')

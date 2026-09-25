@@ -3,6 +3,15 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.8.0](docs/releases/v0.8.0.md): New looks
+
+<a href="docs/releases/v0.8.0.md"><img src="docs/releases/img/v0.8.0-banner.png" alt="v0.8.0: new looks" width="100%"></a>
+
+- 🌳 Blaster is now a tree-stump golem firing thorny seeds from a log blunderbuss.
+- 🦎 Gunslinger is now an axolotl star-ranger with twin ray pistols.
+- 🔥 Bomber is now a magma imp with flickering flame hair, fireballs and a meteor super.
+- 🎨 Same gameplay; new models, portraits, projectiles, store art and texts in 30 languages.
+
 ## [v0.7.0](docs/releases/v0.7.0.md): Made with you
 
 <a href="docs/releases/v0.7.0.md"><img src="docs/releases/img/v0.7.0-banner.png" alt="v0.7.0: made with you" width="100%"></a>

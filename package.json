@@ -4,7 +4,7 @@
   "description": "Top-down brawler: 8 brawlers, 5 arenas with live weather, last one standing wins.",
   "author": "gtko",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.8.0",
   "type": "module",
   "main": "electron/main.cjs",
   "steam": {
