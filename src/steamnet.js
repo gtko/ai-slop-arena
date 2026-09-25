@@ -1,4 +1,5 @@
 import { randomCode } from './net.js';
+import { validBrawler } from './gadgets.js';
 import { presence, serverOrigin } from './platform.js';
 import { t } from './i18n/index.js';
 
@@ -13,7 +14,7 @@ import { t } from './i18n/index.js';
 // last `room` message and carries on as the new host.
 
 const MAX_PLAYERS = 8;
-const BRAWLERS = new Set(['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt']);
+const BRAWLERS = { has: validBrawler }; // 'volt' or 'volt:B2' (loadout: gadget + star power)
 const LEFT = new Set([1, 2, 3, 4]); // ChatMemberStateChange: Left, Disconnected, Kicked, Banned
 const clean = (s, n) => String(s || '').replace(/[^\p{L}\p{N} _\-.!?']/gu, '').slice(0, n).trim();
 // High-rate state that is resent anyway: unreliable, newest wins. Everything else is reliable.

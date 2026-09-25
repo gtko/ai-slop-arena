@@ -79,6 +79,7 @@ await test('a frost nova cannot freeze someone who just thawed', () => {
   while (g.time < 6) m.advance(0.05); // past the spawn shield
   g.brains.clear();
   const a = g.byId.get('alice'), f = g.brawlers.find(b => b !== a);
+  f.star = 1; // no Permafrost
   f.pos.set(a.pos.x + 1, f.pos.y, a.pos.z);
   a.hp = a.maxHp = 1e6;
   g.combat.nova(f);
@@ -88,6 +89,43 @@ await test('a frost nova cannot freeze someone who just thawed', () => {
   f.pos.set(a.pos.x + 1, f.pos.y, a.pos.z);
   g.combat.nova(f);
   assert.ok(a.freezeT <= 0, 'frozen again while immune');
+});
+
+await test('every gadget works, with 3 charges and a 5 s lockout', () => {
+  for (const type of ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt']) for (const gad of ['A', 'B']) {
+    const m = new ServerMatch({ map: 'oasis', roster: makeRoster([{ id: 'alice', name: 'a', type: `${type}:${gad}1` }]), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
+    const g = m.game;
+    while (g.time < 6) m.advance(0.05);
+    g.brains.clear();
+    const a = g.byId.get('alice');
+    a.netDriven = false; // the host plays it here, like a bot
+    assert.equal(a.gadget, gad, `${type}: loadout not parsed`);
+    assert.ok(g.useGadget(a, 1, 0, a.pos), `${type}${gad}: could not use the gadget`);
+    assert.ok(!g.useGadget(a, 1, 0, a.pos), `${type}${gad}: no lockout`);
+    for (let k = 0; k < 2; k++) { for (let s = 0; s < 14; s++) m.advance(0.05); a.gadgetCd = 0; assert.ok(g.useGadget(a, 0, 1, a.pos), `${type}${gad}: charge ${k + 2}`); m.advance(0.5); }
+    a.gadgetCd = 0;
+    assert.ok(!g.useGadget(a, 1, 0, a.pos), `${type}${gad}: a 4th charge`);
+    m.advance(3);
+  }
+});
+
+await test('Bark Skin takes less damage, Root Charge roots', () => {
+  const m = new ServerMatch({ map: 'oasis', roster: makeRoster([{ id: 'alice', name: 'a', type: 'blaster:B1' }]), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
+  const g = m.game;
+  while (g.time < 6) m.advance(0.05);
+  g.brains.clear();
+  const a = g.byId.get('alice'), o = g.brawlers.find(b => b !== a);
+  a.netDriven = false;
+  const hp = a.hp; g.damage(a, 1000, o);
+  const plain = hp - a.hp;
+  g.useGadget(a, 1, 0, a.pos);
+  const hp2 = a.hp; g.damage(a, 1000, o);
+  assert.ok(hp2 - a.hp < plain * 0.7, 'Bark Skin did not reduce the damage');
+  a.gadget = 'A'; a.gadgetCd = 0; o.ccImmuneT = 0;
+  o.pos.set(a.pos.x + 1.6, 0, a.pos.z);
+  g.useGadget(a, 1, 0, a.pos);
+  for (let k = 0; k < 6; k++) m.advance(0.05);
+  assert.ok(o.rootT > 0 || o.hp < o.maxHp, 'Root Charge missed a brawler right in front');
 });
 
 await test('nobody is hurt during the opening seconds (spawn shield + calm bots)', () => {

@@ -23,8 +23,9 @@ export const N = 25;
 export const HALF = (N * TILE) / 2;
 
 // Layouts live in maps.js. 'K' = indestructible prop, 'I' = walkable ice.
-const MOVE_BLOCK = new Set(['X', '#', 'W', 'C', 'T', 'K']);
-const SHOT_BLOCK = new Set(['X', '#', 'C', 'T', 'K']);
+// 'G': a Frostbite ice wall (gadget), temporary
+const MOVE_BLOCK = new Set(['X', '#', 'W', 'C', 'T', 'K', 'G']);
+const SHOT_BLOCK = new Set(['X', '#', 'C', 'T', 'K', 'G']);
 export const WALL_H = 2.1;
 export const BOUND_H = 2.7;
 
@@ -50,6 +51,8 @@ function tintedBox(w, h, d, r, bottom = 0.62) {
   return g;
 }
 
+let ICE_BLOCK = null;
+
 export class Arena {
   constructor(scene, map = MAPS.oasis) {
     this.scene = scene;
@@ -72,6 +75,7 @@ export class Arena {
     }
     this.crates = new Map();
     this.rev = 0; // bumped whenever a tile opens up (line-of-sight caches key on it)
+    this.iceWalls = []; // temporary ice walls (Frostbite gadget)
     this.torches = [];
     this.buildGround();
     this.buildWalls();
@@ -530,6 +534,28 @@ export class Arena {
 
   /* ------------------------------ mutation ----------------------------- */
 
+  // Frostbite's Ice Wall: turn open tiles into ice blocks for `life` seconds (tiles: [[i, j]...]).
+  // Returns the tiles actually frozen (only plain ground, grass, ice and bushes).
+  iceWall(tiles, life, keep = () => true) {
+    if (!ICE_BLOCK) ICE_BLOCK = { geo: new THREE.BoxGeometry(TILE * 0.96, 1.9, TILE * 0.96), mat: new THREE.MeshStandardMaterial({
+      color: 0xbfe8ff, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.8, emissive: 0x2a6f9a, emissiveIntensity: 0.5 }) };
+    const done = [];
+    for (const [i, j] of tiles) {
+      const c = this.get(i, j);
+      if (!'.BI'.includes(c) || c === '' || !keep(i, j)) continue;
+      const m = new THREE.Mesh(ICE_BLOCK.geo, ICE_BLOCK.mat);
+      this.center(i, j, m.position).y = 0.95;
+      m.castShadow = true;
+      m.scale.y = 0.01;
+      this.group.add(m);
+      this.iceWalls.push({ i, j, was: c, mesh: m, t: life, T: life });
+      this.grid[j][i] = 'G';
+      done.push([i, j]);
+    }
+    if (done.length) this.rev++;
+    return done;
+  }
+
   destroyWall(i, j) {
     if (this.get(i, j) !== '#') return null;
     const idx = this.wallIndex.get(this.key(i, j));
@@ -558,6 +584,16 @@ export class Arena {
   /* ------------------------------ per frame ---------------------------- */
 
   update(dt, t) {
+    for (let k = this.iceWalls.length - 1; k >= 0; k--) { // ice walls grow in, then melt away
+      const w = this.iceWalls[k];
+      w.t -= dt;
+      w.mesh.scale.y = Math.min(1, (w.T - w.t) / 0.15, Math.max(0.01, w.t / 0.3));
+      if (w.t > 0) continue;
+      this.group.remove(w.mesh);
+      if (this.grid[w.j][w.i] === 'G') this.grid[w.j][w.i] = w.was;
+      this.iceWalls.splice(k, 1);
+      this.rev++;
+    }
     this.water.update(dt, this.sky);
     for (const c of this.crates.values()) {
       if (c.shake > 0) {

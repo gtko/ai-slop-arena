@@ -3,6 +3,7 @@ import { TILE } from './arena.js';
 import { sfx } from './audio.js';
 import { particle } from './effects.js';
 import { t } from './i18n/index.js';
+import { hasStar } from './gadgets.js';
 
 // HDR colours (> 1) so projectiles bloom; the light colour is the normalised hue.
 const COL = {
@@ -57,6 +58,7 @@ export class Combat {
     this.bullets = [];
     this.bombs = [];
     this.strikes = []; // Volt super: scheduled lightning strikes
+    this.zones = [];   // ground hazards: lava puddles, zap traps (gadgets, star powers)
     this.free = new Map(); // geometry -> spare bullet meshes
     this.bulletGeo = new THREE.SphereGeometry(1, 12, 8);
     this.seedGeo = seedGeometry();
@@ -144,7 +146,7 @@ export class Combat {
       sfx('shot_ice', vol);
     } else if (T === 'volt') {
       if (sup) { this.storm(b, point); return; }
-      this.spawnBullet(b, mx, mz, base, { speed: 26, range: 13, dmg: 650, r: 0.3, breakWalls: false, knock: 0, emit: true, col, chain: 2 });
+      this.spawnBullet(b, mx, mz, base, { speed: 26, range: 13, dmg: 650, r: 0.3, breakWalls: false, knock: 0, emit: true, col, chain: hasStar(b, 'conductor') ? 3 : 2 });
       this.g.effects.muzzle(mx, BULLET_Y, mz, dx, dz, col);
       sfx('shot_zap', vol);
     } else {
@@ -160,11 +162,12 @@ export class Combat {
       const ux = (tx - b.pos.x) / cd, uz = (tz - b.pos.z) / cd;
       this.bombs.push({
         sx: sup ? tx - ux * 4 : mx, sz: sup ? tz - uz * 4 : mz, sy: sup ? 12 : 1.6,
-        tx, tz, t: 0, dur: 0.5 + (cd / R) * 0.35, h: 2.6 + cd * 0.22,
-        dmg: sup ? 1800 : 800, radius: sup ? 3.6 : 2.0, owner: b, sup, mesh, spin: rnd(6, 12),
+        tx, tz, t: 0, dur: (0.5 + (cd / R) * 0.35) * (!sup && b.fuseNext ? 0.6 : 1), h: 2.6 + cd * 0.22,
+        dmg: sup ? 1800 : hasStar(b, 'bigBang') ? 720 : 800, radius: sup ? 3.6 : hasStar(b, 'bigBang') ? 2.4 : 2.0, owner: b, sup, mesh, spin: rnd(6, 12),
         fx: mx, fy: 1.6, fz: mz,
       });
       sfx('throw', vol);
+      if (!sup) b.fuseNext = false;
     }
   }
 
@@ -191,7 +194,8 @@ export class Combat {
       for (const s of b.burst) s.t -= dt;
       while (b.burst.length && b.burst[0].t <= 0) {
         const s = b.burst.shift();
-        const a = s.a + rnd(-0.035, 0.035);
+        const still = hasStar(b, 'steadyAim') && Math.hypot(b.vel.x, b.vel.z) < 0.8;
+        const a = s.a + rnd(-0.035, 0.035) * (still ? 0.5 : 1);
         const dx = Math.sin(a), dz = Math.cos(a), col = this.colorFor(b, s.sup);
         const mx = b.pos.x + dx * 0.9, mz = b.pos.z + dz * 0.9;
         this.spawnBullet(b, mx, mz, a, {
@@ -208,6 +212,7 @@ export class Combat {
     this.updateBullets(dt);
     this.updateBombs(dt);
     this.updateStrikes(dt);
+    this.updateZones(dt);
   }
 
   updateBullets(dt) {
@@ -220,8 +225,9 @@ export class Combat {
         remaining -= st;
         B.x += B.dx * st; B.z += B.dz * st; B.travel += st;
         const ti = A.toTile(B.x), tj = A.toTile(B.z), c = A.get(ti, tj);
-        if (c === 'X' || c === 'T') {
+        if (c === 'X' || c === 'T' || c === 'G') {
           dead = true;
+          this.splinter(B);
           g.effects.sparkBurst(B.x - B.dx * 0.3, BULLET_Y, B.z - B.dz * 0.3, WALL_SPARK, 5, 4, 0.25, 0.12);
         } else if (c === '#') {
           if (B.breakWalls) {
@@ -229,6 +235,7 @@ export class Combat {
             B.travel += 1.2;
           } else {
             dead = true;
+            this.splinter(B);
             g.effects.sparkBurst(B.x - B.dx * 0.3, BULLET_Y, B.z - B.dz * 0.3, WALL_SPARK, 5, 4, 0.25, 0.12);
           }
         } else if (c === 'C') {
@@ -242,7 +249,7 @@ export class Combat {
           const dx = o.pos.x - B.x, dz = o.pos.z - B.z, rr = o.radius + B.r;
           if (dx * dx + dz * dz < rr * rr) {
             g.damage(o, B.dmg * B.owner.dmgMul, B.owner, B.breakWalls);
-            if (B.slow && g.authority && o.alive) o.slowT = Math.max(o.slowT, B.slow);
+            if (B.slow && g.authority && o.alive) { o.slowT = Math.max(o.slowT, B.slow); o.slowMul = hasStar(B.owner, 'deepFreeze') ? 0.45 : 0.55; }
             if (B.chain && g.authority) this.chainZap(o, B);
             if (B.knock) g.applyKnock(o, B.dx * B.knock, B.dz * B.knock);
             g.effects.hit(B.x, BULLET_Y, B.z, B.col, B.dx, B.dz);
@@ -329,14 +336,64 @@ export class Combat {
     }
     const wet = A.isWaterAt(x, z);
     g.effects.explosion(x, z, R, B.sup, wet);
+    if (!B.sup && !wet && hasStar(B.owner, 'magmaPuddle')) this.zone({ x, z, r: 1.5, dps: 200, t: 2, owner: B.owner, col: new THREE.Color(3.4, 1.2, 0.2) });
     if (wet) A.water.ripple(x, z, B.sup ? 1.6 : 1.2);
     g.shakeAt(x, z, B.sup ? 0.9 : 0.5);
     sfx(B.sup ? 'boom_big' : 'boom', g.volumeAt(x, z));
   }
 
+  // Blaster star power: a seed that hits a wall bursts into 2 shards (110 each, 3 m) bouncing back.
+  splinter(B) {
+    if (B.shape !== 'seed' || B.shard || !hasStar(B.owner, 'splinters')) return;
+    const back = Math.atan2(-B.dx, -B.dz), x = B.x - B.dx * 0.4, z = B.z - B.dz * 0.4;
+    for (const s of [-0.5, 0.5]) {
+      this.spawnBullet(B.owner, x, z, back + s + rnd(-0.1, 0.1), { speed: 20, range: 3, dmg: 110, r: 0.14, breakWalls: false, knock: 0,
+        emit: false, col: B.col, shape: 'seed', shard: true });
+    }
+  }
+
+  // Ground hazard: dps (every 0.25 s) or `once` (the first enemy stepping in), for t seconds.
+  // broadcast: the authority tells the clients (hazards that only it creates).
+  zone(o, broadcast = false) {
+    const m = new THREE.Mesh(this.zoneGeo || (this.zoneGeo = new THREE.CircleGeometry(1, 32).rotateX(-Math.PI / 2)),
+      new THREE.MeshBasicMaterial({ color: o.col, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending }));
+    m.position.set(o.x, 0.07, o.z);
+    m.scale.setScalar(o.r);
+    m.renderOrder = 1;
+    this.g.fx.add(m);
+    this.zones.push({ ...o, T: o.t, tick: 0, delay: o.delay || 0, mesh: m });
+    if (broadcast) this.g.ev({ e: 'zone', z: { x: Math.round(o.x * 100) / 100, z: Math.round(o.z * 100) / 100, r: o.r, dps: o.dps, dmg: o.dmg,
+      once: o.once, t: o.t, owner: o.owner && o.owner.id, col: [o.col.r, o.col.g, o.col.b] } });
+  }
+
+  updateZones(dt) {
+    const g = this.g;
+    for (let i = this.zones.length - 1; i >= 0; i--) {
+      const Z = this.zones[i];
+      Z.t -= dt; Z.delay -= dt;
+      Z.mesh.material.opacity = 0.45 * Math.min(1, Z.t / 0.4) * (0.75 + 0.25 * Math.sin(g.time * 9));
+      let gone = Z.t <= 0;
+      if (!gone && g.authority && Z.delay <= 0 && (Z.tick -= dt) <= 0) {
+        Z.tick = 0.25;
+        for (const o of g.brawlers) {
+          if (o === Z.owner || !o.alive || o.pos.y > 0.3 || Math.hypot(o.pos.x - Z.x, o.pos.z - Z.z) > Z.r + o.radius * 0.5) continue;
+          if (Z.once) {
+            g.damage(o, Z.dmg * (Z.owner ? Z.owner.dmgMul : 1), Z.owner);
+            g.effects.sparkBurst(Z.x, 0.4, Z.z, Z.col, 20, 6, 0.4, 0.14);
+            g.ev({ e: 'zoneOff', x: Math.round(Z.x * 100) / 100, z: Math.round(Z.z * 100) / 100 });
+            gone = true;
+            break;
+          }
+          g.damage(o, Z.dps * 0.25 * (Z.owner ? Z.owner.dmgMul : 1), Z.owner);
+        }
+      }
+      if (gone) { g.fx.remove(Z.mesh); Z.mesh.material.dispose(); this.zones.splice(i, 1); }
+    }
+  }
+
   // Frostbite super: ring of frost around him, damages and freezes everyone close.
   nova(b) {
-    const g = this.g, R = 5, x = b.pos.x, z = b.pos.z;
+    const g = this.g, perma = hasStar(b, 'permafrost'), R = perma ? 6.25 : 5, x = b.pos.x, z = b.pos.z;
     if (g.authority) {
       for (const o of g.brawlers) {
         if (o === b || !o.alive || Math.hypot(o.pos.x - x, o.pos.z - z) > R) continue;
@@ -346,7 +403,7 @@ export class Combat {
           if (o.visibleToPlayer) g.hud.floater(g.camera, o.pos.x, 3.1, o.pos.z, t('hud.immune'), 'immune');
           g.ev({ e: 'imm', id: o.id });
         }
-        else o.freezeT = Math.max(o.freezeT, 1.4);
+        else o.freezeT = Math.max(o.freezeT, perma ? 1.0 : 1.4);
       }
     }
     const fx = g.effects;
@@ -388,9 +445,10 @@ export class Combat {
     let dx = point.x - b.pos.x, dz = point.z - b.pos.z;
     const d = Math.hypot(dx, dz) || 1, cd = Math.min(d, R);
     const cx = b.pos.x + dx / d * cd, cz = b.pos.z + dz / d * cd;
-    for (let k = 0; k < 5; k++) {
-      const a = k * 2.39996, r = 2.8 * Math.sqrt((k + 0.5) / 5);
-      this.strikes.push({ t: 0.18 + k * 0.2, x: cx + Math.cos(a) * r, z: cz + Math.sin(a) * r, owner: b });
+    const n = hasStar(b, 'surge') ? 7 : 5;
+    for (let k = 0; k < n; k++) {
+      const a = k * 2.39996, r = 2.8 * Math.sqrt((k + 0.5) / n);
+      this.strikes.push({ t: 0.18 + k * 0.2 * 5 / n, x: cx + Math.cos(a) * r, z: cz + Math.sin(a) * r, owner: b, dmg: n === 7 ? 450 : 600 });
     }
     this.g.effects.ring(cx, cz, 3.2, new THREE.Color(1.5, 3, 4), 1.1);
   }
@@ -405,7 +463,7 @@ export class Combat {
       if (g.authority) {
         for (const o of g.brawlers) {
           if (o === S.owner || !o.alive || Math.hypot(o.pos.x - S.x, o.pos.z - S.z) > 1.8) continue;
-          g.damage(o, 600 * S.owner.dmgMul, S.owner, true);
+          g.damage(o, S.dmg * S.owner.dmgMul, S.owner, true);
         }
         const ti = A.toTile(S.x), tj = A.toTile(S.z);
         if (A.get(ti, tj) === '#') g.breakWall(ti, tj);
@@ -436,5 +494,7 @@ export class Combat {
     for (const B of this.bombs) this.g.fx.remove(B.mesh);
     this.bombs.length = 0;
     this.strikes.length = 0;
+    for (const Z of this.zones) this.g.fx.remove(Z.mesh);
+    this.zones.length = 0;
   }
 }

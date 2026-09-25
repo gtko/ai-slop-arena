@@ -13,6 +13,7 @@ const stub = () => new Proxy({}, { get: (_, k) => (k === 'weather' ? null : noop
 export const BRAWLER_KEYS = Object.keys(TYPES);
 export const MAP_KEYS = Object.keys(MAPS);
 export { makeRoster, randomMap };
+export { validBrawler } from '../gadgets.js';
 
 export class ServerMatch {
   // send(msg): to every player; sendTo(id, msg): one player; onEnd(): match over; onCheat(id, kind)

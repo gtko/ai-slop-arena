@@ -5,7 +5,7 @@ const STORE = 'iaslop-settings-v1';
 
 export const DEFAULT_BINDS = {
   up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD',
-  super: 'Space', tod: 'KeyT', mute: 'KeyM', panel: 'Tab', pause: 'Escape',
+  super: 'Space', gadget: 'KeyE', tod: 'KeyT', mute: 'KeyM', panel: 'Tab', pause: 'Escape',
 };
 
 // Phones and tablets (touch screen): lighter presets, a lower pixel ratio, fewer lights, 60 FPS cap

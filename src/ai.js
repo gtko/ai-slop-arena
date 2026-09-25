@@ -78,6 +78,7 @@ export class BotBrain {
     this.strafeDir = Math.random() < 0.5 ? -1 : 1;
     this.strafeT = 0;
     this.fireCd = 0.6 + Math.random();
+    this.gadgetThink = 1;
     this.seen = 0;
     // 0 (clumsy) .. 1 (sharp): from the roster (makeRoster, set from the players' level), else random.
     this.skill = bot.skill ?? 0.45 + Math.random() * 0.4;
@@ -217,6 +218,26 @@ export class BotBrain {
     this.last.copy(b.pos);
 
     this.shoot(dt);
+    this.gadget(dt);
+  }
+
+  // When to use the gadget (Kit 2.0): mobility to escape when hurt or to close in, utility in a fight.
+  gadget(dt) {
+    const g = this.g, b = this.b, o = this.target;
+    if ((this.gadgetThink -= dt) > 0 || !g.canGadget(b) || !o || !o.alive) return;
+    this.gadgetThink = 0.5 + Math.random() * (1.2 - this.skill);
+    const dx = o.pos.x - b.pos.x, dz = o.pos.z - b.pos.z, d = Math.hypot(dx, dz) || 1, hurt = b.hp < b.maxHp * 0.4;
+    const k = b.type.key + b.gadget, ux = dx / d, uz = dz / d;
+    let use = null; // [dx, dz]
+    if (b.gadget === 'A') {
+      if (hurt && d < 7) use = [-ux, -uz];                                                        // get away
+      else if (!hurt && (k === 'blasterA' ? d < 5 : d > b.type.range * 0.85 && d < b.type.range + 4)) use = [ux, uz]; // close in
+    } else if (k === 'blasterB') { if (d < 6 && b.lastHurt > g.time - 1) use = [ux, uz]; }
+    else if (k === 'gunslingerB') { if (o.inBush && o.revealT <= 0 && d < 16) use = [ux, uz]; }
+    else if (k === 'bomberB') { if (d < b.type.range && b.ammo >= 1) use = [ux, uz]; }
+    else if (k === 'frostbiteB') { if (hurt && d > 3 && d < 9) use = [ux, uz]; }
+    else if (k === 'voltB') { if (b.ammo < 1 && d < b.type.range) use = [ux, uz]; }
+    if (use && Math.random() < 0.35 + this.skill * 0.5) g.useGadget(b, use[0], use[1], o.pos);
   }
 
   shoot(dt) {

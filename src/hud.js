@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { t } from './i18n/index.js';
 import { sfx } from './audio.js';
+import { GADGET_LOCKOUT, GADGET_ICONS } from './gadgets.js';
 
 const $ = s => document.querySelector(s);
 const _v = new THREE.Vector3();
@@ -18,6 +19,10 @@ export class Hud {
     this.superArc = $('#superArc');
     this.superEl = $('#super');
     this.cubeEl = $('#cubeCount');
+    this.gadgetEl = $('#gadget');
+    this.gadgetArc = $('#gadgetArc');
+    this.gadgetIcon = $('#gadgetIcon');
+    this.gadgetPips = [...document.querySelectorAll('#gadget u')];
     this.vignette = $('#vignette');
     const mh = this.myhp = $('#myhp');
     this.mh = { fill: mh.querySelector('.mh-fill'), lag: mh.querySelector('.mh-lag'), num: mh.querySelector('.mh-num'), ammo: [...mh.querySelectorAll('.mh-ammo b')], lagV: 1, hp: -1, cls: '' };
@@ -114,6 +119,14 @@ export class Hud {
       const c = 2 * Math.PI * 44;
       this.superArc.style.strokeDasharray = `${c * p.superCharge} ${c}`;
       this.superEl.classList.toggle('ready', p.superCharge >= 1);
+      // gadget: its icon, 3 charge pips, the lockout ring filling back up
+      const ic = GADGET_ICONS[p.type.key + p.gadget] || '✦';
+      if (this.gadgetIcon.textContent !== ic) this.gadgetIcon.textContent = ic;
+      const cd = Math.max(0, p.gadgetCd) / GADGET_LOCKOUT, c2 = 2 * Math.PI * 44;
+      this.gadgetArc.style.strokeDasharray = `${c2 * (1 - cd)} ${c2}`;
+      this.gadgetEl.classList.toggle('ready', p.alive && p.gadgetCharges > 0 && cd <= 0);
+      this.gadgetEl.classList.toggle('empty', p.gadgetCharges <= 0);
+      for (let k = 0; k < 3; k++) this.gadgetPips[k].classList.toggle('on', k < p.gadgetCharges);
       this.cubeEl.textContent = p.cubes;
       this.vignette.style.opacity = p.alive && p.inPoison ? '1' : '0';
       // big health bar, bottom centre
@@ -187,6 +200,12 @@ export class Hud {
     while (this.feed.children.length > FEED_MAX) this.feed.lastChild.remove();
     setTimeout(() => row.classList.add('out'), FEED_LIFE);
     setTimeout(() => row.remove(), FEED_LIFE + 500);
+  }
+
+  gadgetUsed() {
+    this.gadgetEl.classList.remove('bump');
+    void this.gadgetEl.offsetWidth;
+    this.gadgetEl.classList.add('bump');
   }
 
   // Red edges for a blink when you take a hit, stronger for heavier hits.

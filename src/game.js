@@ -11,6 +11,7 @@ import { MAPS, MAP_KEYS } from './maps.js';
 import { Weather } from './weather.js';
 import { t } from './i18n/index.js';
 import { Feel, weapon } from './feel.js';
+import { GADGETS, GADGET_CHARGES, GADGET_LOCKOUT, parseLoadout, flareFx } from './gadgets.js';
 
 const NAMES = ['Bolt', 'Nova', 'Rex', 'Juno', 'Pix', 'Kai', 'Moxie', 'Zed', 'Luna', 'Taro', 'Fizz', 'Oona', 'Brick', 'Echo'];
 const TYPE_KEYS = Object.keys(TYPES);
@@ -29,7 +30,8 @@ export function makeRoster(humans = [], { level = 0.45 } = {}) {
   const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
   for (let k = roster.length; k < 8; k++) {
     const skill = Math.round(Math.min(0.97, Math.max(0.05, 0.12 + level * 0.8 + gauss() * 0.2)) * 100) / 100;
-    roster.push({ id: 'bot' + k, name: names[k], type: TYPE_KEYS[Math.floor(Math.random() * TYPE_KEYS.length)], human: false, spawn: spawns[k], skill });
+    const lo = `:${Math.random() < 0.5 ? 'A' : 'B'}${Math.random() < 0.5 ? 1 : 2}`; // bots pick a random loadout
+    roster.push({ id: 'bot' + k, name: names[k], type: TYPE_KEYS[Math.floor(Math.random() * TYPE_KEYS.length)] + lo, human: false, spawn: spawns[k], skill });
   }
   return roster;
 }
@@ -62,6 +64,8 @@ export class Game {
     lighting.fogShift = Math.max(0, this.camOffset.length() - 22); // keep the air around the player clear
     this.feel = new Feel();   // hit freeze, camera trauma, zoom punches (cosmetic)
     this.bushIdleT = 0;
+    this.gadgetSeq = 0;
+    this.gadgetDir = new THREE.Vector3(0, 0, 1);
     this.heartT = 0;          // low health: heartbeat timer
     this.aimPoint = new THREE.Vector3();
     this.aimDir = new THREE.Vector3(0, 0, -1);
@@ -119,8 +123,10 @@ export class Game {
     this.player = null;
     for (const r of roster) {
       const isPlayer = r.id === localId;
-      const b = new Brawler(this, r.type, { name: isPlayer ? t('hud.you') : r.name, isPlayer });
+      const L = parseLoadout(r.type); // 'volt:B2' = Volt with gadget B and star power 2
+      const b = new Brawler(this, TYPES[L.type] ? L.type : 'blaster', { name: isPlayer ? t('hud.you') : r.name, isPlayer });
       b.id = r.id;
+      b.gadget = L.gadget; b.star = L.star;
       b.setHuman(!!r.human);
       if (r.skill !== undefined) b.skill = r.skill;
       b.pos.copy(this.arena.spawns[r.spawn % this.arena.spawns.length]);
@@ -142,6 +148,7 @@ export class Game {
     this.camTarget = this.player || this.brawlers[0];
     this.camFocus.copy(this.camTarget.pos);
     this.feel.reset();
+    this.gadgetSeq = 0;
     this.hud.setup(this.brawlers, this.player);
     this.aim.visible = this.aimTarget.visible = !!this.player;
   }
@@ -230,6 +237,8 @@ export class Game {
   damage(target, amount, source, fromSuper = false) {
     if (!target.alive || !this.authority) return;
     if (this.shielded && source && source !== target) return;
+    if (target.ghostT > 0 && source !== target) return; // Tail Roll
+    if (target.armorT > 0) amount *= 0.65;               // Bark Skin
     amount = Math.round(amount);
     target.hp -= amount;
     target.lastHurt = this.time;
@@ -427,7 +436,9 @@ export class Game {
     let px = num(m.px, b.pos.x), pz = num(m.pz, b.pos.z);
     const pd = Math.hypot(px - b.pos.x, pz - b.pos.z);
     if (pd > reach) { px = b.pos.x + (px - b.pos.x) / pd * reach; pz = b.pos.z + (pz - b.pos.z) / pd * reach; }
-    b.remoteIn = { ax, az, px, pz, f: m.f ? 1 : 0, s: Math.max(0, Math.min(1e6, Math.floor(num(m.s, 0)))) };
+    const gl = Math.hypot(num(m.gx, 0), num(m.gz, 0)) || 0;
+    b.remoteIn = { ax, az, px, pz, f: m.f ? 1 : 0, s: Math.max(0, Math.min(1e6, Math.floor(num(m.s, 0)))),
+      g: Math.max(0, Math.min(1e6, Math.floor(num(m.g, 0)))), gx: gl ? m.gx / gl : ax, gz: gl ? m.gz / gl : az };
     if (b.alive) this.checkMove(b, num(m.x, b.net.x), num(m.z, b.net.y), now);
   }
 
@@ -474,7 +485,7 @@ export class Game {
         this.netT = 1 / 15;
         const alive = this.brawlers.filter(b => b.alive), pt = r2(this.poison.timer);
         const row = b => [b.id, r2(b.pos.x), r2(b.pos.z), r2(b.facing), Math.round(b.hp), b.maxHp,
-          r2(b.ammo), r2(b.superCharge), b.cubes, (b.revealT > 0 ? 2 : 0) | (b.slowT > 0 ? 4 : 0) | (b.freezeT > 0 ? 8 : 0)];
+          r2(b.ammo), r2(b.superCharge), b.cubes, (b.revealT > 0 ? 2 : 0) | (b.slowT > 0 ? 4 : 0) | (b.freezeT > 0 ? 8 : 0) | (b.rootT > 0 ? 16 : 0)];
         if (N.sendTo) {
           // One snapshot per player with only what that player can see: brawlers hidden in a bush
           // or behind the fog are simply not sent, so no client can reveal them. Knocked-out
@@ -491,7 +502,8 @@ export class Game {
       this.netT = 1 / 20;
       const p = this.player, i = this.localIn || {};
       N.send({ t: 'in', x: r2(p.pos.x), z: r2(p.pos.z), ax: r2(this.aimDir.x), az: r2(this.aimDir.z),
-        px: r2(this.aimPoint.x), pz: r2(this.aimPoint.z), f: i.f ? 1 : 0, s: this.superSeq });
+        px: r2(this.aimPoint.x), pz: r2(this.aimPoint.z), f: i.f ? 1 : 0, s: this.superSeq, g: this.gadgetSeq,
+        gx: r2(this.gadgetDir.x), gz: r2(this.gadgetDir.z) });
     }
   }
 
@@ -509,6 +521,7 @@ export class Game {
       // status effects are decided by the host; our own brawler needs them too (we move it locally)
       b.slowT = flags & 4 ? 0.2 : Math.min(b.slowT, 0);
       b.freezeT = flags & 8 ? 0.2 : Math.min(b.freezeT, 1e-4); // a tiny rest so update() still sees the thaw (immunity fx)
+      b.rootT = flags & 16 ? 0.2 : Math.min(b.rootT, 0);
       if (b !== this.player) {
         b.net.set(x, z); b.netFacing = f;
         if (b.netHidden) { b.pos.x = x; b.pos.z = z; } // back in sight: appear where it is, don't glide there through the wall
@@ -553,6 +566,13 @@ export class Game {
           break;
         case 'knock': if (b === this.player) b.knock.set(e.x, 0, e.z); break;
         case 'imm': if (b && b.visibleToPlayer) this.hud.floater(this.camera, b.pos.x, 3.1, b.pos.z, t('hud.immune'), 'immune'); break;
+        case 'gad':
+          if (b && b !== this.player && b.alive) GADGETS[b.type.key + b.gadget]?.fx(this, b, e.dx, e.dz);
+          break;
+        case 'flare': flareFx(this, e.x, e.z); break;
+        case 'zoneOff': this.combat.zones.filter(Z => Z.once && Math.hypot(Z.x - e.x, Z.z - e.z) < 0.1).forEach(Z => { Z.t = 0; }); break;
+        case 'ice': this.arena.iceWall(e.t, 3); break;
+        case 'zone': this.combat.zone({ ...e.z, owner: this.byId.get(e.z.owner), col: new THREE.Color(...e.z.col) }); break;
         case 'zap': this.effects.arc(e.pts, new THREE.Color(3.2, 4.2, 5.2)); break;
         case 'wall': this.breakWall(e.i, e.j, true); break;
         case 'crate': if (this.arena.hitCrate(e.i, e.j, 1e9)) this.crateFx(e.i, e.j, this.byId.get(e.by)); break;
@@ -632,6 +652,7 @@ export class Game {
       _v.set(I.px, 0, I.pz);
       if (I.f) this.tryAttack(b, I.ax, I.az, _v, false);
       if (I.s > (b.superSeen || 0)) { b.superSeen = I.s; this.tryAttack(b, I.ax, I.az, _v, true); }
+      if (I.g > (b.gadgetSeen || 0)) { b.gadgetSeen = I.g; if (this.spendGadget(b)) this.gadgetEffect(b, I.gx ?? I.ax, I.gz ?? I.az, _v); }
     }
   }
 
@@ -679,6 +700,12 @@ export class Game {
     }
     const ready = p.superCharge >= 1;
     const superPressed = ready && I.superFired;
+    if (I.gadgetFired) {
+      // mobility gadgets go where you walk (if you walk), the others where you aim
+      const G = GADGETS[p.type.key + p.gadget], mv = p.moveIntent;
+      const d = G && G.dist && mv.lengthSq() > 0.05 ? _v.set(mv.x, 0, mv.z).normalize() : this.aimDir;
+      this.useGadget(p, d.x, d.z, this.aimPoint);
+    }
     if (!this.authority) {
       // client: the host fires for us and echoes the attack back as an event
       this.localIn = { f: I.attackHeld };
@@ -688,6 +715,69 @@ export class Game {
       if (superPressed) this.tryAttack(p, this.aimDir.x, this.aimDir.z, this.aimPoint, true);
     }
     this.superAiming = ready && I.superAimHeld;
+  }
+
+  /* ------------------------------ gadgets (gadgets.js) ------------------------------ */
+
+  canGadget(b) {
+    return b.alive && this.state !== 'idle' && b.freezeT <= 0 && b.gadgetCharges > 0 && b.gadgetCd <= 0 && !b.dash && !b.blink && !this.shielded;
+  }
+
+  spendGadget(b) {
+    if (!this.canGadget(b)) return false;
+    b.gadgetCharges--;
+    b.gadgetCd = GADGET_LOCKOUT;
+    b.revealT = Math.max(b.revealT, 1.2); // using a gadget gives you away, like firing
+    return true;
+  }
+
+  // On the machine that controls b (you; bots on the host): the movement part now, then the rules
+  // part here if we are the authority, else the host runs it when our input arrives.
+  useGadget(b, dx, dz, point) {
+    if (!this.spendGadget(b)) return false;
+    const l = Math.hypot(dx, dz) || 1;
+    dx /= l; dz /= l;
+    const G = GADGETS[b.type.key + b.gadget];
+    G.move?.(this, b, dx, dz);
+    if (this.authority) this.gadgetEffect(b, dx, dz, point);
+    else { this.gadgetSeq++; this.gadgetDir.set(dx, 0, dz); G.fx(this, b, dx, dz); }
+    if (b === this.player) this.hud.gadgetUsed();
+    return true;
+  }
+
+  // Authority: what the gadget does to the match, its look for everyone, and room for the dash.
+  gadgetEffect(b, dx, dz, point) {
+    const G = GADGETS[b.type.key + b.gadget];
+    G.effect(this, b, dx, dz, point);
+    G.fx(this, b, dx, dz);
+    if (b.netDriven && b.guard && G.dist) b.guard.knock = Math.max(b.guard.knock, G.dist + 1.5); // a remote player dashes itself
+    this.ev({ e: 'gad', id: b.id, dx: r2(dx), dz: r2(dz) });
+    if (this.onGadget) this.onGadget(b);
+  }
+
+  // Root Charge: while charging, the first enemy touched takes 400 and is rooted 0.6 s.
+  chargeContact(b) {
+    if (b.chargeHit) return;
+    for (const o of this.brawlers) {
+      if (o === b || !o.alive || Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z) > b.radius + o.radius + 0.35) continue;
+      b.chargeHit = o;
+      this.damage(o, 400 * b.dmgMul, b);
+      if (o.alive && o.ccImmuneT <= 0) o.rootT = Math.max(o.rootT, 0.6);
+      this.effects.ring(o.pos.x, o.pos.z, 1, new THREE.Color(1.6, 1.1, 0.5), 0.5);
+      return;
+    }
+  }
+
+  // Lava Hop: the landing spot burns for 2 s.
+  hopLanded(b) {
+    this.combat.zone({ x: b.pos.x, z: b.pos.z, r: 2, dps: 300, t: 2, owner: b, col: new THREE.Color(3.4, 1.2, 0.2) }, true);
+    this.shakeAt(b.pos.x, b.pos.z, 0.25);
+  }
+
+  // Ice Wall tiles (authority picks them, clients copy): never on top of a brawler.
+  iceWall(tiles) {
+    const A = this.arena, c = new THREE.Vector3();
+    return A.iceWall(tiles, 3, (i, j) => { A.center(i, j, c); return !this.brawlers.some(o => o.alive && Math.abs(o.pos.x - c.x) < 1.35 && Math.abs(o.pos.z - c.z) < 1.35); });
   }
 
   // Closest enemy the player can see (touch auto-aim), preferring ones in range.

@@ -1,7 +1,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import * as Sentry from '@sentry/cloudflare';
 import { version } from '../package.json';
-import { ServerMatch, makeRoster, randomMap, BRAWLER_KEYS, MAP_KEYS } from './build/sim.js';
+import { ServerMatch, makeRoster, randomMap, validBrawler, MAP_KEYS } from './build/sim.js';
 import { rate, tierOf, pickGroup, botLevelFor, START_MMR } from './ranking.js';
 
 // AI SLOP ARENA — online server.
@@ -93,7 +93,7 @@ async function identity(request, url) {
 }
 
 const clean = (s, n) => String(s || '').replace(/[^\p{L}\p{N} _\-.!?']/gu, '').slice(0, n).trim();
-const BRAWLERS = new Set(BRAWLER_KEYS);
+const BRAWLERS = { has: validBrawler }; // 'volt' or 'volt:B2' (loadout: gadget + star power)
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'content-type', 'Access-Control-Max-Age': '86400' };
 const cors = r => { for (const [k, v] of Object.entries(CORS)) r.headers.set(k, v); return r; };
 const json = (data, status = 200) => new Response(JSON.stringify(data, null, 2), { status, headers: { 'content-type': 'application/json' } });
