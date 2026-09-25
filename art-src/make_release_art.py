@@ -665,6 +665,60 @@ def v080():
     img.convert('RGB').save(os.path.join(OUT, 'v0.8.0-brawlers.png'), optimize=True)
 
 
+# ------------------------------ v0.9.0: alive ------------------------------
+
+def v090():
+    banner('v0.9.0', 'ALIVE!', 'Real skeletons, 16 animations each, wind in their hair.',
+           [('🦴', '16 animations'), ('🍃', 'Wind & sway'), ('👀', 'Blinks'), ('👋', 'Waves hello')],
+           'v0.9.0-banner.png', ('frostbite', 'blaster', 'volt'))
+
+    # the animation grid: real frames rendered by Blender from the rigged files (art-src/rig)
+    anim = os.path.join(ROOT, 'art-src', 'rig', 'work', 'anim')
+    clips = [('Run', 0.45), ('Aim', 0.5), ('Victory', 0.5), ('Wave', 0.45), ('BushIdle', 0.3), ('Death', 1.0)]
+    W, H = 1600, 1085
+    img = background(W, H, glow=(0.5, 0.25))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), '16 ANIMATIONS PER BRAWLER', display(58), YELLOW, anchor='ma')
+    d.text((W // 2, 112), 'A standard humanoid skeleton in every model: 6 of the 16 clips, straight from the files',
+           font=body(25, 'Bold'), fill=MUTED, anchor='ma')
+    x0, y0, cw, ch = 190, 170, 230, 165
+    for ci, (clip, _) in enumerate(clips):
+        d.text((x0 + ci * cw + cw // 2, y0), clip, font=display(30), fill=TEXT, anchor='ma')
+    for ri, key in enumerate(BRAWLERS):
+        y = y0 + 50 + ri * ch
+        d.text((x0 - 20, y + ch // 2), key.capitalize(), font=body(26, 'Black'), fill=YELLOW, anchor='rm')
+        for ci, (clip, at) in enumerate(clips):
+            x = x0 + ci * cw
+            card(img, (x + 8, y + 4, x + cw - 8, y + ch - 4), radius=20)
+            frames = sorted(f for f in os.listdir(os.path.join(anim, key, clip)) if f.endswith('.png'))
+            f = Image.open(os.path.join(anim, key, clip, frames[min(len(frames) - 1, int(at * (len(frames) - 1)))])).convert('RGBA')
+            f = f.resize((ch - 6, ch - 6), Image.LANCZOS)
+            img.alpha_composite(f, (x + (cw - f.width) // 2, y + 3))
+    img.convert('RGB').save(os.path.join(OUT, 'v0.9.0-animations.png'), optimize=True)
+
+    # what makes them feel alive, in the game
+    feats = [('🦴', 'Real skeletons', ['22 bones, Mixamo names', '.glb, .fbx and .blend files', 'open them in any 3D tool']),
+             ('🍃', 'Wind & motion', ['leaves, flames, gills, capes', 'sway in the wind, trail behind', 'and bounce when they stop']),
+             ('👀', 'They blink', ['every 2 to 5 seconds', 'sometimes twice in a row', 'eyes shut when knocked out']),
+             ('🔫', 'Weapons in hand', ['their own 3D objects', 'on a bone of the hand', 'holstered to wave hello']),
+             ('🌿', 'Bush sneaking', ['crouch and tiptoe in the grass', 'peek left and right', 'cough in the poison gas']),
+             ('💀', 'Big moments', ['a real fall when knocked out', 'a fist pump after a KO', 'a victory dance for the winner'])]
+    W, H = 1600, 900
+    img = background(W, H, glow=(0.5, 0.3))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 36), 'ALIVE IN THE ARENA', display(58), YELLOW, anchor='ma')
+    cw, chh, gx, gy = 470, 330, 30, 30
+    x0 = (W - (3 * cw + 2 * gx)) // 2
+    for i, (icon, title, lines) in enumerate(feats):
+        x, y = x0 + (i % 3) * (cw + gx), 140 + (i // 3) * (chh + gy)
+        card(img, (x, y, x + cw, y + chh), outline=(150, 120, 230), radius=26)
+        d.text((x + cw // 2, y + 26), icon, font=emoji(64), embedded_color=True, anchor='ma')
+        d.text((x + cw // 2, y + 120), title, font=display(38), fill=YELLOW, anchor='ma')
+        for li, line in enumerate(lines):
+            d.text((x + cw // 2, y + 185 + li * 40), line, font=body(25, 'Bold'), fill=TEXT, anchor='ma')
+    img.convert('RGB').save(os.path.join(OUT, 'v0.9.0-alive.png'), optimize=True)
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     v020()
@@ -676,5 +730,6 @@ if __name__ == '__main__':
     v062()
     v070()
     v080()
+    v090()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')

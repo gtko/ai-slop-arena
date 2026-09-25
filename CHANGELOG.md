@@ -3,6 +3,15 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.9.0](docs/releases/v0.9.0.md): Alive!
+
+<a href="docs/releases/v0.9.0.md"><img src="docs/releases/img/v0.9.0-banner.png" alt="v0.9.0: alive!" width="100%"></a>
+
+- 🦴 Real skeletons and 16 animations per brawler: sneaking in bushes, victory dance, knocked-out fall, waves, fidgets...
+- 🍃 Leaves, flames, gills, capes, hair and antennas sway with the wind and the motion.
+- 👀 Brawlers blink; weapons are held in hand and put away to wave hello.
+- 🧰 Rigged characters also as .glb, .fbx and .blend files for other 3D tools.
+
 ## [v0.8.0](docs/releases/v0.8.0.md): New looks
 
 <a href="docs/releases/v0.8.0.md"><img src="docs/releases/img/v0.8.0-banner.png" alt="v0.8.0: new looks" width="100%"></a>
