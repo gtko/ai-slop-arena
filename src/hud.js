@@ -29,7 +29,11 @@ export class Hud {
     this.banner.id = 'banner';
     this.lowEl = document.createElement('div');
     this.lowEl.id = 'lowhp';
-    this.root.append(this.feed, this.banner, this.lowEl);
+    this.hurtEl = document.createElement('div');
+    this.hurtEl.id = 'hurt';
+    this.arrows = document.createElement('div');
+    this.arrows.id = 'arrows';
+    this.root.append(this.feed, this.banner, this.lowEl, this.hurtEl, this.arrows);
   }
 
   show(on) { this.root.classList.toggle('hidden', !on); }
@@ -85,6 +89,8 @@ export class Hud {
       const regen = b.regen && b.hp < b.maxHp;
       if (regen !== o.regen) { o.el.classList.toggle('regen', regen); o.regen = regen; } // healing: the bar glows
     }
+
+    this.updateArrows(camera, game);
 
     const alive = game.brawlers.filter(b => b.alive).length;
     if (alive !== this.lastAlive) {
@@ -168,6 +174,39 @@ export class Hud {
     while (this.feed.children.length > FEED_MAX) this.feed.lastChild.remove();
     setTimeout(() => row.classList.add('out'), FEED_LIFE);
     setTimeout(() => row.remove(), FEED_LIFE + 500);
+  }
+
+  // Enemies you can see but that are off the screen (small screens): an arrow on the edge.
+  updateArrows(camera, game) {
+    const w = innerWidth, h = innerHeight, P = game.player, pool = this.arrows.children;
+    let n = 0;
+    if (P && P.alive && game.mode === 'play') {
+      for (const b of game.brawlers) {
+        if (b === P || !b.alive || !b.visibleToPlayer) continue;
+        _v.set(b.pos.x, 1.2, b.pos.z).project(camera);
+        const x = (_v.x * 0.5 + 0.5) * w, y = (-_v.y * 0.5 + 0.5) * h, m = 24;
+        if (x > m && x < w - m && y > m && y < h - m && _v.z < 1) continue;
+        // from the screen centre toward the enemy, clamped to the edge
+        let dx = x - w / 2, dy = y - h / 2;
+        if (_v.z > 1) { dx = -dx; dy = -dy; }
+        const k = Math.min((w / 2 - 34) / Math.abs(dx || 1e-3), (h / 2 - 34) / Math.abs(dy || 1e-3));
+        if (n >= pool.length) this.arrows.appendChild(document.createElement('i'));
+        const el = pool[n++];
+        el.style.transform = `translate(${(w / 2 + dx * k).toFixed(0)}px,${(h / 2 + dy * k).toFixed(0)}px) rotate(${Math.atan2(dy, dx).toFixed(3)}rad)`;
+        el.style.display = '';
+      }
+    }
+    for (let k = n; k < pool.length; k++) pool[k].style.display = 'none';
+  }
+
+  // Red edges for a blink when you take a hit, stronger for heavier hits.
+  hurtFlash(strength) {
+    const el = this.hurtEl;
+    el.style.transition = 'none';
+    el.style.opacity = Math.min(1, 0.35 + strength * 1.6).toFixed(2);
+    void el.offsetWidth;
+    el.style.transition = 'opacity 0.35s ease-out';
+    el.style.opacity = '0';
   }
 
   showBanner(text, kind) {

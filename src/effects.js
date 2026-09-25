@@ -230,8 +230,14 @@ export class Effects {
     this.flash(x, y, z, col.r / m, col.g / m, col.b / m, 16, 7, 0.09);
   }
 
-  hit(x, y, z, col) {
-    this.sparkBurst(x, y, z, col, 8, 5, 0.3, 0.14);
+  // dx, dz: the bullet's direction; most sparks fly on through, like the hit carried on
+  hit(x, y, z, col, dx = 0, dz = 0) {
+    this.sparkBurst(x, y, z, col, 4, 5, 0.3, 0.14);
+    for (let k = 0; k < 6; k++) {
+      const s = rnd(5, 10);
+      this.sparks.spawn(particle(x, y, z, dx * s + rnd(-2.2, 2.2), rnd(0.5, 3), dz * s + rnd(-2.2, 2.2),
+        rnd(0.18, 0.3), rnd(0.1, 0.2), col.r, col.g, col.b, { grav: 12, drag: 4, spin: rnd(-10, 10) }));
+    }
     const m = Math.max(col.r, col.g, col.b);
     this.flash(x, y, z, col.r / m, col.g / m, col.b / m, 10, 5, 0.12);
   }

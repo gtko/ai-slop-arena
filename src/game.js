@@ -257,6 +257,7 @@ export class Game {
     if (target.isPlayer) {
       sfx('hurt');
       this.feel.add(taken);
+      this.hud.hurtFlash(taken);
       this.input.rumble(0.55, 0.35, 140);
     } else if (source && source.isPlayer) {
       sfx('hit_confirm', 1, 1 + this.feel.nextHit() * 0.07);

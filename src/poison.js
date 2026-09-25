@@ -26,6 +26,25 @@ export class Poison {
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 2;
     game.fx.add(this.mesh);
+    // the next ring, drawn on the floor for the last 6 s before it fills: a square frame, blinking
+    this.warn = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({
+      color: new THREE.Color(0.5, 2.4, 0.8), transparent: true, opacity: 0, depthWrite: false }));
+    this.warn.renderOrder = 1;
+    this.warn.visible = false;
+    this.warnHalf = -1;
+    game.fx.add(this.warn);
+  }
+
+  // Square frame on the floor: outer half-size h, 0.35 m wide.
+  frame(h) {
+    const w = 0.35, o = h, i = h - w, y = 0.07;
+    const v = [];
+    const quad = (x0, z0, x1, z1) => v.push(x0, y, z0, x0, y, z1, x1, y, z1, x0, y, z0, x1, y, z1, x1, y, z0);
+    quad(-o, -o, o, -i); quad(-o, i, o, o); quad(-o, -i, -i, i); quad(i, -i, o, i);
+    this.warn.geometry.dispose();
+    this.warn.geometry = new THREE.BufferGeometry();
+    this.warn.geometry.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+    this.warnHalf = h;
   }
 
   get safeHalf() { return this.level > 0 ? HALF - (this.level + 1) * TILE : HALF; }
@@ -67,6 +86,13 @@ export class Poison {
     }
     this.mesh.count = n;
     if (n) this.mesh.instanceMatrix.needsUpdate = true;
+
+    const soon = this.nextIn, next = HALF - (this.level + 2) * TILE;
+    this.warn.visible = soon < 6 && soon > 0 && next > 0;
+    if (this.warn.visible) {
+      if (next !== this.warnHalf) this.frame(next);
+      this.warn.material.opacity = (0.35 + 0.35 * Math.sin(t * (soon < 2 ? 14 : 7))) * Math.min(1, (6 - soon) / 1.5);
+    }
   }
 
   isPoisonedAt(x, z) {
@@ -90,7 +116,9 @@ export class Poison {
   }
 
   dispose() {
-    this.g.fx.remove(this.mesh);
+    this.g.fx.remove(this.mesh, this.warn);
+    this.warn.geometry.dispose();
+    this.warn.material.dispose();
     this.mesh.geometry.dispose();
     this.mesh.material.dispose();
   }

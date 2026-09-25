@@ -48,6 +48,9 @@ function rockGeometry(r, detail, bump) {
   return g;
 }
 
+// Camera kick when you fire (trauma, feel.js); Gunslinger adds 0.03 per bolt of its burst.
+const FIRE_KICK = { blaster: 0.14, blasterS: 0.4, gunslinger: 0, gunslingerS: 0, bomber: 0.06, bomberS: 0.1, frostbite: 0.06, frostbiteS: 0.35, volt: 0.07, voltS: 0.1 };
+
 export class Combat {
   constructor(game) {
     this.g = game;
@@ -113,6 +116,7 @@ export class Combat {
     const mx = b.pos.x + dx * 0.9, mz = b.pos.z + dz * 0.9;
     // what you cannot see you do not hear either (the bullets still fly)
     const vol = this.g.fxVisible(b) ? this.g.volumeAt(b.pos.x, b.pos.z) : 0;
+    if (b === this.g.player) this.g.feel.add(FIRE_KICK[T + (sup ? 'S' : '')] ?? 0.05);
     if (sup) { sfx('super', vol); sfx(`bark_${T}_super`, vol * 0.9); }
     if (T === 'blaster') {
       const n = sup ? 9 : 5, spread = sup ? 0.72 : 0.52;
@@ -196,6 +200,7 @@ export class Combat {
         });
         this.g.effects.muzzle(mx, BULLET_Y, mz, dx, dz, col);
         if (s.sup) b.recoil = 1; else b.attacked(); // the volley keeps the Super's arms up
+        if (b === g.player) g.feel.add(0.03);
         b.aimFacing = s.a; b.aimHold = 0.3;
         sfx('shot_ray', g.fxVisible(b) ? g.volumeAt(b.pos.x, b.pos.z) : 0);
       }
@@ -240,7 +245,7 @@ export class Combat {
             if (B.slow && g.authority && o.alive) o.slowT = Math.max(o.slowT, B.slow);
             if (B.chain && g.authority) this.chainZap(o, B);
             if (B.knock) g.applyKnock(o, B.dx * B.knock, B.dz * B.knock);
-            g.effects.hit(B.x, BULLET_Y, B.z, B.col);
+            g.effects.hit(B.x, BULLET_Y, B.z, B.col, B.dx, B.dz);
             dead = true;
             break;
           }
