@@ -8,7 +8,10 @@ LeftShoulder, LeftArm, LeftForeArm, LeftHand, LeftUpLeg, LeftLeg, LeftFoot, Left
 Right side), so the characters retarget in Blender, Unity, Unreal, Godot, Mixamo tools...
 The clips themselves are written in clips.py.
 
-Usage: "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b -P art-src/rig/rig_blender.py -- [keys...] [--preview]
+Joints come from the automatic fit, corrected per character by art-src/rig/landmarks/<key>.json
+(see load_marks).
+
+Usage: "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b -P art-src/rig/rig_blender.py -- [keys...] [--preview] [--check [--quick]]
 """
 import json
 import math
@@ -91,48 +94,100 @@ def build_material(d):
 
 # ------------------------------------------------------------------ armature
 
-def joint_layout(d):
-    """Head/tail of every bone (Blender coords) from the fitted joints."""
+MARKS = os.path.join(HERE, 'landmarks')
+SIDES = (('L', 'Left', 1), ('R', 'Right', -1))
+
+# bone -> (parent, joint at its tail). Every bone's head is the joint of the same name, so a
+# landmark file only lists joints: bone names plus the three end points HeadTop, *HandEnd, *ToeEnd.
+BONES = {
+    'Hips': (None, 'Spine'), 'Spine': ('Hips', 'Spine1'), 'Spine1': ('Spine', 'Spine2'),
+    'Spine2': ('Spine1', 'Neck'), 'Neck': ('Spine2', 'Head'), 'Head': ('Neck', 'HeadTop'),
+}
+for _s, _side, _ in SIDES:
+    BONES.update({
+        _side + 'Shoulder': ('Spine2', _side + 'Arm'), _side + 'Arm': (_side + 'Shoulder', _side + 'ForeArm'),
+        _side + 'ForeArm': (_side + 'Arm', _side + 'Hand'), _side + 'Hand': (_side + 'ForeArm', _side + 'HandEnd'),
+        _side + 'UpLeg': ('Hips', _side + 'Leg'), _side + 'Leg': (_side + 'UpLeg', _side + 'Foot'),
+        _side + 'Foot': (_side + 'Leg', _side + 'ToeBase'), _side + 'ToeBase': (_side + 'Foot', _side + 'ToeEnd'),
+    })
+
+# Half-width of the soft blend where each bone takes over from its parent, as a fraction of the
+# height (side-less names). Small = the joint bends sharply at the landmark, large = a rubbery joint.
+BANDS = {'Spine': 0.03, 'Spine1': 0.03, 'Spine2': 0.03, 'Neck': 0.015, 'Head': 0.01,
+         'Shoulder': 0.03, 'Arm': 0.025, 'ForeArm': 0.02, 'Hand': 0.015,
+         'Hips': 0.02, 'UpLeg': 0.03, 'Leg': 0.02, 'Foot': 0.012}
+
+
+def default_marks(d):
+    """Joint positions from the automatic fit (autorig.mjs), before landmarks/<key>.json."""
     J, H = d['joints'], d['height']
     L, R = J['L'], J['R']
     depth = -(L['thigh'][2] + R['thigh'][2]) / 2  # Blender y of the pelvis
     c = lambda z: Vector((0, depth, z))
-    hips = J['crotch'] + 0.04 * H
     spine0 = J['crotch'] + 0.1 * H
     neck0 = J['neck'] - 0.035 * H
-    s1 = spine0 + (neck0 - spine0) * 0.36
-    s2 = spine0 + (neck0 - spine0) * 0.7
-    bones = {
-        'Hips': (c(hips), c(spine0), None),
-        'Spine': (c(spine0), c(s1), 'Hips'),
-        'Spine1': (c(s1), c(s2), 'Spine'),
-        'Spine2': (c(s2), c(neck0), 'Spine1'),
-        'Neck': (c(neck0), c(J['neck']), 'Spine2'),
-        'Head': (c(J['neck']), c(H * 0.98), 'Neck'),
+    j = {
+        'Hips': c(J['crotch'] + 0.04 * H), 'Spine': c(spine0),
+        'Spine1': c(spine0 + (neck0 - spine0) * 0.36), 'Spine2': c(spine0 + (neck0 - spine0) * 0.7),
+        'Neck': c(neck0), 'Head': c(J['neck']), 'HeadTop': c(H * 0.98),
     }
-    extra = {}
-    for s, side in (('L', 'Left'), ('R', 'Right')):
+    for s, side, _ in SIDES:
         S = J[s]
         sh, el = to_b(S['arm']), to_b(S['fore'])
         up = el - sh
         wrist = el + up.normalized() * up.length * 0.8
-        hand_end = wrist + up.normalized() * 0.07 * H
-        inner = Vector((sh.x * 0.25, sh.y, J['shoulderY'] + 0.01 * H))
         th, kn = to_b(S['thigh']), to_b(S['shin'])
         ankle = Vector((kn.x, kn.y, 0.06 * H))
         toe = Vector((ankle.x, ankle.y - 0.07 * H, 0.015 * H))
-        bones.update({
-            side + 'Shoulder': (inner, sh, 'Spine2'),
-            side + 'Arm': (sh, el, side + 'Shoulder'),
-            side + 'ForeArm': (el, wrist, side + 'Arm'),
-            side + 'Hand': (wrist, hand_end, side + 'ForeArm'),
-            side + 'UpLeg': (th, kn, 'Hips'),
-            side + 'Leg': (kn, ankle, side + 'UpLeg'),
-            side + 'Foot': (ankle, toe, side + 'Leg'),
-            side + 'ToeBase': (toe, toe + Vector((0, -0.04 * H, 0)), side + 'Foot'),
+        j.update({
+            side + 'Shoulder': Vector((sh.x * 0.25, sh.y, J['shoulderY'] + 0.01 * H)), side + 'Arm': sh,
+            side + 'ForeArm': el, side + 'Hand': wrist, side + 'HandEnd': wrist + up.normalized() * 0.07 * H,
+            side + 'UpLeg': th, side + 'Leg': kn, side + 'Foot': ankle, side + 'ToeBase': toe,
+            side + 'ToeEnd': toe + Vector((0, -0.04 * H, 0)),
         })
-        extra[s] = {'shoulder': sh, 'elbow': el, 'wrist': wrist, 'hand_end': hand_end, 'ankle_z': ankle.z}
-    return bones, extra
+    return {'joints': j, 'bands': dict(BANDS), 'head_tilt': 20.0, 'smooth': 2, 'cloth': True,
+            'weapon_radius': 0.07, 'regions': []}
+
+
+def load_marks(d):
+    """Defaults overlaid with art-src/rig/landmarks/<key>.json:
+      joints        {"LeftForeArm": [x, y, z], "Head": {"z": 1.3}, ...}   Blender coords, game units
+      bands         {"Head": 0.008, ...}   blend half-widths, fractions of the height
+      head_tilt     degrees: the neck/head boundary rises toward the back of the head (chin low, nape high)
+      smooth        weight smoothing passes along the surface after the split (0 = crisp)
+      cloth         on an empty hand's side, cloth hanging far from the arm stays on the chest
+      weapon_radius on an armed side, forearm-part vertices farther than this from the arm (fraction of
+                    the height) are the weapon: rigid on the hand
+      regions       [{"sphere": [x, y, z], "radius": r} or {"box": [[x0, y0, z0], [x1, y1, z1]]},
+                     + "part": "body" | "armL" | "armR" | "legL" | "legR"  (move those vertices to a part)
+                     or "bone": "<Bone>"  (weight them fully to one bone)], applied in order
+    The resolved set is written to work/<key>_landmarks.json (a starting point to copy)."""
+    m = default_marks(d)
+    path = os.path.join(MARKS, d['key'] + '.json')
+    if os.path.exists(path):
+        with open(path) as f:
+            over = json.load(f)
+        for name, v in over.get('joints', {}).items():
+            if name not in m['joints']:
+                raise KeyError(f'{path}: unknown joint {name}')
+            if isinstance(v, dict):
+                for ax, val in v.items():
+                    setattr(m['joints'][name], ax, val)
+            else:
+                m['joints'][name] = Vector(v)
+        m['bands'].update(over.get('bands', {}))
+        for k in ('head_tilt', 'smooth', 'cloth', 'weapon_radius', 'regions'):
+            if k in over:
+                m[k] = over[k]
+    out = {**m, 'joints': {k: [round(c, 4) for c in v] for k, v in m['joints'].items()}}
+    with open(os.path.join(WORK, d['key'] + '_landmarks.json'), 'w') as f:
+        json.dump(out, f, indent=1)
+    return m
+
+
+def joint_layout(m):
+    J = m['joints']
+    return {name: (J[name], J[tail], parent) for name, (parent, tail) in BONES.items()}
 
 
 def build_armature(d, bones):
@@ -168,69 +223,123 @@ def seg_dist(p, a, b):
     return (p - (a + ab * t)).length
 
 
-def skin(d, obj, src, bones, extra):
-    """The 12 fitted weights, spread over the finer humanoid chain along each chain's axis.
-    On an empty hand's side, arm weights far from the arm itself (a cape, a sleeve of cloth hanging
-    beside it) go mostly to the chest: raising that arm lifts the cloth like a wing instead of dragging it all."""
-    J, H = d['joints'], d['height']
+class Chain:
+    """Bones along a polyline of joints: a vertex is placed by its nearest point on the polyline
+    (arc length s), and each joint hands over to the next bone within +-band of it."""
+
+    def __init__(self, pts, bones, bands):
+        self.pts, self.bones, self.bands = pts, bones, bands
+        self.cum = [0.0]
+        for a, b in zip(pts, pts[1:]):
+            self.cum.append(self.cum[-1] + (b - a).length)
+
+    def locate(self, p):
+        best = (1e9, 0.0)
+        for i, (a, b) in enumerate(zip(self.pts, self.pts[1:])):
+            ab = b - a
+            t = min(1.0, max(0.0, (p - a).dot(ab) / max(ab.length_squared, 1e-9)))
+            dist = (p - (a + ab * t)).length
+            if dist < best[0]:
+                best = (dist, self.cum[i] + t * ab.length)
+        return best  # (distance to the chain, arc length)
+
+    def weights(self, s):
+        out, carry = {}, 1.0
+        for i, bone in enumerate(self.bones):
+            if i + 1 < len(self.bones):
+                b, bw = self.cum[i + 1], self.bands[i + 1]
+                u = smooth(b - bw, b + bw, s)
+            else:
+                u = 0.0
+            out[bone] = out.get(bone, 0.0) + carry * (1 - u)
+            carry *= u
+        return out
+
+
+def in_shape(r, p):
+    if 'sphere' in r:
+        return (p - Vector(r['sphere'])).length <= r['radius']
+    lo, hi = r['box']
+    return all(lo[k] <= p[k] <= hi[k] for k in range(3))
+
+
+def skin(d, obj, src, m):
+    """Weights from the body parts found by autorig.mjs (which already cut the arms and legs free),
+    each part split along its own chain of landmarks: the torso and head by height (the head boundary
+    tilted up toward the nape, so the whole face turns with the head), legs and arms by where the
+    vertex sits along hip-knee-ankle-toe / shoulder-elbow-wrist-hand."""
+    H = d['height']
+    J, B = m['joints'], m['bands']
+    bw = lambda name: B[name.replace('Left', '').replace('Right', '')] * H
+    names, P, parts = d['bones'], d['position'], d['part']
+    tilt = math.tan(math.radians(m['head_tilt']))
+    torso = [('Spine', 'Hips'), ('Spine1', 'Spine'), ('Spine2', 'Spine1'), ('Neck', 'Spine2'), ('Head', 'Neck')]
+    limbs = {}
+    for s, side, _ in SIDES:
+        hip = J[side + 'UpLeg']
+        limbs['leg' + s] = Chain(
+            [hip + Vector((0, 0, 0.1 * H)), hip, J[side + 'Leg'], J[side + 'Foot'], J[side + 'ToeEnd']],
+            ['Hips', side + 'UpLeg', side + 'Leg', side + 'Foot'],
+            [0, bw('UpLeg'), bw('Leg'), bw('Foot')])
+        limbs['arm' + s] = Chain(
+            [J[side + 'Shoulder'], J[side + 'Arm'], J[side + 'ForeArm'], J[side + 'Hand'], J[side + 'HandEnd']],
+            [side + 'Shoulder', side + 'Arm', side + 'ForeArm', side + 'Hand'],
+            [0, bw('Arm'), bw('ForeArm'), bw('Hand')])
+    part_of = {'root': 'body', 'hips': 'body', 'spine': 'body', 'head': 'body'}
+    for s in 'LR':
+        part_of.update({'thigh' + s: 'leg' + s, 'shin' + s: 'leg' + s, 'arm' + s: 'arm' + s, 'fore' + s: 'arm' + s})
     armed = lambda s: d['weapon'] in ('both', s)
-    names = d['bones']
-    SI, SW, P = d['skinIndex'], d['skinWeight'], d['position']
-    spine_cuts = [(bones['Spine'][1].z, 'Spine', 'Spine1'), (bones['Spine1'][1].z, 'Spine1', 'Spine2'),
-                  (bones['Spine2'][1].z, 'Spine2', 'Neck'), (J['neck'], 'Neck', 'Head')]
     groups = {}
     for i, o in enumerate(src):
         p = to_b(P[o * 3:o * 3 + 3])
-        w = {}
-        add = lambda b, x: w.__setitem__(b, w.get(b, 0) + x)
-        for j in range(4):
-            bone, wt = names[SI[o * 4 + j]], SW[o * 4 + j]
-            if wt < 1e-4:
-                continue
-            if bone in ('root', 'hips'):
-                add('Hips', wt)
-            elif bone in ('spine', 'head'):
-                # chain Spine > Spine1 > Spine2 > Neck > Head by height, soft over +-2.5% of the height
-                rest = wt
-                for z, lo, hi in spine_cuts:
-                    k = smooth(z - 0.025 * H, z + 0.025 * H, p.z)
-                    add(lo, rest * (1 - k))
-                    rest *= k
-                add('Head', rest)
-            else:
-                s = bone[-1]
-                side = 'Left' if s == 'L' else 'Right'
-                E = extra[s]
-                if bone.startswith('thigh'):
-                    add(side + 'UpLeg', wt)
-                elif bone.startswith('shin'):
-                    k = smooth(E['ankle_z'] + 0.02 * H, E['ankle_z'] - 0.02 * H, p.z)
-                    add(side + 'Leg', wt * (1 - k))
-                    add(side + 'Foot', wt * k)
+        part, rigid = part_of[names[parts[o]]], None
+        for r in m['regions']:
+            if in_shape(r, p):
+                if 'bone' in r:
+                    rigid = r['bone']
                 else:
-                    if not armed(s):
-                        far = 0.7 * smooth(0.06 * H, 0.2 * H, min(
-                            seg_dist(p, E['shoulder'], E['elbow']), seg_dist(p, E['elbow'], E['wrist']),
-                            seg_dist(p, E['wrist'], E['hand_end'])))
-                        add('Spine2', wt * far)
-                        wt *= 1 - far
-                    if bone.startswith('arm'):
-                        add(side + 'Arm', wt)
-                        continue
-                    ax = (E['wrist'] - E['elbow'])
-                    t = (p - E['elbow']).dot(ax.normalized())
-                    k = smooth(ax.length - 0.03 * H, ax.length + 0.03 * H, t)
-                    add(side + 'ForeArm', wt * (1 - k))
-                    add(side + 'Hand', wt * k)
+                    part = r['part']
+        if rigid:
+            w = {rigid: 1.0}
+        elif part == 'body':
+            w, carry = {}, 1.0
+            for bone, below in torso:
+                z = p.z - tilt * (p.y - J['Head'].y) if bone == 'Head' else p.z
+                u = smooth(J[bone].z - bw(bone), J[bone].z + bw(bone), z)
+                w[below] = w.get(below, 0.0) + carry * (1 - u)
+                carry *= u
+            w['Head'] = w.get('Head', 0.0) + carry
+        else:
+            s = part[-1]
+            side = 'Left' if s == 'L' else 'Right'
+            ch = limbs[part]
+            dist, arc = ch.locate(p)
+            if part.startswith('arm') and armed(s) and dist > m['weapon_radius'] * H \
+                    and arc > ch.cum[2]:  # the weapon, past the elbow: rigid on the hand
+                w = {side + 'Hand': 1.0}
+            else:
+                w = ch.weights(arc)
+                if part.startswith('arm') and not armed(s) and m['cloth']:
+                    far = 0.7 * smooth(0.06 * H, 0.2 * H, dist)  # a cape beside the arm stays mostly on the chest
+                    w = {b: x * (1 - far) for b, x in w.items()}
+                    w['Spine2'] = w.get('Spine2', 0.0) + far
         for b, x in w.items():
             if x > 1e-3:
                 groups.setdefault(b, {}).setdefault(round(x, 3), []).append(i)
-    for b in bones:
+    for b in BONES:
         vg = obj.vertex_groups.new(name=b)
         for x, ids in groups.get(b, {}).items():
             vg.add(ids, x, 'REPLACE')
     bpy.context.view_layer.objects.active = obj
+    for o in bpy.context.view_layer.objects:
+        o.select_set(o == obj)
+    bpy.ops.object.mode_set(mode='WEIGHT_PAINT')
+    if m['smooth']:
+        bpy.ops.object.vertex_group_smooth(group_select_mode='ALL', factor=0.5, repeat=int(m['smooth']))
+    bpy.ops.object.vertex_group_limit_total(group_select_mode='ALL', limit=4)
     bpy.ops.object.vertex_group_normalize_all(lock_active=False)
+    bpy.ops.object.mode_set(mode='OBJECT')
+
 
 
 # ------------------------------------------------------------------ main
@@ -250,14 +359,14 @@ def build(key):
     me.materials.append(build_material(d))
     body = bpy.data.objects.new(key, me)
     bpy.context.scene.collection.objects.link(body)
-    bones, extra = joint_layout(d)
-    rig = build_armature(d, bones)
+    marks = load_marks(d)
+    rig = build_armature(d, joint_layout(marks))
     rig.name = key + '_rig'
-    skin(d, body, src, bones, extra)
+    skin(d, body, src, marks)
     body.parent = rig
     mod = body.modifiers.new('Armature', 'ARMATURE')
     mod.object = rig
-    return d, rig, body
+    return d, rig, body, marks
 
 
 def export(key, rig, body):
@@ -283,10 +392,15 @@ def export(key, rig, body):
 
 def main():
     argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
-    preview = '--preview' in argv
+    preview, check, quick = '--preview' in argv, '--check' in argv, '--quick' in argv
     keys = [a for a in argv if not a.startswith('--')] or KEYS
     for key in keys:
-        d, rig, body = build(key)
+        d, rig, body, marks = build(key)
+        if check:  # the rig test sheet: work/check/<key>.png
+            import rig_check
+            print(key, 'check sheet:', rig_check.sheet(d, rig, body, marks, os.path.join(WORK, 'check')))
+        if quick:  # --check --quick: the sheet only, no clips, no export
+            continue
         made = clips.make_all(d, rig)
         print(key, 'clips:', ', '.join(made))
         if preview:

@@ -87,7 +87,10 @@ class Char:
         self.hang, self.aim, self.axis, self.wpn = {}, {}, {}, {}
         for s, sg in (('L', 1), ('R', -1)):
             J = d['joints'][s]
-            self.axis[s], self.wpn[s] = to_b(J['armAxis']), to_b(J['weaponAxis'])
+            side = SIDE[s][0]
+            # the arm as rigged (landmarks), the weapon as found on the mesh by autorig.mjs
+            self.axis[s] = (self.head[side + 'ForeArm'] - self.head[side + 'Arm']).normalized()
+            self.wpn[s] = to_b(J['weaponAxis'])
             armed = self.armed(s)
             if armed and self.style == 'gun':
                 self.hang[s] = between(self.wpn[s], Vector((sg * 0.12, -0.65, -0.75)))

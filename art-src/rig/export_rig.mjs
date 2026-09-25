@@ -17,7 +17,7 @@ export const RIGS = {
   volt: { weapon: 'both', style: 'cast' },
 };
 
-const SRC = 'art-src/figurines', OUT = 'art-src/rig/work';
+const SRC = 'art-src/figurines', OUT = 'art-src/rig/work', MARKS = 'art-src/rig/landmarks';
 fs.mkdirSync(OUT, { recursive: true });
 const keys = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(RIGS);
 
@@ -35,7 +35,9 @@ for (const key of keys) {
   const buf = fs.readFileSync(path.join(SRC, `${key}.glb`));
   const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
     .parseAsync(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), '');
-  const { geo, joints: J } = rigFigurine(gltf.scene, { ...RIGS[key], ...OVERRIDES[key] });
+  // landmarks/<key>.json "fit": crotch / neck / torso as fractions of the height, for the cut
+  const marks = fs.existsSync(path.join(MARKS, `${key}.json`)) ? JSON.parse(fs.readFileSync(path.join(MARKS, `${key}.json`), 'utf8')) : {};
+  const { geo, joints: J } = rigFigurine(gltf.scene, { ...RIGS[key], ...OVERRIDES[key], ...marks.fit });
   const side = s => ({
     thigh: vec(J[s].thigh), shin: vec(J[s].shin), arm: vec(J[s].arm), fore: vec(J[s].fore),
     armAxis: vec(J[s].armAxis), weaponAxis: vec(J[s].weaponAxis),
@@ -47,6 +49,9 @@ for (const key of keys) {
     position: round(a.position.array), normal: round(a.normal.array, 4), uv: round(a.uv.array),
     index: Array.from(geo.index.array),
     skinIndex: Array.from(a.skinIndex.array), skinWeight: round(a.skinWeight.array, 4),
+    // body part of each vertex before the weights are blurred (index into bones): rig_blender.py
+    // weights every part along its own chain
+    part: Array.from({ length: a.position.count }, (_, i) => J.labels.label[J.labels.ids[i]]),
     texture: `${key}.${img.mime.split('/')[1]}`,
   };
   fs.writeFileSync(path.join(OUT, `${key}.json`), JSON.stringify(out));
