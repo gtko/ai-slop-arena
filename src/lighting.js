@@ -80,7 +80,7 @@ export class Lighting {
     this.cycle = false;
     this.follow = true;  // fit the shadow frustum to the view instead of the whole map
     this.snap = true;    // snap that frustum to shadow-map texels (kills shimmering)
-    this.halfSize = 22;
+    this.halfSize = 27;
     this.exposureMul = 1;
     this.shadowSize = 2048;
     this.state = {};
@@ -159,7 +159,7 @@ export class Lighting {
       cam.updateProjectionMatrix();
     }
     const c = _c.set(0, 0, 0);
-    if (this.follow) c.set(focus.x, 0, focus.z - 3);
+    if (this.follow) c.set(focus.x, 0, focus.z - 6);
     const d = this.sunDir;
     if (this.follow && this.snap) {
       _r.crossVectors(UP, d).normalize();

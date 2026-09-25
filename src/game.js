@@ -57,7 +57,7 @@ export class Game {
     this.state = 'idle';
     this.camFocus = new THREE.Vector3(0, 0, 4);
     this.camTarget = null;
-    this.camOffset = new THREE.Vector3(0, 21.5, 13.5);
+    this.camOffset = new THREE.Vector3(0, 22.8, 20.8); // ~47° pitch (hack'n'slash), 20% further than the old 57° view
     this.shake = 0;
     this.aimPoint = new THREE.Vector3();
     this.aimDir = new THREE.Vector3(0, 0, -1);
