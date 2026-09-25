@@ -225,6 +225,17 @@ export function buildFigurine(key) {
   line.frustumCulled = false;
   line.userData.outline = true;
   OUTLINES.add(line);
+  // weapons are their own meshes, parented to a hand bone: same look, same hit flash, own outline
+  const weapons = [];
+  rig.traverse(o => { if (o.isMesh && !o.isSkinnedMesh && !o.userData.outline) weapons.push(o); });
+  for (const w of weapons) {
+    w.material = mat;
+    w.castShadow = w.receiveShadow = true;
+    const hull = new THREE.Mesh(w.geometry, outlineMaterial(0.02));
+    hull.userData.outline = true;
+    OUTLINES.add(hull);
+    w.add(hull);
+  }
   const anim = new Animator(rig, T.clips);
   return { figurine: true, root, body, rig, mesh, skeleton: mesh.skeleton, anim, weapon: RIGS[key]?.weapon, style: RIGS[key]?.style, mats: [mat] };
 }
