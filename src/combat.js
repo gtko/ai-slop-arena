@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { TILE } from './arena.js';
 import { sfx } from './audio.js';
+import { particle } from './effects.js';
 
 // HDR colours (> 1) so projectiles bloom; the light colour is the normalised hue.
 const COL = {
@@ -9,6 +10,8 @@ const COL = {
   super: new THREE.Color(4.2, 3.1, 0.6),
   ice: new THREE.Color(1.6, 3.4, 4.6),
   volt: new THREE.Color(1.2, 4.2, 4.6),
+  seed: new THREE.Color(1.5, 3.6, 0.7), // Blaster: thorny seeds
+  ray: new THREE.Color(2.6, 1.5, 4.8), // Gunslinger: ray pistol bolts
 };
 const ICE_LIGHT = new THREE.Color(0.55, 0.85, 1), BOLT = new THREE.Color(3.2, 4.2, 5.2);
 const WALL_SPARK = new THREE.Color(2.5, 2.0, 1.4);
@@ -16,40 +19,89 @@ const BULLET_Y = 1.15;
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 
+// Blaster seed: an icosphere whose 12 original corners are pulled out into thorns.
+function seedGeometry() {
+  const g = new THREE.IcosahedronGeometry(1, 1), p = g.attributes.position, v = new THREE.Vector3();
+  const base = new THREE.IcosahedronGeometry(1, 0).attributes.position, corners = [];
+  for (let i = 0; i < base.count; i++) corners.push(new THREE.Vector3().fromBufferAttribute(base, i));
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    if (corners.some(c => c.distanceToSquared(v) < 1e-4)) p.setXYZ(i, v.x * 1.8, v.y * 1.8, v.z * 1.8);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+// Bomber fireball / meteor: a lumpy faceted rock (the bump is hashed from the position, so the
+// duplicated vertices along face seams move together).
+function rockGeometry(r, detail, bump) {
+  const g = new THREE.IcosahedronGeometry(r, detail), p = g.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    const h = Math.sin(v.x * 12.9898 + v.y * 78.233 + v.z * 37.719) * 43758.5453;
+    v.multiplyScalar(1 + (h - Math.floor(h) - 0.5) * bump);
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
 export class Combat {
   constructor(game) {
     this.g = game;
     this.bullets = [];
     this.bombs = [];
     this.strikes = []; // Volt super: scheduled lightning strikes
-    this.free = [];
+    this.free = new Map(); // geometry -> spare bullet meshes
     this.bulletGeo = new THREE.SphereGeometry(1, 12, 8);
+    this.seedGeo = seedGeometry();
     this.bulletMats = new Map();
-    this.bombGeo = new THREE.SphereGeometry(0.34, 16, 12);
-    this.bigBombGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.9, 16);
-    this.bombMat = new THREE.MeshStandardMaterial({ color: 0x222226, roughness: 0.35, metalness: 0.3 });
-    this.barrelMat = new THREE.MeshStandardMaterial({ color: 0xb23a2a, roughness: 0.5 });
+    // Bomber: molten rock core (emissive enough to bloom) inside an additive flame shell
+    this.fireballGeo = rockGeometry(0.3, 1, 0.3);
+    this.meteorGeo = rockGeometry(0.62, 1, 0.35);
+    this.flameGeo = new THREE.IcosahedronGeometry(1, 2);
+    this.rockMat = new THREE.MeshStandardMaterial({ color: 0x3a2a24, roughness: 0.85, emissive: 0xff5a14, emissiveIntensity: 1.6, flatShading: true });
+    this.flameMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(3.6, 1.5, 0.3), transparent: true, opacity: 0.4,
+      blending: THREE.AdditiveBlending, depthWrite: false });
+  }
+
+  fireball(sup) {
+    const g = new THREE.Group(), core = new THREE.Mesh(sup ? this.meteorGeo : this.fireballGeo, this.rockMat);
+    const flame = new THREE.Mesh(this.flameGeo, this.flameMat);
+    core.castShadow = true;
+    flame.scale.setScalar(sup ? 0.95 : 0.46);
+    g.add(core, flame);
+    g.userData.flame = flame;
+    return g;
   }
 
   colorFor(b, sup) {
+    if (b.type.key === 'blaster' && !sup) return b.isPlayer ? COL.seed : COL.enemy;
+    if (b.type.key === 'gunslinger' && !sup) return b.isPlayer ? COL.ray : COL.enemy;
     if (b.type.key === 'frostbite' && !sup) return b.isPlayer ? COL.ice : COL.enemy;
     if (b.type.key === 'volt' && !sup) return b.isPlayer ? COL.volt : COL.enemy;
     return sup ? COL.super : (b.isPlayer ? COL.player : COL.enemy);
   }
 
-  meshFor(col) {
+  meshFor(col, geo) {
     const key = col.getHexString();
     let mat = this.bulletMats.get(key);
     if (!mat) { mat = new THREE.MeshBasicMaterial({ color: col }); this.bulletMats.set(key, mat); }
-    let m = this.free.pop();
+    let m = this.free.get(geo)?.pop();
     if (!m) {
-      m = new THREE.Mesh(this.bulletGeo, mat);
+      m = new THREE.Mesh(geo, mat);
       m.castShadow = true;
       this.g.fx.add(m);
     }
     m.material = mat;
     m.visible = true;
     return m;
+  }
+
+  release(m) {
+    m.visible = false;
+    if (!this.free.has(m.geometry)) this.free.set(m.geometry, []);
+    this.free.get(m.geometry).push(m);
   }
 
   attack(b, dx, dz, point, sup) {
@@ -63,7 +115,7 @@ export class Combat {
         const a = base + (k / (n - 1) - 0.5) * spread + rnd(-0.03, 0.03);
         this.spawnBullet(b, mx, mz, a, {
           speed: rnd(24, 27), range: sup ? 11 : 9.5, dmg: sup ? 300 : 260, r: sup ? 0.25 : 0.2,
-          breakWalls: sup, knock: sup ? 11 : 0, emit: k % 2 === 0, col,
+          breakWalls: sup, knock: sup ? 11 : 0, emit: k % 2 === 0, col, shape: 'seed',
         });
       }
       this.g.effects.muzzle(mx, BULLET_Y, mz, dx, dz, col);
@@ -93,11 +145,13 @@ export class Combat {
       if (d < 1e-3) { tx = dx; tz = dz; d = 1; }
       const cd = THREE.MathUtils.clamp(d, 2, R);
       tx = b.pos.x + tx / d * cd; tz = b.pos.z + tz / d * cd;
-      const mesh = new THREE.Mesh(sup ? this.bigBombGeo : this.bombGeo, sup ? this.barrelMat : this.bombMat);
-      mesh.castShadow = true;
+      const mesh = this.fireball(sup);
       this.g.fx.add(mesh);
+      // the super is a meteor: same target and timing, but it dives from the sky behind the target
+      const ux = (tx - b.pos.x) / cd, uz = (tz - b.pos.z) / cd;
       this.bombs.push({
-        sx: mx, sz: mz, sy: 1.6, tx, tz, t: 0, dur: 0.5 + (cd / R) * 0.35, h: 2.6 + cd * 0.22,
+        sx: sup ? tx - ux * 4 : mx, sz: sup ? tz - uz * 4 : mz, sy: sup ? 12 : 1.6,
+        tx, tz, t: 0, dur: 0.5 + (cd / R) * 0.35, h: 2.6 + cd * 0.22,
         dmg: sup ? 1800 : 800, radius: sup ? 3.6 : 2.0, owner: b, sup, mesh, spin: rnd(6, 12),
         fx: mx, fy: 1.6, fz: mz,
       });
@@ -106,8 +160,10 @@ export class Combat {
   }
 
   spawnBullet(owner, x, z, a, o) {
-    const m = this.meshFor(o.col);
-    m.scale.set(o.r, o.r, o.r * 2.6);
+    const m = this.meshFor(o.col, o.shape === 'seed' ? this.seedGeo : this.bulletGeo);
+    if (o.shape === 'seed') m.scale.setScalar(o.r * 0.75);
+    else if (o.shape === 'ray') m.scale.set(o.r * 0.7, o.r * 0.7, o.r * 5);
+    else m.scale.set(o.r, o.r, o.r * 2.6);
     m.rotation.set(0, a, 0);
     m.position.set(x, BULLET_Y, z);
     const mx = Math.max(o.col.r, o.col.g, o.col.b);
@@ -131,7 +187,7 @@ export class Combat {
         const mx = b.pos.x + dx * 0.9, mz = b.pos.z + dz * 0.9;
         this.spawnBullet(b, mx, mz, a, {
           speed: 32, range: s.sup ? 20 : 16, dmg: s.sup ? 300 : 250, r: 0.17,
-          breakWalls: s.sup, knock: 0, emit: true, col,
+          breakWalls: s.sup, knock: 0, emit: true, col, shape: 'ray',
         });
         this.g.effects.muzzle(mx, BULLET_Y, mz, dx, dz, col);
         b.recoil = 1;
@@ -193,11 +249,11 @@ export class Combat {
         }
       }
       if (dead) {
-        B.mesh.visible = false;
-        this.free.push(B.mesh);
+        this.release(B.mesh);
         this.bullets.splice(i, 1);
       } else {
         B.mesh.position.set(B.x, BULLET_Y, B.z);
+        if (B.shape === 'seed') B.mesh.rotateX(dt * 16);
       }
     }
   }
@@ -208,17 +264,30 @@ export class Combat {
       const B = this.bombs[i];
       B.t += dt / B.dur;
       const k = Math.min(B.t, 1);
-      const x = B.sx + (B.tx - B.sx) * k, z = B.sz + (B.tz - B.sz) * k;
-      const y = B.sy + (0.35 - B.sy) * k + 4 * B.h * k * (1 - k);
+      let x, y, z;
+      if (B.sup) { // meteor: straight dive, accelerating
+        const e = k * k;
+        x = B.sx + (B.tx - B.sx) * e; z = B.sz + (B.tz - B.sz) * e; y = B.sy + (0.35 - B.sy) * e;
+      } else { // fireball: lobbed arc
+        x = B.sx + (B.tx - B.sx) * k; z = B.sz + (B.tz - B.sz) * k;
+        y = B.sy + (0.35 - B.sy) * k + 4 * B.h * k * (1 - k);
+      }
       B.mesh.position.set(x, y, z);
-      B.mesh.rotation.x += B.spin * dt;
-      B.mesh.rotation.z += B.spin * 0.4 * dt;
+      const core = B.mesh.children[0], size = B.sup ? 0.95 : 0.46;
+      core.rotation.x += B.spin * dt;
+      core.rotation.z += B.spin * 0.4 * dt;
+      B.mesh.userData.flame.scale.setScalar(size * (1 + Math.sin(B.t * 40) * 0.08));
       B.fx = x; B.fy = y + 0.4; B.fz = z;
-      if (Math.random() < 0.6) {
-        g.effects.sparks.spawn({
-          x, y: y + 0.35, z, vx: rnd(-1, 1), vy: rnd(0.5, 2), vz: rnd(-1, 1), life: 0.2, max: 0.2, size: 0.1,
-          r: 5, g: 2.5, b: 0.6, grav: 4, drag: 2, rot: 0, spin: 0, bounce: false, grow: 0, shrink: 1, fade: false, sy: 1,
-        });
+      // flame trail and a little smoke
+      for (let n = B.sup ? 3 : 1; n > 0; n--) {
+        const hot = Math.random();
+        g.effects.fire.spawn(particle(x + rnd(-0.3, 0.3) * size, y + rnd(-0.3, 0.3) * size, z + rnd(-0.3, 0.3) * size,
+          rnd(-0.6, 0.6), rnd(0.4, 1.6), rnd(-0.6, 0.6), rnd(0.18, 0.32), rnd(0.8, 1.2) * size,
+          3.2 + hot * 2, 1.1 + hot * 1.6, 0.25 + hot * 0.4, { drag: 3, grow: 0.3, shrink: 0.9, fade: true }));
+      }
+      if (Math.random() < (B.sup ? 0.5 : 0.25)) {
+        g.effects.smoke.spawn(particle(x, y + 0.2, z, rnd(-0.4, 0.4), rnd(0.6, 1.4), rnd(-0.4, 0.4), rnd(0.5, 0.8), size * 0.8,
+          0.3, 0.28, 0.27, { drag: 2, grow: 1.4, shrink: 0.4 }));
       }
       if (B.t >= 1) {
         this.explode(B);
@@ -343,11 +412,11 @@ export class Combat {
     for (const B of this.bullets) {
       if (B.emit) pool.add(B.x, BULLET_Y + 0.2, B.z, B.lr, B.lg, B.lb, B.breakWalls ? 12 : 8, 6.5);
     }
-    for (const B of this.bombs) pool.add(B.fx, B.fy, B.fz, 1, 0.55, 0.2, 5, 5);
+    for (const B of this.bombs) pool.add(B.fx, B.fy, B.fz, 1, 0.55, 0.2, B.sup ? 9 : 6, B.sup ? 7 : 5.5);
   }
 
   clear() {
-    for (const B of this.bullets) { B.mesh.visible = false; this.free.push(B.mesh); }
+    for (const B of this.bullets) this.release(B.mesh);
     this.bullets.length = 0;
     for (const B of this.bombs) this.g.fx.remove(B.mesh);
     this.bombs.length = 0;

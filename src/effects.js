@@ -133,7 +133,7 @@ class Layer {
   }
 }
 
-function particle(x, y, z, vx, vy, vz, life, size, r, g, b, o) {
+export function particle(x, y, z, vx, vy, vz, life, size, r, g, b, o) {
   return Object.assign({
     x, y, z, vx, vy, vz, life, max: life, size, r, g, b,
     grav: 0, drag: 0, rot: Math.random() * 6, spin: 0, bounce: false, grow: 0, shrink: 1, fade: false, sy: 1,
