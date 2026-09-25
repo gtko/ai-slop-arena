@@ -131,7 +131,7 @@ def joint_layout(d):
             side + 'Foot': (ankle, toe, side + 'Leg'),
             side + 'ToeBase': (toe, toe + Vector((0, -0.04 * H, 0)), side + 'Foot'),
         })
-        extra[s] = {'elbow': el, 'wrist': wrist, 'ankle_z': ankle.z}
+        extra[s] = {'shoulder': sh, 'elbow': el, 'wrist': wrist, 'hand_end': hand_end, 'ankle_z': ankle.z}
     return bones, extra
 
 
@@ -162,9 +162,18 @@ def build_armature(d, bones):
 
 # ------------------------------------------------------------------ weights
 
+def seg_dist(p, a, b):
+    ab = b - a
+    t = min(1.0, max(0.0, (p - a).dot(ab) / max(ab.length_squared, 1e-9)))
+    return (p - (a + ab * t)).length
+
+
 def skin(d, obj, src, bones, extra):
-    """The 12 fitted weights, spread over the finer humanoid chain along each chain's axis."""
+    """The 12 fitted weights, spread over the finer humanoid chain along each chain's axis.
+    On an empty hand's side, arm weights far from the arm itself (a cape, a sleeve of cloth hanging
+    beside it) go mostly to the chest: raising that arm lifts the cloth like a wing instead of dragging it all."""
     J, H = d['joints'], d['height']
+    armed = lambda s: d['weapon'] in ('both', s)
     names = d['bones']
     SI, SW, P = d['skinIndex'], d['skinWeight'], d['position']
     spine_cuts = [(bones['Spine'][1].z, 'Spine', 'Spine1'), (bones['Spine1'][1].z, 'Spine1', 'Spine2'),
@@ -198,9 +207,16 @@ def skin(d, obj, src, bones, extra):
                     k = smooth(E['ankle_z'] + 0.02 * H, E['ankle_z'] - 0.02 * H, p.z)
                     add(side + 'Leg', wt * (1 - k))
                     add(side + 'Foot', wt * k)
-                elif bone.startswith('arm'):
-                    add(side + 'Arm', wt)
                 else:
+                    if not armed(s):
+                        far = 0.7 * smooth(0.06 * H, 0.2 * H, min(
+                            seg_dist(p, E['shoulder'], E['elbow']), seg_dist(p, E['elbow'], E['wrist']),
+                            seg_dist(p, E['wrist'], E['hand_end'])))
+                        add('Spine2', wt * far)
+                        wt *= 1 - far
+                    if bone.startswith('arm'):
+                        add(side + 'Arm', wt)
+                        continue
                     ax = (E['wrist'] - E['elbow'])
                     t = (p - E['elbow']).dot(ax.normalized())
                     k = smooth(ax.length - 0.03 * H, ax.length + 0.03 * H, t)
@@ -261,6 +277,7 @@ def export(key, rig, body):
         add_leaf_bones=False, bake_anim=True, bake_anim_use_all_actions=True, bake_anim_use_nla_strips=False,
         bake_anim_force_startend_keying=True, path_mode='COPY', embed_textures=True, armature_nodetype='NULL',
         axis_forward='-Z', axis_up='Y')
+    bpy.context.preferences.filepaths.save_version = 0  # no .blend1 backups
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(RIGGED, key + '.blend'), compress=True)
 
 

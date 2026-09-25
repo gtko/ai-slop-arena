@@ -1,5 +1,5 @@
 """Raw generated GLBs -> game-ready GLBs (webp texture, meshopt geometry, triangle budget).
-  art-src/glb/<key>.glb        -> public/assets/models/<key>.glb         (characters, ~13k tris)
+  art-src/glb/<key>.glb        -> art-src/figurines/<key>.glb            (characters, then rigged: art-src/rig)
   art-src/glb/decor/<name>.glb -> public/assets/models/decor/<name>.glb  (instanced props, light)
 Usage: python art-src/optimize_models.py [keys...]   python art-src/optimize_models.py --decor [names...]"""
 import glob, os, subprocess, sys
@@ -29,4 +29,4 @@ if args[:1] == ['--decor']:
 else:
     keys = args or [os.path.basename(p)[:-4] for p in glob.glob('art-src/glb/*.glb')]
     for key in keys:
-        run(f'art-src/glb/{key}.glb', f'public/assets/models/{key}.glb', 0.35, 0.0008, 1024)  # HQ sources: 60k -> ~20k
+        run(f'art-src/glb/{key}.glb', f'art-src/figurines/{key}.glb', 0.35, 0.0008, 1024)  # HQ sources: 60k -> ~20k

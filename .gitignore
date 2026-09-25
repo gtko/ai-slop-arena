@@ -13,3 +13,6 @@ dist-app
 steam/store/trailer.mp4
 worker/build
 art-src/rig/work/
+art-src/rig/out/
+__pycache__/
+*.blend1

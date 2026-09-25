@@ -402,10 +402,10 @@ def c_super(C, t):
         crouch1 = env(t, 0.0, 0.18, 0.2, 0.3)
         air = clamp01((t - 0.25) / 0.3)
         slam = env(t, 0.52, 0.58, 0.75, 1.1)
-        P.loc.z = -0.12 * crouch1 + 0.38 * math.sin(math.pi * air) * (t < 0.55) - 0.22 * slam
+        P.loc.z = -0.12 * crouch1 + 0.38 * math.sin(math.pi * air) * (t < 0.55) - 0.14 * slam
         P.loc.y = 0.06 * slam
-        P.hips(0.15 * slam)
-        P.spine(0.1 * crouch1 - 0.2 * (0.25 < t < 0.55) + 0.45 * slam)
+        P.hips(0.08 * slam)
+        P.spine(0.1 * crouch1 - 0.2 * (0.25 < t < 0.55) + 0.22 * slam)
         tuck = math.sin(math.pi * air) * (t < 0.55)
         for s in ('L', 'R'):
             P.leg_ik(s, 0, max(0.0, P.loc.z) + 0.12 * tuck, 0.05 if s == 'L' else -0.05)
@@ -415,7 +415,7 @@ def c_super(C, t):
                 blend_arm(P, s, q(X, -0.2) @ C.hang[s], slam, (0, 0, 0))
             else:
                 blend_arm(P, s, C.arm_to(s, (0.85 if s == 'L' else -0.85, 0, 0.3)), ramp(t, 0.2, 0.4) * (1 - ramp(t, 0.8, 1.1)), (-0.3, 0, 0))
-        P.head(-0.2 * tuck + 0.2 * slam)
+        P.head(-0.2 * tuck - 0.1 * slam)
     else:  # cast: arms to the sky, lifted off the ground by the storm
         lift = env(t, 0.1, 0.35, 0.75, 1.05)
         tremble = math.sin(t * 60) * 0.03 * lift
