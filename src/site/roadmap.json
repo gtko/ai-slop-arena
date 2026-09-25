@@ -1,0 +1,486 @@
+{
+  "vision_fr": "Un petit brawler mignon, loyal et explosif, où chaque coup claque et chaque partie te rapporte quelque chose. Cinq minutes pour apprendre, une saison pour maîtriser, seul contre des bots pleins de caractère ou avec un ami. Et à chaque version, de nouveaux brawlers, de nouvelles arènes et un peu plus de chaos.",
+  "pillars": [
+    {
+      "emoji": "💥",
+      "title_fr": "Chaque coup se sent",
+      "text_fr": "Arrêt sur image, secousse, son et vibration à chaque touche : quand tu touches, tu le sais."
+    },
+    {
+      "emoji": "⚖️",
+      "title_fr": "Juste, toujours",
+      "text_fr": "Tous les brawlers sont gratuits, rien ne s'achète pour gagner, et personne ne voit à travers les murs : ce qui est caché reste caché."
+    },
+    {
+      "emoji": "👀",
+      "title_fr": "Un chaos lisible",
+      "text_fr": "Ami, ennemi, danger : tu comprends tout d'un coup d'œil, chaque règle a son signe et son son."
+    },
+    {
+      "emoji": "🎁",
+      "title_fr": "Toujours une raison de rejouer",
+      "text_fr": "Chaque partie fait avancer quelque chose, et chaque semaine apporte une nouvelle surprise."
+    },
+    {
+      "emoji": "🤝",
+      "title_fr": "Génial avec les bots, mieux entre amis",
+      "text_fr": "Des bots avec une vraie personnalité, et un mode fait pour jouer à deux."
+    }
+  ],
+  "releases": [
+    {
+      "version": "v0.11",
+      "name": "IMPACT",
+      "emoji": "💥",
+      "color": "#ff4d4f",
+      "teaser_fr": "Chaque coup porte. Tu vas le sentir.",
+      "promise_fr": "Chaque tir qui touche et chaque K.O. que tu marques, tu le sens dans tes mains et dans tes oreilles. Et tu es en partie en moins d'une minute.",
+      "highlights": [
+        {
+          "emoji": "🥊",
+          "title_fr": "Des coups qui claquent",
+          "text_fr": "Arrêt sur image, la cible s'écrase sous l'impact, étincelles dans le sens du tir : chaque touche compte.",
+          "tag": "feel"
+        },
+        {
+          "emoji": "🎥",
+          "title_fr": "Une caméra vivante",
+          "text_fr": "Elle regarde là où tu vises, tremble aux explosions et se resserre pour le duel final.",
+          "tag": "feel"
+        },
+        {
+          "emoji": "💀",
+          "title_fr": "Des K.O. mémorables",
+          "text_fr": "Tampon K.O., brawler envoyé valser, et un ralenti spectaculaire sur le dernier K.O. de la partie.",
+          "tag": "feel"
+        },
+        {
+          "emoji": "🔊",
+          "title_fr": "Chaque brawler a sa voix",
+          "text_fr": "Tirs, supers et cris propres à chacun, des pas qu'on entend selon le sol, un son qui monte quand tu enchaînes les touches, des alertes pour le gaz.",
+          "tag": "audio"
+        },
+        {
+          "emoji": "🎯",
+          "title_fr": "Tout se lit d'un coup d'œil",
+          "text_fr": "Contour bleu pour toi, rouge pour les ennemis, armes plus grandes, mode daltonien.",
+          "tag": "art"
+        },
+        {
+          "emoji": "📰",
+          "title_fr": "Fil des K.O. et bannières",
+          "text_fr": "Qui a sorti qui, « 3 RESTANTS », « DUEL FINAL » et la prochaine vague de gaz tracée au sol.",
+          "tag": "feel"
+        },
+        {
+          "emoji": "⏱️",
+          "title_fr": "En partie en une minute",
+          "text_fr": "Si la file est calme, des bots complètent la partie au bout de 60 secondes au lieu de 5 minutes.",
+          "tag": "tech"
+        },
+        {
+          "emoji": "📳",
+          "title_fr": "Vibrations sur mobile",
+          "text_fr": "Une vibration quand tu touches, quand tu es touché et quand ta super est prête.",
+          "tag": "feel"
+        }
+      ],
+      "new_brawlers": [],
+      "new_maps": []
+    },
+    {
+      "version": "v0.12",
+      "name": "GADGETS",
+      "emoji": "🧰",
+      "color": "#fab005",
+      "teaser_fr": "Choisis ton gadget. Sors-le au bon moment. Renverse le combat.",
+      "promise_fr": "Ton brawler a désormais un tour dans sa manche : choisis-le, sors-le au bon moment et renverse le combat. Et des caisses de cubes tombent du ciel.",
+      "highlights": [
+        {
+          "emoji": "🧰",
+          "title_fr": "10 gadgets",
+          "text_fr": "Une esquive ou un outil pour chaque brawler : charge qui enracine, roulade, saut de lave, mur de glace, téléportation...",
+          "tag": "gameplay"
+        },
+        {
+          "emoji": "⭐",
+          "title_fr": "10 pouvoirs star",
+          "text_fr": "Un passif à choisir avant la partie pour jouer ton brawler à ta façon.",
+          "tag": "gameplay"
+        },
+        {
+          "emoji": "🎖️",
+          "title_fr": "Maîtrise des brawlers",
+          "text_fr": "Joue un brawler pour monter sa maîtrise et débloquer son deuxième gadget et son deuxième pouvoir star.",
+          "tag": "progression"
+        },
+        {
+          "emoji": "🪂",
+          "title_fr": "Largages de ravitaillement",
+          "text_fr": "En pleine partie, une caisse pleine de cubes tombe du ciel : tout le monde fonce, la bagarre est garantie.",
+          "tag": "gameplay"
+        },
+        {
+          "emoji": "👑",
+          "title_fr": "La couronne de prime",
+          "text_fr": "Le plus gros porteur de cubes porte une couronne et se fait repérer à travers les murs. Fais-le tomber pour un bonus.",
+          "tag": "gameplay"
+        },
+        {
+          "emoji": "🤖",
+          "title_fr": "Des bots plus malins",
+          "text_fr": "Ils esquivent, se cachent pour se soigner, utilisent leurs gadgets et gardent leur super pour le bon moment.",
+          "tag": "gameplay"
+        },
+        {
+          "emoji": "🧊",
+          "title_fr": "Des supers qui préviennent",
+          "text_fr": "Nova de givre et orage s'annoncent au sol : vois-les venir, esquive-les. Après un gel ou un enracinement, tu es protégé un instant.",
+          "tag": "gameplay"
+        },
+        {
+          "emoji": "🥋",
+          "title_fr": "Le Dojo",
+          "text_fr": "Une arène d'entraînement avec des mannequins pour essayer chaque gadget avant de jouer pour de vrai.",
+          "tag": "gameplay"
+        }
+      ],
+      "new_brawlers": [],
+      "new_maps": []
+    },
+    {
+      "version": "v0.13",
+      "name": "LEVEL UP",
+      "emoji": "⭐",
+      "color": "#7b4dff",
+      "teaser_fr": "Chaque partie rapporte. Et tout le monde le voit.",
+      "promise_fr": "Chaque partie te rapporte quelque chose : des niveaux, des quêtes, des trophées et des looks que tout le monde voit. Et chaque semaine, les arènes changent les règles.",
+      "highlights": [
+        {
+          "emoji": "🆙",
+          "title_fr": "Niveaux de joueur",
+          "text_fr": "Chaque partie donne de l'XP, et chaque niveau se fête : confettis, danse de ton brawler et récompense.",
+          "tag": "progression"
+        },
+        {
+          "emoji": "📌",
+          "title_fr": "3 quêtes par jour",
+          "text_fr": "Un tableau de liège, trois défis faisables avec n'importe quel brawler, et un grand tampon « FAIT ! ».",
+          "tag": "progression"
+        },
+        {
+          "emoji": "🏆",
+          "title_fr": "Ligue des bots",
+          "text_fr": "Des trophées pour chaque brawler, même en jouant contre les bots, et une route des trophées pleine de récompenses.",
+          "tag": "progression"
+        },
+        {
+          "emoji": "✨",
+          "title_fr": "Apparences à gagner",
+          "text_fr": "Couleurs, traînées de tirs, effets de K.O., figurines dorées et 12 emotes, rien qu'en jouant. Rien à acheter pour gagner.",
+          "tag": "content"
+        },
+        {
+          "emoji": "🎨",
+          "title_fr": "Les 5 d'origine remasterisés",
+          "text_fr": "Blaster, Gunslinger, Bomber, Frostbite et Volt retravaillés en haute qualité : plus de détails, des regards expressifs, et leurs nouvelles couleurs à débloquer.",
+          "tag": "art"
+        },
+        {
+          "emoji": "☄️",
+          "title_fr": "Les arènes s'animent",
+          "text_fr": "Pluie de météores sur la Tempête des dunes, paratonnerre au Bosquet pluvieux, blizzard sur le Pic gelé, geysers à l'Oasis, champignons soignants dans le Marais brumeux.",
+          "tag": "gameplay"
+        },
+        {
+          "emoji": "🎲",
+          "title_fr": "Le Chaos de la semaine",
+          "text_fr": "Chaque semaine, une règle folle : pluie de cubes, chasse nocturne, gaz qui recule...",
+          "tag": "gameplay"
+        },
+        {
+          "emoji": "🎭",
+          "title_fr": "Des bots avec du caractère",
+          "text_fr": "Chasseur, campeur, pilleur, vautour, froussard, frimeur : chacun a son icône, ses répliques et ses emotes.",
+          "tag": "social"
+        },
+        {
+          "emoji": "🏅",
+          "title_fr": "Le podium de fin",
+          "text_fr": "Les trois meilleurs sur le podium, tes statistiques et des trophées rigolos comme « Vautour » ou « Plus long tir ».",
+          "tag": "feel"
+        }
+      ],
+      "new_brawlers": [],
+      "new_maps": []
+    },
+    {
+      "version": "v0.14",
+      "name": "À DEUX",
+      "emoji": "🤝",
+      "color": "#15aabf",
+      "teaser_fr": "Amène un ami. Et ramène-le.",
+      "promise_fr": "Amène un ami : lancez la partie ensemble, relève-le quand il tombe et gagnez en duo, avec une infirmière qui garde ton équipe en vie.",
+      "highlights": [
+        {
+          "emoji": "👯",
+          "title_fr": "Survivant en duo",
+          "text_fr": "Quatre équipes de deux sur les cinq arènes : le dernier duo debout gagne.",
+          "tag": "gameplay"
+        },
+        {
+          "emoji": "💚",
+          "title_fr": "Relève ton pote",
+          "text_fr": "Ton partenaire K.O. devient un petit fantôme : reste près de lui trois secondes pour le relever, deux fois par partie.",
+          "tag": "gameplay"
+        },
+        {
+          "emoji": "🔗",
+          "title_fr": "Jouer avec un ami",
+          "text_fr": "Crée un salon, invite ton ami et lancez la recherche à deux.",
+          "tag": "social"
+        },
+        {
+          "emoji": "🩺",
+          "title_fr": "Nouvelle brawleuse : Infirmière Kappa",
+          "text_fr": "Ses bulles passent par-dessus les murs et soignent ton duo, et sa vague repousse les ennemis et chasse même le gaz un court instant.",
+          "tag": "content"
+        },
+        {
+          "emoji": "📍",
+          "title_fr": "Signaux d'équipe",
+          "text_fr": "« Ici ! », « Attention ! », « À l'aide ! » : parle à ton duo sans taper un mot.",
+          "tag": "social"
+        },
+        {
+          "emoji": "🤖",
+          "title_fr": "Un bot coéquipier",
+          "text_fr": "Pas d'ami dispo ? Un bot fait équipe avec toi, te suit et vient te relever.",
+          "tag": "gameplay"
+        }
+      ],
+      "new_brawlers": [
+        "Infirmière Kappa"
+      ],
+      "new_maps": []
+    },
+    {
+      "version": "v0.15",
+      "name": "ÎLES SAUVAGES",
+      "emoji": "🌿",
+      "color": "#2f9e44",
+      "teaser_fr": "Quelque chose mord dans les buissons... et les îles s'effondrent.",
+      "promise_fr": "Un nouveau chasseur rôde dans les buissons, un phoque sumo débarque, et sur une arène dans le ciel, une seule poussée t'envoie dans le vide.",
+      "highlights": [
+        {
+          "emoji": "🍄",
+          "title_fr": "Nouveau : Pip & Chomp",
+          "text_fr": "Un petit champignon timide sur une plante carnivore affamée : Chomp bondit et croque, Pip s'excuse et pose des buissons-pièges.",
+          "tag": "content"
+        },
+        {
+          "emoji": "🍡",
+          "title_fr": "Nouveau : Mochi",
+          "text_fr": "Un énorme phoque sumo en mochi : coups de ventre, saut écrasant qui casse les murs.",
+          "tag": "content"
+        },
+        {
+          "emoji": "🌬️",
+          "title_fr": "Nouvelle arène : les Îles aux Moulins",
+          "text_fr": "Des îles dans les nuages, des ponts qui cèdent et le vide tout autour : pousse tes ennemis dehors !",
+          "tag": "content"
+        },
+        {
+          "emoji": "🏝️",
+          "title_fr": "Des îles qui s'effondrent",
+          "text_fr": "Ici, pas de gaz : les îles se détachent une à une et le combat se resserre au centre.",
+          "tag": "gameplay"
+        },
+        {
+          "emoji": "🛝",
+          "title_fr": "Tremplins, barils et champignons",
+          "text_fr": "Saute par-dessus les murs, fais exploser des barils en chaîne, soigne-toi aux champignons. Tremplins et barils arrivent aussi sur l'Oasis et la Tempête des dunes.",
+          "tag": "gameplay"
+        },
+        {
+          "emoji": "💨",
+          "title_fr": "Des arènes qui réagissent",
+          "text_fr": "Des murs qui s'effondrent en morceaux, de la poussière à chaque pas, des empreintes dans la neige et des remous dans l'eau.",
+          "tag": "art"
+        }
+      ],
+      "new_brawlers": [
+        "Pip & Chomp",
+        "Mochi"
+      ],
+      "new_maps": [
+        "Îles aux Moulins"
+      ]
+    },
+    {
+      "version": "v0.16",
+      "name": "GLITCH EN LIBERTÉ",
+      "emoji": "👾",
+      "color": "#f03e3e",
+      "teaser_fr": "L'IA s'est échappée. Elle a ramené un Kaïju.",
+      "promise_fr": "La mascotte IA du jeu se déchaîne : du chaos chaque semaine, un boss géant à battre ensemble et le replay de tes meilleurs moments.",
+      "highlights": [
+        {
+          "emoji": "👾",
+          "title_fr": "Nouveau : Glitch",
+          "text_fr": "Un petit robot buggé à six doigts : il crée des clones, revient deux secondes en arrière et tire des lettres qui rebondissent.",
+          "tag": "content"
+        },
+        {
+          "emoji": "🦖",
+          "title_fr": "Raid : le Kaïju du Slop",
+          "text_fr": "Seul avec deux bots ou jusqu'à trois joueurs contre un boss géant en trois phases, avec des coups annoncés et une horde de gobelins-caisses.",
+          "tag": "gameplay"
+        },
+        {
+          "emoji": "🎬",
+          "title_fr": "Revois ton K.O.",
+          "text_fr": "Après un K.O., revois les cinq dernières secondes pour comprendre ce qui t'a eu.",
+          "tag": "social"
+        },
+        {
+          "emoji": "📼",
+          "title_fr": "Ton meilleur moment en vidéo",
+          "text_fr": "Le jeu capture ton meilleur moment de la partie et tu peux l'exporter en GIF ou en vidéo.",
+          "tag": "social"
+        },
+        {
+          "emoji": "🎲",
+          "title_fr": "Le chaos présenté par Glitch",
+          "text_fr": "Grosses têtes, gravité lunaire, arène buggée : Glitch présente les nouvelles règles de la semaine.",
+          "tag": "gameplay"
+        },
+        {
+          "emoji": "☠️",
+          "title_fr": "Un gaz qui fait peur",
+          "text_fr": "Le gaz devient un vrai mur toxique, tourbillonnant, avec sa limite tracée au sol.",
+          "tag": "art"
+        }
+      ],
+      "new_brawlers": [
+        "Glitch"
+      ],
+      "new_maps": [
+        "Arène du Kaïju"
+      ],
+      "color2": "#15aabf"
+    }
+  ],
+  "later": [
+    {
+      "emoji": "🥊",
+      "title_fr": "Élimination 3 contre 3",
+      "text_fr": "Des manches courtes en équipe sur des arènes à deux camps, avec Hopper la grenouille coursière et ses tirs en rebond."
+    },
+    {
+      "emoji": "🌋",
+      "title_fr": "La Caldeira",
+      "text_fr": "Une arène à étages où la lave monte à la place du gaz, et un mode où il faut garder le butin en équipe."
+    },
+    {
+      "emoji": "🏆",
+      "title_fr": "Les saisons",
+      "text_fr": "Un classement qui repart à chaque saison, avec titres et cadres exclusifs."
+    },
+    {
+      "emoji": "🦀",
+      "title_fr": "Encore plus de brawlers",
+      "text_fr": "Clawdia, bernard-l'hermite et bâtisseuse de tourelles, et Nimbus le mouton-nuage tireur d'élite."
+    }
+  ],
+  "moonshots": [
+    {
+      "emoji": "🧱",
+      "title_fr": "Slop Studio",
+      "text_fr": "Construis ton arène case par case dans le navigateur, partage-la par lien, et les meilleures rejoignent la rotation."
+    },
+    {
+      "emoji": "💡",
+      "title_fr": "Invente un brawler",
+      "text_fr": "Un concours : décris ton brawler, le gagnant est créé en direct par notre chaîne IA et arrive dans le jeu à ton nom."
+    },
+    {
+      "emoji": "📖",
+      "title_fr": "Slop Story",
+      "text_fr": "Une campagne de 30 défis à jouer hors ligne, racontée par les brawlers, avec un boss tous les 10 niveaux."
+    },
+    {
+      "emoji": "🏟️",
+      "title_fr": "Slop Cup",
+      "text_fr": "Des tournois, un mode spectateur avec une caméra qui choisit toute seule les meilleures actions, et des replays à partager."
+    },
+    {
+      "emoji": "🤖",
+      "title_fr": "Ton jumeau bot",
+      "text_fr": "Un bot qui apprend ton style de jeu et affronte les autres joueurs à ta place, bien identifié comme un bot."
+    },
+    {
+      "emoji": "🗿",
+      "title_fr": "Figurines pour de vrai",
+      "text_fr": "Pose ton brawler sur ton bureau en réalité augmentée, puis en vraie figurine imprimée."
+    }
+  ],
+  "brawlers": [
+    {
+      "name": "Infirmière Kappa",
+      "role_fr": "Soigneuse",
+      "pitch_fr": "Une petite infirmière kappa autoritaire, avec un bol d'eau sur la tête et une seringue à bulles géante. Ses bulles passent par-dessus les murs et soignent son équipe, et sa super est un raz-de-marée qui repousse tout le monde et chasse le gaz sur son passage.",
+      "release": "v0.14",
+      "color": "#94d82d",
+      "image": "kappa"
+    },
+    {
+      "name": "Pip & Chomp",
+      "role_fr": "Assassin",
+      "pitch_fr": "Un petit champignon timide qui chevauche une plante carnivore affamée. Chomp bondit pour croquer, Pip s'excuse après chaque morsure, et leur super plante un buisson-piège qui mord et révèle celui qui marche dedans.",
+      "release": "v0.15",
+      "color": "#2f9e44",
+      "image": "pipchomp"
+    },
+    {
+      "name": "Mochi",
+      "role_fr": "Tank",
+      "pitch_fr": "Un énorme phoque sumo en mochi à la fraise, avec une toque de chef minuscule. Il repousse tout le monde à coups de ventre et retombe du ciel pour tout écraser, murs compris.",
+      "release": "v0.15",
+      "color": "#e64980",
+      "image": "mochi"
+    },
+    {
+      "name": "Glitch",
+      "role_fr": "Farceur",
+      "pitch_fr": "La mascotte du jeu : un petit robot buggé, une tête-écran surmontée d'un curseur, une main à six doigts. Il tire des lettres qui rebondissent, crée des clones et peut revenir deux secondes en arrière.",
+      "release": "v0.16",
+      "color": "#f03e3e",
+      "image": "glitch"
+    },
+    {
+      "name": "Hopper",
+      "role_fr": "Voltigeur",
+      "pitch_fr": "Une grenouille coursière en rollers, casquette à l'envers et sacoche en bandoulière. Ses cailloux rebondissent sur les murs et sa super enchaîne trois bonds par-dessus les obstacles.",
+      "release": "Plus tard",
+      "color": "#fab005",
+      "image": "hopper"
+    },
+    {
+      "name": "Clawdia",
+      "role_fr": "Bâtisseuse",
+      "pitch_fr": "Clawdia porte en guise de coquille une petite maison de thé. Sa super pose sa coquille en tourelle automatique pendant qu'elle court, toute nue et toute rouge.",
+      "release": "Plus tard",
+      "color": "#ff8a3d",
+      "image": "clawdia"
+    },
+    {
+      "name": "Nimbus",
+      "role_fr": "Sniper",
+      "pitch_fr": "Un mouton-nuage endormi armé d'un parapluie-fusil. Il charge ses tirs pour frapper de loin et fait pleuvoir un nuage qui suit sa cible.",
+      "release": "Plus tard",
+      "color": "#74c0fc",
+      "image": "nimbus"
+    }
+  ]
+}

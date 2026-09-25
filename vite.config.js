@@ -66,7 +66,7 @@ const sourceMaps = out => SOURCE_MAPS ? [sentryVitePlugin({
   telemetry: false,
 })] : [];
 
-// Two pages: the landing site (index.html, "/") and the game (play.html, "/play").
+// Three pages: the landing site (index.html, "/"), the roadmap (roadmap.html, "/roadmap") and the game (play.html, "/play").
 export default defineConfig(({ mode }) => mode === 'server' ? serverBuild : mode === 'app' ? {
   plugins: [appBuild, ...sourceMaps('dist-app')],
   build: { outDir: 'dist-app', sourcemap: SOURCE_MAPS ? 'hidden' : false, rollupOptions: { input: { play: resolve(__dirname, 'play.html') } } },
@@ -77,6 +77,7 @@ export default defineConfig(({ mode }) => mode === 'server' ? serverBuild : mode
     rollupOptions: {
       input: {
         site: resolve(__dirname, 'index.html'),
+        roadmap: resolve(__dirname, 'roadmap.html'),
         play: resolve(__dirname, 'play.html'),
       },
     },

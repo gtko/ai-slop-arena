@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Roadmap — AI SLOP ARENA</title>
+  <meta name="description" content="La suite d'AI SLOP ARENA : des coups qui claquent, des gadgets, la progression, le mode duo, 7 nouveaux brawlers, de nouvelles arènes et un raid contre un Kaïju." />
+  <meta property="og:title" content="AI SLOP ARENA — la roadmap" />
+  <meta property="og:description" content="Six versions, sept nouveaux brawlers, de nouvelles arènes : voici la suite de l'arène." />
+  <meta property="og:image" content="https://ai-slop-arena.gtux-prog.workers.dev/assets/site/trailer.jpg" />
+  <meta property="og:url" content="https://ai-slop-arena.gtux-prog.workers.dev/roadmap" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+<body class="rm">
+  <header class="nav">
+    <a class="brand" href="/"><b>AI SLOP</b> ARENA</a>
+    <nav>
+      <a href="/">Accueil</a>
+      <a href="#versions">Versions</a>
+      <a href="#nouveaux">Nouveaux brawlers</a>
+      <a href="#apres">Et après ?</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-play btn-sm" href="/play.html">Jouer</a>
+    </div>
+  </header>
+
+  <!-- ============================== hero ============================== -->
+  <section class="rm-hero" id="top">
+    <div class="sky"><i class="sun"></i><i class="cloud c1"></i><i class="cloud c2"></i></div>
+    <div class="rm-hero-inner">
+      <span class="badge reveal">Roadmap · v0.11 → v0.16 et au-delà</span>
+      <h1 class="title reveal"><span>LA SUITE</span><b>DE L'ARÈNE</b></h1>
+      <p class="lead reveal" id="vision"></p>
+      <div class="crowd reveal" id="crowd" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <!-- ============================== pillars ============================== -->
+  <section class="section rm-pillars">
+    <div class="section-head reveal">
+      <span class="kicker">Nos règles du jeu</span>
+      <h2>Cinq promesses</h2>
+      <p>Chaque nouveauté doit respecter ces cinq règles. Si elle ne rend pas le jeu plus fun, elle attend.</p>
+    </div>
+    <div class="pillars" id="pillars"></div>
+  </section>
+
+  <!-- ============================== releases ============================== -->
+  <section class="section alt" id="versions">
+    <div class="section-head reveal">
+      <span class="kicker">Six versions</span>
+      <h2>Ce qui arrive</h2>
+      <p>D'abord les sensations, puis la profondeur, puis la progression, puis le contenu. Filtre par thème pour voir ce qui t'intéresse.</p>
+    </div>
+    <div class="filters reveal" id="filters" role="group" aria-label="Filtrer par thème"></div>
+    <ol class="road" id="road">
+      <li class="stop now reveal">
+        <span class="node" aria-hidden="true"><i></i></span>
+        <div class="now-card">
+          <span class="ver">v0.10 · maintenant</span>
+          <b>Tu es ici : Ligne de mire</b>
+          <span>5 brawlers, 5 arènes avec météo, parties classées, et des murs qui cachent vraiment.</span>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============================== new brawlers ============================== -->
+  <section class="section" id="nouveaux">
+    <div class="section-head reveal">
+      <span class="kicker">Concepts</span>
+      <h2>Sept nouveaux brawlers</h2>
+      <p>Des tanks, une soigneuse, un assassin, un farceur... Voici les premières images, avant leur passage en 3D.</p>
+    </div>
+    <div class="newcards" id="newcards"></div>
+  </section>
+
+  <!-- ============================== later + moonshots ============================== -->
+  <section class="section alt" id="apres">
+    <div class="section-head reveal">
+      <span class="kicker">Plus tard</span>
+      <h2>Et après ?</h2>
+      <p>Déjà prévu, pas encore daté.</p>
+    </div>
+    <div class="tiles later" id="later"></div>
+
+    <div class="moon">
+      <div class="section-head reveal">
+        <span class="kicker">Sans limites</span>
+        <h2>Les idées folles</h2>
+        <p>Les rêves au bout de la route, si l'arène continue de grandir.</p>
+      </div>
+      <div class="moons" id="moons"></div>
+    </div>
+  </section>
+
+  <section class="final">
+    <h2 class="reveal">En attendant, l'arène t'attend.</h2>
+    <p class="note reveal">Cette roadmap est un plan, pas une promesse : l'ordre peut changer selon ce que vous aimez le plus.</p>
+    <div class="final-cta reveal">
+      <a class="btn btn-play btn-xl" href="/play.html"><span>JOUER</span><small>c'est gratuit</small></a>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span><b>AI SLOP</b> ARENA</span>
+    <span>Roadmap imaginée par deux game designers IA, en cinq tours de brainstorm</span>
+    <span class="foot-links"><a href="/">Accueil</a><a href="/privacy#fr">Politique de confidentialité</a><a href="https://github.com/gtko/ai-slop-arena/blob/main/docs/roadmap.md">Roadmap détaillée</a></span>
+  </footer>
+
+  <script type="module" src="/src/site/roadmap.js"></script>
+</body>
+</html>
