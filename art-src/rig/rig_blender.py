@@ -429,9 +429,22 @@ def split_weapons(d, body, rig, m, wside):
         wpn.matrix_world = Matrix.Translation(pivot)
         bpy.context.view_layer.update()
         mw = wpn.matrix_world.copy()
+        # its own bone under the hand: clips can move the weapon (put it away at the hip)
+        centre = sum((v.co for v in wpn.data.vertices), Vector()) / len(wpn.data.vertices)
+        for o in bpy.context.view_layer.objects:
+            o.select_set(o == rig)
+        bpy.context.view_layer.objects.active = rig
+        bpy.ops.object.mode_set(mode='EDIT')
+        eb = rig.data.edit_bones.new(side + 'Weapon')
+        eb.head = pivot
+        eb.tail = pivot + (centre.normalized() if centre.length > 1e-4 else Vector((0, 0, 1))) * 0.2
+        eb.parent = rig.data.edit_bones[side + 'Hand']
+        eb.use_deform = False
+        eb.align_roll(Vector((0, -1, 0)))
+        bpy.ops.object.mode_set(mode='OBJECT')
         wpn.parent = rig
         wpn.parent_type = 'BONE'
-        wpn.parent_bone = side + 'Hand'
+        wpn.parent_bone = side + 'Weapon'
         bpy.context.view_layer.update()
         wpn.matrix_world = mw
         if 'weapon_side' in wpn.data.attributes:

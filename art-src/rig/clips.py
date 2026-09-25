@@ -100,6 +100,9 @@ POSE_DEFAULTS = {
     'shrug': 1.0,              # scale of the shoulder shrugs (sigh, flinch, shiver)
     'head_motion': 1.0,        # scale of the head turns and tilts (a big head brushing its pads)
     'reach': 0.9,              # IK: fraction of the arm's length a hand may reach (elbow stays bent)
+    'holster_out': 0.16,       # where a put-away weapon hangs: out from the torso side ...
+    'holster_up': 0.18,        # ... and up from the hips joint
+    'wave_forward': -0.55,     # how far forward the waving arm is raised (-y = forward)
     'raise_fore': None,        # Wave / Cheer forearm direction for the LEFT arm (mirrored), None = upright
     'resolve': True,       # every frame: swing an arm away from the head / torso when it goes through
     'up_forward': -0.12,   # raised arms lean forward (-y) or back (+y)
@@ -205,7 +208,7 @@ class Char:
         for b in reversed(self.chain(bone)):
             h = self.head[b]
             p = P.get(b) @ (p - h) + h
-        return p + P.loc
+        return p + P.loc + P.moved.get(bone, Vector())
 
     def to_local(self, P, bone, p):
         """A posed point back into `bone`'s rest frame."""
@@ -235,7 +238,9 @@ class Char:
                     for p in sm.get(side + 'Arm', [])]
             pts += [('lower', self.to_world(P, side + 'ForeArm', p)) for p in sm.get(side + 'ForeArm', [])]
             pts += [('lower', self.to_world(P, side + 'Hand', p)) for p in sm.get(side + 'Hand', [])]
-            pts += [('weapon', self.to_world(P, side + 'Hand', p)) for p in sm.get('weapon' + s, [])]
+            wb = side + 'Weapon' if side + 'Weapon' in self.head else side + 'Hand'
+            if wb not in P.moved:  # a weapon put away is not in the hand's way
+                pts += [('weapon', self.to_world(P, wb, p)) for p in sm.get('weapon' + s, [])]
             return pts
         pts = [('upper', self.to_world(P, side + 'Arm', S.lerp(E0, k))) for k in (0.2, 0.6, 1.0)]
         pts += [('lower', self.to_world(P, side + 'ForeArm', E0.lerp(W0, k))) for k in (0.5, 1.0)]
@@ -327,6 +332,7 @@ class Pose:
         self.C = C
         self.r = {}
         self.loc = Vector()
+        self.moved = {}  # weapon bone -> world offset of its head (weapon put away)
 
     def get(self, b):
         return self.r.get(b, I)
@@ -358,11 +364,46 @@ class Pose:
         """Elbow bend (negative = forearm forward / up), plus a turn about the vertical."""
         self.set(SIDE[s][0] + 'ForeArm', q(Z, yaw) @ q(self.C.hinge[s], bend))
 
-    def fore_to(self, s, direction):
-        """Point the forearm along a direction of the torso frame, whatever the upper arm does."""
+    def fore_to(self, s, direction, thumb=None):
+        """Point the forearm along a direction of the torso frame, whatever the upper arm does; with
+        `thumb`, also twist it so the thumb side of the hand faces that way (palm forward to wave)."""
         arm = self.get(SIDE[s][0] + 'Arm')
         local = arm.inverted() @ Vector(direction).normalized()
         self.set(SIDE[s][0] + 'ForeArm', between(self.C.fore_rest[s], local))
+        if thumb is not None:
+            self.twist(s, thumb)
+
+    def twist(self, s, thumb):
+        """Turn the forearm about itself so the hand's thumb side (forward in the rest pose) points
+        toward `thumb` (torso frame)."""
+        side = SIDE[s][0]
+        arm, fore = self.get(side + 'Arm'), self.get(side + 'ForeArm')
+        d = (arm @ fore @ self.C.fore_rest[s]).normalized()
+        cur = arm @ fore @ Vector((0, -1, 0))
+        want = Vector(thumb)
+        cur, want = cur - d * cur.dot(d), want - d * want.dot(d)
+        if cur.length < 1e-4 or want.length < 1e-4:
+            return
+        ang = cur.normalized().angle(want.normalized())
+        if cur.cross(want).dot(d) < 0:
+            ang = -ang
+        self.set(side + 'ForeArm', arm.inverted() @ q(d, ang) @ arm @ fore)
+
+    def holster(self, s, h):
+        """Put the weapon of hand s away at the hip (h = 0 in the hand .. 1 holstered): its bone
+        leaves the hand for a spot beside the hip, barrel down. Call after the arm is posed."""
+        C = self.C
+        side, sg = SIDE[s]
+        wb = side + 'Weapon'
+        if wb not in C.head or h <= 0:
+            return
+        tc, tr = C.torso_ell or (C.head['Spine'], Vector((0.3, 0.3, 0.3)))
+        # on the outside of the hip, grip at the belt, barrel down and a little back
+        spot = Vector((sg * (tr.x * 0.9 + C.over['holster_out']), C.head['Hips'].y, C.head['Hips'].z + C.over['holster_up']))
+        held = C.to_world(self, side + 'Hand', C.head[wb])
+        self.moved[wb] = (C.to_world(self, 'Hips', spot) - held) * h
+        down = C.turn(self, 'Hips') @ between(C.wpn[s], Vector((sg * 0.3, 0.35, -1)))
+        self.set(wb, I.slerp(C.turn(self, side + 'Hand').inverted() @ down, h))
 
     def reach(self, s, target, pole):
         """Two-bone IK: the wrist on `target` (torso frame), the elbow toward `pole`."""
@@ -478,8 +519,9 @@ def aim_arms(P, C, r, amount=1.0):
     P.head(r * 0.05 * amount)
 
 
-def blend_arm(P, s, target, k, fore=None, fore_dir=None):
-    """Blend an arm toward a pose: `fore` = (bend, yaw), or `fore_dir` = forearm direction."""
+def blend_arm(P, s, target, k, fore=None, fore_dir=None, thumb=None):
+    """Blend an arm toward a pose: `fore` = (bend, yaw), or `fore_dir` = forearm direction (and
+    `thumb`: where the thumb side of the hand faces)."""
     b, fb = SIDE[s][0] + 'Arm', SIDE[s][0] + 'ForeArm'
     old_fore = P.get(fb)
     P.set(b, P.get(b).slerp(target, k))
@@ -487,7 +529,7 @@ def blend_arm(P, s, target, k, fore=None, fore_dir=None):
         P.set(fb, old_fore)
         tmp = Pose(P.C)
         tmp.set(b, target)
-        tmp.fore_to(s, fore_dir)
+        tmp.fore_to(s, fore_dir, thumb)
         P.set(fb, old_fore.slerp(tmp.get(fb), k))
     elif fore is not None:
         tmp = Pose(P.C)
@@ -539,11 +581,13 @@ def resolve(C, P, s, step=0.05, steps=40, patience=6):
     P.set(side + 'ForeArm', best[2])
 
 
-def blend_reach(P, s, target, pole, k):
-    """Blend an arm toward an IK pose (wrist on target)."""
+def blend_reach(P, s, target, pole, k, thumb=None):
+    """Blend an arm toward an IK pose (wrist on target), the thumb side toward `thumb`."""
     side = SIDE[s][0]
     tmp = Pose(P.C)
     tmp.reach(s, target, pole)
+    if thumb is not None:
+        tmp.twist(s, thumb)
     for b in ('Arm', 'ForeArm'):
         P.set(side + b, P.get(side + b).slerp(tmp.get(side + b), k))
 
@@ -777,15 +821,26 @@ def c_wave(C, t):
     """Hello! Raised hand swinging side to side."""
     s = C.free
     sg = SIDE[s][1]
-    e = env(t, 0.1, 0.45, 1.75, 2.2)
-    P = stance(C, t, 0.6)
     side = SIDE[s][0]
-    raised = C.arm_to(s, C.up_dir(s, -1.0))
+    armed = C.armed(s) and side + 'Weapon' in C.head
+    # an armed hand first puts its weapon away at the hip, and takes it back at the end
+    e = env(t, 0.3, 0.6, 1.7, 2.05) if armed else env(t, 0.1, 0.45, 1.75, 2.2)
+    stow = env(t, 0.0, 0.3, 1.9, 2.2) if armed else 0.0
+    P = stance(C, t, 0.6)
+    if armed:  # the hand dips toward the hip to drop it
+        dip = stow * (1 - e)
+        P.set(side + 'Arm', q(Y, sg * 0.25 * dip) @ P.get(side + 'Arm'))
+    # the arm raised forward, forearm upright, palm to the front
+    raised = C.arm_to(s, C.up_dir(s, -1.0, forward=C.over['wave_forward']))
     w = math.sin(TAU * 2.4 * t)
-    # upper arm out, forearm upright and swinging side to side, clear of the face
     rf = C.over['raise_fore']
-    fd = (sg * (rf[0] + 0.35 * w), rf[1], rf[2]) if rf else (sg * (0.35 + 0.35 * w), -0.2, 1)
-    blend_arm(P, s, raised, e, fore_dir=fd)
+    fd = (sg * (rf[0] + 0.25 * w), rf[1], rf[2]) if rf else (sg * (0.25 + 0.25 * w), -0.3, 1)
+    blend_arm(P, s, raised, e, fore_dir=fd, thumb=(-sg, -0.3, 0))
+    # the hand itself swings at the wrist, about the palm's normal
+    palm = (P.get(side + 'Arm') @ P.get(side + 'ForeArm')).inverted() @ Vector((0, -1, 0))
+    P.set(side + 'Hand', q(palm.normalized(), 0.45 * math.sin(TAU * 2.4 * t + 0.9) * e))
+    if armed:
+        P.holster(s, stow)
     P.head(0.05 * e, sg * 0.15 * e, -sg * 0.18 * e)
     P.hips(0, 0, -sg * 0.05 * e)
     return P
@@ -903,7 +958,7 @@ def c_cheer(C, t):
         sg = SIDE[s][1]
         rf = C.over['raise_fore']
         fd = (sg * (rf[0] + 0.2 * pump), rf[1], rf[2]) if rf else (sg * (0.2 + 0.3 * pump), -0.25, 1)
-        blend_arm(P, s, C.arm_to(s, C.up_dir(s, -0.5)), e, fore_dir=fd)
+        blend_arm(P, s, C.arm_to(s, C.up_dir(s, -0.5)), e, fore_dir=fd, thumb=(-sg, -0.2, 0))
     P.spine(-0.1 * e)
     P.head(-0.2 * e)
     P.loc.z = 0.03 * e * pump
@@ -938,7 +993,12 @@ def apply(C, P):
         pb.rotation_mode = 'QUATERNION'
         R = C.rest[pb.name]
         pb.rotation_quaternion = R.inverted() @ P.get(pb.name) @ R
-        pb.location = (R.inverted() @ P.loc) if pb.name == 'Hips' else Vector()
+        if pb.name == 'Hips':
+            pb.location = R.inverted() @ P.loc
+        elif pb.name in P.moved:  # world offset -> the bone's own frame (under its posed parent)
+            pb.location = R.inverted() @ C.turn(P, C.parent[pb.name]).inverted() @ P.moved[pb.name]
+        else:
+            pb.location = Vector()
         pb.scale = (1, 1, 1)
 
 
@@ -965,7 +1025,7 @@ def make_all(d, rig):
                     pb.rotation_quaternion = -qq
                 last[pb.name] = pb.rotation_quaternion.copy()
                 pb.keyframe_insert('rotation_quaternion', frame=f, group=pb.name)
-                if pb.name == 'Hips':
+                if pb.name == 'Hips' or pb.name.endswith('Weapon'):
                     pb.keyframe_insert('location', frame=f, group=pb.name)
         act.frame_range = (0, n)
         act.use_frame_range = True
