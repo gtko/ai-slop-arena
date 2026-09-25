@@ -48,9 +48,6 @@ Skapa en lobby och bjud in dina Steam-vänner, eller låt dem gå med direkt fr�
 
 [img]{STEAM_APP_IMAGE}/extras/daynight.gif[/img]
 
-[h2]Gjort av en AI på två kvällar[/h2]
-Namnet är ärligt. AI SLOP ARENA byggdes på två kvällar av Claude Opus 5.5, en AI som arbetade på egen hand i Claude Code: den skrev koden, skapade grafiken, spelade spelet för att testa det och lagade det som var trasigt. Illustrationerna, texturerna, musiken och ljudeffekterna är AI-genererade, och 3D-figurerna modellerades på en vanlig hemdator utifrån illustrationerna. Människan bakom skrev 35 prompter och sa "det där är fult" när det var fult. Total kostnad för alla assets: 2,61 USD.
-
 [h2]Funktioner[/h2]
 [list]
 [*]Matcher för 8 spelare där den siste kvar vinner, solo mot bottar eller online.

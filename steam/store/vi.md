@@ -48,9 +48,6 @@ Tạo sảnh và mời bạn bè Steam, hoặc để họ vào thẳng từ danh
 
 [img]{STEAM_APP_IMAGE}/extras/daynight.gif[/img]
 
-[h2]Do AI làm trong hai buổi tối[/h2]
-Cái tên không hề nói dối. AI SLOP ARENA được tạo ra trong hai buổi tối bởi Claude Opus 5.5, một AI, tự vận hành trong Claude Code: nó viết code, tạo hình ảnh, tự chơi thử để kiểm tra và sửa những chỗ bị lỗi. Tranh minh họa, texture, nhạc và hiệu ứng âm thanh đều do AI tạo ra, còn các mô hình nhân vật 3D được dựng trên một chiếc PC ở nhà từ chính những tranh minh họa đó. Con người đứng sau đã viết 35 prompt và nói "xấu quá" mỗi khi nó xấu. Tổng chi phí asset: 2,61 USD.
-
 [h2]Tính năng[/h2]
 [list]
 [*]Trận đấu 8 người, người trụ lại cuối cùng giành chiến thắng, chơi đơn với bot hoặc online.

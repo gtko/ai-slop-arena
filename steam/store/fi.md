@@ -48,9 +48,6 @@ Luo aula ja kutsu Steam-kaverisi, tai anna heidän liittyä suoraan kaverilistal
 
 [img]{STEAM_APP_IMAGE}/extras/daynight.gif[/img]
 
-[h2]Tekoälyn tekemä kahdessa illassa[/h2]
-Nimi on rehellinen. AI SLOP ARENA rakennettiin kahdessa illassa, ja sen teki Claude Opus 5.5, tekoäly, joka työskenteli itsenäisesti Claude Codessa: se kirjoitti koodin, loi grafiikan, pelasi peliä testatakseen sitä ja korjasi rikkinäiset kohdat. Kuvitukset, tekstuurit, musiikki ja äänitehosteet ovat tekoälyn tuottamia, ja 3D-hahmot mallinnettiin kotitietokoneella näiden kuvitusten pohjalta. Ihminen sen takana kirjoitti 35 kehotetta ja sanoi "tuo on rumaa", kun se oli rumaa. Assettien kokonaislasku: 2,61 USD.
-
 [h2]Ominaisuudet[/h2]
 [list]
 [*]8 pelaajan ottelut, joissa viimeinen pystyssä voittaa, yksin botteja vastaan tai verkossa.

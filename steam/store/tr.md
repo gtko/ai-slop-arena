@@ -48,9 +48,6 @@ Bir lobi kur ve Steam arkadaşlarını davet et ya da doğrudan arkadaş listesi
 
 [img]{STEAM_APP_IMAGE}/extras/daynight.gif[/img]
 
-[h2]Bir yapay zekâ tarafından iki akşamda yapıldı[/h2]
-İsim dürüst. AI SLOP ARENA, bir yapay zekâ olan Claude Opus 5.5 tarafından Claude Code içinde kendi başına çalışarak iki akşamda geliştirildi: kodu yazdı, görselleri üretti, test etmek için oyunu oynadı ve bozuk olanları düzeltti. İllüstrasyonlar, dokular, müzikler ve ses efektleri yapay zekâ ile üretildi; 3D figürler ise bu illüstrasyonlardan yola çıkılarak evdeki bir bilgisayarda modellendi. İşin arkasındaki insan 35 prompt yazdı ve çirkin olduğunda "bu çirkin" dedi. Toplam asset maliyeti: 2,61 dolar.
-
 [h2]Özellikler[/h2]
 [list]
 [*]Ayakta kalan son kişinin kazandığı 8 oyunculu maçlar: botlara karşı tek başına ya da çevrimiçi.

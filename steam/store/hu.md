@@ -48,9 +48,6 @@ Hozz létre egy lobbit, és hívd meg a Steam-barátaidat, vagy hagyd, hogy köz
 
 [img]{STEAM_APP_IMAGE}/extras/daynight.gif[/img]
 
-[h2]Egy MI készítette két este alatt[/h2]
-A név őszinte. Az AI SLOP ARENA-t két este alatt készítette el a Claude Opus 5.5 mesterséges intelligencia, teljesen önállóan, a Claude Code-ban: megírta a kódot, legenerálta a grafikát, játszott a játékkal, hogy tesztelje, és kijavította, ami hibás volt. Az illusztrációk, textúrák, a zene és a hangeffektusok MI által generáltak, a 3D figurákat pedig ezekből az illusztrációkból modellezték egy otthoni PC-n. A mögötte álló ember 35 promptot írt, és szólt, hogy "ez ronda", amikor ronda volt. A teljes assetszámla: 2,61 USD.
-
 [h2]Jellemzők[/h2]
 [list]
 [*]8 játékos, az utolsó talpon maradt nyer, egyedül botok ellen vagy online.

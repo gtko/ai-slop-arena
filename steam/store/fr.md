@@ -48,9 +48,6 @@ Créez un salon et invitez vos amis Steam, ou laissez-les vous rejoindre directe
 
 [img]{STEAM_APP_IMAGE}/extras/daynight.gif[/img]
 
-[h2]Fait par une IA en deux soirées[/h2]
-Le nom est honnête. AI SLOP ARENA a été créé en deux soirées par Claude Opus 5.5, une IA, en autonomie dans Claude Code : elle a écrit le code, généré les graphismes, joué au jeu pour le tester et corrigé ce qui n'allait pas. Les illustrations, textures, musiques et bruitages sont générés par IA, et les figurines 3D ont été modélisées sur un PC personnel à partir de ces illustrations. L'humain derrière tout ça a écrit 35 prompts et a dit "c'est moche" quand c'était moche. Coût total des assets : 2,61 $.
-
 [h2]Caractéristiques[/h2]
 [list]
 [*]Parties à 8 joueurs où le dernier debout gagne, en solo contre des bots ou en ligne.

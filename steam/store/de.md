@@ -48,9 +48,6 @@ Erstelle eine Lobby und lade deine Steam-Freunde ein, oder lass sie direkt über
 
 [img]{STEAM_APP_IMAGE}/extras/daynight.gif[/img]
 
-[h2]Von einer KI an zwei Abenden gebaut[/h2]
-Der Name ist ehrlich gemeint. AI SLOP ARENA wurde an zwei Abenden von Claude Opus 5.5 gebaut, einer KI, die selbstständig in Claude Code gearbeitet hat: Sie hat den Code geschrieben, die Grafiken erzeugt, das Spiel zum Testen gespielt und repariert, was kaputt war. Illustrationen, Texturen, Musik und Soundeffekte sind KI-generiert, und die 3D-Figuren wurden auf einem Heim-PC aus diesen Illustrationen modelliert. Der Mensch dahinter hat 35 Prompts geschrieben und "das ist hässlich" gesagt, wenn es hässlich war. Gesamtkosten der Assets: 2,61 $.
-
 [h2]Features[/h2]
 [list]
 [*]Runden für 8 Spieler nach dem Last-One-Standing-Prinzip, solo gegen Bots oder online.

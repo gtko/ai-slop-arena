@@ -48,9 +48,6 @@ Utwórz lobby i zaproś znajomych ze Steam albo pozwól im dołączyć prosto z 
 
 [img]{STEAM_APP_IMAGE}/extras/daynight.gif[/img]
 
-[h2]Stworzona przez AI w dwa wieczory[/h2]
-Nazwa mówi prawdę. AI SLOP ARENA powstała w dwa wieczory dzięki Claude Opus 5.5, sztucznej inteligencji pracującej samodzielnie w Claude Code: napisała kod, wygenerowała grafikę, grała w grę, żeby ją przetestować, i naprawiła to, co nie działało. Ilustracje, tekstury, muzyka i efekty dźwiękowe zostały wygenerowane przez AI, a figurki 3D wymodelowano na domowym komputerze na podstawie tych ilustracji. Człowiek, który za tym stoi, napisał 35 promptów i mówił "to jest brzydkie", kiedy było brzydkie. Łączny koszt assetów: 2,61 USD.
-
 [h2]Cechy gry[/h2]
 [list]
 [*]Mecze dla 8 graczy, w których wygrywa ostatni na placu boju, solo z botami lub online.

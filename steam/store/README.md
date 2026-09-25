@@ -80,7 +80,7 @@ Pour les langues sans description traduite ici, Steam affiche la version anglais
 
 ## 3. Visuels à produire
 
-Aucun visuel existant n'a encore le bon format. Tailles exigées par Steam :
+Capsules et visuels de bibliothèque faits : [../capsules/](../capsules/) (`python art-src/gen_capsules.py`). Le décor vient de gpt-image, les vrais brawlers détourés et le vrai logo sont posés par-dessus. Tailles exigées par Steam :
 
 | Visuel | Taille | Remarques |
 | --- | --- | --- |
@@ -92,7 +92,7 @@ Aucun visuel existant n'a encore le bon format. Tailles exigées par Steam :
 | Library capsule | 600 x 900 | Bibliothèque. |
 | Library header | 920 x 430 | Bibliothèque. |
 | Library hero | 3840 x 1240 | Sans texte ni logo (le logo est posé par-dessus). |
-| Library logo | 1280 x 720 | PNG transparent : `docs/readme/logo.png` fait l'affaire une fois recadré. |
+| Library logo | 1280 x 720 | PNG transparent (`library_logo.png`). |
 | Icône communauté | 184 x 184 | Depuis `electron/icon.png`. |
 | Icône client | .ico + 32 x 32 | `electron/icon.ico`. |
 | Icônes de succès | 256 x 256 x 15, en double (débloqué + grisé) | Faites : [../achievements/](../achievements/) (`python art-src/gen_achievements.py`). |
@@ -100,8 +100,8 @@ Aucun visuel existant n'a encore le bon format. Tailles exigées par Steam :
 | Bande-annonce | MP4 H.264, 1920 x 1080, 5000 kbit/s min. | Faite : `steam/store/trailer.mp4`, 25 s en 1080p avec musique et logo (`python art-src/make_steam_trailer.py`). |
 
 Règles Valve sur les capsules : uniquement l'illustration et le logo. Pas de "GRATUIT", pas de note,
-pas de récompense, pas de citation de presse. Idée : les 5 figurines en pose d'action (les portraits
-`public/assets/ui/*.png` sont déjà détourés) devant l'Oasis au coucher du soleil, logo en haut.
+pas de récompense, pas de citation de presse. Les nôtres montrent les 5 brawlers en pose d'action
+devant l'Oasis au coucher du soleil, logo en haut.
 
 Règles sur les captures : du vrai jeu uniquement, pas d'art conceptuel ni de texte marketing.
 Ordre conseillé : 1) combat à 8 avec supers qui partent, 2) buisson avec le dithering,
@@ -128,8 +128,7 @@ Je recommande **Free** (sans microtransactions) :
 
 - le jeu est déjà gratuit dans le navigateur : le vendre sur Steam serait mal vu ;
 - un public méfiant envers l'IA pardonne beaucoup plus à un jeu gratuit ;
-- un jeu à 8 joueurs a besoin de monde en ligne : la gratuité remplit les salons ;
-- l'histoire des "2,61 $" fonctionne mieux gratuite.
+- un jeu à 8 joueurs a besoin de monde en ligne : la gratuité remplit les salons.
 
 Coût : 100 $ de frais Steam Direct, non remboursés pour un jeu gratuit.
 Si tu préfères un prix, 1,99 $ / 1,99 € / 2 CHF au maximum, et retirer le tag "Free to Play".

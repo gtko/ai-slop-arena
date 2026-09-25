@@ -48,9 +48,6 @@ Buat lobi dan undang teman Steam-mu, atau biarkan mereka langsung bergabung dari
 
 [img]{STEAM_APP_IMAGE}/extras/daynight.gif[/img]
 
-[h2]Dibuat oleh AI dalam dua malam[/h2]
-Namanya memang jujur. AI SLOP ARENA dibuat dalam dua malam oleh Claude Opus 5.5, sebuah AI, yang bekerja sendiri di Claude Code: ia menulis kodenya, membuat grafisnya, memainkan game ini untuk mengujinya, lalu memperbaiki bagian yang rusak. Ilustrasi, tekstur, musik, dan efek suaranya dibuat dengan AI, sedangkan figur 3D-nya dimodelkan di PC rumahan berdasarkan ilustrasi tersebut. Manusia di baliknya menulis 35 prompt dan bilang "jelek" setiap kali hasilnya memang jelek. Total biaya aset: US$2,61.
-
 [h2]Fitur[/h2]
 [list]
 [*]Match 8 pemain, yang terakhir bertahan menang, solo melawan bot atau online.

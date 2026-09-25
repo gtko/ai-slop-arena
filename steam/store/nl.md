@@ -48,9 +48,6 @@ Maak een kamer aan en nodig je Steam-vrienden uit, of laat ze direct meedoen via
 
 [img]{STEAM_APP_IMAGE}/extras/daynight.gif[/img]
 
-[h2]Gemaakt door een AI in twee avonden[/h2]
-De naam liegt niet. AI SLOP ARENA is in twee avonden gebouwd door Claude Opus 5.5, een AI, die zelfstandig werkte in Claude Code: het schreef de code, genereerde de graphics, speelde de game om hem te testen en repareerde wat kapot was. De illustraties, textures, muziek en geluidseffecten zijn door AI gegenereerd, en de 3D-figuurtjes zijn op basis van die illustraties gemodelleerd op een gewone thuis-pc. De mens erachter schreef 35 prompts en zei "dat is lelijk" als het lelijk was. Totale kosten van de assets: $ 2,61.
-
 [h2]Kenmerken[/h2]
 [list]
 [*]Potjes met 8 spelers waarin de laatste overlevende wint, solo tegen bots of online.

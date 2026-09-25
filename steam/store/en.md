@@ -49,9 +49,6 @@ Create a lobby and invite your Steam friends, or let them join straight from the
 
 [img]{STEAM_APP_IMAGE}/extras/daynight.gif[/img]
 
-[h2]Made by an AI in two evenings[/h2]
-The name is honest. AI SLOP ARENA was built in two evenings by Claude Opus 5.5, an AI, running on its own in Claude Code: it wrote the code, generated the art, played the game to test it and fixed what was broken. The illustrations, textures, music and sound effects are AI-generated, and the 3D figurines were modeled on a home PC from those illustrations. The human behind it wrote 35 prompts and said "that's ugly" when it was ugly. Total asset bill: $2.61.
-
 [h2]Features[/h2]
 [list]
 [*]8-player last-one-standing matches, solo against bots or online.

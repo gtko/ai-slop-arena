@@ -48,9 +48,6 @@ Creează un lobby și invită-ți prietenii de pe Steam sau lasă-i să intre di
 
 [img]{STEAM_APP_IMAGE}/extras/daynight.gif[/img]
 
-[h2]Făcut de o IA în două seri[/h2]
-Numele spune adevărul. AI SLOP ARENA a fost construit în două seri de Claude Opus 5.5, o IA care a lucrat singură în Claude Code: a scris codul, a generat grafica, a jucat jocul ca să-l testeze și a reparat ce nu mergea. Ilustrațiile, texturile, muzica și efectele sonore sunt generate de IA, iar figurinele 3D au fost modelate pe un PC de acasă pornind de la aceste ilustrații. Omul din spatele proiectului a scris 35 de prompturi și a spus "e urât" atunci când era urât. Costul total al asset-urilor: 2,61 USD.
-
 [h2]Caracteristici[/h2]
 [list]
 [*]Meciuri pentru 8 jucători în care câștigă ultimul rămas în picioare, solo contra boților sau online.

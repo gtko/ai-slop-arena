@@ -48,9 +48,6 @@ Vytvoř lobby a pozvi přátele ze Steamu, nebo je nech připojit rovnou ze sezn
 
 [img]{STEAM_APP_IMAGE}/extras/daynight.gif[/img]
 
-[h2]Vytvořila ji AI za dva večery[/h2]
-Název nelže. AI SLOP ARENA za dva večery vytvořil Claude Opus 5.5, umělá inteligence, která v Claude Code pracovala zcela samostatně: napsala kód, vygenerovala grafiku, hrála hru, aby ji otestovala, a opravila, co nefungovalo. Ilustrace, textury, hudba i zvukové efekty jsou generované AI a 3D figurky vznikly podle těchto ilustrací na domácím PC. Člověk za tím vším napsal 35 promptů a řekl "to je hnusné", když to hnusné bylo. Celkové náklady na assety: 2,61 USD.
-
 [h2]Vlastnosti[/h2]
 [list]
 [*]Zápasy pro 8 hráčů, kde vyhrává poslední, kdo přežije, sólo proti botům nebo online.
