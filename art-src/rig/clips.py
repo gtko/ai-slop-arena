@@ -72,6 +72,19 @@ def to_b(v):
     return Vector((v[0], -v[2], v[1]))
 
 
+def principal_axis(pts, origin):
+    """Main direction of a point cloud (power iteration), oriented from `origin` toward its centroid."""
+    c = sum(pts, Vector()) / len(pts)
+    m = [[sum((p[i] - c[i]) * (p[j] - c[j]) for p in pts) for j in range(3)] for i in range(3)]
+    v = Vector((0.3, -0.5, 0.8))
+    for _ in range(40):
+        v = Vector([sum(m[i][j] * v[j] for j in range(3)) for i in range(3)])
+        if v.length < 1e-12:
+            return Vector((0, 0, 1))
+        v.normalize()
+    return v if v.dot(c - origin) >= 0 else -v
+
+
 # ------------------------------------------------------------------ character
 
 # Per-character pose adjustments ("poses" in art-src/rig/landmarks/<key>.json), all optional.
@@ -87,6 +100,7 @@ POSE_DEFAULTS = {
     'shrug': 1.0,              # scale of the shoulder shrugs (sigh, flinch, shiver)
     'head_motion': 1.0,        # scale of the head turns and tilts (a big head brushing its pads)
     'reach': 0.9,              # IK: fraction of the arm's length a hand may reach (elbow stays bent)
+    'raise_fore': None,        # Wave / Cheer forearm direction for the LEFT arm (mirrored), None = upright
     'resolve': True,       # every frame: swing an arm away from the head / torso when it goes through
     'up_forward': -0.12,   # raised arms lean forward (-y) or back (+y)
     'carry': {},           # {"R": [x, y, z]}: rest direction of the weapon (guns) or of the arm
@@ -127,8 +141,14 @@ class Char:
             self.wcorners[s_] = [Vector((x, y, z)) for x in (lo.x, hi.x) for y in (lo.y, hi.y) for z in (lo.z, hi.z)] + [(lo + hi) / 2]
         # surface samples of each arm piece and weapon (rig_blender.measure): what really collides
         self.samples = {k: [Vector(p) for p in v] for k, v in M.get('samples', {}).items()}
+        self.wax = {}
+        for s_ in 'LR':  # the weapon's axis from its own mesh (grip included), pointing to its bulk
+            pts = self.samples.get('weapon' + s_)
+            if pts and len(pts) > 4:
+                self.wax[s_] = principal_axis(pts, self.head[SIDE[s_][0] + 'Hand'])
         self.cache = {}
         self.rest_k = None
+        self.kinds = {}
         self.free = 'R' if self.weapon == 'L' else 'L'  # the hand that waves, coughs, cheers
         self.hang, self.aim, self.axis, self.wpn = {}, {}, {}, {}
         for s, sg in (('L', 1), ('R', -1)):
@@ -136,7 +156,7 @@ class Char:
             side = SIDE[s][0]
             # the arm as rigged (landmarks), the weapon as found on the mesh by autorig.mjs
             self.axis[s] = (self.head[side + 'ForeArm'] - self.head[side + 'Arm']).normalized()
-            self.wpn[s] = to_b(J['weaponAxis'])
+            self.wpn[s] = self.wax.get(s) or to_b(J['weaponAxis'])
             armed = self.armed(s)
             carry = self.over['carry'].get(s)
             if carry:
@@ -209,8 +229,10 @@ class Char:
         S, E0, W0, T0 = self.head[side + 'Arm'], self.head[side + 'ForeArm'], self.head[side + 'Hand'], self.tail[side + 'Hand']
         sm = self.samples
         if sm:
-            pts = [('upper', self.to_world(P, side + 'Shoulder', p)) for p in sm.get(side + 'Shoulder', [])]
-            pts += [('upper', self.to_world(P, side + 'Arm', p)) for p in sm.get(side + 'Arm', [])]
+            # 'pad': near the shoulder pivot, a swing of the arm can't move them (the shrug can)
+            pts = [('pad', self.to_world(P, side + 'Shoulder', p)) for p in sm.get(side + 'Shoulder', [])]
+            pts += [('pad' if (p - S).length < 0.12 else 'upper', self.to_world(P, side + 'Arm', p))
+                    for p in sm.get(side + 'Arm', [])]
             pts += [('lower', self.to_world(P, side + 'ForeArm', p)) for p in sm.get(side + 'ForeArm', [])]
             pts += [('lower', self.to_world(P, side + 'Hand', p)) for p in sm.get(side + 'Hand', [])]
             pts += [('weapon', self.to_world(P, side + 'Hand', p)) for p in sm.get('weapon' + s, [])]
@@ -221,7 +243,7 @@ class Char:
         pts += [('weapon', self.to_world(P, side + 'Hand', c)) for c in self.wcorners.get(s, [])]
         return pts
 
-    def clearance(self, P, s):
+    def clearance(self, P, s, movable=False):
         """How far the arm stays out of the head, and its hand / weapon (deeply) out of the torso
         and the legs: < 0 = inside, in units of the volume's size. Returns (value, posed centre of the
         volume it hits)."""
@@ -233,8 +255,12 @@ class Char:
             rest = Pose(self)
             for s_ in 'LR':
                 self.rest_k[s_] = [min(0.0, k) for k in self._point_ks(rest, s_)]
+        if s not in self.kinds:
+            self.kinds[s] = [kind for kind, _ in self.arm_points(Pose(self), s)]
         ks = self._point_ks(P, s, centres=True)
-        for (k, ctr), k0 in zip(ks, self.rest_k[s]):
+        for (k, ctr), k0, kind in zip(ks, self.rest_k[s], self.kinds[s]):
+            if movable and kind == 'pad':
+                continue
             k = k - k0
             if k < best[0]:
                 best = (k, ctr)
@@ -249,12 +275,13 @@ class Char:
             hip = self.to_world(P, side_ + 'UpLeg', self.head[side_ + 'UpLeg'])
             knee = self.to_world(P, side_ + 'Leg', self.head[side_ + 'Leg'])
             ankle = self.to_world(P, side_ + 'Foot', self.head[side_ + 'Foot'])
-            legs += [(hip, knee), (knee, ankle)]
+            toe = self.to_world(P, side_ + 'Foot', self.head[side_ + 'ToeBase'])
+            legs += [(hip, knee), (knee, ankle), (ankle, toe)]
         hc = self.to_world(P, 'Head', c) if centres else None
         for kind, p in self.arm_points(P, s):
             v = self.to_local(P, 'Head', p) - c
             best = (math.sqrt(sum((v[i] / (r[i] + o['head_margin'])) ** 2 for i in range(3))) - 1, hc)
-            if kind != 'upper':
+            if kind not in ('upper', 'pad'):
                 if self.torso_ell:
                     tc, tr = self.torso_ell
                     v = self.to_local(P, 'Spine1', p) - tc
@@ -286,7 +313,7 @@ class Char:
             out = Vector((sg * math.cos(e), fwd, math.sin(e))).normalized()
             P.arm(s, self.arm_to(s, out))
             P.fore(s, fore_bend)
-            if self.clearance(P, s)[0] >= 0:
+            if self.clearance(P, s, movable=True)[0] >= 0.05:  # room for breathing and bobbing
                 break
         self.cache[key] = out
         return out
@@ -468,19 +495,26 @@ def blend_arm(P, s, target, k, fore=None, fore_dir=None):
         P.set(fb, old_fore.slerp(tmp.get(fb), k))
 
 
-def resolve(C, P, s, step=0.05, steps=40):
+def resolve(C, P, s, step=0.05, steps=40, patience=6):
     """Safety net, every frame: while an arm (or its fist or weapon) is inside the head, deep in the
-    torso or in a leg, swing it away from that volume about the shoulder, straightening the elbow."""
-    k, centre = C.clearance(P, s)
-    if k >= 0:
-        return
+    torso or in a leg, swing it away from that volume about the shoulder, straightening the elbow.
+    Shoulder pads (which a swing can't move) are only helped by dropping the shrug; the best pose
+    found is kept, and the search stops when it no longer improves."""
     side = SIDE[s][0]
+    k, centre = C.clearance(P, s)
+    if k >= -1e-3:
+        return
     if P.get(side + 'Shoulder') != I:  # a shrug pushing the pad into the head: drop it first
         for _ in range(4):
             P.set(side + 'Shoulder', P.get(side + 'Shoulder').slerp(I, 0.5))
             k, centre = C.clearance(P, s)
-            if k >= 0:
+            if k >= -1e-3:
                 return
+    k, centre = C.clearance(P, s, movable=True)
+    if k >= -1e-3:
+        return
+    best = (k, P.get(side + 'Arm'), P.get(side + 'ForeArm'))
+    stale = 0
     for i in range(steps):
         S = C.to_world(P, side + 'Arm', C.head[side + 'Arm'])
         W = C.to_world(P, side + 'Hand', C.head[side + 'Hand'])
@@ -492,9 +526,17 @@ def resolve(C, P, s, step=0.05, steps=40):
         P.set(side + 'Arm', q(axis.normalized(), step) @ P.get(side + 'Arm'))
         if i % 3 == 2:  # a little less elbow bend too
             P.set(side + 'ForeArm', P.get(side + 'ForeArm').slerp(I, 0.15))
-        k, centre = C.clearance(P, s)
-        if k >= 0:
+        k, centre = C.clearance(P, s, movable=True)
+        if k >= -1e-3:
             return
+        if k > best[0] + 1e-3:
+            best, stale = (k, P.get(side + 'Arm'), P.get(side + 'ForeArm')), 0
+        else:
+            stale += 1
+            if stale >= patience:
+                break
+    P.set(side + 'Arm', best[1])
+    P.set(side + 'ForeArm', best[2])
 
 
 def blend_reach(P, s, target, pole, k):
@@ -741,7 +783,9 @@ def c_wave(C, t):
     raised = C.arm_to(s, C.up_dir(s, -1.0))
     w = math.sin(TAU * 2.4 * t)
     # upper arm out, forearm upright and swinging side to side, clear of the face
-    blend_arm(P, s, raised, e, fore_dir=(sg * (0.35 + 0.35 * w), -0.2, 1))
+    rf = C.over['raise_fore']
+    fd = (sg * (rf[0] + 0.35 * w), rf[1], rf[2]) if rf else (sg * (0.35 + 0.35 * w), -0.2, 1)
+    blend_arm(P, s, raised, e, fore_dir=fd)
     P.head(0.05 * e, sg * 0.15 * e, -sg * 0.18 * e)
     P.hips(0, 0, -sg * 0.05 * e)
     return P
@@ -784,7 +828,7 @@ def c_fidget(C, t):
     k = C.key
     if k == 'blaster':  # rests the shotgun on the shoulder, chest out, proud nod
         e = env(t, 0.2, 0.7, 2.3, 2.9)
-        blend_arm(P, 'R', C.arm_to('R', (-0.55, -0.75, 0.15)), e, fore_dir=(0.15, 0.35, 0.92))  # shotgun upright on the shoulder
+        blend_arm(P, 'R', C.arm_to('R', (-0.55, -0.75, 0.15)), e, fore_dir=(-0.35, 0.2, 0.9))  # blunderbuss upright on the shoulder, beside the head
         P.spine(-0.12 * e)
         P.head(-0.15 * e + math.sin(TAU * 1.5 * max(0.0, t - 1.0)) * 0.1 * env(t, 1.0, 1.2, 2.0, 2.3))
         P.shoulder('R', 0.15 * e)
@@ -857,7 +901,9 @@ def c_cheer(C, t):
     pump = 0.5 + 0.5 * math.sin(TAU * 2.5 * t)
     for s in arms:
         sg = SIDE[s][1]
-        blend_arm(P, s, C.arm_to(s, C.up_dir(s, -0.5)), e, fore_dir=(sg * (0.2 + 0.3 * pump), -0.25, 1))
+        rf = C.over['raise_fore']
+        fd = (sg * (rf[0] + 0.2 * pump), rf[1], rf[2]) if rf else (sg * (0.2 + 0.3 * pump), -0.25, 1)
+        blend_arm(P, s, C.arm_to(s, C.up_dir(s, -0.5)), e, fore_dir=fd)
     P.spine(-0.1 * e)
     P.head(-0.2 * e)
     P.loc.z = 0.03 * e * pump
