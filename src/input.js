@@ -46,7 +46,7 @@ export class Input {
     });
     addEventListener('pointerup', e => {
       if (e.pointerType === 'touch') return;
-      if (e.button === 0) this.lmb = false;
+      if (e.button === 0) { this.lmb = false; this.tapT = performance.now(); }
       if (e.button === 2) { if (this.rmb) this.rmbReleased = true; this.rmb = false; }
     });
     el.addEventListener('contextmenu', e => e.preventDefault());
@@ -124,7 +124,9 @@ export class Input {
     return out;
   }
 
-  get attackHeld() { return this.lmb || this.btn[PAD.RT] || (!!this.touch && this.touch.fireUntil > performance.now()); }
+  // A click still counts for 120 ms after its release (input buffer): a quick tap during the
+  // reload fires as soon as the weapon is ready instead of being lost.
+  get attackHeld() { return this.lmb || this.btn[PAD.RT] || performance.now() - (this.tapT || -1e9) < 120 || (!!this.touch && this.touch.fireUntil > performance.now()); }
   get superAimHeld() { return this.rmb || this.btn[PAD.LT] || (!!this.touch && this.touch.superAiming); }
   get superFired() {
     return this.hitAction('super') || this.rmbReleased || this.padHit(PAD.RB) || this.padReleased(PAD.LT) || (!!this.touch && this.touch.superFired);
