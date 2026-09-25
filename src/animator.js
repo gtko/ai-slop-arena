@@ -41,6 +41,14 @@ export class Animator {
     return (this.halves[name] = { lo: make('_lo', true), up: make('_up', false) });
   }
 
+  // the upper layer's own action of a clip (a Super can fade out on the base while it plays here)
+  top(name) {
+    const key = name + '_top';
+    if (this.halves[key]) return this.halves[key];
+    const c = this.clips[name];
+    return (this.halves[key] = this.mixer.clipAction(new THREE.AnimationClip(key, c.duration, c.tracks.filter(t => !LOWER.test(t.name)))));
+  }
+
   // Loop `name` as the base state (crossfades from the current one).
   setLoop(name, speed = 1) {
     if (!this.clips[name] || this.held) return;
@@ -56,6 +64,10 @@ export class Animator {
     this.enter(name, false, hold, fade);
     this.busy = !hold ? name : null;
     this.held = hold;
+    if (hold) { // a fall: the whole body goes, arms included
+      for (const n of Object.keys(this.upper)) this.top(n).stop();
+      this.upper = {};
+    }
     return true;
   }
 
@@ -72,13 +84,15 @@ export class Animator {
   pose(name, time) {
     this.mixer.stopAllAction();
     this.base = {}; this.upper = {}; this.busy = null; this.held = false;
-    const a = this.mixer.clipAction(this.clips[name]);
+    this.state = this.loop = null; // the next setLoop starts cleanly
+    const a = this.posed = this.mixer.clipAction(this.clips[name]);
     a.reset().play();
     a.time = time;
     this.mixer.update(0);
   }
 
   enter(name, loop, hold = false, fade = this.fade) {
+    if (this.posed) { this.posed.stop(); this.posed = null; }
     const h = this.half(name);
     for (const a of [h.lo, h.up]) {
       a.reset();
@@ -94,15 +108,16 @@ export class Animator {
 
   // Upper-body layer: aim(amount 0..1) every frame; fire(name) for one-shots.
   aim(k) {
+    if (this.held) return;
     const u = this.upper.Aim || (this.upper.Aim = { w: 0, target: 0 });
     u.target = this.clips.Aim ? k : 0;
   }
 
   fire(name) {
-    if (!this.clips[name]) return;
-    const h = this.half(name);
-    h.up.reset().setLoop(THREE.LoopOnce, 1).play();
-    h.up.clampWhenFinished = true;
+    if (!this.clips[name] || this.held) return;
+    const a = this.top(name);
+    a.reset().setLoop(THREE.LoopOnce, 1).play();
+    a.clampWhenFinished = true;
     this.upper[name] = { w: 1, target: 1, once: true };
   }
 
@@ -119,7 +134,7 @@ export class Animator {
     let U = 0;
     for (const [name, u] of Object.entries(this.upper)) {
       if (u.once) {
-        const a = this.half(name).up, left = a.getClip().duration - a.time;
+        const a = this.top(name), left = a.getClip().duration - a.time;
         u.w = Math.min(1, left / 0.12, a.time / 0.05 + 0.3);
         if (left <= 0) { a.stop(); delete this.upper[name]; continue; }
       } else {
@@ -131,12 +146,12 @@ export class Animator {
     const shot = Object.entries(this.upper).reduce((m, [n, u]) => (u.once ? Math.max(m, u.w) : m), 0);
     for (const [name, u] of Object.entries(this.upper)) {
       const w = u.once ? u.w : u.w * (1 - shot);
+      const a = this.top(name);
       if (name === 'Aim') {
-        const a = this.half('Aim').up;
         if (w > 0 && !a.isRunning()) a.reset().setLoop(THREE.LoopRepeat, Infinity).play();
         if (w <= 0 && a.isRunning()) a.stop();
-        a.setEffectiveWeight(w);
-      } else this.half(name).up.setEffectiveWeight(w);
+      }
+      a.setEffectiveWeight(w);
     }
     for (const name of Object.keys(this.base)) {
       const target = name === this.state ? 1 : 0;

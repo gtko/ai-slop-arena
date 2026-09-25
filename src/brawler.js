@@ -294,7 +294,7 @@ export class Brawler {
   }
 
   cheer() {
-    if (this.alive && this.aimHold <= 0) this.model.anim?.fire('Cheer');
+    if (this.alive) this.model.anim?.fire('Cheer'); // over the aim: it covers the held arms
   }
 
   win() {
@@ -306,6 +306,10 @@ export class Brawler {
     const A = this.model.anim;
     this.ring.visible = false;
     if (this.ice) this.ice.visible = false;
+    // the body falls with its normal look: no hit flash, squash or frost tint left from the last frame
+    this.flash = 0;
+    this.model.root.scale.setScalar(1);
+    for (const mat of this.model.mats) if (!mat.userData.glow) mat.emissive.setRGB(0, 0, 0);
     if (A && A.has('Death') && this.visibleToPlayer) {
       A.mixer.timeScale = 1;
       A.once('Death', { hold: true, fade: 0.08 });
