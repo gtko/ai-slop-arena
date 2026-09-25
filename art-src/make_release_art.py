@@ -853,6 +853,37 @@ def v0100():
     img.convert('RGB').save(os.path.join(OUT, 'v0.10.0-camera.png'), optimize=True)
 
 
+def v0101():
+    banner('v0.10.1', 'FAIR HITS', 'Every human hits as hard, everywhere.',
+           [('⚖️', 'Same damage'), ('🎺', 'Fanfare fixed'), ('🗺️', 'Roadmap page')],
+           'v0.10.1-banner.png', ('volt', 'blaster', 'gunslinger'))
+
+    # human damage multiplier before / after (src/brawler.js setHuman: 1 for humans, 0.85 for bots)
+    rows = [('Solo', 100, 100), ('Steam lobby: host', 100, 100), ('Steam lobby: friends', 85, 100),
+            ('Online (server)', 85, 100), ('Bots', 85, 85)]
+    W, H = 1600, 760
+    img = background(W, H, glow=(0.3, 0.35))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'EVERY HUMAN HITS AT 100%', display(56), YELLOW, anchor='ma')
+    lw, bw = 380, 420
+    x0, y0 = (W - (lw + 2 * bw + 40)) // 2, 150
+    d.text((x0 + lw + bw // 2, y0 - 44), 'BEFORE', font=display(30), fill=TEXT, anchor='ma')
+    d.text((x0 + lw + bw + 40 + bw // 2, y0 - 44), 'NOW', font=display(30), fill=YELLOW, anchor='ma')
+    for k, (label, before, after) in enumerate(rows):
+        y = y0 + k * 92
+        d.text((x0, y + 12), label, font=body(28, 'Black'), fill=TEXT)
+        for col, v in ((0, before), (1, after)):
+            bx = x0 + lw + col * (bw + 40)
+            d.rounded_rectangle((bx, y, bx + bw, y + 52), 14, fill=(40, 32, 76))
+            good = v == 100 or label == 'Bots'
+            fill = (90, 200, 110) if good else (240, 90, 90)
+            d.rounded_rectangle((bx, y, bx + int(bw * v / 100), y + 52), 14, fill=fill, outline=INK, width=3)
+            d.text((bx + int(bw * v / 100) - 16, y + 26), f'{v}%', font=display(30), fill=INK, anchor='rm')
+    d.text((W // 2, H - 60), 'Bots keep 85%: they aim with lead prediction. Power cubes still add +10% each.',
+           font=body(24, 'Bold'), fill=TEXT, anchor='ma')
+    img.convert('RGB').save(os.path.join(OUT, 'v0.10.1-damage.png'), optimize=True)
+
+
 if __name__ == '__main__':
     import sys
     os.makedirs(OUT, exist_ok=True)
@@ -870,5 +901,6 @@ if __name__ == '__main__':
     v080()
     v090()
     v0100()
+    v0101()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')

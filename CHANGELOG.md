@@ -3,6 +3,14 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.10.1](docs/releases/v0.10.1.md): Fair hits
+
+<a href="docs/releases/v0.10.1.md"><img src="docs/releases/img/v0.10.1-banner.png" alt="v0.10.1: fair hits" width="100%"></a>
+
+- ⚖️ Every human hits at 100% online and in Steam lobbies (it was 85%, except for the Steam host).
+- 🎺 The victory fanfare stops when the next match starts.
+- 🗺️ New roadmap page on the website: six versions, seven new brawlers.
+
 ## [v0.10.0](docs/releases/v0.10.0.md): Line of sight
 
 <a href="docs/releases/v0.10.0.md"><img src="docs/releases/img/v0.10.0-banner.png" alt="v0.10.0: line of sight" width="100%"></a>
