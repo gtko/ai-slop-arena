@@ -133,13 +133,14 @@ const html = `<!doctype html>
 <body>
 <div class="bar">Language:
   ${Object.entries(LANGS).map(([k, v]) => `<button data-l="${k}">${v}</button>`).join('')}
-  <span>Local mock-up · capsule art is a placeholder</span>
+  <span>Local mock-up</span>
 </div>
 <div class="page" id="page"></div>
 <script>
 const DATA = ${JSON.stringify(data)};
 const TAGS = ${JSON.stringify(TAGS)};
 const SHOTS = ${JSON.stringify(SHOTS)};
+const CAPSULE = ${JSON.stringify(existsSync(join(dir, '..', 'capsules', 'header_capsule.jpg')) ? '../capsules/header_capsule.jpg' : '')};
 const TRAILER = ${JSON.stringify(existsSync(join(dir, 'trailer.mp4')) ? 'trailer.mp4' : '../../public/assets/site/trailer.mp4')};
 function render(l) {
   const d = DATA[l], u = d.ui;
@@ -157,7 +158,7 @@ function render(l) {
       <div class="thumbs"><div class="vid on" data-v="1"></div>\${SHOTS.map(s => '<img src="' + s + '">').join('')}</div>
     </div>
     <div class="side">
-      <div class="capsule"><img src="../../docs/readme/logo.png" alt=""><small>placeholder</small></div>
+      \${CAPSULE ? '<img src="' + CAPSULE + '" alt="" width="324" height="151" style="display:block">' : '<div class="capsule"><img src="../../docs/readme/logo.png" alt=""><small>placeholder</small></div>'}
       <div class="short">\${d.short}</div>
       <div class="meta">
         <span>\${u.reviews}:</span><span class="v">\${u.noReviews}</span>
