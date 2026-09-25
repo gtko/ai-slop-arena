@@ -53,7 +53,6 @@ PLAY YOUR WAY
 • Online matchmaking with a rank ladder, or a private room with a code to play with friends.
 • Empty slots are filled with bots that adapt to your level.
 • Touch controls made for phones: floating joystick, tap to shoot the nearest enemy, drag to aim, and a charged Super.
-• 15 Google Play Games achievements.
 • Also works with a gamepad.
 
 FAIR AND CLEAN
@@ -102,7 +101,6 @@ JOUEZ COMME VOUS VOULEZ
 • En ligne avec le matchmaking et un classement, ou dans un salon privé avec un code pour jouer entre amis.
 • Les places libres sont complétées par des bots qui s'adaptent à votre niveau.
 • Des commandes tactiles pensées pour le téléphone : joystick flottant, un appui pour tirer sur l'ennemi le plus proche, glisser pour viser, et un Super à charger.
-• 15 succès Google Play Jeux.
 • Compatible manette.
 
 SANS PIÈGE
