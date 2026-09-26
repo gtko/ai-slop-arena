@@ -50,7 +50,7 @@ export const GADGETS = {
     // Star Flare: a flare to the aim point (up to 16 m) that reveals everyone within 6 m for 3 s
     effect(g, b, dx, dz, p) {
       const [x, z] = reach(g, b, dx, dz, p, 16);
-      for (const o of g.brawlers) if (o !== b && o.alive && Math.hypot(o.pos.x - x, o.pos.z - z) < 6) o.revealT = Math.max(o.revealT, 3);
+      for (const o of g.brawlers) if (o !== b && !g.ally(b, o) && o.alive && Math.hypot(o.pos.x - x, o.pos.z - z) < 6) o.revealT = Math.max(o.revealT, 3);
       g.ev({ e: 'flare', x: Math.round(x * 100) / 100, z: Math.round(z * 100) / 100 });
       flareFx(g, x, z);
     },

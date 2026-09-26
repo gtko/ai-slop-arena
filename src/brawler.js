@@ -554,7 +554,7 @@ export class Brawler {
     this.ammo = this.type.ammo; this.freezeT = 0; this.slowT = 0; this.rootT = 0; this.burst.length = 0;
     this.ccImmuneT = 1.5; this.lastHurt = this.g.time;
     this.spawnT = 0; // pops back in
-    this.setVisible(true);
+    this.setVisible(false); this.visibleToPlayer = false; // updateVisibility shows it to whoever can see it
     const A = this.model.anim;
     if (A) { A.held = false; A.loop = null; A.setLoop('Idle'); }
     if (this.model.blink) this.model.blink.value = 0;

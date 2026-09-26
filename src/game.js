@@ -175,7 +175,7 @@ export class Game {
     this.rainT = 12;
     this.player = null;
     this.corners = null;
-    for (const G of this.ghosts || []) this.removeGhost(G);
+    for (const G of [...(this.ghosts || [])]) this.removeGhost(G);
     this.ghosts = [];                 // Buddy Revive: KO'd partners waiting to be brought back
     this.revives = [2, 2, 2, 2];      // revives left per team
     this.pingSeq = 0; this.pingAt = null;
@@ -323,19 +323,22 @@ export class Game {
     }
   }
 
-  revive(G) {
-    const b = G.b;
-    this.removeGhost(G);
+  // G: the ghost, or null (a client that was never shown that enemy's ghost: it revives where it is,
+  // hidden until the next snapshot shows it).
+  revive(G, b = G.b) {
+    const P = this.player, mine = !P || b === P || this.ally(b, P), seen = mine || !!(G && G.grp.visible);
+    const x = G ? G.x : b.pos.x, z = G ? G.z : b.pos.z;
+    if (G) this.removeGhost(G);
     this.revives[b.team] = Math.max(0, this.revives[b.team] - 1);
     this.ev({ e: 'revive', id: b.id });
-    b.revive(G.x, G.z);
+    b.revive(x, z);
     b.rank = 0;
-    this.effects.ring(G.x, G.z, 2.4, new THREE.Color(0.6, 3, 1.4), 0.6);
-    this.effects.sparkBurst(G.x, 1.2, G.z, new THREE.Color(0.8, 3, 1.6), 30, 7, 0.6);
-    const P = this.player;
-    if (this.fxVisible(b)) {
-      sfx('revive', b === P || this.ally(b, P) ? 1 : this.volumeAt(G.x, G.z));
-      this.hud.floater(this.camera, G.x, 3.4, G.z, t('hud.revived'), 'power');
+    if (b.netDriven) b.remoteIn = null; // no fire button still held from before the knock-out
+    if (seen) { // nothing lights up where an enemy you cannot see gets back up
+      this.effects.ring(x, z, 2.4, new THREE.Color(0.6, 3, 1.4), 0.6);
+      this.effects.sparkBurst(x, 1.2, z, new THREE.Color(0.8, 3, 1.6), 30, 7, 0.6);
+      sfx('revive', mine ? 1 : this.volumeAt(x, z));
+      this.hud.floater(this.camera, x, 3.4, z, t('hud.revived'), 'power');
     }
     if (b === P) { this.state = 'playing'; this.resultT = -1; this.camTarget = b; this.aim.visible = true; }
     if (b.persona) this.later.push([this.time + 0.6, () => this.bark(b, 'thanks')]);
@@ -412,7 +415,7 @@ export class Game {
   duoKo(b, ghost) {
     const mate = this.mateOf(b), P = this.player;
     if (b.rank && mate) { mate.rank = b.rank; const G = this.ghostOf(mate); if (G) this.removeGhost(G); }
-    if (ghost) this.addGhost(b);
+    if (ghost && (this.authority || !P || b === P || this.ally(b, P))) this.addGhost(b);
     if (P && b.rank && (b === P || this.ally(b, P))) { this.state = 'over'; this.resultT = 1.6; }
     if (b === P && !b.rank && mate && mate.alive) this.camTarget = mate; // watch your partner
   }
@@ -987,6 +990,7 @@ export class Game {
     const seen = new Set();
     for (const [id, x, z, f, hp, maxHp, ammo, sup, cubes, flags] of m.b) {
       const b = this.byId.get(id);
+      if (b && !b.alive && this.duo && !this.ended) { b.pos.set(x, 0, z); this.revive(this.ghostOf(b), b); b.netHidden = true; }
       if (!b || !b.alive) continue;
       seen.add(b);
       b.hp = hp; b.maxHp = maxHp; b.ammo = ammo; b.superCharge = sup; b.cubes = cubes;
@@ -1042,7 +1046,7 @@ export class Game {
         case 'rv': { const G = this.ghostOf(b); if (G && Number.isFinite(e.p)) G.p = e.p; break; }
         case 'ping': if (b && Number.isFinite(e.x) && Number.isFinite(e.z)) this.pingFx(b, e.k, e.x, e.z); break;
         case 'gone': { const G = this.ghostOf(b); if (G) this.removeGhost(G); break; }
-        case 'revive': { const G = this.ghostOf(b); if (G) this.revive(G); break; }
+        case 'revive': if (b && !b.alive) this.revive(this.ghostOf(b), b); break;
         case 'knock': if (b === this.player) b.knock.set(e.x, 0, e.z); break;
         case 'imm': if (b && b.visibleToPlayer) this.hud.floater(this.camera, b.pos.x, 3.1, b.pos.z, t('hud.immune'), 'immune'); break;
         case 'gad':

@@ -138,12 +138,14 @@ class RoomObject extends DurableObject {
     await this.ctx.storage.put('pq', this.pq);
     this.broadcastRoom();
     await this.partyTick(true);
+    if (this.pq) await this.ctx.storage.setAlarm(Date.now() + 2000);
   }
   async partyStop() {
     if (!this.pq) return;
     this.pq = null;
     await this.ctx.storage.delete('pq');
-    await this.env.MATCHMAKER.getByName('global').partyLeave(this.code());
+    const matched = await this.env.MATCHMAKER.getByName('global').partyLeave(this.code());
+    if (matched) this.broadcast({ t: 'matched', code: matched }); // too late to back out: the match expects them
     this.broadcastRoom();
   }
   async partyTick(force = false, bots = false) {
@@ -153,13 +155,12 @@ class RoomObject extends DurableObject {
     const r = await this.env.MATCHMAKER.getByName('global').partyTick({
       room: this.code(), mode: this.gm, members: members.map(p => p.cid || p.ip), plat: members[0]?.plat || 'web', bots,
     });
-    if (!this.pq) return;
-    if (r.matched) {
+    if (r.matched) { // (even if the queue was stopped meanwhile: the match expects them)
       this.pq = null;
       await this.ctx.storage.delete('pq');
       this.broadcast({ t: 'matched', code: r.matched });
       this.broadcastRoom();
-    } else this.broadcast({ ...r, t: 'queue' });
+    } else if (this.pq) this.broadcast({ ...r, t: 'queue' });
   }
 
   get inMatch() { return !!this.match; }
@@ -178,6 +179,7 @@ class RoomObject extends DurableObject {
 
   async alarm() {
     if (this.preset && !this.inMatch && this.sockets().length) this.startMatch(this.preset.map);
+    if (this.pq) { await this.partyTick(true); if (this.pq) await this.ctx.storage.setAlarm(Date.now() + 2000); }
   }
 
   async fetch(request) {
@@ -235,7 +237,7 @@ class RoomObject extends DurableObject {
       : humans.reduce((sum, p) => sum + (p.lvl ?? 0.45), 0) / humans.length;
     // matchmade matches are ranked: remember who played, rated at the end
     const duo = this.mode === 'duo', parties = this.preset ? this.preset.parties || {} : {};
-    this.ranked = this.preset ? humans.map(p => ({ id: p.id, key: p.cid || p.ip })) : null;
+    this.ranked = this.preset ? humans.map(p => ({ id: p.id, key: p.cid || p.ip, party: parties[p.cid || p.ip] })) : null;
     this.rankedDuo = duo;
     const roster = makeRoster(humans.map(p => ({ id: p.id, name: p.name, type: p.brawler, lo: p.lo, cos: p.cos, plat: p.plat, party: parties[p.cid || p.ip] })), { level, duo });
     for (const r of roster) delete r.party; // who queued with whom stays on the server
@@ -321,6 +323,8 @@ class RoomObject extends DurableObject {
     if (match && this.ranked) await this.rateMatch(match.game, this.ranked);
     this.ranked = null;
     if (this.preset) { // a matchmade room becomes a normal room: the first player can start a rematch
+      this.gm = this.preset.mode || 'solo';
+      await this.ctx.storage.put('gm', this.gm);
       this.preset = null;
       await this.ctx.storage.delete('preset');
       const first = this.sockets().map(ws => [ws, this.info(ws)]).sort((a, b) => a[1].joined - b[1].joined)[0];
@@ -334,7 +338,7 @@ class RoomObject extends DurableObject {
     const duo = !!game.duo;
     const alive = duo ? game.teamsUp() : game.brawlers.filter(b => b.alive).length; // still standing at the end (e.g. time limit)
     // grp: who plays together (a Duo team); RP only move when humans of 2 groups or more met
-    const results = players.map(p => { const b = game.byId.get(p.id); return { key: p.key, id: p.id, rank: b ? b.rank || alive : duo ? 4 : 8, grp: duo && b ? 't' + b.team : p.key }; });
+    const results = players.map(p => { const b = game.byId.get(p.id); return { key: p.key, id: p.id, rank: b ? b.rank || alive : duo ? 4 : 8, grp: duo && b ? 't' + b.team : p.party ? 'p' + p.party : p.key }; });
     const updates = await this.env.PLAYERS.getByName('global').record(results, { duo });
     for (const u of updates) {
       const ws = this.byId(u.id);
@@ -408,8 +412,8 @@ class RoomObject extends DurableObject {
       case 'pqTick':
         await this.partyTick();
         break;
-      case 'pqBots': // play now, bots fill up
-        if (this.pq) { this.pqAt = 0; await this.partyTick(true, true); }
+      case 'pqBots': // play now, bots fill up (the leader)
+        if (this.pq && me.host) { this.pqAt = 0; await this.partyTick(true, true); }
         break;
       case 'mode': // Showdown or Duo (room leader, not in matchmade rooms)
         if (me.host && !this.preset && !this.inMatch && !this.pq) {
@@ -484,6 +488,7 @@ class MatchmakerObject extends DurableObject {
     super(ctx, env);
     this.parties = new Map();   // room code -> party ticket { room, mode, members, joined, mmr, seen, status }
     this.partyDone = new Map(); // room code -> the matched room, until its next poll picks it up
+    this.partyPending = new Set(); // parties whose match room is being prepared
   }
   sockets() { return this.ctx.getWebSockets().filter(ws => ws.readyState === 1 && !this.info(ws).matched); }
   info(ws) { return ws.deserializeAttachment() || {}; }
@@ -542,9 +547,11 @@ class MatchmakerObject extends DurableObject {
     for (let i = 0; i < 5; i++) code += A[Math.floor(Math.random() * A.length)];
     const expect = group.reduce((s, e) => s + e.size, 0);
     const mmr = group.reduce((s, e) => s + (e.mmr ?? START_MMR) * e.size, 0) / expect;
-    const parties = {};
-    for (const e of group) if (e.party) { for (const k of e.party.members) parties[k] = e.party.room; this.parties.delete(e.party.room); this.partyDone.set(e.party.room, code); }
-    await this.env.ROOMS.getByName(code).prepare({ expect, map: randomMap(), level: botLevelFor(mmr), mode, parties });
+    const parties = {}, rooms = group.filter(e => e.party).map(e => e.party.room);
+    for (const e of group) if (e.party) { for (const k of e.party.members) parties[k] = e.party.room; this.parties.delete(e.party.room); }
+    for (const r of rooms) this.partyPending.add(r);
+    try { await this.env.ROOMS.getByName(code).prepare({ expect, map: randomMap(), level: botLevelFor(mmr), mode, parties }); }
+    finally { for (const r of rooms) { this.partyPending.delete(r); this.partyDone.set(r, code); } } // told once the room is ready
     for (const e of group) {
       if (e.ws) try { e.ws.send(JSON.stringify({ t: 'matched', code, players: expect })); e.ws.close(1000, 'matched'); } catch { /* left */ }
     }
@@ -557,6 +564,7 @@ class MatchmakerObject extends DurableObject {
     const was = done();
     if (was) return { matched: was };
     mode = mode === 'duo' ? 'duo' : 'solo';
+    if (this.partyPending.has(room)) return { n: members.length, need: MAX_PLAYERS, waited: 0, botsIn: 0, plats: {} }; // matched: its room is being set up
     let p = this.parties.get(room);
     if (!p || p.mode !== mode || p.members.join() !== members.join()) {
       const P = this.env.PLAYERS.getByName('global');
@@ -572,7 +580,13 @@ class MatchmakerObject extends DurableObject {
     return p.status || { n: members.length, need: MAX_PLAYERS, waited: now - p.joined, botsIn: 0, plats: { [plat]: members.length } };
   }
 
-  partyLeave(room) { this.parties.delete(room); this.partyDone.delete(room); }
+  // The party left the queue. Returns the match already found for it, if any (it must still go).
+  partyLeave(room) {
+    this.parties.delete(room);
+    const c = this.partyDone.get(room);
+    this.partyDone.delete(room);
+    return c || null;
+  }
 
   async webSocketMessage(ws, raw) {
     let msg;

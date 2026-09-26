@@ -512,6 +512,7 @@ export class Combat {
       const Z = this.zones[i];
       Z.t -= dt; Z.delay -= dt;
       Z.mesh.material.opacity = 0.45 * Math.min(1, Z.t / 0.4) * (0.75 + 0.25 * Math.sin(g.time * 9));
+      if (Z.heal) Z.mesh.visible = !Z.owner || g.fxVisible(Z.owner) || g.ally(Z.owner, g.player); // Bowl Splash: no marker on a hidden Kappa
       let gone = Z.t <= 0;
       if (Z.heal) { // Bowl Splash: heals the owner and its partner
         if (!gone && g.authority && Z.delay <= 0 && (Z.tick -= dt) <= 0) {
