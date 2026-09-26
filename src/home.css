@@ -625,3 +625,24 @@ body.touch #touch .t-super b { top: 50%; margin-top: 12px; font-size: 9px; }
 .sh-item.earned .sh-buy { background: rgba(255, 255, 255, 0.08); color: var(--text); opacity: 1; font-size: 13px; }
 .sh-pack.featured { grid-row: auto; border-color: rgba(214, 160, 255, 0.6); }
 .sh-pack.featured .sh-ico { height: 100px; }
+
+/* ======================= v0.14 BETTER TOGETHER: the mode picker ======================= */
+.pp-mode { flex-direction: row; gap: 6px; }
+.pp-mode button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; border-radius: 12px; cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.04); color: #fff; font: inherit; text-align: left; transition: border-color 0.15s, background 0.15s; }
+.pp-mode button:hover { border-color: rgba(255, 255, 255, 0.3); }
+.pp-mode button small { font-size: 18px; }
+.pp-mode button span { font-size: 11px; line-height: 1.25; }
+.pp-mode button.on { border-color: var(--yellow); background: rgba(255, 210, 63, 0.1); }
+.pp-mode button[data-mode="duo"].on { border-color: #15aabf; background: rgba(21, 170, 191, 0.16); }
+.room-mode { display: inline-flex; gap: 4px; margin-left: 8px; }
+.room-mode button { margin: 0; padding: 4px 10px; border-radius: 8px; font-size: 12px; background: rgba(255, 255, 255, 0.08); color: var(--muted); box-shadow: none; border: 1px solid rgba(255, 255, 255, 0.14); }
+.room-mode button.on { color: var(--ink); background: var(--yellow); border-color: var(--yellow); }
+.room-mode button[data-mode="duo"].on { background: #15aabf; border-color: #15aabf; color: #fff; }
+.room-mode button:disabled { cursor: default; }
+.q-mode { margin: -4px 0 4px; font-family: var(--display); color: #15aabf; letter-spacing: 0.5px; }
+@media (max-height: 520px) and (orientation: landscape) {
+  .pp-mode button { padding: 4px 8px; }
+  .pp-mode button small { font-size: 14px; }
+}
+.party-q { margin: 0 0 0 auto; padding: 5px 12px; border-radius: 9px; font-size: 13px; background: linear-gradient(#3fd3e6, #15aabf); color: #fff; }

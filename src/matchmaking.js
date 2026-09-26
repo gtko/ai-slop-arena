@@ -11,9 +11,10 @@ export class Matchmaking {
   emit(type, msg) { const h = this.handlers.get(type); if (h) h(msg); }
   get searching() { return !!this.ws; }
 
-  start(name, brawler, lo) {
+  // mode: 'solo' (Showdown) or 'duo' (Duo Showdown): one queue each
+  start(name, brawler, lo, mode = 'solo') {
     this.cancel();
-    const ws = this.ws = new WebSocket(`${serverBase()}/mm?${identityQuery(name, brawler, lo)}`);
+    const ws = this.ws = new WebSocket(`${serverBase()}/mm?${identityQuery(name, brawler, lo)}&mode=${mode === 'duo' ? 'duo' : 'solo'}`);
     ws.onmessage = e => {
       let msg;
       try { msg = JSON.parse(e.data); } catch { return; }

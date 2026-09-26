@@ -2,7 +2,7 @@ import { DurableObject } from 'cloudflare:workers';
 import * as Sentry from '@sentry/cloudflare';
 import { version } from '../package.json';
 import { ServerMatch, makeRoster, randomMap, validBrawler, validLoadout, validCos, COS_DEFAULT, weeklyMutator, MAP_KEYS } from './build/sim.js';
-import { rate, tierOf, pickGroup, botLevelFor, START_MMR } from './ranking.js';
+import { rate, tierOf, pickGroup, partyMmr, botLevelFor, START_MMR } from './ranking.js';
 
 // AI SLOP ARENA — online server.
 //
@@ -18,7 +18,7 @@ import { rate, tierOf, pickGroup, botLevelFor, START_MMR } from './ranking.js';
 // Steam friend lobbies (src/steamnet.js) stay peer-to-peer: a player hosts, with the same checks.
 // Errors of the Worker and of every Durable Object go to Sentry (SENTRY_DSN in wrangler.jsonc).
 
-const PROTOCOL = 4;          // clients send ?v=4 (v0.13: arena events, emotes); older builds are told to update
+const PROTOCOL = 5;          // clients send ?v=5 (v0.14: Duo, revives, pings); older builds are told to update
 const MAX_PLAYERS = 8;
 const CODE = /^[A-Z0-9]{4,6}$/;
 const QUEUE_BOTS_AFTER = 60 * 1000;     // matchmaking: after 1 minute, whoever is queued plays and bots fill up
@@ -27,6 +27,8 @@ const LOAD_WAIT = 25 * 1000;  // the pre-match loading screen waits at most this
 const COUNTDOWN = 3000;       // then 3-2-1, and the match starts on every screen at once
 const CHEAT_KICK = 25;                  // refused moves in one match before the player is kicked
 const MSG_PER_SEC = 60;
+const PARTY_MAX = { solo: 4, duo: 2 }; // friends who queue together (a Duo party is one team)
+const PARTY_STALE = 8000;              // a party whose room stopped polling leaves the queue
 
 // Sentry: exceptions only, plus a small share of traced requests. No IP, no request bodies.
 const sentry = env => ({
@@ -121,9 +123,43 @@ class RoomObject extends DurableObject {
     ctx.blockConcurrencyWhile(async () => {
       this.map = (await ctx.storage.get('map')) || 'random';
       this.chaos = !!(await ctx.storage.get('chaos')); // Weekly Chaos on (private rooms only)
+      this.gm = (await ctx.storage.get('gm')) === 'duo' ? 'duo' : 'solo'; // game mode: Showdown or Duo
       this.preset = (await ctx.storage.get('preset')) || null; // matchmade room: { expect, map, deadline }
       this.kicked = new Set((await ctx.storage.get('kicked')) || []);
+      this.pq = (await ctx.storage.get('pq')) || null; // the room queues together (a party)
     });
+  }
+
+  /* party queue: the room's players queue as one ticket; the leader's client polls every 2 s */
+  async partyStart() {
+    const n = this.sockets().length;
+    if (this.preset || this.inMatch || this.pq || n < 1 || n > PARTY_MAX[this.gm]) return;
+    this.pq = { since: Date.now() };
+    await this.ctx.storage.put('pq', this.pq);
+    this.broadcastRoom();
+    await this.partyTick(true);
+  }
+  async partyStop() {
+    if (!this.pq) return;
+    this.pq = null;
+    await this.ctx.storage.delete('pq');
+    await this.env.MATCHMAKER.getByName('global').partyLeave(this.code());
+    this.broadcastRoom();
+  }
+  async partyTick(force = false, bots = false) {
+    if (!this.pq || (!force && Date.now() - (this.pqAt || 0) < 1500)) return;
+    this.pqAt = Date.now();
+    const members = this.sockets().map(ws => this.info(ws));
+    const r = await this.env.MATCHMAKER.getByName('global').partyTick({
+      room: this.code(), mode: this.gm, members: members.map(p => p.cid || p.ip), plat: members[0]?.plat || 'web', bots,
+    });
+    if (!this.pq) return;
+    if (r.matched) {
+      this.pq = null;
+      await this.ctx.storage.delete('pq');
+      this.broadcast({ t: 'matched', code: r.matched });
+      this.broadcastRoom();
+    } else this.broadcast({ ...r, t: 'queue' });
   }
 
   get inMatch() { return !!this.match; }
@@ -133,8 +169,9 @@ class RoomObject extends DurableObject {
   code() { return this.roomCode || ''; }
 
   // Called by the Matchmaker before sending players here. level: bot skill for the group's MMR.
-  async prepare({ expect, map, level }) {
-    this.preset = { expect, map: MAP_KEYS.includes(map) ? map : randomMap(), deadline: Date.now() + MATCHED_WAIT, level };
+  // mode: 'solo' | 'duo'; parties: { playerKey: partyId } (friends who queued together share a team).
+  async prepare({ expect, map, level, mode = 'solo', parties = {} }) {
+    this.preset = { expect, map: MAP_KEYS.includes(map) ? map : randomMap(), deadline: Date.now() + MATCHED_WAIT, level, mode: mode === 'duo' ? 'duo' : 'solo', parties };
     await this.ctx.storage.put('preset', this.preset);
     await this.ctx.storage.setAlarm(this.preset.deadline);
   }
@@ -166,6 +203,7 @@ class RoomObject extends DurableObject {
       lvl: Math.min(1, Math.max(0, parseFloat(url.searchParams.get('lvl')) || 0.45)), // bot tuning
     };
     server.serializeAttachment(me);
+    if (this.pq) await this.partyStop(); // someone new: the party queue starts over
     server.send(JSON.stringify({ t: 'welcome', id: me.id, code: this.code(), matchmade: !!this.preset }));
     this.broadcastRoom();
     if (this.preset && !this.inMatch && this.sockets().length >= this.preset.expect) this.startMatch(this.preset.map);
@@ -176,9 +214,11 @@ class RoomObject extends DurableObject {
     return this.sockets().map(ws => this.info(ws)).sort((a, b) => a.joined - b.joined)
       .map(({ id, name, brawler, host, plat, cos }) => ({ id, name, brawler, host, plat, cos }));
   }
-  broadcastRoom() {
-    this.broadcast({ t: 'room', players: this.roster(), inMatch: this.inMatch, map: this.map, chaos: this.chaos && !this.preset, matchmade: !!this.preset });
+  get mode() { return this.preset ? this.preset.mode : this.gm; }
+  roomMsg(players = this.roster()) {
+    return { t: 'room', players, inMatch: this.inMatch, map: this.map, chaos: this.chaos && !this.preset, matchmade: !!this.preset, mode: this.mode, pq: !!this.pq };
   }
+  broadcastRoom() { this.broadcast(this.roomMsg()); }
   broadcast(msg) {
     const raw = typeof msg === 'string' ? msg : JSON.stringify(msg);
     for (const ws of this.sockets()) ws.send(raw);
@@ -194,8 +234,11 @@ class RoomObject extends DurableObject {
     const level = this.preset && this.preset.level !== undefined ? this.preset.level
       : humans.reduce((sum, p) => sum + (p.lvl ?? 0.45), 0) / humans.length;
     // matchmade matches are ranked: remember who played, rated at the end
+    const duo = this.mode === 'duo', parties = this.preset ? this.preset.parties || {} : {};
     this.ranked = this.preset ? humans.map(p => ({ id: p.id, key: p.cid || p.ip })) : null;
-    const roster = makeRoster(humans.map(p => ({ id: p.id, name: p.name, type: p.brawler, lo: p.lo, cos: p.cos, plat: p.plat })), { level });
+    this.rankedDuo = duo;
+    const roster = makeRoster(humans.map(p => ({ id: p.id, name: p.name, type: p.brawler, lo: p.lo, cos: p.cos, plat: p.plat, party: parties[p.cid || p.ip] })), { level, duo });
+    for (const r of roster) delete r.party; // who queued with whom stays on the server
     const mut = this.chaos && !this.preset ? weeklyMutator() : null; // never in ranked matches
     this.match = new ServerMatch({
       map, roster, mut,
@@ -288,9 +331,11 @@ class RoomObject extends DurableObject {
 
   // Ranked result: every human's placement (leavers too: their brawler played on as a bot).
   async rateMatch(game, players) {
-    const alive = game.brawlers.filter(b => b.alive).length; // still standing at the end (e.g. time limit)
-    const results = players.map(p => { const b = game.byId.get(p.id); return { key: p.key, id: p.id, rank: b ? b.rank || alive : 8 }; });
-    const updates = await this.env.PLAYERS.getByName('global').record(results);
+    const duo = !!game.duo;
+    const alive = duo ? game.teamsUp() : game.brawlers.filter(b => b.alive).length; // still standing at the end (e.g. time limit)
+    // grp: who plays together (a Duo team); RP only move when humans of 2 groups or more met
+    const results = players.map(p => { const b = game.byId.get(p.id); return { key: p.key, id: p.id, rank: b ? b.rank || alive : duo ? 4 : 8, grp: duo && b ? 't' + b.team : p.key }; });
+    const updates = await this.env.PLAYERS.getByName('global').record(results, { duo });
     for (const u of updates) {
       const ws = this.byId(u.id);
       if (ws) ws.send(JSON.stringify({ t: 'ranked', rp: u.rp, delta: u.delta, tier: u.tier, prevTier: u.prevTier, visible: u.visible }));
@@ -354,6 +399,25 @@ class RoomObject extends DurableObject {
       case 'start':
         if (me.host && !this.inMatch) this.startMatch(this.map);
         break;
+      case 'pq': // queue together (the leader)
+        if (me.host) await this.partyStart();
+        break;
+      case 'pqStop': // anyone in the party
+        await this.partyStop();
+        break;
+      case 'pqTick':
+        await this.partyTick();
+        break;
+      case 'pqBots': // play now, bots fill up
+        if (this.pq) { this.pqAt = 0; await this.partyTick(true, true); }
+        break;
+      case 'mode': // Showdown or Duo (room leader, not in matchmade rooms)
+        if (me.host && !this.preset && !this.inMatch && !this.pq) {
+          this.gm = msg.mode === 'duo' ? 'duo' : 'solo';
+          await this.ctx.storage.put('gm', this.gm);
+          this.broadcastRoom();
+        }
+        break;
       case 'chaos': // Weekly Chaos on / off (room leader, not in matchmade rooms)
         if (me.host && !this.preset) {
           this.chaos = !!msg.on;
@@ -388,6 +452,7 @@ class RoomObject extends DurableObject {
     this.rate.delete(ws);
     try { ws.close(code === 1005 ? 1000 : code, 'bye'); } catch { /* already closed */ }
     const rest = this.sockets().filter(s => s !== ws);
+    if (this.pq) await this.partyStop(); // a friend left: the party queue stops
     if (me.host) { // the longest-connected player leads now; the match itself goes on (we run it)
       const next = rest.map(s => [s, this.info(s)]).sort((a, b) => a[1].joined - b[1].joined)[0];
       if (next && !this.preset) { next[1].host = true; next[0].serializeAttachment(next[1]); }
@@ -402,7 +467,7 @@ class RoomObject extends DurableObject {
     }
     const players = rest.map(s => this.info(s)).sort((a, b) => a.joined - b.joined)
       .map(({ id, name, brawler, host, plat, cos }) => ({ id, name, brawler, host, plat, cos }));
-    const msg = JSON.stringify({ t: 'room', players, inMatch: this.inMatch, map: this.map, chaos: this.chaos && !this.preset, matchmade: !!this.preset });
+    const msg = JSON.stringify(this.roomMsg(players));
     for (const s of rest) s.send(msg);
   }
 
@@ -415,6 +480,11 @@ class RoomObject extends DurableObject {
 // away; otherwise the oldest player's wait decides: after 1 minute, whoever is queued plays and
 // bots fill the empty slots. "Play now with bots" skips the wait for one player.
 class MatchmakerObject extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    this.parties = new Map();   // room code -> party ticket { room, mode, members, joined, mmr, seen, status }
+    this.partyDone = new Map(); // room code -> the matched room, until its next poll picks it up
+  }
   sockets() { return this.ctx.getWebSockets().filter(ws => ws.readyState === 1 && !this.info(ws).matched); }
   info(ws) { return ws.deserializeAttachment() || {}; }
   queue() { return this.sockets().sort((a, b) => this.info(a).joined - this.info(b).joined); }
@@ -428,7 +498,8 @@ class MatchmakerObject extends DurableObject {
     const me = await this.env.PLAYERS.getByName('global').get(who.cid || who.ip);
     const [client, server] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ joined: Date.now(), name: clean(url.searchParams.get('name'), 14) || 'Player', mmr: me.mmr, ...who });
+    const mode = url.searchParams.get('mode') === 'duo' ? 'duo' : 'solo'; // one queue per mode
+    server.serializeAttachment({ joined: Date.now(), name: clean(url.searchParams.get('name'), 14) || 'Player', mmr: me.mmr, mode, ...who });
     server.send(JSON.stringify({ t: 'rank', rp: me.rp, tier: tierOf(me.rp), matches: me.matches }));
     this.ensureLoop();
     this.tick();
@@ -437,38 +508,77 @@ class MatchmakerObject extends DurableObject {
 
   ensureLoop() { if (!this.loop) this.loop = setInterval(() => this.tick(), 1000); }
 
+  // Tickets of one mode: queued players (size 1) and parties (friends from one room).
+  tickets(mode) {
+    return [...this.queue().filter(ws => (this.info(ws).mode || 'solo') === mode).map(ws => ({ ws, ...this.info(ws), size: 1 })),
+      ...[...this.parties.values()].filter(p => p.mode === mode).map(p => ({ party: p, joined: p.joined, mmr: p.mmr, plat: p.plat, size: p.members.length }))];
+  }
+
   async tick() {
-    const q = this.queue(), now = Date.now();
-    if (!q.length) { clearInterval(this.loop); this.loop = null; return; }
-    const oldest = now - this.info(q[0]).joined;
+    const now = Date.now();
+    for (const [code, p] of this.parties) if (now - p.seen > PARTY_STALE) this.parties.delete(code);
+    if (!this.queue().length && !this.parties.size) { clearInterval(this.loop); this.loop = null; return; }
     const botsAfter = +this.env.QUEUE_BOTS_AFTER_MS || QUEUE_BOTS_AFTER; // the env var is for tests only
-    // players with close hidden MMRs; the allowed gap grows with the wait (ranking.js)
-    const group = pickGroup(q.map(ws => ({ ws, ...this.info(ws) })), now, MAX_PLAYERS, botsAfter);
-    if (group) return this.makeMatch(group.map(p => p.ws));
-    const plats = {};
-    for (const ws of q) plats[this.info(ws).plat] = (plats[this.info(ws).plat] || 0) + 1;
-    for (const ws of q) {
-      ws.send(JSON.stringify({ t: 'queue', n: q.length, need: MAX_PLAYERS, waited: now - this.info(ws).joined,
-        botsIn: Math.max(0, botsAfter - oldest), plats }));
+    for (const mode of ['solo', 'duo']) {
+      const q = this.tickets(mode);
+      if (!q.length) continue;
+      // tickets with close hidden MMRs; the allowed gap grows with the wait (ranking.js)
+      const group = pickGroup(q, now, MAX_PLAYERS, botsAfter);
+      if (group) { await this.makeMatch(group, mode); continue; }
+      const oldest = now - Math.min(...q.map(e => e.joined)), plats = {};
+      for (const e of q) plats[e.plat] = (plats[e.plat] || 0) + e.size;
+      const st = { t: 'queue', n: q.reduce((s, e) => s + e.size, 0), need: MAX_PLAYERS, botsIn: Math.max(0, botsAfter - oldest), plats };
+      for (const e of q) {
+        if (e.ws) e.ws.send(JSON.stringify({ ...st, waited: now - e.joined }));
+        else e.party.status = { ...st, waited: now - e.joined };
+      }
     }
   }
 
-  async makeMatch(group) {
-    for (const ws of group) { const i = this.info(ws); i.matched = true; ws.serializeAttachment(i); }
+  async makeMatch(group, mode = 'solo') {
+    for (const e of group) if (e.ws) { const i = this.info(e.ws); i.matched = true; e.ws.serializeAttachment(i); }
     const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = 'Q';
     for (let i = 0; i < 5; i++) code += A[Math.floor(Math.random() * A.length)];
-    const mmr = group.reduce((s, ws) => s + (this.info(ws).mmr ?? START_MMR), 0) / group.length;
-    await this.env.ROOMS.getByName(code).prepare({ expect: group.length, map: randomMap(), level: botLevelFor(mmr) });
-    for (const ws of group) {
-      try { ws.send(JSON.stringify({ t: 'matched', code, players: group.length })); ws.close(1000, 'matched'); } catch { /* left */ }
+    const expect = group.reduce((s, e) => s + e.size, 0);
+    const mmr = group.reduce((s, e) => s + (e.mmr ?? START_MMR) * e.size, 0) / expect;
+    const parties = {};
+    for (const e of group) if (e.party) { for (const k of e.party.members) parties[k] = e.party.room; this.parties.delete(e.party.room); this.partyDone.set(e.party.room, code); }
+    await this.env.ROOMS.getByName(code).prepare({ expect, map: randomMap(), level: botLevelFor(mmr), mode, parties });
+    for (const e of group) {
+      if (e.ws) try { e.ws.send(JSON.stringify({ t: 'matched', code, players: expect })); e.ws.close(1000, 'matched'); } catch { /* left */ }
     }
   }
+
+  // A party (the players of one room, worker Room) queues as one ticket. Its room polls every 2 s
+  // (that keeps the ticket alive) and learns here the room it was matched into.
+  async partyTick({ room, mode, members, plat, bots = false }) {
+    const now = Date.now(), done = () => { const c = this.partyDone.get(room); if (c) this.partyDone.delete(room); return c; };
+    const was = done();
+    if (was) return { matched: was };
+    mode = mode === 'duo' ? 'duo' : 'solo';
+    let p = this.parties.get(room);
+    if (!p || p.mode !== mode || p.members.join() !== members.join()) {
+      const P = this.env.PLAYERS.getByName('global');
+      const mmrs = await Promise.all(members.map(async k => (await P.get(k)).mmr ?? START_MMR));
+      p = { room, mode, members, plat, joined: p ? p.joined : now, mmr: partyMmr(mmrs) };
+      this.parties.set(room, p);
+    }
+    p.seen = now;
+    if (bots) await this.makeMatch([{ party: p, joined: p.joined, mmr: p.mmr, plat, size: members.length }], mode);
+    else { this.ensureLoop(); await this.tick(); }
+    const got = done();
+    if (got) return { matched: got };
+    return p.status || { n: members.length, need: MAX_PLAYERS, waited: now - p.joined, botsIn: 0, plats: { [plat]: members.length } };
+  }
+
+  partyLeave(room) { this.parties.delete(room); this.partyDone.delete(room); }
 
   async webSocketMessage(ws, raw) {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
-    if (msg.t === 'bots' && !this.info(ws).matched) await this.makeMatch([ws]); // play now, bots fill up
+    const me = this.info(ws);
+    if (msg.t === 'bots' && !me.matched) await this.makeMatch([{ ws, ...me, size: 1 }], me.mode || 'solo'); // play now, bots fill up
   }
 
   async webSocketClose(ws) { try { ws.close(1000, 'bye'); } catch { /* closed */ } this.tick(); }
@@ -492,11 +602,12 @@ class PlayersObject extends DurableObject {
     return row || { key, mmr: START_MMR, rp: 0, matches: 0, wins: 0 };
   }
 
-  // results: [{ key, id, rank }] of one matchmade match. Visible RP only move with 2+ humans.
-  record(results) {
-    const visible = results.length >= 2;
+  // results: [{ key, id, rank, grp }] of one matchmade match. Visible RP only move when humans of 2
+  // groups or more met (a Duo team counts once: two friends cannot farm bots together).
+  record(results, { duo = false } = {}) {
+    const visible = new Set(results.map(r => r.grp ?? r.key)).size >= 2;
     const players = results.map(r => ({ ...this.get(r.key), key: r.key, rank: r.rank, id: r.id }));
-    const out = rate(players, { visible });
+    const out = rate(players, { visible, duo });
     return out.map((u, i) => {
       const before = players[i];
       this.sql.exec('INSERT OR REPLACE INTO players (key, mmr, rp, matches, wins, updated) VALUES (?,?,?,?,?,?)',

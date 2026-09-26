@@ -436,6 +436,29 @@ function showMastery(m, key) {
   renderHero();
 }
 
+// Mode (v0.14): Showdown (every one for themself) or Duo Showdown (4 teams of 2), for solo play and
+// the matchmaking queue; the room leader picks it for a room.
+let gameMode = 'solo';
+try { if (localStorage.getItem('iaslop-mode') === 'duo') gameMode = 'duo'; } catch { /* private mode */ }
+function renderMode() {
+  $('#modePick').querySelectorAll('button').forEach(b => { const on = b.dataset.mode === gameMode; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+}
+$('#modePick').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b || b.dataset.mode === gameMode) return;
+  sfx('click');
+  gameMode = b.dataset.mode === 'duo' ? 'duo' : 'solo';
+  try { localStorage.setItem('iaslop-mode', gameMode); } catch { /* private mode */ }
+  renderMode();
+});
+renderMode();
+$('#roomMode').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b || !net.isHost || net.matchmade || b.dataset.mode === net.mode) return;
+  sfx('click');
+  net.send({ t: 'mode', mode: b.dataset.mode });
+});
+
 // Weekly Chaos (v0.13): this week's mutator, on or off for solo; the room leader sets it for a room.
 let chaosOn = false;
 try { chaosOn = localStorage.getItem('iaslop-chaos') === '1'; } catch { /* private mode */ }
@@ -561,10 +584,11 @@ function play() {
   matchLeft('restart');
   const level = leagueBotLevel(chosen, botLevel()); // Bot League: this brawler's trophies nudge the bots
   const mutator = chaosOn ? weeklyMutator() : null;
-  game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen), cos: cosFor(chosen) }], { level }), localId: 'me', mutator });
+  const duo = gameMode === 'duo'; // Duo: you and a bot partner against 3 bot teams
+  game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen), cos: cosFor(chosen) }], { level, duo }), localId: 'me', mutator });
   hud.titleCard();
   achievements.matchStart({ mapKey, brawler: chosen });
-  matchStarted({ mode: 'solo', map: mapKey, map_random: chosenMap === 'random', brawler: chosen, loadout: loadout(chosen), bot_level: level, humans: 1, mutator });
+  matchStarted({ mode: 'solo', map: mapKey, map_random: chosenMap === 'random', brawler: chosen, loadout: loadout(chosen), bot_level: level, humans: 1, mutator, duo });
   presence(t('presence.solo', { map: t(`map.${mapKey}`) }));
   canvas.focus();
 }
@@ -643,9 +667,11 @@ function openLobby() {
   return true;
 }
 function showRoomView(inRoom) {
+  const party = inRoom && !!net.pq; // the room queues together: the queue view, still in the room
   $('#lobbyJoin').classList.toggle('hidden', inRoom || mm.searching);
-  $('#queue').classList.toggle('hidden', inRoom || !mm.searching);
-  $('#lobbyRoom').classList.toggle('hidden', !inRoom);
+  $('#queue').classList.toggle('hidden', (inRoom || !mm.searching) && !party);
+  $('#lobbyRoom').classList.toggle('hidden', !inRoom || party);
+  $('#partyQueue').classList.toggle('hidden', !inRoom || net !== webNet || net.matchmade || !net.isHost);
   // Steam lobby: overlay invite. Cross-play / browser room: copy the web link.
   $('#copyLink').textContent = net === steamNet ? t('lobby.inviteSteam') : t('lobby.copyLink');
   $('#crossBadge').classList.toggle('hidden', !(steamNet && net === webNet));
@@ -719,9 +745,10 @@ function findMatch() {
   try { if (!steam) localStorage.setItem('iaslop-name', name); } catch { /* ignore */ }
   sfx('click');
   status('');
-  mm.start(name, chosen, loadout(chosen));
+  mm.start(name, chosen, loadout(chosen), gameMode);
   queuedAt = performance.now();
-  track('mm_search_started', { brawler: chosen });
+  track('mm_search_started', { brawler: chosen, duo: gameMode === 'duo' });
+  $('#qMode').textContent = gameMode === 'duo' ? t('menu.duo') : t('menu.mode');
   $('#qCount').textContent = t('lobby.connecting');
   $('#qTime').textContent = $('#qBotsIn').textContent = $('#qPlats').textContent = '';
   $('#qFill').style.width = '0%';
@@ -729,16 +756,53 @@ function findMatch() {
   presence(t('mm.searching'));
 }
 $('#quick').addEventListener('click', findMatch);
-$('#qCancel').addEventListener('click', () => { sfx('click'); track('mm_search_cancelled', { wait_s: waited() }); mm.cancel(); showRoomView(false); presence(t('presence.menu')); });
-$('#qBots').addEventListener('click', () => { sfx('click'); track('mm_bots_requested', { wait_s: waited() }); mm.bots(); });
+$('#qCancel').addEventListener('click', () => {
+  sfx('click');
+  track('mm_search_cancelled', { wait_s: waited(), party: !!net.pq });
+  if (net.pq) { net.send({ t: 'pqStop' }); return; }
+  mm.cancel(); showRoomView(false); presence(t('presence.menu'));
+});
+$('#qBots').addEventListener('click', () => { sfx('click'); track('mm_bots_requested', { wait_s: waited(), party: !!net.pq }); if (net.pq) net.send({ t: 'pqBots' }); else mm.bots(); });
 mm.on('rank', m => showRank(m));
-mm.on('queue', m => {
+// Queue together (v0.14): the room's players (2 for Duo, up to 4 for Showdown) queue as one ticket,
+// matched with other players; in Duo the two friends are one team. The leader's client keeps the
+// ticket alive (the room polls the matchmaker).
+let pqTimer = null;
+$('#partyQueue').addEventListener('click', () => {
+  const max = net.mode === 'duo' ? 2 : 4;
+  if (net.players.length > max) { status(t('party.tooMany', { n: max })); return; }
+  sfx('click');
+  queuedAt = performance.now();
+  track('party_queue_started', { players: net.players.length, duo: net.mode === 'duo' });
+  net.send({ t: 'pq' });
+});
+function partyQueued(on) {
+  if (on && !pqTimer) {
+    queuedAt = performance.now();
+    $('#qMode').textContent = `${net.mode === 'duo' ? t('menu.duo') : t('menu.mode')} · ${t('party.name', { n: net.players.length })}`;
+    $('#qCount').textContent = t('lobby.connecting');
+    $('#qTime').textContent = $('#qBotsIn').textContent = $('#qPlats').textContent = '';
+    $('#qFill').style.width = '0%';
+    pqTimer = setInterval(() => { if (net.isHost) net.send({ t: 'pqTick' }); }, 2000);
+  } else if (!on && pqTimer) { clearInterval(pqTimer); pqTimer = null; }
+}
+onNet('matched', m => { // the party was matched: everyone moves to the match's room
+  partyQueued(false);
+  track('mm_matched', { wait_s: waited(), party: true });
+  sfx('join');
+  status(t('mm.found'));
+  net.close();
+  joinRoom(m.code, null, true);
+});
+onNet('queue', m => showQueue(m));
+mm.on('queue', m => showQueue(m));
+function showQueue(m) {
   $('#qCount').textContent = t('mm.inQueue', { n: m.n, need: m.need });
   $('#qFill').style.width = `${Math.min(100, (m.n / m.need) * 100)}%`;
   $('#qTime').textContent = t('mm.waited', { time: clock(m.waited) });
   $('#qBotsIn').textContent = t('mm.botsIn', { time: clock(m.botsIn) });
   $('#qPlats').textContent = Object.entries(m.plats || {}).map(([k, n]) => `${PLAT_ICON[k] || '•'} ${n}`).join('   ');
-});
+}
 mm.on('matched', m => {
   track('mm_matched', { wait_s: waited() });
   sfx('join');
@@ -805,6 +869,9 @@ onNet('room', m => {
   $('#mapNote').textContent = host ? t('lobby.youPick') : t('lobby.hostPicks');
   $('#chaosRoomBtn').classList.toggle('hidden', !!m.matchmade);
   chaosChip($('#chaosRoomBtn'), !!m.chaos, host);
+  $('#roomMode').querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.mode === (m.mode === 'duo' ? 'duo' : 'solo')); b.disabled = !host || !!m.matchmade; });
+  partyQueued(!!m.pq);
+  showRoomView(true);
   $('#start').classList.toggle('hidden', !host);
   $('#waiting').classList.toggle('hidden', host);
   $('#waiting').textContent = m.inMatch ? t('lobby.inProgress') : m.matchmade ? t('mm.matchmade') : t('lobby.waiting');
@@ -887,7 +954,7 @@ function matchmadeOver() {
   // our own result may not be on screen yet (knocked out while the app was in the background):
   // fill it from where our brawler finished before leaving the match
   if (!resultShown) {
-    const P = game.player, alive = game.brawlers.filter(b => b.alive).length;
+    const P = game.player, alive = game.duo ? game.teamsUp() : game.brawlers.filter(b => b.alive).length;
     const rank = P ? P.rank || alive || 1 : 1;
     game.onResult(rank, rank === 1);
   }
@@ -964,7 +1031,7 @@ $('#start').addEventListener('click', () => {
   sfx('click');
   // Server rooms: the server builds the roster and starts everyone (the leader included).
   if (net.serverAuthority) { net.send({ t: 'start' }); return; }
-  const roster = makeRoster(net.players.map(p => ({ id: p.id, name: p.name, type: p.brawler, lo: p.lo, cos: p.cos })), { level: botLevel() });
+  const roster = makeRoster(net.players.map(p => ({ id: p.id, name: p.name, type: p.brawler, lo: p.lo, cos: p.cos })), { level: botLevel(), duo: net.mode === 'duo' });
   const mapKey = resolveMap(lobbyMap), mut = net.chaos ? weeklyMutator() : null;
   net.send({ t: 'start', map: mapKey, roster, mut });
   startOnline(mapKey, roster, 'host', mut);
@@ -1085,8 +1152,8 @@ function showPodium() {
   if (!game.ended || !game.player) { el.innerHTML = ''; $('.result').classList.remove('podium-on'); podiumFor = null; return; }
   if (podiumFor === game.matchNo) return;
   podiumFor = game.matchNo;
-  const top = game.brawlers.filter(b => b.rank >= 1 && b.rank <= 3).sort((a, b) => a.rank - b.rank);
-  const order = [top[1], top[0], top[2]].filter(Boolean); // 2 - 1 - 3
+  const top = game.brawlers.filter(b => b.rank >= 1 && b.rank <= (game.duo ? 2 : 3)).sort((a, b) => a.rank - b.rank);
+  const order = (game.duo ? [top[2], top[0], top[1], top[3]] : [top[1], top[0], top[2]]).filter(Boolean); // 2 - 1 - 3 (Duo: 2 - 1 1 - 2)
   el.innerHTML = order.map(b => {
     const C = b.cos;
     return `<div class="pd p${b.rank}${b === game.player ? ' me' : ''}">${framed(C.frame, `<img src="${portrait(b.type.key)}" alt="" style="filter:${skinFilter(b.type.key, C.skin)}">`)}
@@ -1096,13 +1163,15 @@ function showPodium() {
   $('.result').classList.add('podium-on');
 }
 
-game.onResult = (rank, won) => {
+game.onResult = (place, won) => {
+  // Duo: 1st-4th team; progression counts them like 1st, 3rd, 5th and 7th of 8
+  const rank = game.duo ? place * 2 - 1 : place;
   showStats();
   showPodium();
   achievements.result(rank, won, { night: lighting.night >= 0.5 });
   if (played && !played.ended) {
     played.ended = true;
-    track('match_ended', { ...matchProps(), rank, won, players: game.brawlers.length });
+    track('match_ended', { ...matchProps(), rank: place, won, players: game.brawlers.length, duo: !!game.duo });
     perfReport({ mode: played.mode, map: played.map });
     maybeAskSurvey({ mode: played.mode, map: played.map, brawler: played.brawler, rank, won });
   }
@@ -1132,9 +1201,9 @@ game.onResult = (rank, won) => {
   $('#resRank').textContent = matchmadeMatch ? rankedText || t('rank.pending') : '';
   playMusic(null);
   sfx(won ? 'victory' : 'defeat');
-  $('#resTitle').textContent = won ? t('result.victory') : t('result.rank', { rank });
+  $('#resTitle').textContent = won ? t('result.victory') : t('result.rank', { rank: place });
   $('#resTitle').className = won ? 'win' : '';
-  $('#resSub').textContent = won ? t('result.won') : t('result.lost', { n: rank - 1 });
+  $('#resSub').textContent = game.duo ? (won ? t('result.wonDuo') : t('result.lostDuo', { n: place - 1 })) : won ? t('result.won') : t('result.lost', { n: rank - 1 });
   $('#soloBtns').classList.toggle('hidden', !!game.net);
   $('#onlineBtns').classList.toggle('hidden', !game.net);
   $('#mmBtns').classList.add('hidden');
