@@ -418,7 +418,7 @@ function pickBrawler(key) {
 renderLoadout();
 
 // Progression pages (v0.13): quests, Trophy Road, shop, collection, under the top navigation.
-const meta = new MetaUI({ brawlers: Object.keys(TYPES), portrait, chosen: () => chosen, colorOf: hexOf, onBrawler: key => { renderHero(); if (key === chosen) showcaseAgain(); }, onWear: () => {
+const meta = new MetaUI({ brawlers: Object.keys(TYPES), portrait, chosen: () => chosen, colorOf: hexOf, onWallet: () => renderUnlock(), onBrawler: key => { renderHero(); if (key === chosen) showcaseAgain(); }, onWear: () => {
   renderHero();
   showcaseAgain();
   if (net.connected) net.send({ t: 'pick', brawler: chosen, lo: loadout(chosen), cos: cosFor(chosen) });
@@ -628,7 +628,7 @@ if (steam) {
 const status = msg => { $('#lobbyStatus').textContent = msg || ''; };
 
 function openLobby() {
-  if (!ownsBrawler(chosen)) return;
+  if (!ownsBrawler(chosen)) return false;
   leaveHome();
   lobbyCards.querySelectorAll('button').forEach(b => { b.disabled = !ownsBrawler(b.dataset.key); });
   initAudio();
@@ -640,6 +640,7 @@ function openLobby() {
   playMusic('lobby');
   loadRank();
   showAvatar();
+  return true;
 }
 function showRoomView(inRoom) {
   $('#lobbyJoin').classList.toggle('hidden', inRoom || mm.searching);
@@ -1223,6 +1224,7 @@ if (steam) {
     if (menus.paused) menus.closePause();
     if (net.connected) net.close();
     toMenu();
+    if (!ownsBrawler(chosen)) pickBrawler(Object.keys(TYPES).find(ownsBrawler)); // an invite: join with a brawler you own
     openLobby();
     joinRoom(null, id);
   };

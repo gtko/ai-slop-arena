@@ -19,7 +19,7 @@ try {
   // a veteran: a profile from before v0.13.1, or no profile yet but mastery points (v0.12 and older)
   const veteran = raw ? !raw.v : (() => { try { return Object.keys(JSON.parse(localStorage.getItem('iaslop-mastery') || '{}')).length > 0; } catch { return false; } })();
   if (veteran) {
-    for (const k of veteran ? ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt'] : STARTERS) if (!P.owned.includes('brawler:' + k)) P.owned.push('brawler:' + k);
+    for (const k of ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt']) if (!P.owned.includes('brawler:' + k)) P.owned.push('brawler:' + k); // the five of before
     P.v = 2;
     P.gems ??= 0;
   }

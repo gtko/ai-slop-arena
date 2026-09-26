@@ -73,8 +73,8 @@ function markQuestsSeen(B) { try { localStorage.setItem(SEEN, JSON.stringify(don
 
 export class MetaUI {
   // brawlers: keys; portrait(key) -> url; chosen() -> current brawler; onWear(): what you wear changed
-  constructor({ brawlers, portrait, chosen, onWear, onBrawler, colorOf }) {
-    Object.assign(this, { brawlers, portrait, chosen, onWear, onBrawler, colorOf });
+  constructor({ brawlers, portrait, chosen, onWear, onBrawler, colorOf, onWallet }) {
+    Object.assign(this, { brawlers, portrait, chosen, onWear, onBrawler, colorOf, onWallet });
     this.view = null;
     this.tab = 'skin';
     this.panel = $('#meta');
@@ -112,6 +112,7 @@ export class MetaUI {
     $('#homeQuests').innerHTML = `<h3>${t('meta.quests')}<small>${B.daily.filter(q => q.done).length}/3</small></h3><ul>${B.daily.map(row).join('')}</ul>`;
     $('#pbCoins').innerHTML = coin(Pr.coins());
     $('#pbGems').innerHTML = gem(Pr.gems());
+    this.onWallet?.();
     $('#pbTrophies').innerHTML = `🏆 ${num(Pr.totalTrophies())}`;
     // red badges only for something new: a quest just finished, an item just unlocked
     const fresh = unseenQuests(B);
@@ -272,7 +273,7 @@ export class MetaUI {
     } else if (tab === 'skins') {
       const key = this.shopSkinsOf || this.chosen();
       const pick = `<div class="col-brawlers">${this.brawlers.map(k => `<button data-b="${k}" class="${k === key ? 'on' : ''}" title="${cap(k)}" aria-label="${cap(k)}" aria-pressed="${k === key}"><img src="${this.portrait(k)}" alt=""></button>`).join('')}</div>`;
-      body = pick + `<div class="shop">${pool.filter(id => id.startsWith(`skin:${key}:`)).map(id => card(id)).join('')}${card(`skin:${key}:3`, { cls: 'earned' }).replace(/<button class="sh-buy[^"]*"[^>]*>[\s\S]*?<\/button>/, `<button class="sh-buy" disabled>🔒 ${t('col.gold', { n: GOLD_AT })}</button>`)}</div>`;
+      body = pick + `<div class="shop">${pool.filter(id => id.startsWith(`skin:${key}:`)).map(id => card(id)).join('')}${Pr.owns(`skin:${key}:3`) ? card(`skin:${key}:3`) : card(`skin:${key}:3`, { cls: 'earned' }).replace(/<button class="sh-buy[^"]*"[^>]*>[\s\S]*?<\/button>/, `<button class="sh-buy" disabled>🔒 ${t('col.gold', { n: GOLD_AT })}</button>`)}</div>`;
     } else if (tab === 'effects') body = `<div class="shop">${pool.filter(id => /^(trail|ko):/.test(id)).map(id => card(id)).join('')}</div>`;
     else if (tab === 'emotes') body = `<div class="shop">${pool.filter(id => id.startsWith('emote:')).map(id => card(id)).join('')}</div>`;
     else if (tab === 'profile') body = `<div class="shop">${pool.filter(id => /^(frame|title|icon):/.test(id)).map(id => card(id)).join('')}</div>`;
