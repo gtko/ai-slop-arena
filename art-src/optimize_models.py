@@ -7,7 +7,7 @@ import glob, os, subprocess, sys
 # fraction of the triangles kept for each decor prop (raw props come out at ~30k triangles)
 # (instanced by the hundred around the arena: a canyon pillar at 1k triangles x 286 copies is plenty)
 DECOR_RATIO = {'wall': 0.05, 'crate': 0.08, 'tree': 0.05, 'bush': 0.04, 'rock': 0.035, 'boulder': 0.06, 'stump': 0.06,
-               'cactus': 0.05, 'lantern': 0.1}
+               'cactus': 0.05, 'lantern': 0.1, 'windmill': 0.12}  # one windmill per match: it can keep detail
 
 
 def run(src, dst, ratio, error, size):

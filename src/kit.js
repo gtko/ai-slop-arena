@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { N, TILE } from './arena.js';
 import { sfx } from './audio.js';
 import { t } from './i18n/index.js';
+import { hasProp, propGeometry, propMaterial } from './props.js';
 
 // Interactive arena kit (v0.15 WILD ISLES, docs/brainstorm/iter3_kenji.md §2c). Tiles of maps.js:
 //   V  void: nothing to stand on. Walking stops at the edge, but a brawler knocked onto it falls: a
@@ -22,6 +23,9 @@ const BARREL_R = 2.5, BARREL_DMG = 900, BARREL_KNOCK = 9;
 const SHROOM_HEAL = 1200, SHROOM_TIME = 2, SHROOM_REGROW = 20;
 const BRIDGE_HP = 1200;
 const DOOM_WARN = 5;
+// the sculpted windmill: footprint share of its 'M' square, sails span (x the tower's width), the
+// hub's height (x the tower's height) and how far out front (x the tower's half depth)
+const WINDMILL = { width: 0.82, sails: 1.4, hubY: 0.68, hubZ: 0.95 };
 const r2 = v => Math.round(v * 100) / 100;
 const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3();
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -195,13 +199,29 @@ export class MapKit {
       G.add(this.rock);
       this.buildSky();
     }
-    // the windmill: a stone tower, a red roof and turning sails, facing south (the camera); built
-    // for a 2 x 2 block, scaled to the size of the square of 'M'
+    // the windmill: a stone tower, a red roof and turning sails, facing south (the camera). The
+    // sculpted one (art-src/ai3d: windmill + windmill_sails) fills the square of 'M'; the procedural
+    // fallback is built for a 2 x 2 block and scaled to it.
     for (let j = 0; j < N - 1; j++) for (let i = 0; i < N - 1; i++) {
       if (A.get(i, j) !== 'M' || A.get(i - 1, j) === 'M' || A.get(i, j - 1) === 'M') continue;
       let n = 1;
       while (A.get(i + n, j) === 'M') n++;
       const c = A.center(i, j, new THREE.Vector3()).add(new THREE.Vector3(TILE * (n - 1) / 2, 0, TILE * (n - 1) / 2)), g = new THREE.Group();
+      if (hasProp('windmill') && hasProp('windmill_sails')) {
+        const W = n * TILE * WINDMILL.width, tg = propGeometry('windmill', { width: W });
+        tg.computeBoundingBox();
+        const H = tg.boundingBox.max.y, D = tg.boundingBox.max.z;
+        const sg = propGeometry('windmill_sails', { width: W * WINDMILL.sails }).center();
+        const tower = new THREE.Mesh(tg, propMaterial('windmill')), hub = new THREE.Group(), sails = new THREE.Mesh(sg, propMaterial('windmill_sails'));
+        hub.position.set(0, H * WINDMILL.hubY, D * WINDMILL.hubZ);
+        hub.add(sails);
+        g.add(tower, hub);
+        g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+        g.position.copy(c);
+        G.add(g);
+        this.sails = hub;
+        continue;
+      }
       g.scale.setScalar(n / 2 * 0.9);
       const stone = new THREE.MeshStandardMaterial({ color: 0xece2cf, roughness: 0.85 }), roofM = new THREE.MeshStandardMaterial({ color: 0xc8453a, roughness: 0.7 });
       const wood = new THREE.MeshStandardMaterial({ color: 0x8a5a34, roughness: 0.8 }), cloth = new THREE.MeshStandardMaterial({ color: 0xfff6e0, roughness: 0.9, side: THREE.DoubleSide });
