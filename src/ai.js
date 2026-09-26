@@ -379,6 +379,8 @@ export class BotBrain {
     if (T === 'frostbite') return near(this.b.pos, 4.5) >= 1;
     if (T === 'blaster') return d < 6;
     if (T === 'volt') return near(tgt.pos, 3) >= 2 || low;
+    if (T === 'pipchomp') return d < 6;
+    if (T === 'mochi') return d < 8.5 && (near(tgt.pos, 4) >= 1 || low);
     if (T === 'kappa') return d < 8 && (near(tgt.pos, 3) >= 1 || low || this.b.inPoison);
     if (T === 'bomber') return low || tgt.inBush || !g.arena.los(this.b.pos.x, this.b.pos.z, tgt.pos.x, tgt.pos.z) || near(tgt.pos, 3.6) >= 2;
     return low || d < this.b.type.range * 0.6; // gunslinger: finisher or a sure hit
@@ -400,6 +402,8 @@ export class BotBrain {
     else if (k === 'bomberB') { if (d < b.type.range && b.ammo >= 1) use = [ux, uz]; }
     else if (k === 'frostbiteB') { if (hurt && d > 3 && d < 9) use = [ux, uz]; }
     else if (k === 'voltB') { if (b.ammo < 1 && d < b.type.range) use = [ux, uz]; }
+    else if (k === 'pipchompB') { if (hurt && d < 8) use = [ux, uz]; }
+    else if (k === 'mochiB') { if (hurt && d < 5) use = [ux, uz]; }
     else if (k === 'kappaB') { const m = g.mateOf(b); if (b.hp < b.maxHp * 0.55 || (m && m.alive && m.hp < m.maxHp * 0.5 && m.pos.distanceTo(b.pos) < 2)) use = [ux, uz]; }
     if (use && Math.random() < 0.35 + this.skill * 0.5) g.useGadget(b, use[0], use[1], o.pos);
   }
@@ -420,7 +424,7 @@ export class BotBrain {
       const a = Math.atan2(dx, dz) + err, l = Math.hypot(dx, dz);
       dx = Math.sin(a) * l; dz = Math.cos(a) * l;
       const point = _v.set(b.pos.x + dx, 0, b.pos.z + dz);
-      const superRange = T.key === 'frostbite' ? 4.5 : T.key === 'kappa' ? 9 : range * 0.9;
+      const superRange = T.key === 'frostbite' ? 4.5 : T.key === 'kappa' ? 9 : T.key === 'pipchomp' ? 7.5 : T.key === 'mochi' ? 8.5 : range * 0.9;
       if (b.superCharge >= 1 && d < superRange && this.superGood(tgt, d) && Math.random() < 0.35 + this.skill * 0.5) {
         g.tryAttack(b, dx, dz, point, true);
       } else if (this.fireCd <= 0 && b.ammo >= 1) {

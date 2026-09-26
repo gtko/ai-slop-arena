@@ -13,7 +13,8 @@ import { sfx } from './audio.js';
 export const GADGET_CHARGES = 3, GADGET_LOCKOUT = 5;
 // HUD / lobby icon of each gadget
 export const GADGET_ICONS = { blasterA: '🐏', blasterB: '🪵', gunslingerA: '🌀', gunslingerB: '🎆', bomberA: '🦘', bomberB: '🧨',
-  frostbiteA: '⛸️', frostbiteB: '🧊', voltA: '⚡', voltB: '🔋', kappaA: '🤿', kappaB: '🥣' };
+  frostbiteA: '⛸️', frostbiteB: '🧊', voltA: '⚡', voltB: '🔋', kappaA: '🤿', kappaB: '🥣',
+  pipchompA: '🍖', pipchompB: '🍄', mochiA: '🛷', mochiB: '🍡' };
 const YELLOW = new THREE.Color(3.2, 2.6, 0.6), ICE = new THREE.Color(1.4, 2.8, 3.6), ZAP = new THREE.Color(2.2, 3.4, 4.6);
 const LAVA = new THREE.Color(3.4, 1.2, 0.2), BARK = new THREE.Color(1.6, 1.1, 0.5), PINK = new THREE.Color(3.4, 1.4, 2.4);
 const WATER = new THREE.Color(0.8, 2.2, 3.4), HEAL = new THREE.Color(0.8, 3.2, 1.4);
@@ -142,6 +143,37 @@ GADGETS.kappaB = {
   fx(g, b) { g.effects.splash(b.pos.x, b.pos.z, 0.6); g.effects.ring(b.pos.x, b.pos.z, 2, WATER, 0.5); },
 };
 
+// Pip & Chomp and Mochi (v0.15)
+GADGETS.pipchompA = {
+  sound: 'lunge',
+  // Leap Snack: a 6 m lunge; a bite on the way does 400 and heals 600
+  dist: 6.5,
+  move(g, b, dx, dz) { g.combat.lungeMove(b, dx, dz, 6); },
+  effect(g, b, dx, dz) { g.combat.lungeBite(b, dx, dz, 6, 400, 600); },
+  fx(g, b) { g.effects.dust(b.pos.x, b.pos.z, 8, 0x6a9a4a, 1); },
+};
+GADGETS.pipchompB = {
+  sound: 'spore',
+  // Spore Puff: a 3 m cloud for 3 s that hides everyone inside like a bush
+  effect() {},
+  fx(g, b) { g.kit.puff(b.pos.x, b.pos.z); },
+};
+GADGETS.mochiA = {
+  sound: 'slide',
+  // Belly Slide: a 5 m slide; enemies in the way take 200 and are pushed aside
+  dist: 5.5,
+  move(g, b, dx, dz) { dash(b, dx, dz, 5, 0.4); },
+  effect(g, b) { b.slideT = 0.45; b.slideHit = new Set(); },
+  fx(g, b) { g.effects.dust(b.pos.x, b.pos.z, 10, 0xffd6e0, 1.3); },
+};
+GADGETS.mochiB = {
+  sound: 'sticky',
+  // Sticky Mochi: 2 s as a sticky blob: -60% damage taken, no attacks, enemies touching it slowed
+  move(g, b) { b.stickyT = 2; },
+  effect(g, b) { b.stickyT = 2; },
+  fx(g, b) { b.stickyT = 2; g.effects.ring(b.pos.x, b.pos.z, 1.4, PINK, 0.5); },
+};
+
 // Star powers: passives read by the rules where they apply (brawler.js, combat.js).
 export const STARS = {
   blaster: ['sapRegen', 'splinters'],       // regen after 2 s (not 3) | seeds that hit a wall split into 2 shards
@@ -150,6 +182,8 @@ export const STARS = {
   frostbite: ['deepFreeze', 'permafrost'],  // shards slow x0.45 (not 0.55) | nova radius +25%, freeze 1.0 s (not 1.4)
   volt: ['conductor', 'surge'],             // +1 chain | storm 7 bolts x 450 (not 5 x 600)
   kappa: ['hydrotherapy', 'undertow'],      // heals +30% | the Tidal Wave pulls enemies toward her instead of pushing
+  pipchomp: ['huntersNose', 'hungry'],      // sees hurt enemies (< 35%) in bushes within 8 m | bites on targets under 40% +25%
+  mochi: ['heavyweight', 'secondHelping'],  // -50% knock-back | a power cube heals 800
 };
 export const hasStar = (b, id) => STARS[b.type.key]?.[(b.star || 1) - 1] === id;
 

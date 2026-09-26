@@ -44,6 +44,19 @@ export const TYPES = {
     hp: 3600, speed: 6.2, ammo: 3, reload: 1.7, range: 11, superCost: 2600, projSpeed: 16,
     palette: { main: 0x94d82d, dark: 0x0ca678, accent: 0xff6b6b, hair: 0x3f8f3a, skin: 0x94d82d },
   },
+  // v0.15 WILD ISLES (docs/brainstorm/iter3_maya.md, roadmap D6/D7)
+  pipchomp: {
+    key: 'pipchomp', name: 'Pip & Chomp', role: 'Assassin',
+    desc: 'A shy mushroom kid riding a hungry venus-flytrap. Chomp lunges 4 m and bites; Pip says sorry. Super: plants a Venus Trap, a bush that bites, roots and reveals the first enemy who walks in.',
+    hp: 3800, speed: 6.8, ammo: 3, reload: 1.8, range: 4.5, superCost: 2200, projSpeed: 20,
+    palette: { main: 0x2f9e44, dark: 0x1e5c2c, accent: 0xd6336c, hair: 0xb197fc, skin: 0xf5e6d0 },
+  },
+  mochi: {
+    key: 'mochi', name: 'Mochi', role: 'Tank',
+    desc: 'A gentle strawberry-mochi sumo seal. Its belly bump sends 3 jelly waves that push enemies back (off a cliff, ideally). Super: Mochi Pound, a leap that crushes and stuns everyone where it lands and flattens walls.',
+    hp: 6800, speed: 5.6, ammo: 4, reload: 1.4, range: 3.5, superCost: 2400, projSpeed: 20, radius: 0.72, cubeHp: 250,
+    palette: { main: 0xffc2d4, dark: 0xe64980, accent: 0xffffff, hair: 0xffffff, skin: 0xffc2d4 },
+  },
 };
 
 let G = null; // shared geometries
@@ -117,7 +130,7 @@ function teamOutline(base) {
   m.userData = { outline: true, team: true };
   return m;
 }
-const IMMUNE_COL = new THREE.Color(2.2, 3, 3.6);
+const IMMUNE_COL = new THREE.Color(2.2, 3, 3.6), STUN_COL = new THREE.Color(3.2, 2.8, 0.6);
 
 export class Brawler {
   constructor(game, typeKey, { name, isPlayer = false }) {
@@ -207,7 +220,7 @@ export class Brawler {
     this.teamColors();
   }
 
-  get radius() { return 0.62; }
+  get radius() { return this.type.radius || 0.62; } // Mochi is wider
 
   // Cosmetics (v0.13, cosmetics.js): skin on the figurine; trail, K.O. effect, frame, title and
   // icon are read where they show.
@@ -305,6 +318,9 @@ export class Brawler {
     this.gadgetCd -= dt; this.rootT -= dt; this.armorT -= dt; this.ghostT -= dt; this.slowSelfT -= dt; this.overclockT -= dt;
     if (this.bowlSlowAt && t >= this.bowlSlowAt) { this.bowlSlowAt = 0; this.slowSelfT = 4; } // Bowl Splash: the bowl is empty
     if (this.chargeT > 0) { this.chargeT -= dt; if (this.g.authority) this.g.chargeContact(this); }
+    if (this.slideT > 0) { this.slideT -= dt; if (this.g.authority) this.g.slideContact(this); } // Mochi's Belly Slide
+    this.stickyT -= dt;
+    if (this.stickyT > 0 && this.g.authority) this.g.stickyContact(this); // Sticky Mochi
     if (this.hopLandT > 0 && (this.hopLandT -= dt) <= 0 && this.g.authority) this.g.hopLanded(this);
     this.fireCd -= dt;
     this.revealT -= dt;
@@ -358,7 +374,7 @@ export class Brawler {
       this.knock.multiplyScalar(Math.exp(-7 * dt));
       A.collideCircle(this.pos, this.radius, this.knock.lengthSq() > 2.25); // a hard push can send you over the edge (kit.js)
     }
-    this.inBush = A.isBushAt(this.pos.x, this.pos.z);
+    this.inBush = A.isBushAt(this.pos.x, this.pos.z) || this.g.kit.inPuff(this.pos.x, this.pos.z); // a spore cloud hides like a bush
 
     const speed = Math.hypot(this.vel.x, this.vel.z);
     const moving = speed > 0.8;
@@ -591,7 +607,9 @@ export class Brawler {
 
   // Frozen: an ice block around the brawler. Slowed: a frosty tint.
   updateStatusFx() {
-    const frozen = this.freezeT > 0;
+    if (this.freezeT <= 0) this.stunned = false;
+    const frozen = this.freezeT > 0 && !this.stunned; // a stun (Mochi Pound) holds you without the ice
+    if (this.stunned && this.visibleToPlayer && (this.stunFx = (this.stunFx || 0) - 1 / 60) <= 0) { this.stunFx = 0.35; this.g.effects.sparkBurst(this.pos.x, 2.9, this.pos.z, STUN_COL, 3, 1.5, 0.35, 0.12); }
     if (frozen && !this.ice) {
       if (!ICE_MAT) ICE_MAT = new THREE.MeshStandardMaterial({ color: 0xbfe8ff, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.55, emissive: 0x2a6f9a, emissiveIntensity: 0.6 });
       this.ice = new THREE.Mesh(geos().iceBlock, ICE_MAT);

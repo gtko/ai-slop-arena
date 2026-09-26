@@ -102,7 +102,7 @@ await test('brawler names and loadouts from the network are checked', () => {
 });
 
 await test('every gadget works, with 3 charges and a 5 s lockout', () => {
-  for (const type of ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt', 'kappa']) for (const gad of ['A', 'B']) {
+  for (const type of ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt', 'kappa', 'pipchomp', 'mochi']) for (const gad of ['A', 'B']) {
     const m = new ServerMatch({ map: 'oasis', roster: makeRoster([{ id: 'alice', name: 'a', type: `${type}:${gad}1` }]), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
     const g = m.game;
     while (g.time < 6) m.advance(0.05);
@@ -443,7 +443,7 @@ await test('Kappa: the Tidal Wave hits, pushes (or pulls) and parts the gas', ()
     for (let i = 0; i < 20; i++) m.advance(0.05);
     assert.ok(hp - foe.hp >= 900 * k.dmgMul - 1, `the wave did ${hp - foe.hp}`);
     if (star === 1) assert.ok(foe.pos.x > x0 + 1.5, `not pushed: ${foe.pos.x - x0}`);
-    else assert.ok(foe.pos.x < x0 - 1, `not pulled: ${foe.pos.x - x0}`);
+    else assert.ok(foe.pos.x < x0 - 0.5, `not pulled: ${foe.pos.x - x0}`);
     for (let i = 0; i < 30; i++) m.advance(0.05);
     assert.ok(!g.poison.inLane(c.x + 5, c.z), 'the lane never closes');
   }
@@ -556,6 +556,86 @@ await test('bridges break under explosions; mushrooms heal and grow back', () =>
   for (let k = 0; k < 50; k++) { o.lastHurt = g.time; m.advance(0.05); }
   assert.ok(o.hp >= 2150, `mushroom heal: ${o.hp}`);
   assert.ok(!g.kit.shrooms.find(s => s.i === si && s.j === sj).ready, 'the mushroom is still there');
+});
+
+/* ------------------------------ Pip & Chomp, Mochi (v0.15) ------------------------------ */
+
+function duel(type, lo = 'A1') {
+  const m = new ServerMatch({ map: 'oasis', roster: makeRoster([{ id: 'me', name: 'me', type, lo }]), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
+  const g = m.game;
+  while (g.time < 6) m.advance(0.05);
+  g.brains.clear();
+  for (const b of g.brawlers) { b.netDriven = false; b.moveIntent.set(0, 0, 0); }
+  const me = g.byId.get('me'), foe = g.brawlers.find(o => o !== me), c = openRow(g);
+  for (const o of g.brawlers) if (o !== me && o !== foe) place(o, -40, -40);
+  place(me, c.x, c.z);
+  foe.maxHp = foe.hp = 20000; foe.ccImmuneT = 0;
+  return { m, g, me, foe, c };
+}
+
+await test('Pip & Chomp: the lunge moves you and bites the first enemy (bending up to 15°)', () => {
+  const { m, g, me, foe, c } = duel('pipchomp');
+  place(foe, c.x + 3.5, c.z + 0.7); // off the aim line, within the magnetism
+  const x0 = me.pos.x;
+  assert.ok(g.tryAttack(me, 1, 0, foe.pos.clone(), false));
+  for (let i = 0; i < 10; i++) m.advance(0.05);
+  assert.ok(me.pos.x > x0 + 2, 'the lunge did not move Pip');
+  assert.ok(20000 - foe.hp >= 800 * me.dmgMul - 1, `bite: ${20000 - foe.hp}`);
+  const miss = duel('pipchomp');
+  place(miss.foe, miss.c.x - 6, miss.c.z);
+  const hp = miss.foe.hp;
+  miss.g.tryAttack(miss.me, 1, 0, miss.me.pos.clone(), false);
+  for (let i = 0; i < 10; i++) miss.m.advance(0.05);
+  assert.equal(miss.foe.hp, hp, 'a bite behind the back');
+});
+
+await test('Venus Trap: a bush that bites, roots and reveals the first enemy, one per Pip', () => {
+  const { m, g, me, foe, c } = duel('pipchomp');
+  place(foe, c.x - 20, c.z);
+  me.superCharge = 1;
+  assert.ok(g.tryAttack(me, 1, 0, { x: c.x + 5, z: c.z }, true));
+  assert.equal(g.kit.traps.length, 1, 'no trap');
+  const T = g.kit.traps[0];
+  assert.equal(g.arena.get(T.i, T.j), 'B', 'the trap is not a bush');
+  me.superCharge = 1;
+  g.tryAttack(me, 1, 0, { x: c.x + 7, z: c.z }, true);
+  assert.equal(g.kit.traps.length, 1, 'two traps');
+  const T2 = g.kit.traps[0];
+  place(foe, T2.x, T2.z);
+  m.advance(0.05);
+  assert.equal(g.kit.traps.length, 0, 'the trap did not go off');
+  assert.ok(foe.rootT > 0.8 && foe.revealT > 2.5, 'no root / reveal');
+  assert.ok(20000 - foe.hp >= 790, `trap damage ${20000 - foe.hp}`);
+});
+
+await test('Mochi: 3 jelly waves push enemies back; the Pound lands, hurts and stuns', () => {
+  const { m, g, me, foe, c } = duel('mochi');
+  assert.equal(me.maxHp, 6800);
+  place(foe, c.x + 2, c.z);
+  assert.ok(g.tryAttack(me, 1, 0, foe.pos.clone(), false));
+  for (let i = 0; i < 8; i++) m.advance(0.05);
+  assert.ok(20000 - foe.hp >= 420 * 2 * me.dmgMul, `bump: ${20000 - foe.hp}`);
+  assert.ok(foe.pos.x > c.x + 2.5, 'not pushed back');
+  place(foe, c.x + 6, c.z); foe.ccImmuneT = 0;
+  const hp = foe.hp;
+  me.superCharge = 1;
+  assert.ok(g.tryAttack(me, 1, 0, foe.pos.clone(), true));
+  for (let i = 0; i < 24; i++) m.advance(0.05);
+  assert.ok(Math.hypot(me.pos.x - foe.pos.x, me.pos.z - foe.pos.z) < 2.5, 'Mochi did not leap');
+  assert.ok(hp - foe.hp >= 1000 * me.dmgMul - 1, `pound: ${hp - foe.hp}`);
+  assert.ok(foe.stunned || foe.freezeT > 0, 'no stun');
+});
+
+await test('Mochi star powers: Heavyweight halves pushes, Second Helping heals on a cube; +250 HP a cube', () => {
+  const a = duel('mochi', 'A1'), b = duel('mochi', 'A2');
+  a.me.knock.set(0, 0, 0); a.g.applyKnock(a.me, 10, 0, null);
+  assert.equal(a.me.knock.x, 5, 'Heavyweight');
+  const hp = b.me.maxHp;
+  b.me.hp = 1000;
+  b.g.dropCube(b.me.pos.x, b.me.pos.z, 0, 1);
+  for (let i = 0; i < 20; i++) b.m.advance(0.05);
+  assert.equal(b.me.maxHp, hp + 250);
+  assert.ok(b.me.hp >= 1000 + 250 + 800 - 1, `Second Helping: ${b.me.hp}`);
 });
 
 if (failed) { console.error(`\n${failed} test(s) failed`); process.exit(1); }

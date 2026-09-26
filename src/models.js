@@ -410,7 +410,37 @@ function kappa(rig, M, P) {
   rig.add(rig.gun, cyl(0.1, 0.1, 0.04, 16), coral, [0, -0.12, -0.38], [Math.PI / 2, 0, 0]);
 }
 
-const BUILDERS = { blaster, gunslinger, bomber, frostbite, volt, kappa };
+// Pip & Chomp: a round venus-flytrap on root legs, a mushroom kid on top.
+function pipchomp(rig, M, P) {
+  const leaf = toyCache(0x2f9e44, 0.55), mouth = toyCache(0xd6336c, 0.3, { coat: 0.5 }), tooth = toyCache(0xfff6e0, 0.4);
+  const root = toyCache(0x7a5230, 0.7), cap = toyCache(0xb197fc, 0.6), scarf = toyCache(0x12b886, 0.6);
+  for (const L of [rig.legL, rig.legR]) rig.add(L, capsule(0.15, 0.3), root, [0, -0.3, 0.1]);
+  rig.add(rig.torso, ellipsoid(0.72, 0.62, 0.66), leaf, [0, 0.3, 0.1]); // Chomp's head is the body
+  rig.add(rig.torso, ellipsoid(0.56, 0.3, 0.2), mouth, [0, 0.22, 0.62]);
+  for (let k = 0; k < 6; k++) rig.add(rig.torso, new THREE.ConeGeometry(0.06, 0.14, 6), tooth, [-0.4 + k * 0.16, 0.42, 0.72], [Math.PI, 0, 0]);
+  for (const s of [-1, 1]) rig.add(rig.torso, ellipsoid(0.12, 0.28, 0.06), leaf, [0.55 * s, 0.8, 0], [0, 0, 0.6 * s]); // leaf ears
+  rig.add(rig.head, ellipsoid(0.3, 0.3, 0.3), M.skin, [0, -0.2, 0]); // Pip
+  face(rig, M, { iris: 0x3a2a1a, browColor: 0x7a5a3a });
+  rig.add(rig.head, lathe([[0.02, 0.5], [0.3, 0.42], [0.55, 0.1], [0.6, -0.02]], 20), cap, [0, 0.05, 0]);
+  rig.add(rig.torso, new THREE.TorusGeometry(0.24, 0.07, 8, 16), scarf, [0, 1.02, 0], [Math.PI / 2, 0, 0]);
+  rig.add(rig.gun, ellipsoid(0.12, 0.14, 0.12), toyCache(0x8a5a34, 0.7), [0, -0.1, 0]); // spore pouch
+}
+
+// Mochi: a pear-shaped pink seal, a rose sumo belt, a tiny chef hat, a rice paddle.
+function mochi(rig, M, P) {
+  const body = toyCache(0xffc2d4, 0.8, { coat: 0 }), belt = toyCache(0xe64980, 0.6), white = toyCache(0xffffff, 0.7);
+  for (const L of [rig.legL, rig.legR]) rig.add(L, ellipsoid(0.2, 0.14, 0.26), body, [0, -0.52, 0.05]);
+  rig.add(rig.torso, ellipsoid(0.82, 0.78, 0.74), body, [0, 0.45, 0]);
+  rig.add(rig.torso, cyl(0.8, 0.8, 0.2, 28), belt, [0, 0.12, 0]);
+  rig.add(rig.head, ellipsoid(0.52, 0.46, 0.48), body);
+  face(rig, M, { iris: 0x3a2a2a, browColor: 0x6a3a3a, grin: true });
+  rig.add(rig.head, cyl(0.2, 0.2, 0.22, 16), white, [0, 0.52, 0]);
+  rig.add(rig.head, ellipsoid(0.28, 0.14, 0.28), white, [0, 0.66, 0]);
+  rig.add(rig.gun, cyl(0.03, 0.03, 0.4, 8), toyCache(0xd8b07a, 0.6), [0, -0.1, 0]);
+  rig.add(rig.gun, ellipsoid(0.12, 0.18, 0.04), toyCache(0xd8b07a, 0.6), [0, -0.38, 0]);
+}
+
+const BUILDERS = { blaster, gunslinger, bomber, frostbite, volt, kappa, pipchomp, mochi };
 
 export function buildModel(T) {
   matCache = new Map();

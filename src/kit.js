@@ -34,6 +34,7 @@ export class MapKit {
     this.group = new THREE.Group();
     A.group.add(this.group); // disposed with the arena
     this.pads = []; this.shrooms = []; this.bridges = new Map(); this.falling = []; this.doomed = new Set();
+    this.traps = []; this.puffs = []; // Pip & Chomp's Venus Traps and spore clouds (v0.15)
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
       const ch = A.get(i, j);
       if (ch === 'J') this.pads.push({ i, j });
@@ -437,6 +438,7 @@ export class MapKit {
       const cr = A.crateAt(i, j);
       if (cr) { A.group.remove(cr.group); A.crates.delete(key); }
       A.hideBush?.(i, j);
+      for (const T of this.traps.filter(T => T.i === i && T.j === j)) this.removeTrap(T);
       for (const p of this.pads) if (p.i === i && p.j === j && p.disc) p.disc.parent.visible = false;
       for (const s of this.shrooms) if (s.i === i && s.j === j) { s.ready = false; s.at = Infinity; if (s.mesh) s.mesh.visible = false; }
       this.pads = this.pads.filter(p => !(p.i === i && p.j === j));
@@ -459,8 +461,89 @@ export class MapKit {
     this.falling.push({ m, vy: 0, rx: (Math.random() - 0.5) * 2, rz: (Math.random() - 0.5) * 2, t: 2.2 });
   }
 
+  /* ---- Pip & Chomp ---- */
+
+  // Venus Trap (authority): a bush on an open tile near the aim point (8 m at most), one per Pip,
+  // for 30 s. It hides like any bush; the first enemy stepping in takes 800, is rooted 1 s and
+  // shows for 3 s.
+  plantTrap(b, point) {
+    const g = this.g, A = this.A;
+    let x = point.x, z = point.z;
+    const d = Math.hypot(x - b.pos.x, z - b.pos.z);
+    if (d > 8) { x = b.pos.x + (x - b.pos.x) / d * 8; z = b.pos.z + (z - b.pos.z) / d * 8; }
+    let i = A.toTile(x), j = A.toTile(z);
+    if (A.get(i, j) !== '.') {
+      let best = null, bd = 9;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) if (A.get(i + di, j + dj) === '.' && Math.abs(di) + Math.abs(dj) < bd) { bd = Math.abs(di) + Math.abs(dj); best = [i + di, j + dj]; }
+      if (!best) return;
+      [i, j] = best;
+    }
+    for (const T of this.traps.filter(T => T.owner === b)) this.removeTrap(T); // one each
+    this.addTrap(b, i, j);
+    g.ev({ e: 'kit', k: 'trap', id: b.id, i, j });
+  }
+  addTrap(b, i, j) {
+    const A = this.A, c = A.center(i, j, new THREE.Vector3()), grp = new THREE.Group();
+    const leaf = new THREE.MeshStandardMaterial({ color: 0x3f9e44, roughness: 0.7 }), mouth = new THREE.MeshStandardMaterial({ color: 0xd6336c, roughness: 0.5 });
+    for (let k = 0; k < 7; k++) {
+      const a = k / 7 * Math.PI * 2, m = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), leaf);
+      m.position.set(Math.cos(a) * 0.45, 0.45 + (k % 2) * 0.15, Math.sin(a) * 0.45); m.scale.set(1, 0.8, 1); grp.add(m);
+    }
+    const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), mouth); jaw.position.y = 0.75; grp.add(jaw);
+    grp.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    grp.position.copy(c); grp.scale.setScalar(0.01);
+    this.group.add(grp);
+    const was = A.grid[j][i];
+    A.grid[j][i] = 'B'; // a bush: it hides whoever stands in it
+    A.rev++;
+    this.traps.push({ owner: b, i, j, x: c.x, z: c.z, until: this.g.time + 30, grp, was, grow: 0 });
+    this.g.effects.dust(c.x, c.z, 8, 0x6a9a4a, 1);
+  }
+  removeTrap(T, snapped = false) {
+    const A = this.A;
+    this.traps.splice(this.traps.indexOf(T), 1);
+    this.group.remove(T.grp);
+    T.grp.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+    if (A.grid[T.j][T.i] === 'B') { A.grid[T.j][T.i] = T.was === 'B' ? '.' : T.was; A.rev++; }
+    if (snapped) {
+      this.g.effects.ring(T.x, T.z, 1.2, new THREE.Color(3.2, 0.8, 1.6), 0.5);
+      this.g.effects.sparkBurst(T.x, 1, T.z, new THREE.Color(0.6, 2.6, 0.6), 18, 5, 0.5, 0.14);
+      sfx('trap_snap', this.g.volumeAt(T.x, T.z));
+    }
+  }
+  checkTraps() {
+    const g = this.g;
+    for (const T of [...this.traps]) {
+      T.grow = Math.min(1, T.grow + this.dt / 0.4);
+      T.grp.scale.setScalar(Math.max(0.01, T.grow < 1 ? T.grow * 1.15 : 1));
+      if (!g.authority) continue;
+      if (g.time > T.until || !T.owner.alive && !g.duo) { g.ev({ e: 'kit', k: 'trapGo', i: T.i, j: T.j }); this.removeTrap(T); continue; }
+      const o = g.brawlers.find(v => g.hits(T.owner, v) && v.pos.y < 0.3 && Math.hypot(v.pos.x - T.x, v.pos.z - T.z) < 0.95);
+      if (!o) continue;
+      g.damage(o, 800 * T.owner.dmgMul, T.owner);
+      if (o.alive) {
+        o.revealT = Math.max(o.revealT, 3);
+        if (o.ccImmuneT > 0) g.ev({ e: 'imm', id: o.id }); else o.rootT = Math.max(o.rootT, 1);
+      }
+      g.ev({ e: 'kit', k: 'trapGo', i: T.i, j: T.j, snap: 1 });
+      this.removeTrap(T, true);
+    }
+  }
+
+  // Spore Puff: a 3 m cloud for 3 s that hides everyone inside like a bush (drawn everywhere from the
+  // gadget's look event, so every machine agrees closely enough; the server's view is the one that counts).
+  puff(x, z) {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(3, 18, 12), new THREE.MeshStandardMaterial({ color: 0xb8a6d8, transparent: true, opacity: 0.5, roughness: 1, depthWrite: false }));
+    m.position.set(x, 0.4, z); m.scale.set(1, 0.45, 1);
+    this.group.add(m);
+    this.puffs.push({ x, z, r: 3, t: 3, m });
+  }
+  inPuff(x, z) { return this.puffs.length > 0 && this.puffs.some(P => Math.hypot(P.x - x, P.z - z) < P.r); }
+
   onEvent(e) {
     switch (e.k) {
+      case 'trap': { const b = this.g.byId.get(e.id); if (b) { for (const T of this.traps.filter(T => T.owner === b)) this.removeTrap(T); this.addTrap(b, e.i, e.j); } break; }
+      case 'trapGo': { const T = this.traps.find(T => T.i === e.i && T.j === e.j); if (T) this.removeTrap(T, !!e.snap); break; }
       case 'land': this.landFx(e.x, e.z); break;
       case 'shroom': { const s = this.shrooms.find(o => o.i === e.i && o.j === e.j); if (s) this.shroomFx(s, !!e.on); break; }
       case 'bridge': this.breakBridge(e.i, e.j); break;
@@ -472,7 +555,14 @@ export class MapKit {
   update(dt) {
     const g = this.g;
     this.dt = dt;
+    for (let k = this.puffs.length - 1; k >= 0; k--) {
+      const P = this.puffs[k];
+      P.t -= dt;
+      P.m.material.opacity = 0.5 * Math.min(1, P.t / 0.5);
+      if (P.t <= 0) { this.group.remove(P.m); P.m.geometry.dispose(); P.m.material.dispose(); this.puffs.splice(k, 1); }
+    }
     if (g.state === 'playing' || g.state === 'over') {
+      this.checkTraps();
       this.checkPads();
       this.checkShrooms();
       if (g.authority) { this.checkCrumble(); this.checkFalls(); }

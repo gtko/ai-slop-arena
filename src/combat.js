@@ -51,7 +51,8 @@ function rockGeometry(r, detail, bump) {
 }
 
 // Camera kick when you fire (trauma, feel.js); Gunslinger adds 0.03 per bolt of its burst.
-const FIRE_KICK = { blaster: 0.14, blasterS: 0.4, gunslinger: 0, gunslingerS: 0, bomber: 0.06, bomberS: 0.1, frostbite: 0.06, frostbiteS: 0.35, volt: 0.07, voltS: 0.1, kappa: 0.05, kappaS: 0.3 };
+const FIRE_KICK = { blaster: 0.14, blasterS: 0.4, gunslinger: 0, gunslingerS: 0, bomber: 0.06, bomberS: 0.1, frostbite: 0.06, frostbiteS: 0.35, volt: 0.07, voltS: 0.1, kappa: 0.05, kappaS: 0.3,
+  pipchomp: 0.1, pipchompS: 0.15, mochi: 0.12, mochiS: 0.3 };
 
 export class Combat {
   constructor(game) {
@@ -164,6 +165,15 @@ export class Combat {
       }
       this.g.effects.muzzle(mx, BULLET_Y, mz, dx, dz, col);
       sfx('shot_ice', vol);
+    } else if (T === 'pipchomp') {
+      if (sup) { if (this.g.authority) this.g.kit.plantTrap(b, point); sfx('trap_plant', vol); return; }
+      this.lungeMove(b, dx, dz, 4);
+      this.lungeBite(b, dx, dz, 4, 800);
+      sfx('lunge', vol);
+    } else if (T === 'mochi') {
+      if (sup) { this.pound(b, point); sfx('pound_leap', vol); return; }
+      this.bump(b, dx, dz);
+      sfx('bump', vol);
     } else if (T === 'kappa' && sup) {
       this.wave(b, dx, dz);
       sfx('wave', vol);
@@ -354,6 +364,116 @@ export class Combat {
         this.bombs.splice(i, 1);
       }
     }
+  }
+
+  /* ---- Pip & Chomp (v0.15) ---- */
+
+  // The lunge itself, on the machine that moves the brawler: a ground dash, stopped short of walls,
+  // water and the void. (The host lets a remote player's lunge through its move check.)
+  lungeMove(b, dx, dz, dist) {
+    const A = this.g.arena;
+    let d = dist;
+    while (d > 0.5 && !A.walkLine(b.pos.x, b.pos.z, b.pos.x + dx * d, b.pos.z + dz * d, 0.3)) d -= 0.5;
+    if (!b.netDriven) b.dash = { vx: dx * d / 0.22, vz: dz * d / 0.22, t: 0.22, air: false, T: 0.22 };
+    else if (b.guard) b.guard.knock = Math.max(b.guard.knock, d + 1.5);
+    this.g.effects.dust(b.pos.x, b.pos.z, 6, 0x6a9a4a, 0.8);
+  }
+
+  // The bite (authority): the first enemy along the lunge takes it a split second later; nobody
+  // there, "MISS" (and Pip says sorry to the air).
+  lungeBite(b, dx, dz, dist, dmg, heal = 0) {
+    const g = this.g;
+    if (!g.authority) return;
+    const sx = b.netDriven ? b.net.x : b.pos.x, sz = b.netDriven ? b.net.y : b.pos.z;
+    let best = null, bt = Infinity;
+    for (const o of g.brawlers) {
+      if (!g.hits(b, o)) continue;
+      const rx = o.pos.x - sx, rz = o.pos.z - sz, along = rx * dx + rz * dz;
+      if (along < -0.6 || along > dist + 1.3 || Math.abs(rx * -dz + rz * dx) > 1.15) continue;
+      if (along < bt) { bt = along; best = o; }
+    }
+    g.later.push([g.time + 0.12, () => {
+      if (!b.alive) return;
+      if (best && best.alive && g.hittable(best)) {
+        const amt = dmg * b.dmgMul * (hasStar(b, 'hungry') && best.hp < best.maxHp * 0.4 ? 1.25 : 1);
+        g.damage(best, amt, b);
+        if (heal) g.heal(b, heal);
+        g.ev({ e: 'bite', id: b.id, x: Math.round(best.pos.x * 100) / 100, z: Math.round(best.pos.z * 100) / 100 });
+        this.biteFx(best.pos.x, best.pos.z);
+      } else { g.ev({ e: 'miss', id: b.id }); this.missFx(b); }
+    }]);
+  }
+  biteFx(x, z) {
+    const g = this.g;
+    g.effects.sparkBurst(x, 1.4, z, new THREE.Color(3, 3, 3), 3, 5, 0.25, 0.14); // teeth sparks
+    g.effects.sparkBurst(x, 1.2, z, new THREE.Color(0.6, 2.4, 0.6), 10, 4, 0.4, 0.12); // leaves
+    sfx('bite', g.volumeAt(x, z));
+  }
+  missFx(b) {
+    const g = this.g;
+    if (!g.fxVisible(b)) return;
+    g.hud.floater(g.camera, b.pos.x, 3, b.pos.z, t('hud.miss'), 'immune');
+  }
+
+  /* ---- Mochi (v0.15) ---- */
+
+  // Belly bump: 3 jelly waves in a 3.5 m cone in front, 420 each and a push (Mochi, the ring-out king).
+  bump(b, dx, dz) {
+    const g = this.g;
+    for (let k = 0; k < 3; k++) g.later.push([g.time + k * 0.12, () => {
+      if (!b.alive) return;
+      const x = b.pos.x, z = b.pos.z;
+      g.effects.ring(x + dx * (1.2 + k * 0.8), z + dz * (1.2 + k * 0.8), 1.1 + k * 0.5, new THREE.Color(3.2, 1.6, 2.2), 0.3);
+      if (!g.authority) return;
+      for (const o of g.brawlers) {
+        if (!g.hits(b, o)) continue;
+        const rx = o.pos.x - x, rz = o.pos.z - z, d = Math.hypot(rx, rz);
+        if (d > 3.5 + o.radius || d < 1e-3 || (rx * dx + rz * dz) / d < Math.cos(0.62)) continue;
+        g.damage(o, 420 * b.dmgMul, b);
+        if (o.alive) g.applyKnock(o, rx / d * 6, rz / d * 6, b);
+      }
+    }]);
+  }
+
+  // Mochi Pound: a leap to the aim point (up to 9 m, over walls, 1.1 s in the air), then 1000 in
+  // 4 m, a 0.8 s stun, and the walls there flattened. Everyone sees where it will land.
+  pound(b, point) {
+    const g = this.g;
+    let tx = point.x - b.pos.x, tz = point.z - b.pos.z, d = Math.hypot(tx, tz);
+    if (d > 9) { tx *= 9 / d; tz *= 9 / d; d = 9; }
+    const x = b.pos.x + tx, z = b.pos.z + tz, T = 1.1;
+    if (!b.netDriven) b.dash = { vx: tx / T, vz: tz / T, t: T, air: true, T };
+    else if (b.guard) { b.guard.knock = Math.max(b.guard.knock, d + 2); b.guard.airUntil = g.time + T + 0.3; }
+    const mark = new THREE.Mesh(this.zoneGeo || (this.zoneGeo = new THREE.CircleGeometry(1, 32).rotateX(-Math.PI / 2)),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 1.2, 1.8), transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending }));
+    mark.position.set(x, 0.08, z); mark.scale.setScalar(4); mark.renderOrder = 1;
+    g.fx.add(mark);
+    g.later.push([g.time + T, () => {
+      g.fx.remove(mark); mark.material.dispose();
+      if (!b.alive) return;
+      const lx = b.netDriven ? b.net.x : b.pos.x, lz = b.netDriven ? b.net.y : b.pos.z;
+      g.effects.ring(lx, lz, 4, new THREE.Color(3.4, 1.6, 2.4), 0.5);
+      g.effects.dust(lx, lz, 20, 0xffd6e0, 2.4);
+      g.shakeAt(lx, lz, 0.8);
+      sfx('pound_land', g.volumeAt(lx, lz));
+      if (!g.authority) return;
+      for (const o of g.brawlers) {
+        if (!g.hits(b, o) || Math.hypot(o.pos.x - lx, o.pos.z - lz) > 4 + o.radius * 0.5) continue;
+        g.damage(o, 1000 * b.dmgMul, b, true);
+        if (!o.alive) continue;
+        if (o.ccImmuneT > 0) { g.ev({ e: 'imm', id: o.id }); continue; }
+        o.freezeT = Math.max(o.freezeT, 0.8); o.stunned = true;
+      }
+      const A = g.arena, ti = A.toTile(lx), tj = A.toTile(lz);
+      for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) {
+        const c = A.center(ti + di, tj + dj, new THREE.Vector3());
+        if (Math.hypot(c.x - lx, c.z - lz) > 4.2) continue;
+        const ch = A.get(ti + di, tj + dj);
+        if (ch === '#') g.breakWall(ti + di, tj + dj);
+        else if (isCrate(ch)) g.damageCrate(ti + di, tj + dj, 1000, b);
+      }
+      g.kit.damageArea(lx, lz, 4, 1000);
+    }]);
   }
 
   // Nurse Kappa's bubble pops: 700 around it; a splash that hurts an enemy heals her 350, and in Duo

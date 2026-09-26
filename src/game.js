@@ -12,7 +12,7 @@ import { MAPS, MAP_KEYS } from './maps.js';
 import { Weather } from './weather.js';
 import { t } from './i18n/index.js';
 import { Feel, weapon } from './feel.js';
-import { GADGETS, GADGET_CHARGES, GADGET_LOCKOUT, parseLoadout, validLoadout, flareFx, gadgetFx } from './gadgets.js';
+import { GADGETS, GADGET_CHARGES, GADGET_LOCKOUT, parseLoadout, validLoadout, flareFx, gadgetFx, hasStar } from './gadgets.js';
 import { KOFX, validCos, EMOTES, EMOTE_ICONS } from './cosmetics.js';
 import { PERSONAS } from './ai.js';
 import { ArenaEvents } from './events.js';
@@ -453,6 +453,7 @@ export class Game {
     if (this.sightRange && d > this.sightRange) return false;
     if (!this.inSight(viewer.pos, target.pos)) return false;
     if (!target.inBush || target.revealT > 0) return true;
+    if (d < 8 && target.hp < target.maxHp * 0.35 && hasStar(viewer, 'huntersNose')) return true; // Pip & Chomp star power
     return d < 3.6;
   }
 
@@ -484,9 +485,23 @@ export class Game {
       if (b.superCharge < 1) return false;
       b.superCharge = 0;
     } else {
-      if (b.ammo < 1 || b.fireCd > 0 || b.burst.length) return false;
+      if (b.ammo < 1 || b.fireCd > 0 || b.burst.length || b.stickyT > 0) return false;
       b.ammo -= 1;
       b.fireCd = b.type.key === 'gunslinger' ? 0.55 : 0.4;
+    }
+    if (isSuper && b.stickyT > 0) return false;
+    // Chomp's lunge bends up to 15° toward an enemy you can see within 4.5 m (authority: the
+    // attack event carries the bent direction to everyone)
+    if (!isSuper && b.type.key === 'pipchomp' && this.authority) {
+      let best = null, ba = 0.27;
+      for (const o of this.brawlers) {
+        if (!this.hits(b, o) || !this.teamSees(b, o)) continue;
+        const ox = o.pos.x - b.pos.x, oz = o.pos.z - b.pos.z, od = Math.hypot(ox, oz);
+        if (od > 4.5 + o.radius || od < 1e-3) continue;
+        const a = Math.acos(Math.max(-1, Math.min(1, (ox * dx + oz * dz) / od)));
+        if (a < ba) { ba = a; best = [ox / od, oz / od]; }
+      }
+      if (best) [dx, dz] = best;
     }
     b.lastAttack = this.time;
     b.revealT = 1.2;
@@ -503,6 +518,7 @@ export class Game {
   applyKnock(o, x, z, by = null) {
     if (!this.authority || this.shielded) return;
     if (by && by !== o) o.pushBy = { by, t: this.time };
+    if (hasStar(o, 'heavyweight')) { x *= 0.5; z *= 0.5; } // Mochi star power
     if (o.netDriven) {
       this.ev({ e: 'knock', id: o.id, x: r2(x), z: r2(z) }); // remote players move themselves
       if (o.guard) o.guard.knock = Math.max(o.guard.knock, Math.hypot(x, z) * 0.6 + 1.5); // allow the push
@@ -524,6 +540,7 @@ export class Game {
       if (amount >= target.hp) target.hp = amount + target.maxHp * 0.999; // lands at (almost) full health
     }
     if (target.armorT > 0) amount *= 0.65;               // Bark Skin
+    if (target.stickyT > 0) amount *= 0.4;               // Sticky Mochi
     amount = Math.round(amount);
     target.hp -= amount;
     target.lastHurt = this.time;
@@ -731,8 +748,10 @@ export class Game {
     b.cubes++;
     b.stats.cubes++;
     b.refreshDmg();
-    b.maxHp += 300; // v0.12: +300 (was +400), the cube leader snowballs less
-    b.hp += 300;
+    const up = b.type.cubeHp || 300; // v0.12: +300 (was +400), the cube leader snowballs less; Mochi +250
+    b.maxHp += up;
+    b.hp += up;
+    if (hasStar(b, 'secondHelping')) this.heal(b, 800);
     this.fx.remove(it.mesh);
     this.items.splice(this.items.indexOf(it), 1);
     this.effects.sparkBurst(it.x, 1, it.z, GREEN, 14, 5, 0.5);
@@ -966,7 +985,7 @@ export class Game {
         this.netT = 1 / 15;
         const alive = this.brawlers.filter(b => b.alive), pt = r2(this.poison.timer);
         const row = b => [b.id, r2(b.pos.x), r2(b.pos.z), r2(b.facing), Math.round(b.hp), b.maxHp,
-          r2(b.ammo), r2(b.superCharge), b.cubes, (b.revealT > 0 ? 2 : 0) | (b.slowT > 0 ? 4 : 0) | (b.freezeT > 0 ? 8 : 0) | (b.rootT > 0 ? 16 : 0)];
+          r2(b.ammo), r2(b.superCharge), b.cubes, (b.revealT > 0 ? 2 : 0) | (b.slowT > 0 ? 4 : 0) | (b.freezeT > 0 ? 8 : 0) | (b.rootT > 0 ? 16 : 0) | (b.stunned ? 32 : 0)];
         if (N.sendTo) {
           // One snapshot per player with only what that player can see: brawlers hidden in a bush
           // or behind the fog are simply not sent, so no client can reveal them. Knocked-out
@@ -1005,6 +1024,7 @@ export class Game {
       // status effects are decided by the host; our own brawler needs them too (we move it locally)
       b.slowT = flags & 4 ? 0.2 : Math.min(b.slowT, 0);
       b.freezeT = flags & 8 ? 0.2 : Math.min(b.freezeT, 1e-4); // a tiny rest so update() still sees the thaw (immunity fx)
+      b.stunned = !!(flags & 32);
       b.rootT = flags & 16 ? 0.2 : Math.min(b.rootT, 0);
       if (b !== this.player) {
         b.net.set(x, z); b.netFacing = f;
@@ -1050,6 +1070,8 @@ export class Game {
           this.ended = true;
           if (b) { this.winners(b); if (!this.feel.orbitWant) sfx('sting_finalko'); this.feel.finalKo(false); if (b === this.player || this.ally(b, this.player)) { this.state = 'over'; this.resultT = 1.2; } }
           break;
+        case 'bite': if (Number.isFinite(e.x)) this.combat.biteFx(e.x, e.z); break;
+        case 'miss': if (b) this.combat.missFx(b); break;
         case 'heal': if (b && b.alive && Number.isFinite(e.a)) { b.hp = Math.min(b.maxHp, b.hp + e.a); this.healFx(b, e.a); } break;
         case 'rv': { const G = this.ghostOf(b); if (G && Number.isFinite(e.p)) G.p = e.p; break; }
         case 'ping': if (b && Number.isFinite(e.x) && Number.isFinite(e.z)) this.pingFx(b, e.k, e.x, e.z); break;
@@ -1348,6 +1370,25 @@ export class Game {
     }
   }
 
+  // Mochi's Belly Slide: each enemy bumped on the way takes 200 and is pushed aside.
+  slideContact(b) {
+    const dx = b.dash ? b.dash.vx : 0, dz = b.dash ? b.dash.vz : 0, l = Math.hypot(dx, dz) || 1;
+    for (const o of this.brawlers) {
+      if (b.slideHit?.has(o) || !this.hits(b, o) || Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z) > b.radius + o.radius + 0.3) continue;
+      (b.slideHit ||= new Set()).add(o);
+      this.damage(o, 200 * b.dmgMul, b);
+      const side = (o.pos.x - b.pos.x) * -dz + (o.pos.z - b.pos.z) * dx >= 0 ? 1 : -1;
+      if (o.alive) this.applyKnock(o, -dz / l * side * 6, dx / l * side * 6, b);
+    }
+  }
+  // Sticky Mochi: enemies touching the blob are slowed.
+  stickyContact(b) {
+    for (const o of this.brawlers) {
+      if (!this.hits(b, o) || Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z) > b.radius + o.radius + 0.4) continue;
+      o.slowT = Math.max(o.slowT, 0.3); o.slowMul = 0.6;
+    }
+  }
+
   // Lava Hop: the landing spot burns for 2 s.
   hopLanded(b) {
     const p = b.netDriven ? { x: b.net.x, z: b.net.y } : b.pos; // a remote player lands where it says it is
@@ -1451,9 +1492,10 @@ export class Game {
     const fan = s => { const g = new THREE.CircleGeometry(1, 40, -s / 2, s); g.rotateX(-Math.PI / 2); return g; };
     this.aimFan = new THREE.Mesh(fan(0.56), this.aimMat);
     this.aimFanS = new THREE.Mesh(fan(0.76), this.aimMat);
+    this.aimCone = new THREE.Mesh(fan(1.24), this.aimMat); // Mochi's belly bump
     const rect = new THREE.PlaneGeometry(1, 1); rect.rotateX(-Math.PI / 2); rect.translate(0.5, 0, 0);
     this.aimRect = new THREE.Mesh(rect, this.aimMat);
-    this.aim.add(this.aimFan, this.aimFanS, this.aimRect);
+    this.aim.add(this.aimFan, this.aimFanS, this.aimRect, this.aimCone);
     const disc = new THREE.CircleGeometry(1, 48); disc.rotateX(-Math.PI / 2);
     this.aimTarget = new THREE.Mesh(disc, this.aimMat);
     this.aim.renderOrder = this.aimTarget.renderOrder = 1;
@@ -1473,7 +1515,14 @@ export class Game {
     this.aimFan.scale.setScalar(9.5);
     this.aimFanS.scale.setScalar(11);
     this.aimRect.visible = T.key !== 'blaster' && !(T.key === 'frostbite' && sup);
-    this.aimTarget.visible = T.key === 'bomber' || (T.key === 'kappa' && !sup) || (sup && (T.key === 'frostbite' || T.key === 'volt'));
+    this.aimTarget.visible = T.key === 'bomber' || (T.key === 'kappa' && !sup) || (sup && (T.key === 'frostbite' || T.key === 'volt' || T.key === 'pipchomp' || T.key === 'mochi'));
+    this.aimCone.visible = T.key === 'mochi' && !sup;
+    if (this.aimCone.visible) { this.aimRect.visible = false; this.aimCone.scale.setScalar(3.5); }
+    if (T.key === 'pipchomp' || T.key === 'mochi') { // a 4 m lunge; supers: a trap (8 m) or a landing (9 m) where you aim
+      const far = T.key === 'mochi' ? 9 : 8, d = THREE.MathUtils.clamp(this.aimDist, 2, far);
+      this.aimRect.scale.set(sup ? d : 4, 1, sup ? 0.14 : 1.1);
+      if (sup) { this.aimTarget.position.set(p.pos.x + dir.x * d, 0.065, p.pos.z + dir.z * d); this.aimTarget.scale.setScalar(T.key === 'mochi' ? 4 : 1); }
+    }
     if (T.key === 'gunslinger') this.aimRect.scale.set(sup ? 20 : 16, 1, sup ? 1.3 : 0.8);
     if (T.key === 'frostbite') {
       this.aimRect.scale.set(12, 1, 0.9);

@@ -32,7 +32,8 @@ const SFX = ['shot', 'shotgun', 'throw', 'boom', 'boom_big', 'hit', 'hurt', 'bre
   'revive', 'ping', 'ghost', 'bubble', 'bubble_pop', 'wave', 'gad_dive', 'gad_bowl',
   // v0.15 WILD ISLES: the map kit
   'jumppad', 'barrel_boom', 'crumble', 'crumble_warn', 'fall',
-  ...['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt', 'kappa'].flatMap(k => [`bark_${k}_super`, `bark_${k}_cheer`])];
+  'lunge', 'bite', 'trap_plant', 'trap_snap', 'spore', 'bump', 'pound_leap', 'pound_land', 'slide', 'sticky',
+  ...['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt', 'kappa', 'pipchomp', 'mochi'].flatMap(k => [`bark_${k}_super`, `bark_${k}_cheer`])];
 const LOOPS = {
   amb_day: 'music/amb_day', amb_night: 'music/amb_night',
   amb_rain: 'music/amb_rain', amb_storm: 'music/amb_storm', amb_snow: 'music/amb_snow', amb_marsh: 'music/amb_marsh',
