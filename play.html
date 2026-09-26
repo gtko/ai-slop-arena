@@ -17,7 +17,7 @@
   <div id="loader">
     <div class="ld-title outline"><span>AI SLOP</span><b>ARENA</b></div>
     <div class="ld-crew">
-      <img src="/assets/ui/blaster.png" alt="" /><img src="/assets/ui/gunslinger.png" alt="" /><img src="/assets/ui/bomber.png" alt="" /><img src="/assets/ui/frostbite.png" alt="" /><img src="/assets/ui/volt.png" alt="" />
+      <img src="/assets/ui/blaster.png" alt="" /><img src="/assets/ui/gunslinger.png" alt="" /><img src="/assets/ui/bomber.png" alt="" /><img src="/assets/ui/frostbite.png" alt="" /><img src="/assets/ui/volt.png" alt="" /><img src="/assets/ui/kappa.png" alt="" />
     </div>
     <div class="ld-bar"><i id="ldFill"></i></div>
     <div class="ld-info"><b id="ldPct">0%</b><span id="ldStep" data-i18n="loader.warmup">Warming up the arena…</span></div>
@@ -151,7 +151,10 @@
     <aside class="play-panel">
       <div id="homeQuests" class="home-quests"></div>
       <div class="pp-box">
-        <div class="pp-mode"><small data-i18n="menu.mode">SHOWDOWN</small><span data-i18n="menu.modeDesc">8 brawlers · last one standing</span></div>
+        <div class="pp-mode" id="modePick" role="radiogroup">
+          <button data-mode="solo" role="radio"><small data-i18n="menu.mode">SHOWDOWN</small><span data-i18n="menu.modeDesc">8 brawlers · last one standing</span></button>
+          <button data-mode="duo" role="radio"><small data-i18n="menu.duo">DUO</small><span data-i18n="menu.duoDesc">4 teams of 2 · revive your partner</span></button>
+        </div>
         <div class="pp-mapwrap">
           <button id="mapPick" class="pp-map" aria-haspopup="true" aria-expanded="false"></button>
           <div class="pp-maps hidden" id="mapsPop"><h4 data-i18n="menu.pickMap">Choose a map</h4><div id="maps" class="maps"></div></div>
@@ -218,6 +221,7 @@
       <div id="queue" class="hidden">
         <div class="q-spin"><i></i><i></i><i></i></div>
         <h3 data-i18n="mm.searching">Searching for players…</h3>
+        <p id="qMode" class="q-mode"></p>
         <p id="qRank" class="rank-badge"></p>
         <p class="q-count" id="qCount"></p>
         <div class="q-bar"><i id="qFill"></i></div>
@@ -236,6 +240,10 @@
         <ul id="players" class="players"></ul>
         <div class="lbl-row" id="lblBrawler" data-i18n="lobby.yourBrawler">Your brawler</div>
         <div id="lobbyCards" class="mini-cards"></div>
+        <div class="lbl-row" id="lblMode"><span data-i18n="menu.modeLbl">Mode</span>
+          <span id="roomMode" class="room-mode"><button data-mode="solo" data-i18n="menu.mode">SHOWDOWN</button><button data-mode="duo" data-i18n="menu.duo">DUO</button></span>
+          <button id="partyQueue" class="party-q hidden" data-i18n="party.queue">QUEUE TOGETHER</button>
+        </div>
         <div class="lbl-row" id="lblMap"><span data-i18n="menu.map">Map</span> <small id="mapNote"></small><button id="chaosRoomBtn" class="chaos-chip"></button></div>
         <div id="lobbyMaps" class="maps"></div>
         <div class="row-btns left">

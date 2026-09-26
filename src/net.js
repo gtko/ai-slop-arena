@@ -6,7 +6,7 @@ import { botLevel } from './skill.js';
 // room (it is the host); the leader only picks the map and starts. The Steam build's friend
 // lobbies use steamnet.js instead (a player hosts).
 
-export const PROTOCOL = 4; // must match worker/index.js; older clients are told to update
+export const PROTOCOL = 5; // must match worker/index.js; older clients are told to update
 
 // Server refusals come with a code we translate; bans keep the server's text (it has the date).
 export function serverError(msg) {
@@ -59,7 +59,7 @@ export class Net {
         let msg;
         try { msg = JSON.parse(e.data); } catch { return; }
         if (msg.t === 'welcome') { this.id = msg.id; this.code = msg.code; this.matchmade = !!msg.matchmade; welcomed = true; resolve(this); }
-        if (msg.t === 'room') { this.players = msg.players; this.inMatch = msg.inMatch; this.map = msg.map; this.chaos = !!msg.chaos; this.matchmade = !!msg.matchmade; }
+        if (msg.t === 'room') { this.players = msg.players; this.inMatch = msg.inMatch; this.map = msg.map; this.chaos = !!msg.chaos; this.mode = msg.mode === 'duo' ? 'duo' : 'solo'; this.pq = !!msg.pq; this.matchmade = !!msg.matchmade; }
         if (msg.t === 'kicked') this.kickedMsg = msg.msg;
         if (msg.t === 'pong') this.rtt = performance.now() - msg.at;
         if (msg.t === 'error' && !welcomed) reject(new Error(serverError(msg)));
@@ -81,5 +81,6 @@ export class Net {
     this.ws = null;
     this.players = [];
     this.id = null;
+    this.pq = false;
   }
 }

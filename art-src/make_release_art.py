@@ -1059,6 +1059,56 @@ def v0131():
     img.convert('RGB').save(os.path.join(OUT, 'v0.13.1-home.png'), optimize=True)
 
 
+def v0140():
+    banner('v0.14.0', 'BETTER TOGETHER', 'Bring a friend. Bring them back.',
+           [('🤝', 'Duo Showdown'), ('💚', 'Buddy Revive'), ('📍', 'Pings'), ('🐢', 'Nurse Kappa')],
+           'v0.14.0-banner.png', ('kappa', 'volt', 'gunslinger'))
+
+    # Duo Showdown (src/game.js, worker/index.js): real numbers
+    feats = [('🤝', 'Duo Showdown', ['4 teams of 2,', 'no friendly fire,', 'the last team wins']),
+             ('👻', 'Buddy Revive', ['a ghost waits 15 s,', '3 s next to it: back', 'at 40% health']),
+             ('💚', '2 hearts a team', ['two revives a match,', 'being hit pauses it,', 'the gas ends a ghost']),
+             ('👯', 'Queue together', ['a room queues as one', 'ticket: in Duo', 'you are one team']),
+             ('📍', 'Pings', ['go, attack, loot,', 'danger: your partner', 'only, never the rest']),
+             ('🤖', 'Bot partners', ['they follow you,', 'run to revive you,', 'hit your target'])]
+    W, H = 1600, 840
+    img = background(W, H, glow=(0.5, 0.3))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'TWO IS BETTER THAN ONE', display(56), YELLOW, anchor='ma')
+    cw, chh, gx, gy = 470, 300, 30, 30
+    x0 = (W - (3 * cw + 2 * gx)) // 2
+    for i, (icon, head, lines) in enumerate(feats):
+        x, y = x0 + (i % 3) * (cw + gx), 140 + (i // 3) * (chh + gy)
+        card(img, (x, y, x + cw, y + chh), outline=(21, 170, 191), radius=26)
+        d.text((x + cw // 2, y + 22), icon, font=emoji(58), embedded_color=True, anchor='ma')
+        d.text((x + cw // 2, y + 108), head, font=display(34), fill=YELLOW, anchor='ma')
+        for li, line in enumerate(lines):
+            d.text((x + cw // 2, y + 164 + li * 36), line, font=body(23, 'Bold'), fill=TEXT, anchor='ma')
+    img.convert('RGB').save(os.path.join(OUT, 'v0.14.0-duo.png'), optimize=True)
+
+    # Nurse Kappa (src/brawler.js, src/combat.js, src/gadgets.js)
+    W, H = 1600, 760
+    img = background(W, H, glow=(0.3, 0.4))
+    d = ImageDraw.Draw(img)
+    k = Image.open(os.path.join(UI, 'kappa.png')).convert('RGBA')
+    k = k.resize((int(k.width * 540 / k.height), 540), Image.LANCZOS)
+    img.alpha_composite(k, (40, H - 600))
+    outlined(d, (620, 40), 'NURSE KAPPA', display(64), YELLOW)
+    d.text((624, 128), 'Healer · 3600 HP · unlock: 1500 coins or 240 gems', font=body(26, 'Bold'), fill=MUTED)
+    rows = [('🫧', 'Soap bubble', 'lobbed over walls, 700 splash; a hit heals her 350, her Duo partner 500'),
+            ('🌊', 'Super: Tidal Wave', 'a 10 x 5 m wave: 900 and a push, the gas parted for 1.5 s'),
+            ('🤿', 'River Dive', '5 m dive (8 m from water), untouchable for 0.3 s'),
+            ('🥣', 'Bowl Splash', 'a puddle heals her and her partner 400/s for 3 s'),
+            ('⭐', 'Star powers', 'Hydrotherapy: heals +30%  ·  Undertow: the wave pulls')]
+    for i, (icon, head, line) in enumerate(rows):
+        y = 190 + i * 108
+        card(img, (620, y, W - 60, y + 92), outline=(148, 216, 45), radius=20)
+        d.text((650, y + 18), icon, font=emoji(46), embedded_color=True)
+        d.text((725, y + 12), head, font=display(30), fill=YELLOW)
+        d.text((725, y + 54), line, font=body(22, 'Bold'), fill=TEXT)
+    img.convert('RGB').save(os.path.join(OUT, 'v0.14.0-kappa.png'), optimize=True)
+
+
 if __name__ == '__main__':
     import sys
     os.makedirs(OUT, exist_ok=True)
@@ -1081,5 +1131,6 @@ if __name__ == '__main__':
     v0120()
     v0130()
     v0131()
+    v0140()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')

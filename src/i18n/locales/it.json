@@ -635,5 +635,47 @@
   "shop.gemsSoon": "IN ARRIVO",
   "menu.locked2": "SBLOCCA QUESTO BRAWLER",
   "menu.unlockFirst": "Sblocca questo brawler per giocarlo online o in solo",
-  "menu.tryDojo": "Provalo gratis in allenamento"
+  "menu.tryDojo": "Provalo gratis in allenamento",
+  "menu.duo": "DUO",
+  "menu.duoDesc": "4 squadre da 2 · rianima il tuo compagno",
+  "menu.modeLbl": "Modalità",
+  "hud.teamsLeft": "SQUADRE RIMASTE",
+  "hud.revived": "RIANIMATO!",
+  "hud.reviving": "Rianimazione… {n}%",
+  "hud.ghost": "KO · {n} s per rianimarlo",
+  "hud.mateOut": "KO",
+  "hud.youGhost": "Sei KO! Il tuo compagno ha {n} s per rianimarti",
+  "hud.beingRevived": "Il tuo compagno ti sta rianimando… {n}%",
+  "hud.revivesLeft": {
+    "one": "{n} rianimazione rimasta",
+    "other": "{n} rianimazioni rimaste"
+  },
+  "result.wonDuo": "Tu e il tuo compagno siete l'ultima squadra in piedi.",
+  "result.lostDuo": {
+    "one": "La tua squadra è fuori. {n} squadra ha resistito più di voi.",
+    "other": "La tua squadra è fuori. {n} squadre hanno resistito più di voi."
+  },
+  "party.queue": "GIOCA INSIEME",
+  "party.tooMany": "Troppi giocatori per giocare insieme: al massimo {n} in questa modalità.",
+  "party.name": {
+    "one": "gruppo da {n}",
+    "other": "gruppo da {n}"
+  },
+  "opt.act.ping": "Segnale (Duo)",
+  "bark.hunter.thanks": "Si torna a caccia. Grazie!",
+  "bark.camper.thanks": "Uff. Torno nel mio cespuglio.",
+  "bark.looter.thanks": "Ti devo un cubo!",
+  "bark.vulture.thanks": "Grazie. Allora, chi è debole?",
+  "bark.coward.thanks": "Sei tornato a prendermi?!",
+  "bark.showoff.thanks": "La rimonta del secolo!",
+  "brawler.kappa.role": "Guaritrice",
+  "brawler.kappa.desc": "Un'infermiera kappa prepotente, folletto dei fiumi, che lancia bolle di sapone oltre i muri: uno schizzo che colpisce i nemici cura lei e, in Duo, anche il suo compagno. Super: un'onda di marea che spazza via i nemici e apre un varco nel gas.",
+  "gad.kappaA.name": "Tuffo nel fiume",
+  "gad.kappaA.desc": "Tuffati di 5 m (8 m dall'acqua), intoccabile per una frazione di secondo.",
+  "gad.kappaB.name": "Ciotola rovesciata",
+  "gad.kappaB.desc": "Svuota la ciotola sulla tua testa: una pozza cura te e il tuo compagno di 400/s per 3 s, poi cammini più lentamente per 4 s.",
+  "star.hydrotherapy.name": "Idroterapia",
+  "star.hydrotherapy.desc": "Le tue cure sono più forti del 30%.",
+  "star.undertow.name": "Risacca",
+  "star.undertow.desc": "L'onda di marea attira i nemici verso di te invece di respingerli."
 }

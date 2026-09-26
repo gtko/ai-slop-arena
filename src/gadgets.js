@@ -13,9 +13,10 @@ import { sfx } from './audio.js';
 export const GADGET_CHARGES = 3, GADGET_LOCKOUT = 5;
 // HUD / lobby icon of each gadget
 export const GADGET_ICONS = { blasterA: '🐏', blasterB: '🪵', gunslingerA: '🌀', gunslingerB: '🎆', bomberA: '🦘', bomberB: '🧨',
-  frostbiteA: '⛸️', frostbiteB: '🧊', voltA: '⚡', voltB: '🔋' };
+  frostbiteA: '⛸️', frostbiteB: '🧊', voltA: '⚡', voltB: '🔋', kappaA: '🤿', kappaB: '🥣' };
 const YELLOW = new THREE.Color(3.2, 2.6, 0.6), ICE = new THREE.Color(1.4, 2.8, 3.6), ZAP = new THREE.Color(2.2, 3.4, 4.6);
 const LAVA = new THREE.Color(3.4, 1.2, 0.2), BARK = new THREE.Color(1.6, 1.1, 0.5), PINK = new THREE.Color(3.4, 1.4, 2.4);
+const WATER = new THREE.Color(0.8, 2.2, 3.4), HEAL = new THREE.Color(0.8, 3.2, 1.4);
 
 // A dash: velocity for `time` seconds, walls stop it like any movement (air: flies over them).
 const dash = (b, dx, dz, dist, time, air = false) => { b.dash = { vx: dx * dist / time, vz: dz * dist / time, t: time, air, T: time }; };
@@ -49,7 +50,7 @@ export const GADGETS = {
     // Star Flare: a flare to the aim point (up to 16 m) that reveals everyone within 6 m for 3 s
     effect(g, b, dx, dz, p) {
       const [x, z] = reach(g, b, dx, dz, p, 16);
-      for (const o of g.brawlers) if (o !== b && o.alive && Math.hypot(o.pos.x - x, o.pos.z - z) < 6) o.revealT = Math.max(o.revealT, 3);
+      for (const o of g.brawlers) if (o !== b && !g.ally(b, o) && o.alive && Math.hypot(o.pos.x - x, o.pos.z - z) < 6) o.revealT = Math.max(o.revealT, 3);
       g.ev({ e: 'flare', x: Math.round(x * 100) / 100, z: Math.round(z * 100) / 100 });
       flareFx(g, x, z);
     },
@@ -119,6 +120,28 @@ export const GADGETS = {
   },
 };
 
+// Nurse Kappa (v0.14)
+GADGETS.kappaA = {
+  sound: 'gad_dive',
+  // River Dive: a 5 m dive (8 m from water), untouchable for 0.3 s
+  dist: 8,
+  move(g, b, dx, dz) { dash(b, dx, dz, g.arena.isWaterAt(b.pos.x, b.pos.z) ? 8 : 5, 0.3); },
+  effect(g, b) { b.ghostT = 0.3; },
+  fx(g, b) { g.effects.splash(b.pos.x, b.pos.z, 0.8); },
+};
+GADGETS.kappaB = {
+  sound: 'gad_bowl',
+  // Bowl Splash: she empties her head dish: a 2 m puddle heals her and her partner 400/s for 3 s; with
+  // the bowl empty she walks 20% slower for 4 s after
+  move(g, b) { b.bowlSlowAt = g.time + 3; },
+  effect(g, b) {
+    b.bowlSlowAt = g.time + 3;
+    const p = b.netDriven ? { x: b.net.x, z: b.net.y } : b.pos;
+    g.combat.zone({ x: p.x, z: p.z, r: 2, heal: 400, t: 3, owner: b, col: HEAL }, true);
+  },
+  fx(g, b) { g.effects.splash(b.pos.x, b.pos.z, 0.6); g.effects.ring(b.pos.x, b.pos.z, 2, WATER, 0.5); },
+};
+
 // Star powers: passives read by the rules where they apply (brawler.js, combat.js).
 export const STARS = {
   blaster: ['sapRegen', 'splinters'],       // regen after 2 s (not 3) | seeds that hit a wall split into 2 shards
@@ -126,6 +149,7 @@ export const STARS = {
   bomber: ['magmaPuddle', 'bigBang'],       // fireballs leave a 1.5 m puddle (200/s, 2 s) | radius 2.0 -> 2.4, damage 800 -> 720
   frostbite: ['deepFreeze', 'permafrost'],  // shards slow x0.45 (not 0.55) | nova radius +25%, freeze 1.0 s (not 1.4)
   volt: ['conductor', 'surge'],             // +1 chain | storm 7 bolts x 450 (not 5 x 600)
+  kappa: ['hydrotherapy', 'undertow'],      // heals +30% | the Tidal Wave pulls enemies toward her instead of pushing
 };
 export const hasStar = (b, id) => STARS[b.type.key]?.[(b.star || 1) - 1] === id;
 

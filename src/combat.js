@@ -15,6 +15,7 @@ const COL = {
   volt: new THREE.Color(1.2, 4.2, 4.6),
   seed: new THREE.Color(0.75, 1.9, 0.3), // Blaster: thorny seeds (dimmer: the thorns must read through the bloom)
   ray: new THREE.Color(2.6, 1.5, 4.8), // Gunslinger: ray pistol bolts
+  bubble: new THREE.Color(1.1, 2.6, 3.6), // Nurse Kappa: soap bubbles
 };
 const ICE_LIGHT = new THREE.Color(0.55, 0.85, 1), BOLT = new THREE.Color(3.2, 4.2, 5.2);
 const WALL_SPARK = new THREE.Color(2.5, 2.0, 1.4);
@@ -50,7 +51,7 @@ function rockGeometry(r, detail, bump) {
 }
 
 // Camera kick when you fire (trauma, feel.js); Gunslinger adds 0.03 per bolt of its burst.
-const FIRE_KICK = { blaster: 0.14, blasterS: 0.4, gunslinger: 0, gunslingerS: 0, bomber: 0.06, bomberS: 0.1, frostbite: 0.06, frostbiteS: 0.35, volt: 0.07, voltS: 0.1 };
+const FIRE_KICK = { blaster: 0.14, blasterS: 0.4, gunslinger: 0, gunslingerS: 0, bomber: 0.06, bomberS: 0.1, frostbite: 0.06, frostbiteS: 0.35, volt: 0.07, voltS: 0.1, kappa: 0.05, kappaS: 0.3 };
 
 export class Combat {
   constructor(game) {
@@ -60,6 +61,7 @@ export class Combat {
     this.strikes = []; // Volt super: scheduled lightning strikes
     this.zones = [];   // ground hazards: lava puddles, zap traps (gadgets, star powers)
     this.windups = []; // area supers announce themselves on the ground before they hit
+    this.waves = [];   // Nurse Kappa's Tidal Wave
     this.free = new Map(); // geometry -> spare bullet meshes
     this.bulletGeo = new THREE.SphereGeometry(1, 12, 8);
     this.seedGeo = seedGeometry();
@@ -80,6 +82,23 @@ export class Combat {
     flame.scale.setScalar(sup ? 0.78 : 0.4);
     g.add(core, flame);
     g.userData.flame = flame;
+    return g;
+  }
+
+  // Nurse Kappa: a soap bubble (see-through, with a shine) for the lobbed attack.
+  bubble() {
+    if (!this.bubbleMat) {
+      this.bubbleMat = new THREE.MeshPhysicalMaterial({ color: 0xbfe9ff, roughness: 0.05, transmission: 0, transparent: true, opacity: 0.55,
+        iridescence: 1, iridescenceIOR: 1.3, emissive: 0x2a6f9a, emissiveIntensity: 0.6, depthWrite: false });
+      this.bubbleGeo = new THREE.SphereGeometry(0.34, 18, 12);
+      this.shineMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 3, 3) });
+    }
+    const g = new THREE.Group(), shell = new THREE.Mesh(this.bubbleGeo, this.bubbleMat);
+    const shine = new THREE.Mesh(this.bulletGeo, this.shineMat);
+    shine.scale.setScalar(0.07);
+    shine.position.set(-0.12, 0.14, 0.2);
+    g.add(shell, shine);
+    g.userData.flame = shell;
     return g;
   }
 
@@ -145,6 +164,9 @@ export class Combat {
       }
       this.g.effects.muzzle(mx, BULLET_Y, mz, dx, dz, col);
       sfx('shot_ice', vol);
+    } else if (T === 'kappa' && sup) {
+      this.wave(b, dx, dz);
+      sfx('wave', vol);
     } else if (T === 'volt') {
       if (sup) { this.storm(b, point); return; }
       this.spawnBullet(b, mx, mz, base, { speed: 26, range: 13, dmg: 650, r: 0.3, breakWalls: false, knock: 0, emit: true, col, chain: hasStar(b, 'conductor') ? 3 : 2 });
@@ -157,17 +179,17 @@ export class Combat {
       if (d < 1e-3) { tx = dx; tz = dz; d = 1; }
       const cd = THREE.MathUtils.clamp(d, 2, R);
       tx = b.pos.x + tx / d * cd; tz = b.pos.z + tz / d * cd;
-      const mesh = this.fireball(sup);
+      const bubble = T === 'kappa', mesh = bubble ? this.bubble() : this.fireball(sup);
       this.g.fx.add(mesh);
       // the super is a meteor: same target and timing, but it dives from the sky behind the target
       const ux = (tx - b.pos.x) / cd, uz = (tz - b.pos.z) / cd;
       this.bombs.push({
         sx: sup ? tx - ux * 4 : mx, sz: sup ? tz - uz * 4 : mz, sy: sup ? 12 : 1.6,
         tx, tz, t: 0, dur: (0.5 + (cd / R) * 0.35) * (!sup && b.fuseNext ? 0.6 : 1), h: 2.6 + cd * 0.22,
-        dmg: sup ? 1800 : hasStar(b, 'bigBang') ? 720 : 800, radius: sup ? 3.6 : hasStar(b, 'bigBang') ? 2.4 : 2.0, owner: b, sup, mesh, spin: rnd(6, 12),
-        fx: mx, fy: 1.6, fz: mz,
+        dmg: bubble ? 700 : sup ? 1800 : hasStar(b, 'bigBang') ? 720 : 800, radius: bubble ? 1.6 : sup ? 3.6 : hasStar(b, 'bigBang') ? 2.4 : 2.0, owner: b, sup, mesh, spin: bubble ? 1 : rnd(6, 12),
+        fx: mx, fy: 1.6, fz: mz, bubble,
       });
-      sfx('throw', vol);
+      sfx(bubble ? 'bubble' : 'throw', vol);
       if (!sup) b.fuseNext = false;
     }
   }
@@ -215,6 +237,7 @@ export class Combat {
     this.updateStrikes(dt);
     this.updateZones(dt);
     this.updateWindups(dt);
+    this.updateWaves(dt);
   }
 
   updateBullets(dt) {
@@ -247,7 +270,7 @@ export class Combat {
         }
         if (dead) break;
         for (const o of g.brawlers) {
-          if (o === B.owner || !g.hittable(o)) continue;
+          if (!g.hits(B.owner, o)) continue;
           const dx = o.pos.x - B.x, dz = o.pos.z - B.z, rr = o.radius + B.r;
           if (dx * dx + dz * dz < rr * rr) {
             g.damage(o, B.dmg * B.owner.dmgMul, B.owner, B.breakWalls);
@@ -293,10 +316,15 @@ export class Combat {
       }
       B.mesh.position.set(x, y, z);
       const core = B.mesh.children[0], size = B.sup ? 0.78 : 0.4;
+      B.fx = x; B.fy = y + 0.4; B.fz = z;
+      if (B.bubble) { // a wobbling bubble, no fire
+        core.scale.set(1 + Math.sin(B.t * 30) * 0.08, 1 - Math.sin(B.t * 30) * 0.08, 1);
+        if (B.t >= 1) { this.explode(B); g.fx.remove(B.mesh); this.bombs.splice(i, 1); }
+        continue;
+      }
       core.rotation.x += B.spin * dt;
       core.rotation.z += B.spin * 0.4 * dt;
       B.mesh.userData.flame.scale.setScalar(size * (1 + Math.sin(B.t * 40) * 0.08));
-      B.fx = x; B.fy = y + 0.4; B.fz = z;
       if (B.sup) { // the meteor's shadow grows where it will land
         if (!B.shadow) {
           B.shadow = new THREE.Mesh(this.zoneGeo || (this.zoneGeo = new THREE.CircleGeometry(1, 32).rotateX(-Math.PI / 2)),
@@ -328,10 +356,84 @@ export class Combat {
     }
   }
 
+  // Nurse Kappa's bubble pops: 700 around it; a splash that hurts an enemy heals her 350, and in Duo
+  // her partner caught in the splash gets 500 (Hydrotherapy: +30%). Crates take it too.
+  pop(B) {
+    const g = this.g, A = g.arena, { tx: x, tz: z, radius: R } = B, K = B.owner;
+    let hit = false;
+    for (const o of g.brawlers) {
+      if (!o.alive || !g.hits(K, o) || Math.hypot(o.pos.x - x, o.pos.z - z) > R + o.radius * 0.6) continue;
+      g.damage(o, B.dmg * K.dmgMul, K);
+      hit = true;
+    }
+    const k = hasStar(K, 'hydrotherapy') ? 1.3 : 1, mate = g.mateOf(K);
+    if (hit && K.alive) g.heal(K, 350 * k);
+    if (mate && mate.alive && Math.hypot(mate.pos.x - x, mate.pos.z - z) < R + 0.8) g.heal(mate, 500 * k);
+    const ch = A.get(A.toTile(x), A.toTile(z));
+    if (ch === 'C') g.damageCrate(A.toTile(x), A.toTile(z), B.dmg * K.dmgMul, K);
+    g.effects.splash(x, z, 1.2);
+    g.effects.ring(x, z, R, COL.bubble, 0.4);
+    if (A.isWaterAt(x, z)) A.water.ripple(x, z, 1);
+    sfx('bubble_pop', g.volumeAt(x, z));
+  }
+
+  // Nurse Kappa's super, Tidal Wave: a wave 5 m wide rolls 10 m ahead in 0.6 s. Every enemy it sweeps
+  // takes 900 and is pushed 5 m along (Undertow: pulled toward her); the gas in a 2 m lane down its
+  // middle clears for 1.5 s (poison.js), everywhere the attack is played, so every screen agrees.
+  wave(b, dx, dz) {
+    const g = this.g, x = b.pos.x + dx * 0.6, z = b.pos.z + dz * 0.6;
+    if (!this.waveGeo) {
+      const geo = new THREE.PlaneGeometry(5, 1.6, 10, 3), p = geo.attributes.position;
+      for (let i = 0; i < p.count; i++) { const u = p.getX(i) / 2.5, v = (p.getY(i) + 0.8) / 1.6; p.setZ(i, -0.5 * v * v + 0.15 * (1 - u * u)); } // a curling crest
+      geo.translate(0, 0.8, 0);
+      geo.computeVertexNormals();
+      this.waveGeo = geo;
+      this.foamGeo = new THREE.CapsuleGeometry(0.14, 4.6, 4, 8).rotateZ(Math.PI / 2);
+    }
+    const grp = new THREE.Group();
+    const sheet = new THREE.Mesh(this.waveGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(0.35, 1.3, 2.2), transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false }));
+    const foam = new THREE.Mesh(this.foamGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.6, 2.8), transparent: true, opacity: 0.9 }));
+    foam.position.set(0, 1.55, -0.45);
+    grp.add(sheet, foam);
+    grp.rotation.y = Math.atan2(dx, dz);
+    grp.position.set(x, 0, z);
+    g.fx.add(grp);
+    this.waves.push({ b, x, z, dx, dz, t: 0, T: 0.6, len: 10, half: 2.5, hit: new Set(), mesh: grp, mats: [sheet.material, foam.material] });
+    g.poison.clearLane(x, z, dx, dz, 10, 1, 1.5);
+    g.shakeAt(x, z, 0.3);
+  }
+
+  updateWaves(dt) {
+    const g = this.g;
+    for (let i = this.waves.length - 1; i >= 0; i--) {
+      const W = this.waves[i], k = Math.min(1, (W.t += dt) / W.T), front = k * W.len;
+      W.mesh.position.set(W.x + W.dx * front, 0, W.z + W.dz * front);
+      W.mesh.scale.set(1, 0.7 + 0.3 * Math.sin(k * Math.PI), 1);
+      W.mats[0].opacity = 0.7 * (1 - k * k);
+      W.mats[1].opacity = 0.9 * (1 - k * k);
+      if (Math.random() < 0.6) g.effects.splash(W.mesh.position.x + (Math.random() - 0.5) * 4 * W.dz, W.mesh.position.z - (Math.random() - 0.5) * 4 * W.dx, 0.5);
+      if (g.authority) for (const o of g.brawlers) {
+        if (W.hit.has(o) || !g.hits(W.b, o)) continue;
+        const rx = o.pos.x - W.x, rz = o.pos.z - W.z, along = rx * W.dx + rz * W.dz, side = Math.abs(rx * -W.dz + rz * W.dx);
+        if (along < -0.5 || along > front + 0.5 || side > W.half + o.radius * 0.5) continue;
+        W.hit.add(o);
+        g.damage(o, 900 * W.b.dmgMul, W.b, true);
+        if (!o.alive) continue;
+        if (o.ccImmuneT > 0) { g.ev({ e: 'imm', id: o.id }); continue; }
+        const pull = hasStar(W.b, 'undertow');
+        let kx = W.dx, kz = W.dz;
+        if (pull) { kx = W.b.pos.x - o.pos.x; kz = W.b.pos.z - o.pos.z; const l = Math.hypot(kx, kz) || 1; kx /= l; kz /= l; }
+        g.applyKnock(o, kx * 12, kz * 12);
+      }
+      if (k >= 1) { g.fx.remove(W.mesh); W.mats.forEach(m => m.dispose()); this.waves.splice(i, 1); }
+    }
+  }
+
   explode(B) {
+    if (B.bubble) { this.pop(B); return; }
     const g = this.g, A = g.arena, { tx: x, tz: z, radius: R } = B;
     for (const o of g.brawlers) {
-      if (!o.alive || o === B.owner) continue;
+      if (!o.alive || !g.hits(B.owner, o)) continue;
       if (Math.hypot(o.pos.x - x, o.pos.z - z) < R + o.radius * 0.6) {
         g.damage(o, B.dmg * B.owner.dmgMul, B.owner, B.sup);
         const d = Math.hypot(o.pos.x - x, o.pos.z - z) + 0.01;
@@ -400,7 +502,7 @@ export class Combat {
     m.renderOrder = 1;
     this.g.fx.add(m);
     this.zones.push({ ...o, T: o.t, tick: 0, delay: o.delay || 0, mesh: m });
-    if (broadcast) this.g.ev({ e: 'zone', z: { x: Math.round(o.x * 100) / 100, z: Math.round(o.z * 100) / 100, r: o.r, dps: o.dps, dmg: o.dmg,
+    if (broadcast) this.g.ev({ e: 'zone', z: { x: Math.round(o.x * 100) / 100, z: Math.round(o.z * 100) / 100, r: o.r, dps: o.dps, dmg: o.dmg, heal: o.heal,
       once: o.once, t: o.t, delay: o.delay, owner: o.owner && o.owner.id, col: [o.col.r, o.col.g, o.col.b] } });
   }
 
@@ -410,11 +512,17 @@ export class Combat {
       const Z = this.zones[i];
       Z.t -= dt; Z.delay -= dt;
       Z.mesh.material.opacity = 0.45 * Math.min(1, Z.t / 0.4) * (0.75 + 0.25 * Math.sin(g.time * 9));
+      if (Z.heal) Z.mesh.visible = !Z.owner || g.fxVisible(Z.owner) || g.ally(Z.owner, g.player); // Bowl Splash: no marker on a hidden Kappa
       let gone = Z.t <= 0;
-      if (!gone && g.authority && Z.delay <= 0 && (Z.tick -= dt) <= 0) {
+      if (Z.heal) { // Bowl Splash: heals the owner and its partner
+        if (!gone && g.authority && Z.delay <= 0 && (Z.tick -= dt) <= 0) {
+          Z.tick = 0.25;
+          for (const o of g.brawlers) if (o.alive && (o === Z.owner || g.ally(Z.owner, o)) && Math.hypot(o.pos.x - Z.x, o.pos.z - Z.z) <= Z.r + o.radius * 0.5) g.heal(o, Z.heal * 0.25 * (hasStar(Z.owner, 'hydrotherapy') ? 1.3 : 1));
+        }
+      } else if (!gone && g.authority && Z.delay <= 0 && (Z.tick -= dt) <= 0) {
         Z.tick = 0.25;
         for (const o of g.brawlers) {
-          if (o === Z.owner || !g.hittable(o) || o.pos.y > 0.3 || Math.hypot(o.pos.x - Z.x, o.pos.z - Z.z) > Z.r + o.radius * 0.5) continue;
+          if (!g.hits(Z.owner, o) || o.pos.y > 0.3 || Math.hypot(o.pos.x - Z.x, o.pos.z - Z.z) > Z.r + o.radius * 0.5) continue;
           if (Z.once) {
             g.damage(o, Z.dmg * (Z.owner ? Z.owner.dmgMul : 1), Z.owner);
             g.effects.sparkBurst(Z.x, 0.4, Z.z, Z.col, 20, 6, 0.4, 0.14);
@@ -434,7 +542,7 @@ export class Combat {
     const g = this.g, perma = hasStar(b, 'permafrost'), R = perma ? 6.25 : 5, x = b.pos.x, z = b.pos.z;
     if (g.authority) {
       for (const o of g.brawlers) {
-        if (o === b || !g.hittable(o) || Math.hypot(o.pos.x - x, o.pos.z - z) > R) continue;
+        if (!g.hits(b, o) || Math.hypot(o.pos.x - x, o.pos.z - z) > R) continue;
         g.damage(o, 900 * b.dmgMul, b, true);
         if (!o.alive) continue;
         if (o.ccImmuneT > 0) {
@@ -461,7 +569,7 @@ export class Combat {
     for (let k = 0; k < B.chain; k++) {
       let best = null, bd = 5.5;
       for (const o of g.brawlers) {
-        if (hit.has(o) || !g.hittable(o)) continue;
+        if (hit.has(o) || !g.hits(B.owner, o)) continue;
         const d = Math.hypot(o.pos.x - from.pos.x, o.pos.z - from.pos.z);
         if (d < bd && g.arena.los(from.pos.x, from.pos.z, o.pos.x, o.pos.z)) { bd = d; best = o; }
       }
@@ -500,7 +608,7 @@ export class Combat {
       this.strikes.splice(i, 1);
       if (g.authority) {
         for (const o of g.brawlers) {
-          if (o === S.owner || !g.hittable(o) || Math.hypot(o.pos.x - S.x, o.pos.z - S.z) > 1.8) continue;
+          if (!g.hits(S.owner, o) || Math.hypot(o.pos.x - S.x, o.pos.z - S.z) > 1.8) continue;
           g.damage(o, S.dmg * S.owner.dmgMul, S.owner, true);
         }
         const ti = A.toTile(S.x), tj = A.toTile(S.z);
@@ -523,7 +631,7 @@ export class Combat {
     for (const B of this.bullets) {
       if (B.emit) pool.add(B.x, BULLET_Y + 0.2, B.z, B.lr, B.lg, B.lb, B.breakWalls ? 12 : 8, 6.5);
     }
-    for (const B of this.bombs) pool.add(B.fx, B.fy, B.fz, 1, 0.55, 0.2, B.sup ? 7 : 5, B.sup ? 6 : 5);
+    for (const B of this.bombs) pool.add(B.fx, B.fy, B.fz, B.bubble ? 0.4 : 1, B.bubble ? 0.8 : 0.55, B.bubble ? 1 : 0.2, B.sup ? 7 : 5, B.sup ? 6 : 5);
   }
 
   clear() {
@@ -536,5 +644,7 @@ export class Combat {
     this.zones.length = 0;
     for (const W of this.windups) this.g.fx.remove(W.mesh);
     this.windups.length = 0;
+    for (const W of this.waves) { this.g.fx.remove(W.mesh); W.mats.forEach(m => m.dispose()); }
+    this.waves.length = 0;
   }
 }

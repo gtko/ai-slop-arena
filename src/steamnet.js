@@ -179,6 +179,10 @@ export class SteamNet {
         this.chaos = !!msg.on;
         this.broadcastRoom();
         break;
+      case 'mode': // Showdown or Duo (v0.14)
+        this.mode = msg.mode === 'duo' ? 'duo' : 'solo';
+        this.broadcastRoom();
+        break;
       case 'start':
         this.inMatch = true;
         this.toOthers(msg);
@@ -200,7 +204,7 @@ export class SteamNet {
   broadcastRoom() {
     const players = [...this.roster.values()].sort((a, b) => a.joined - b.joined)
       .map(({ id, name, brawler, lo, cos, host }) => ({ id, name, brawler, lo, cos, host }));
-    const msg = { t: 'room', players, inMatch: this.inMatch, map: this.map, chaos: !!this.chaos };
+    const msg = { t: 'room', players, inMatch: this.inMatch, map: this.map, chaos: !!this.chaos, mode: this.mode === 'duo' ? 'duo' : 'solo' };
     this.toOthers(msg);
     this.steam.setLobbyData('map', this.map);
     this.applyRoom(msg);
@@ -212,6 +216,7 @@ export class SteamNet {
     this.inMatch = m.inMatch;
     this.map = m.map;
     this.chaos = !!m.chaos;
+    this.mode = m.mode === 'duo' ? 'duo' : 'solo';
     presence(t(m.inMatch ? 'presence.online' : 'presence.room'), this.lobby, m.players.length);
   }
 

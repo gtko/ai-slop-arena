@@ -16,6 +16,8 @@ const BRAWLERS = [
     desc: 'Trois éclats de glace qui ralentissent. Super : une nova de givre qui gèle tout autour de lui.' },
   { key: 'volt', name: 'Volt', role: 'Robot électrique', color: '#3ec6e0', hp: 3100, range: 13,
     desc: 'Un orbe dont l\'éclair rebondit sur 2 ennemis. Super : un orage qui fait tomber la foudre.' },
+  { key: 'kappa', name: 'Nurse Kappa', role: 'Soigneuse', color: '#94d82d', hp: 3600, range: 11,
+    desc: 'Infirmière kappa : ses bulles passent par-dessus les murs, la soignent quand elles touchent et soignent son partenaire en Duo. Super : un raz-de-marée qui balaie les ennemis et écarte le gaz.' },
 ];
 const MAPS = [
   { key: 'oasis', name: 'Oasis', tag: 'Grand soleil' },

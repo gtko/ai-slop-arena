@@ -264,3 +264,45 @@
   #chaosCard b { font-size: 28px; -webkit-text-stroke: 3px var(--ink); }
   #chaosCard p { font-size: 11px; }
 }
+
+/* ------------------------------ Duo (v0.14): partner card, arrow, pings ------------------------------ */
+.ov.mate .ov-name { color: #7dffa8; }
+.ov.mate .ov-fill { background: linear-gradient(#8dffc0, #22b86a); }
+body.cb .ov.mate .ov-name { color: #d4c8ff; }
+body.cb .ov.mate .ov-fill { background: linear-gradient(#d4c8ff, #8f7ae0); }
+#teamCard { position: absolute; left: 14px; top: 62px; display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 6px; border-radius: 14px;
+  background: var(--panel); border: 2px solid var(--ink); box-shadow: 0 3px 0 rgba(0,0,0,0.4); font-family: var(--display); min-width: 190px; }
+#teamCard img { width: 40px; height: 40px; object-fit: contain; object-position: top; border-radius: 10px; background: rgba(47, 211, 107, 0.25); }
+#teamCard > div { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+#teamCard .tc-name { font-size: 14px; color: #7dffa8; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#teamCard .tc-hp { height: 10px; border-radius: 4px; background: #2a0e14; border: 2px solid var(--ink); overflow: hidden; }
+#teamCard .tc-hp i { display: block; height: 100%; background: linear-gradient(#8dffc0, #22b86a); transition: width 0.2s; }
+#teamCard .tc-hp i.low { background: linear-gradient(#ff7a6b, #e0342e); }
+#teamCard .tc-st { font-family: var(--body, sans-serif); font-weight: 800; font-size: 11px; color: #bfe8ff; min-height: 13px; }
+#teamCard .tc-hearts { display: flex; flex-direction: column; gap: 1px; font-size: 14px; line-height: 1; }
+#teamCard .tc-hearts i { font-style: normal; color: #ff5c7a; -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; }
+#teamCard .tc-hearts i.off { color: #3a2a3a; }
+#teamCard.down img { filter: grayscale(1) brightness(0.7); }
+#teamCard.hidden { display: none; }
+#mateArrow { position: absolute; left: 0; top: 0; width: 34px; height: 34px; border-radius: 50%; background: #2fd36b; border: 3px solid var(--ink);
+  box-shadow: 0 0 14px rgba(47, 211, 107, 0.6); }
+#mateArrow::after { content: ''; position: absolute; right: -12px; top: 50%; transform: translateY(-50%); border: 8px solid transparent; border-left: 12px solid var(--ink); }
+#mateArrow.ghost { background: #7ff0ff; animation: mateGhost 0.8s ease-in-out infinite alternate; }
+#mateArrow.hidden { display: none; }
+@keyframes mateGhost { to { opacity: 0.45; } }
+#pings { position: absolute; inset: 0; }
+.ping { position: absolute; left: 0; top: 0; }
+.ping b { display: block; font-size: 30px; line-height: 1; filter: drop-shadow(0 0 3px var(--ink)) drop-shadow(0 3px 0 var(--ink)); animation: pingIn 0.35s cubic-bezier(.2, .9, .3, 1.4); }
+.ping.mate b::after { content: ''; position: absolute; left: 50%; bottom: -8px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: #2fd36b; border: 2px solid var(--ink); }
+.ping.edge b { font-size: 22px; }
+@keyframes pingIn { from { transform: translateY(-18px) scale(0.3); opacity: 0; } }
+#touch .t-ping { position: absolute; right: calc(12px + env(safe-area-inset-right)); top: calc(124px + env(safe-area-inset-top)); width: 46px; height: 46px; border-radius: 50%;
+  border: 3px solid var(--ink); background: rgba(47, 211, 107, 0.45); font-size: 22px; line-height: 1; pointer-events: auto; touch-action: none; padding: 0; display: none; }
+body.duo #touch .t-ping { display: block; }
+@media (max-height: 520px) and (orientation: landscape) {
+  #teamCard { min-width: 150px; padding: 3px 6px 3px 3px; }
+  #teamCard img { width: 30px; height: 30px; }
+}
+#ghostMsg { position: absolute; left: 50%; top: 24%; transform: translateX(-50%); padding: 8px 18px; border-radius: 14px; background: rgba(10, 30, 40, 0.75);
+  border: 2px solid #7ff0ff; font-family: var(--display); font-size: 20px; color: #bff8ff; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; white-space: nowrap; display: none; }
+#ghostMsg.on { display: block; animation: pingIn 0.3s ease-out; }

@@ -15,6 +15,7 @@ export class Poison {
     this.level = 0; // rings 0..level are poisoned (level 0 = none)
     this.tileT = new Float32Array(N * N).fill(-1);
     this.active = [];
+    this.lanes = []; // Tidal Wave: strips of ground the gas leaves alone for a moment
     const geo = new THREE.IcosahedronGeometry(1, 1);
     const mat = new THREE.MeshStandardMaterial({
       color: 0x58d46a, emissive: 0x1fc04a, emissiveIntensity: 0.9, roughness: 1, flatShading: true,
@@ -95,9 +96,20 @@ export class Poison {
     }
   }
 
+  // A strip `len` long and 2*half wide from (x, z) along (dx, dz), free of gas for `time` seconds.
+  clearLane(x, z, dx, dz, len, half, time) { this.lanes.push({ x, z, dx, dz, len, half, until: this.timer + time }); }
+  inLane(x, z) {
+    this.lanes = this.lanes.filter(L => L.until > this.timer);
+    return this.lanes.some(L => {
+      const rx = x - L.x, rz = z - L.z, along = rx * L.dx + rz * L.dz;
+      return along >= 0 && along <= L.len && Math.abs(rx * -L.dz + rz * L.dx) <= L.half;
+    });
+  }
+
   isPoisonedAt(x, z) {
     const A = this.g.arena, i = A.toTile(x), j = A.toTile(z);
     if (i < 0 || j < 0 || i >= N || j >= N) return true;
+    if (this.lanes.length && this.inLane(x, z)) return false;
     const t = this.tileT[j * N + i];
     return t >= 0 && this.timer - t > 0.6;
   }

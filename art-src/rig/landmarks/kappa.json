@@ -1,0 +1,53 @@
+{
+ "fit": {"neck": 0.5, "crotch": 0.18},
+ "joints": {
+  "Hips": [0, 0.1, 0.5],
+  "Spine": [0, 0.1, 0.63],
+  "Spine1": [0, 0.1, 0.8],
+  "Spine2": [0, 0.1, 0.96],
+  "Neck": [0, 0.1, 1.15],
+  "Head": [0, 0.1, 1.26],
+  "HeadTop": [0, 0.05, 2.45],
+  "LeftShoulder": [0.1, 0.12, 1.08],
+  "LeftArm": [0.34, 0.15, 1.02],
+  "LeftForeArm": [0.46, 0.15, 0.85],
+  "LeftHand": [0.57, 0.15, 0.75],
+  "LeftHandEnd": [0.82, 0.12, 0.63],
+  "RightShoulder": [-0.1, 0.12, 1.08],
+  "RightArm": [-0.34, 0.12, 1.02],
+  "RightForeArm": [-0.52, 0.08, 0.85],
+  "RightHand": [-0.6, 0.02, 0.71],
+  "RightHandEnd": [-0.68, -0.02, 0.61],
+  "LeftUpLeg": [0.22, 0.12, 0.46],
+  "LeftLeg": [0.27, 0.12, 0.27],
+  "LeftFoot": [0.3, 0.12, 0.12],
+  "LeftToeBase": [0.3, -0.06, 0.04],
+  "LeftToeEnd": [0.3, -0.2, 0.02],
+  "RightUpLeg": [-0.22, 0.12, 0.46],
+  "RightLeg": [-0.27, 0.12, 0.27],
+  "RightFoot": [-0.3, 0.12, 0.12],
+  "RightToeBase": [-0.3, -0.06, 0.04],
+  "RightToeEnd": [-0.3, -0.2, 0.02]
+ },
+ "bands": {"Spine": 0.015, "Spine1": 0.015, "Spine2": 0.015, "Neck": 0.012, "Head": 0.01, "Hips": 0.015, "UpLeg": 0.02, "Leg": 0.015, "Foot": 0.01, "Arm": 0.02, "ForeArm": 0.015, "Hand": 0.012},
+ "head_tilt": 0,
+ "smooth": 2,
+ "weapon_radius": 0.07,
+ "cloth": false,
+ "poses": {
+  "head_margin": 0.03,
+  "torso_margin": 0.03,
+  "leg_margin": 0.02,
+  "up_forward": -0.6
+ },
+ "regions": [
+  {"box": [[-0.5, -0.6, 0.4], [0.5, 0.8, 0.72]], "part": "body"},
+  {"box": [[0.29, -0.35, 0.93], [0.62, 0.3, 1.22]], "part": "armL"},
+  {"box": [[-0.62, -0.35, 0.93], [-0.29, 0.3, 1.22]], "part": "armR"},
+  {"box": [[-0.8, 0.3, 0.4], [0.8, 0.9, 1.3]], "part": "body"}
+ ],
+ "sway": [
+  {"box": [[-0.6, -0.5, 0.36], [0.6, -0.12, 0.72]], "axis": [0, 0, -1], "from": -0.72, "length": 0.3, "amp": 0.4}
+ ],
+ "eyes": {"spheres": [{"sphere": [0.32, -0.42, 1.56], "radius": 0.15}, {"sphere": [-0.35, -0.42, 1.56], "radius": 0.15}]}
+}

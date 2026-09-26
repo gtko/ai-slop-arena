@@ -4,7 +4,7 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
 
-const keys = process.argv.slice(2).length ? process.argv.slice(2) : ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt'];
+const keys = process.argv.slice(2).length ? process.argv.slice(2) : ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt', 'kappa'];
 const cli = cmd => execSync(`npx --yes @gltf-transform/cli@4 ${cmd}`, { stdio: 'pipe' });
 for (const key of keys) {
   const src = `art-src/rig/out/${key}.glb`, tmp = `art-src/rig/out/${key}.tmp.glb`, dst = `public/assets/models/${key}.glb`;

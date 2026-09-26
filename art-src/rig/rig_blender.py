@@ -30,7 +30,7 @@ ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
 WORK = os.path.join(HERE, 'work')
 GAME = os.path.join(ROOT, 'art-src', 'rig', 'out')  # then meshopt -> public/assets/models (build.mjs)
 RIGGED = os.path.join(ROOT, 'art-src', 'rigged')
-KEYS = ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt']
+KEYS = ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt', 'kappa']
 
 
 def to_b(v):

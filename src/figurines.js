@@ -26,6 +26,7 @@ export const RIGS = {
   bomber: { weapon: 'L', style: 'throw', flames: true },
   frostbite: { weapon: 'R', style: 'staff' },
   volt: { weapon: 'both', style: 'cast' },
+  kappa: { weapon: 'R', style: 'throw' },
 };
 
 const templates = new Map(); // type key -> { scene, clips, map, gain, flames }

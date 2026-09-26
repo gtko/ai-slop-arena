@@ -1,6 +1,6 @@
 // Ranking maths (worker/ranking.js): MMR, visible RP, tiers, matchmaking groups.
 import assert from 'node:assert/strict';
-import { rate, tierOf, pickGroup, botLevelFor, START_MMR } from '../worker/ranking.js';
+import { rate, tierOf, pickGroup, partyMmr, botLevelFor, START_MMR } from '../worker/ranking.js';
 
 let failed = 0;
 const test = (name, fn) => { try { fn(); console.log(`ok   ${name}`); } catch (e) { failed++; console.error(`FAIL ${name}\n     ${e.message}`); } };
@@ -58,6 +58,23 @@ test('matchmaking groups close MMRs and waits for them', () => {
 
 test('bot level follows MMR', () => {
   assert.ok(botLevelFor(600) < botLevelFor(1000) && botLevelFor(1000) < botLevelFor(1600));
+});
+
+test('Duo: RP per team placement (1st .. 4th)', () => {
+  const r = rate(['a', 'b', 'c', 'd'].map((k, i) => fresh(k, [1, 1, 2, 4][i], { rp: 300, matches: 30 })), { duo: true });
+  assert.deepEqual(r.map(x => x.delta), [30, 30, 12, -10]);
+  assert.ok(r[3].mmr < START_MMR, 'the last team did not lose MMR');
+});
+
+test('parties: a ticket is taken whole, never split', () => {
+  const now = 100000;
+  const q = [{ id: 'p', size: 2, mmr: 1000, joined: 0 }, ...[...Array(7)].map((_, k) => ({ id: 's' + k, mmr: 1000, joined: 10 + k }))];
+  const g = pickGroup(q, now, 8);
+  assert.equal(g.reduce((s, e) => s + (e.size || 1), 0), 8);
+  assert.ok(g.some(e => e.id === 'p'), 'the party was left out');
+  const g2 = pickGroup([{ id: 's', mmr: 1000, joined: 0 }, { id: 'p', size: 4, mmr: 1000, joined: 1 }, { id: 'p2', size: 4, mmr: 1000, joined: 2 }], now, 8, 1000);
+  assert.equal(g2.reduce((s, e) => s + (e.size || 1), 0), 5, 'a party was split to fill the match');
+  assert.equal(partyMmr([1000, 2000]), 1800);
 });
 
 if (failed) { console.error(`\n${failed} test(s) failed`); process.exit(1); }

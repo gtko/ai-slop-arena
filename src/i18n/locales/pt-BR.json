@@ -652,5 +652,47 @@
   "shop.gemsSoon": "EM BREVE",
   "menu.locked2": "DESBLOQUEIE ESTE LUTADOR",
   "menu.unlockFirst": "Desbloqueie este lutador para jogar online ou no solo",
-  "menu.tryDojo": "Experimente grátis no treino"
+  "menu.tryDojo": "Experimente grátis no treino",
+  "menu.duo": "DUPLA",
+  "menu.duoDesc": "4 duplas · reviva seu parceiro",
+  "menu.modeLbl": "Modo",
+  "hud.teamsLeft": "EQUIPES VIVAS",
+  "hud.revived": "REVIVIDO!",
+  "hud.reviving": "Revivendo… {n}%",
+  "hud.ghost": "Eliminado · {n} s para reviver",
+  "hud.mateOut": "Fora",
+  "hud.youGhost": "Eliminado! Seu parceiro tem {n} s para reviver você",
+  "hud.beingRevived": "Seu parceiro está revivendo você… {n}%",
+  "hud.revivesLeft": {
+    "one": "Resta {n} reanimação",
+    "other": "Restam {n} reanimações"
+  },
+  "result.wonDuo": "Você e seu parceiro são a última equipe de pé.",
+  "result.lostDuo": {
+    "one": "Sua equipe caiu. {n} equipe durou mais que vocês.",
+    "other": "Sua equipe caiu. {n} equipes duraram mais que vocês."
+  },
+  "party.queue": "JOGAR JUNTOS",
+  "party.tooMany": "Jogadores demais para jogar juntos: no máximo {n} neste modo.",
+  "party.name": {
+    "one": "grupo de {n}",
+    "other": "grupo de {n}"
+  },
+  "opt.act.ping": "Ping (Dupla)",
+  "bark.hunter.thanks": "De volta à caçada. Valeu!",
+  "bark.camper.thanks": "Ufa. De volta pra minha moita.",
+  "bark.looter.thanks": "Te devo um cubo!",
+  "bark.vulture.thanks": "Valeu. E aí, quem tá fraco?",
+  "bark.coward.thanks": "Você voltou por mim?!",
+  "bark.showoff.thanks": "A virada do século!",
+  "brawler.kappa.role": "Curandeira",
+  "brawler.kappa.desc": "Uma enfermeira kappa mandona, duende dos rios, que arremessa bolhas de sabão por cima dos muros: um respingo que acerta inimigos cura ela e, na Dupla, também o parceiro. Super: um maremoto que varre os inimigos e abre caminho no gás.",
+  "gad.kappaA.name": "Mergulho no rio",
+  "gad.kappaA.desc": "Mergulhe 5 m (8 m saindo da água), intocável por uma fração de segundo.",
+  "gad.kappaB.name": "Respingo da tigela",
+  "gad.kappaB.desc": "Esvazie a tigela da sua cabeça: uma poça cura você e seu parceiro em 400/s por 3 s, depois você anda mais devagar por 4 s.",
+  "star.hydrotherapy.name": "Hidroterapia",
+  "star.hydrotherapy.desc": "Suas curas são 30% mais fortes.",
+  "star.undertow.name": "Contracorrente",
+  "star.undertow.desc": "O maremoto puxa os inimigos na sua direção em vez de empurrá-los para longe."
 }

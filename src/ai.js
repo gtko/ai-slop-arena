@@ -63,6 +63,7 @@ const segDist = (p, a, b) => {
   return Math.hypot(p.x - (a.x + dx * k), p.z - (a.z + dz * k));
 };
 const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
+const LOB = new Set(['bomber', 'kappa']); // lobbed attacks fly over walls
 
 // Bot personas (v0.13, B02): every bot is a character with its own habits, an icon on its name
 // plate and a few lines in speech bubbles (bark.<persona>.<spot|ko|hurt|win> in the i18n files).
@@ -158,8 +159,10 @@ export class BotBrain {
     const calm = g.time < this.graceUntil && !provoked;
     const H = this.habits;
     const sight = 13 + this.skill * 9 + H.sight; // sharper bots notice targets from further away
+    // Duo partner (B02): focus whoever the partner is fighting
+    const mate = g.mateOf(b), focus = mate && mate.alive ? g.brains.get(mate)?.target || (g.time - (mate.hitAt ?? -9) < 3 ? mate.hitWho : null) : null;
     for (const o of g.brawlers) {
-      if (calm || o === b || !o.alive) continue;
+      if (calm || o === b || !o.alive || g.ally(b, o)) continue;
       const d = o.pos.distanceTo(b.pos);
       // A target that just ducked behind a wall is remembered for a moment (not one hiding in a bush).
       const seen = g.canSee(b, o);
@@ -167,7 +170,7 @@ export class BotBrain {
       const recall = o === this.target && g.time - (this.seenAt || 0) < 2.5 && !(o.inBush && o.revealT <= 0);
       if (d > sight || !(seen || recall)) continue;
       if (H.camp && !provoked && o !== this.target && d > T.range * 0.8) continue; // campers wait for you to come close
-      const s = d + (o.hp / o.maxHp) * (4 + H.lowHp) - (o === this.target ? 2 : 0);
+      const s = d + (o.hp / o.maxHp) * (4 + H.lowHp) - (o === this.target ? 2 : 0) - (o === focus ? 4 : 0);
       if (s < bestS) { bestS = s; best = o; }
     }
     if (best !== this.target) { this.seen = 0; this.seenAt = g.time; if (best && best.human && Math.random() < 0.5) g.bark(b, 'spot'); } // memory starts with the new target
@@ -182,6 +185,18 @@ export class BotBrain {
       else this.setGoal(this.goal);
       return;
     }
+
+    // Duo: a knocked-out partner comes first (unless the gas is on its ghost or about to be)
+    const G = mate && !mate.alive ? g.ghostOf(mate) : null;
+    if (G && A.ring(A.toTile(G.x), A.toTile(G.z)) > P.level + (P.nextIn < 3 ? 1 : 0)) {
+      this.mode = 'revive';
+      if (Math.hypot(G.x - b.pos.x, G.z - b.pos.z) > 1.2) this.setGoal(new THREE.Vector3(G.x, 0, G.z));
+      else { this.path.length = 0; this.hasGoal = false; }
+      return;
+    }
+    // a ping from the partner (pings, hud): go there, unless a fight is on
+    const ping = this.ping && g.time - this.ping.t < 8 ? this.ping : null;
+    if (ping && !best && Math.hypot(ping.x - b.pos.x, ping.z - b.pos.z) > 2) { this.mode = 'ping'; this.setGoal(new THREE.Vector3(ping.x, 0, ping.z)); return; }
 
     if (best) {
       const d = best.pos.distanceTo(b.pos), hpF = b.hp / b.maxHp;
@@ -205,10 +220,17 @@ export class BotBrain {
         return;
       }
       const want = T.key === 'blaster' ? 4.5 : T.range * 0.7;
-      const clear = T.key === 'bomber' || A.los(b.pos.x, b.pos.z, best.pos.x, best.pos.z);
+      const clear = LOB.has(T.key) || A.los(b.pos.x, b.pos.z, best.pos.x, best.pos.z);
       if (d > want + 2 || !clear) { this.mode = 'chase'; this.setGoal(best.pos.clone()); }
       else { this.mode = 'strafe'; this.path.length = 0; this.hasGoal = false; }
       this.want = want;
+      return;
+    }
+
+    // Duo: stay within 6 m of the partner
+    if (mate && mate.alive && Math.hypot(mate.pos.x - b.pos.x, mate.pos.z - b.pos.z) > 6) {
+      this.mode = 'follow';
+      this.setGoal(mate.pos.clone());
       return;
     }
 
@@ -314,7 +336,7 @@ export class BotBrain {
       return;
     }
     for (const Z of g.combat.zones) {
-      if (Z.owner === b) continue;
+      if (Z.owner === b || Z.heal) continue; // (a heal puddle is nothing to run from)
       const dx = b.pos.x - Z.x, dz = b.pos.z - Z.z, d = Math.hypot(dx, dz);
       if (d < Z.r + 1 && d > 1e-3) { move.x += dx / d * 1.5; move.z += dz / d * 1.5; }
     }
@@ -348,6 +370,7 @@ export class BotBrain {
     if (T === 'frostbite') return near(this.b.pos, 4.5) >= 1;
     if (T === 'blaster') return d < 6;
     if (T === 'volt') return near(tgt.pos, 3) >= 2 || low;
+    if (T === 'kappa') return d < 8 && (near(tgt.pos, 3) >= 1 || low || this.b.inPoison);
     if (T === 'bomber') return low || tgt.inBush || !g.arena.los(this.b.pos.x, this.b.pos.z, tgt.pos.x, tgt.pos.z) || near(tgt.pos, 3.6) >= 2;
     return low || d < this.b.type.range * 0.6; // gunslinger: finisher or a sure hit
   }
@@ -368,6 +391,7 @@ export class BotBrain {
     else if (k === 'bomberB') { if (d < b.type.range && b.ammo >= 1) use = [ux, uz]; }
     else if (k === 'frostbiteB') { if (hurt && d > 3 && d < 9) use = [ux, uz]; }
     else if (k === 'voltB') { if (b.ammo < 1 && d < b.type.range) use = [ux, uz]; }
+    else if (k === 'kappaB') { const m = g.mateOf(b); if (b.hp < b.maxHp * 0.55 || (m && m.alive && m.hp < m.maxHp * 0.5 && m.pos.distanceTo(b.pos) < 2)) use = [ux, uz]; }
     if (use && Math.random() < 0.35 + this.skill * 0.5) g.useGadget(b, use[0], use[1], o.pos);
   }
 
@@ -378,7 +402,7 @@ export class BotBrain {
       const d = tgt.pos.distanceTo(b.pos);
       const range = T.key === 'blaster' ? 8.6 : T.range * 0.95;
       if (d > range || this.seen < 1.3 - this.skill * 1.0) return; // reaction time: ~1.2 s .. 0.3 s
-      if (T.key !== 'bomber' && !A.los(b.pos.x, b.pos.z, tgt.pos.x, tgt.pos.z)) return;
+      if (!LOB.has(T.key) && !A.los(b.pos.x, b.pos.z, tgt.pos.x, tgt.pos.z)) return;
       const travel = d / T.projSpeed;
       const lead = this.skill * this.skill * 1.0;                          // clumsy bots aim where you are
       const err = (0.5 * (1 - this.skill) ** 1.5 + 0.04) * gauss();      // radians: ~0.4 (clumsy) .. 0.05 (sharp)
@@ -387,7 +411,7 @@ export class BotBrain {
       const a = Math.atan2(dx, dz) + err, l = Math.hypot(dx, dz);
       dx = Math.sin(a) * l; dz = Math.cos(a) * l;
       const point = _v.set(b.pos.x + dx, 0, b.pos.z + dz);
-      const superRange = T.key === 'frostbite' ? 4.5 : range * 0.9;
+      const superRange = T.key === 'frostbite' ? 4.5 : T.key === 'kappa' ? 9 : range * 0.9;
       if (b.superCharge >= 1 && d < superRange && this.superGood(tgt, d) && Math.random() < 0.35 + this.skill * 0.5) {
         g.tryAttack(b, dx, dz, point, true);
       } else if (this.fireCd <= 0 && b.ammo >= 1) {
@@ -398,7 +422,7 @@ export class BotBrain {
       // opening grace: no crate shots that could hit someone standing in the way or next to it; spread
       // weapons (Blaster pellets, Frostbite's side shards) can miss the crate and fly on to full range
       if (g.time < this.graceUntil && g.brawlers.some(o => o !== b && o.alive && (segDist(o.pos, b.pos, cp) < 2.4 || inFan(b, cp, o)))) return;
-      if (d < T.range * 0.9 && (T.key === 'bomber' || A.los(b.pos.x, b.pos.z, cp.x, cp.z, 1.1))) {
+      if (d < T.range * 0.9 && (LOB.has(T.key) || A.los(b.pos.x, b.pos.z, cp.x, cp.z, 1.1))) {
         if (g.tryAttack(b, cp.x - b.pos.x, cp.z - b.pos.z, cp, false)) this.fireCd = 0.5 + Math.random() * 0.5;
       }
     }

@@ -635,5 +635,47 @@
   "shop.gemsSoon": "YAKINDA",
   "menu.locked2": "BU SAVAŞÇIYI AÇ",
   "menu.unlockFirst": "Çevrimiçi ya da tekli oynamak için bu savaşçının kilidini aç",
-  "menu.tryDojo": "Antrenmanda ücretsiz dene"
+  "menu.tryDojo": "Antrenmanda ücretsiz dene",
+  "menu.duo": "İKİLİ",
+  "menu.duoDesc": "2 kişilik 4 takım · ortağını dirilt",
+  "menu.modeLbl": "Mod",
+  "hud.teamsLeft": "KALAN TAKIM",
+  "hud.revived": "DİRİLTİLDİ!",
+  "hud.reviving": "Diriltiliyor… %{n}",
+  "hud.ghost": "Nakavt · dirilmek için {n} sn",
+  "hud.mateOut": "Elendi",
+  "hud.youGhost": "Nakavt oldun! Ortağının seni diriltmek için {n} sn'si var",
+  "hud.beingRevived": "Ortağın seni diriltiyor… %{n}",
+  "hud.revivesLeft": {
+    "one": "{n} diriltme hakkı kaldı",
+    "other": "{n} diriltme hakkı kaldı"
+  },
+  "result.wonDuo": "Sen ve ortağın ayakta kalan son takımsınız.",
+  "result.lostDuo": {
+    "one": "Takımın elendi. {n} takım sizden uzun dayandı.",
+    "other": "Takımın elendi. {n} takım sizden uzun dayandı."
+  },
+  "party.queue": "BİRLİKTE MAÇ ARA",
+  "party.tooMany": "Birlikte maç aramak için çok fazla oyuncu: bu modda en fazla {n}.",
+  "party.name": {
+    "one": "{n} kişilik grup",
+    "other": "{n} kişilik grup"
+  },
+  "opt.act.ping": "İşaret (İkili)",
+  "bark.hunter.thanks": "Ava geri dönüyorum. Sağ ol!",
+  "bark.camper.thanks": "Oh be. Çalıma geri dönüyorum.",
+  "bark.looter.thanks": "Sana bir küp borçluyum!",
+  "bark.vulture.thanks": "Sağ ol. Şimdi, kim zayıf?",
+  "bark.coward.thanks": "Benim için mi geri döndün?!",
+  "bark.showoff.thanks": "Yüzyılın dönüşü!",
+  "brawler.kappa.role": "Şifacı",
+  "brawler.kappa.desc": "Duvarların üstünden sabun köpüğü fırlatan buyurgan bir nehir cini hemşire: düşmanlara çarpan sıçrama onu iyileştirir, İkili'de ortağını da iyileştirir. Süper: düşmanları süpürüp gazı ikiye ayıran dev bir dalga.",
+  "gad.kappaA.name": "Nehir Dalışı",
+  "gad.kappaA.desc": "5 m dal (sudan 8 m), bir anlığına dokunulmaz ol.",
+  "gad.kappaB.name": "Tas Sıçratma",
+  "gad.kappaB.desc": "Başındaki tası boşalt: bir birikinti seni ve ortağını 3 sn boyunca saniyede 400 iyileştirir, sonra 4 sn daha yavaş yürürsün.",
+  "star.hydrotherapy.name": "Hidroterapi",
+  "star.hydrotherapy.desc": "İyileştirmelerin %30 daha güçlü.",
+  "star.undertow.name": "Dip Akıntısı",
+  "star.undertow.desc": "Dev Dalga düşmanları itmek yerine sana doğru çeker."
 }

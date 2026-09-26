@@ -17,6 +17,8 @@ import { PERSONAS } from './ai.js';
 import { ArenaEvents } from './events.js';
 import { validMutator } from './mutators.js';
 
+// Pings (v0.14): what the icon says follows what is under your aim.
+export const PING_ICONS = { go: '📍', attack: '⚔️', loot: '💎', danger: '⚠️' };
 const NAMES = ['Bolt', 'Nova', 'Rex', 'Juno', 'Pix', 'Kai', 'Moxie', 'Zed', 'Luna', 'Taro', 'Fizz', 'Oona', 'Brick', 'Echo'];
 const TYPE_KEYS = Object.keys(TYPES);
 const GREEN = new THREE.Color(0.6, 4, 1.2);
@@ -27,7 +29,9 @@ const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.f
 // Who plays where: humans first, bots fill up to 8. The host builds this and sends it to
 // every client so all browsers create the same brawlers on the same spawns.
 // level (0..1, see skill.js): the bots' skill is a mix around it, some weaker, some sharper.
-export function makeRoster(humans = [], { level = 0.45 } = {}) {
+// duo: 4 teams of 2 (team 0..3). Humans with the same `party` share a team, other humans are
+// paired together, bots fill the rest.
+export function makeRoster(humans = [], { level = 0.45, duo = false } = {}) {
   const spawns = shuffle([0, 1, 2, 3, 4, 5, 6, 7]);
   const names = shuffle(NAMES.slice());
   const roster = humans.slice(0, 8).map((h, k) => ({ id: h.id, name: h.name, type: h.type, lo: h.lo, cos: validCos(h.cos) ? h.cos : undefined, human: true, spawn: spawns[k], plat: h.plat }));
@@ -39,6 +43,15 @@ export function makeRoster(humans = [], { level = 0.45 } = {}) {
     const cos = `${Math.random() < 0.4 ? 1 + Math.floor(Math.random() * 2) : 0}.${Math.random() < 0.25 ? 1 + Math.floor(Math.random() * 5) : 0}.${Math.random() < 0.3 ? 1 + Math.floor(Math.random() * 5) : 0}.0.0.${5 + Math.floor(Math.random() * 20)}`;
     const per = PERSONAS[Math.floor(Math.random() * PERSONAS.length)]; // a character (ai.js): hunter, camper...
     roster.push({ id: 'bot' + k, name: names[k], type: TYPE_KEYS[Math.floor(Math.random() * TYPE_KEYS.length)], lo, cos, per, human: false, spawn: spawns[k], skill });
+  }
+  if (duo) {
+    const groups = new Map();
+    humans.slice(0, 8).forEach((h, k) => { const key = h.party ? 'p:' + h.party : roster[k].id; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(roster[k]); });
+    const units = [];
+    for (const g of groups.values()) for (let k = 0; k < g.length; k += 2) units.push(g.slice(k, k + 2)); // a party is 2 at most
+    units.sort((a, b) => b.length - a.length); // parties first (a whole team each), then solo humans
+    const order = [...units.flat(), ...roster.filter(r => !r.human)], teams = shuffle([0, 1, 2, 3]);
+    order.forEach((r, k) => { r.team = teams[k >> 1]; r.spawn = r.team; });
   }
   return roster;
 }
@@ -147,7 +160,11 @@ export class Game {
     this.dojo = dojo;
     this.dojoLog = [];
     const M = this.mutator = real && !dojo && validMutator(mutator) ? mutator : null;
-    this.poison = new Poison(this, dojo ? { startAt: 1e9 } : real ? (M === 'gasBreath' ? { startAt: 16, interval: 4.5 } : {}) : { startAt: 18, interval: 6 });
+    roster = roster || makeRoster([]);
+    // Duo Showdown (v0.14): 4 teams of 2, from the roster's teams. The gas waits a little longer
+    // (35 s, then a ring every 8 s) so partners can regroup.
+    this.duo = real && !dojo && roster.some(r => Number.isInteger(r.team));
+    this.poison = new Poison(this, dojo ? { startAt: 1e9 } : real ? (M === 'gasBreath' ? { startAt: 16, interval: 4.5 } : this.duo ? { startAt: 35, interval: 8 } : {}) : { startAt: 18, interval: 6 });
     this.visionRadius = MAPS[this.mapKey].vision || 0;
     // How far anyone sees (fog maps use their fog wall instead); the sandstorm cuts it shorter.
     this.sightRange = this.visionRadius ? 0 : MAPS[this.mapKey].weather === 'sandstorm' ? 11 : 14;
@@ -156,8 +173,12 @@ export class Game {
     this.nightOverride(M === 'nightHunt');
     this.gadgetLockout = M === 'gadgetFrenzy' ? 2 : GADGET_LOCKOUT;
     this.rainT = 12;
-    roster = roster || makeRoster([]);
     this.player = null;
+    this.corners = null;
+    for (const G of [...(this.ghosts || [])]) this.removeGhost(G);
+    this.ghosts = [];                 // Buddy Revive: KO'd partners waiting to be brought back
+    this.revives = [2, 2, 2, 2];      // revives left per team
+    this.pingSeq = 0; this.pingAt = null;
     for (const r of roster) {
       const isPlayer = r.id === localId;
       // loadout: r.lo ('B2' = gadget B, star power 2), or inside the type ('volt:B2', solo)
@@ -170,7 +191,9 @@ export class Game {
       if (!r.human && PERSONAS.includes(r.per)) b.persona = r.per;
       b.setHuman(!!r.human);
       if (r.skill !== undefined) b.skill = r.skill;
-      b.pos.copy(this.arena.spawns[r.spawn % this.arena.spawns.length]);
+      b.team = this.duo ? r.team & 3 : -1;
+      if (this.duo) this.teamSpawn(b);
+      else b.pos.copy(this.arena.spawns[r.spawn % this.arena.spawns.length]);
       b.net.set(b.pos.x, b.pos.z);
       b.facing = Math.atan2(-b.pos.x, -b.pos.z);
       this.brawlers.push(b);
@@ -180,6 +203,7 @@ export class Game {
       // Positions of everything we do not simulate come from the network.
       if (net && !isPlayer && (net.role === 'client' || r.human)) b.netDriven = true;
     }
+    if (this.duo) for (const b of this.brawlers) b.teamColors(); // partners in their own colour
     this.mode = real ? 'play' : 'attract';
     this.fixSeen = 0;
     this.state = 'playing';
@@ -201,14 +225,210 @@ export class Game {
     this.gadgetSeq = 0;
     this.emoteSeq = 0;
     this.hud.setup(this.brawlers, this.player);
+    this.hud.setupTeam?.(this);
+    this.hud.setLeftLabel?.(this.duo);
     this.hud.setMutator(M);
     this.later = []; // [time, fn]: bots' delayed emotes, forgotten with the match
     this.aim.visible = this.aimTarget.visible = !!this.player;
+    this.buildTether();
   }
 
   // Solo and host run the rules; a client only mirrors what the host tells it.
   get authority() { return !this.net || this.net.role === 'host'; }
+
+  /* ------------------------------ Duo (v0.14) ------------------------------ */
+
+  // Partners: no friendly fire, their shots fly through each other.
+  ally(a, b) { return !!(this.duo && a && b && a !== b && a.team === b.team); }
+  // Can `owner`'s attack hurt o? (owner null: the gas, arena events)
+  hits(owner, o) { return o !== owner && this.hittable(o) && !this.ally(owner, o); }
+  mateOf(b) { return this.duo && b ? this.brawlers.find(o => o !== b && o.team === b.team) || null : null; }
+  // Teams with someone still standing, other than `except`.
+  teamsUp(except = -1) { return new Set(this.brawlers.filter(o => o.alive && o.team !== except).map(o => o.team)).size; }
+
+  // A team starts in one of the 4 corner spawns, the partners side by side.
+  teamSpawn(b) {
+    const A = this.arena;
+    const C = this.corners || (this.corners = [...A.spawns].sort((p, q) => (q.x * q.x + q.z * q.z) - (p.x * p.x + p.z * p.z)).slice(0, 4));
+    const c = C[b.team % C.length], first = !this.brawlers.some(o => o.team === b.team);
+    const l = Math.hypot(c.x, c.z) || 1, dx = -c.x / l, dz = -c.z / l; // toward the middle
+    b.pos.set(c.x + dx * 0.6 + dz * (first ? -0.9 : 0.9), 0, c.z + dz * 0.6 - dx * (first ? -0.9 : 0.9));
+    A.collideCircle(b.pos, b.radius);
+  }
+
+  // Your partner sees for you (bushes included): what either of you sees shows on your screen.
+  teamSees(viewer, b) {
+    if (this.canSee(viewer, b)) return true;
+    const m = this.mateOf(viewer);
+    return !!(m && m.alive && m !== b && this.canSee(m, b));
+  }
+
+  // Buddy Revive: a KO'd partner leaves a ghost for 15 s where it fell. The partner standing within
+  // 2.5 m for 3 s in all (the count pauses while the reviver is being hit) brings it back at 40%
+  // health with no cubes. The gas reaching the ghost ends it. 2 revives per team per match.
+  addGhost(b) {
+    const x = b.pos.x, z = b.pos.z, mine = !this.player || b === this.player || this.ally(b, this.player);
+    const col = mine ? new THREE.Color(0.7, 2.4, 2.8) : new THREE.Color(2.4, 0.9, 0.8), grp = new THREE.Group(); // bright: it glows through fog and bloom
+    const mat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.5, depthWrite: false });
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.7, 4, 12), mat);
+    body.position.y = 1.5;
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.06, 8, 28), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 2, 0.6) }));
+    halo.rotation.x = Math.PI / 2;
+    halo.position.y = 2.45;
+    const rim = new THREE.Mesh(new THREE.RingGeometry(2.3, 2.5, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.25, depthWrite: false }));
+    const fill = new THREE.Mesh(new THREE.RingGeometry(2.25, 2.55, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.6, 3, 1.4), transparent: true, opacity: 0.9, depthWrite: false }));
+    rim.position.y = fill.position.y = 0.07;
+    fill.geometry.setDrawRange(0, 0);
+    grp.add(body, halo, rim, fill);
+    grp.position.set(x, 0, z);
+    this.fx.add(grp);
+    this.ghosts.push({ b, x, z, t: 15, p: 0, sent: 0, grp, body, halo, fill, mats: [mat, halo.material, rim.material, fill.material] });
+    if (this.player && mine) sfx('ghost', b === this.player ? 0.8 : 1);
+  }
+
+  removeGhost(G) {
+    this.fx.remove(G.grp);
+    G.grp.traverse(o => { if (o.isMesh) o.geometry.dispose(); });
+    for (const m of G.mats) m.dispose();
+    const k = this.ghosts ? this.ghosts.indexOf(G) : -1;
+    if (k >= 0) this.ghosts.splice(k, 1);
+  }
+
+  ghostOf(b) { return this.ghosts.find(G => G.b === b) || null; }
+
+  updateGhosts(dt) {
+    const P = this.player;
+    for (let k = this.ghosts.length - 1; k >= 0; k--) {
+      const G = this.ghosts[k], mate = this.mateOf(G.b);
+      G.t -= dt;
+      if (this.ended) { this.removeGhost(G); continue; }
+      if (this.authority) {
+        if (G.t <= 0 || !mate || !mate.alive || this.poison.isPoisonedAt(G.x, G.z)) {
+          this.ev({ e: 'gone', id: G.b.id });
+          this.removeGhost(G);
+          continue;
+        }
+        if (Math.hypot(mate.pos.x - G.x, mate.pos.z - G.z) < 2.5 && this.time - mate.lastHurt > 0.5) G.p += dt;
+        if (G.p >= 3) { this.revive(G); continue; }
+        if (G.p - G.sent >= 0.25) { G.sent = G.p; this.evTeam(G.b.team, { e: 'rv', id: G.b.id, p: r2(G.p) }); }
+      }
+      // what shows: the ghost bobs, its halo spins, the ring fills; enemies only see it in their sight
+      const mine = !P || G.b === P || this.ally(G.b, P);
+      const d = P ? Math.hypot(P.pos.x - G.x, P.pos.z - G.z) : 0;
+      G.grp.visible = mine || (P.alive && d < (this.sightRange || this.visionRadius || 14) && this.inSight(P.pos, G));
+      G.body.position.y = 1.5 + Math.sin(this.time * 2.6) * 0.12;
+      G.halo.rotation.z += dt * 2;
+      G.mats[0].opacity = G.t < 4 ? 0.2 + 0.3 * (Math.sin(this.time * 14) > 0 ? 1 : 0) : 0.5; // flickers in its last seconds
+      G.fill.geometry.setDrawRange(0, 6 * Math.floor(Math.min(1, G.p / 3) * 48));
+    }
+  }
+
+  // G: the ghost, or null (a client that was never shown that enemy's ghost: it revives where it is,
+  // hidden until the next snapshot shows it).
+  revive(G, b = G.b) {
+    const P = this.player, mine = !P || b === P || this.ally(b, P), seen = mine || !!(G && G.grp.visible);
+    const x = G ? G.x : b.pos.x, z = G ? G.z : b.pos.z;
+    if (G) this.removeGhost(G);
+    this.revives[b.team] = Math.max(0, this.revives[b.team] - 1);
+    this.ev({ e: 'revive', id: b.id });
+    b.revive(x, z);
+    b.rank = 0;
+    if (b.netDriven) b.remoteIn = null; // no fire button still held from before the knock-out
+    if (seen) { // nothing lights up where an enemy you cannot see gets back up
+      this.effects.ring(x, z, 2.4, new THREE.Color(0.6, 3, 1.4), 0.6);
+      this.effects.sparkBurst(x, 1.2, z, new THREE.Color(0.8, 3, 1.6), 30, 7, 0.6);
+      sfx('revive', mine ? 1 : this.volumeAt(x, z));
+      this.hud.floater(this.camera, x, 3.4, z, t('hud.revived'), 'power');
+    }
+    if (b === P) { this.state = 'playing'; this.resultT = -1; this.camTarget = b; this.aim.visible = true; }
+    if (b.persona) this.later.push([this.time + 0.6, () => this.bark(b, 'thanks')]);
+  }
+
+  // Tether: a soft ribbon on the ground between you and your partner (green close, amber past 6 m).
+  buildTether() {
+    if (!this.tether) {
+      const geo = new THREE.PlaneGeometry(1, 0.14).rotateX(-Math.PI / 2);
+      this.tether = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x2fd36b, transparent: true, opacity: 0.35, depthWrite: false }));
+      this.tether.renderOrder = 1;
+      this.fx.add(this.tether);
+    }
+    this.tether.visible = false;
+  }
+  updateTether() {
+    const P = this.player, m = this.mateOf(P), T = this.tether;
+    const on = !!(this.duo && P && P.alive && m && m.alive && m.visibleToPlayer && !this.ended);
+    T.visible = on;
+    if (!on) return;
+    const dx = m.pos.x - P.pos.x, dz = m.pos.z - P.pos.z, d = Math.hypot(dx, dz);
+    if (d < 1.4) { T.visible = false; return; }
+    T.position.set((P.pos.x + m.pos.x) / 2, 0.05, (P.pos.z + m.pos.z) / 2);
+    T.rotation.y = Math.atan2(-dz, dx);
+    T.scale.set(d - 1.2, 1, 1);
+    T.material.color.set(d > 6 ? 0xffc23a : 0x2fd36b);
+    T.material.opacity = 0.2 + 0.15 * Math.min(1, d / 6);
+  }
+
+  // Pings (v0.14, S03): a marker where you aim, for your partner only (Duo). Its icon follows what is
+  // there: an enemy you (or your partner) can see, loot (a cube or a crate), the gas, or "go here".
+  // Nothing about an enemy nobody sees: a ping on a bush you suspect is just "go here".
+  localPing() {
+    const P = this.player;
+    if (!this.duo || !P || !P.alive || this.mode !== 'play' || this.ended || this.time < (P.pingUntil || 0)) return;
+    P.pingUntil = this.time + 1;
+    const x = this.aimPoint.x, z = this.aimPoint.z;
+    if (this.authority) this.ping(P, x, z);
+    else { this.pingSeq++; this.pingAt = [r2(x), r2(z)]; }
+  }
+
+  pingKind(b, x, z) {
+    for (const o of this.brawlers) if (o.alive && !this.ally(o, b) && o !== b && Math.hypot(o.pos.x - x, o.pos.z - z) < 2.5 && this.teamSees(b, o)) return 'attack';
+    if (this.items.some(it => Math.hypot(it.x - x, it.z - z) < 2)) return 'loot';
+    const A = this.arena, i = A.toTile(x), j = A.toTile(z);
+    if (A.get(i, j) === 'C') return 'loot';
+    const P = this.poison, closing = P.level > 0 || P.nextIn < 8; // the next ring of gas, once it is coming
+    if (P.isPoisonedAt(x, z) || (closing && A.ring(i, j) <= P.level + 1)) return 'danger';
+    return 'go';
+  }
+
+  // Authority: one ping a second per player; the partner's screen (and its bot brain) gets it.
+  ping(b, x, z) {
+    if (!b || !b.alive || !this.duo || !Number.isFinite(x) || !Number.isFinite(z) || this.time < (b.pingOk || 0) - (b.netDriven ? 0.3 : 0)) return;
+    b.pingOk = this.time + 1;
+    const lim = HALF - 0.5, k0 = { x: THREE.MathUtils.clamp(x, -lim, lim), z: THREE.MathUtils.clamp(z, -lim, lim) };
+    const k = this.pingKind(b, k0.x, k0.z), e = { e: 'ping', id: b.id, k, x: r2(k0.x), z: r2(k0.z) };
+    const mate = this.mateOf(b);
+    this.evTeam(b.team, e); // the team only
+    this.pingFx(b, k, e.x, e.z);
+    const brain = mate && this.brains.get(mate);
+    if (brain && k !== 'danger') brain.ping = { x: e.x, z: e.z, t: this.time };
+  }
+
+  pingFx(b, k, x, z) {
+    const P = this.player;
+    if (!P || !(b === P || this.ally(b, P)) || !PING_ICONS[k]) return;
+    this.effects.ring(x, z, 1.4, k === 'danger' ? new THREE.Color(3, 1.6, 0.2) : k === 'attack' ? new THREE.Color(3, 0.6, 0.5) : new THREE.Color(0.6, 2.6, 3), 0.9);
+    this.hud.ping(x, z, PING_ICONS[k], b === P ? 'mine' : 'mate', k);
+    sfx('ping', b === P ? 0.6 : 1);
+  }
+
+  // Duo: after a knock-out. The whole team out: its placement for both, the partner's ghost goes.
+  duoKo(b, ghost) {
+    const mate = this.mateOf(b), P = this.player;
+    if (b.rank && mate) { mate.rank = b.rank; const G = this.ghostOf(mate); if (G) this.removeGhost(G); }
+    if (ghost && (this.authority || !P || b === P || this.ally(b, P))) this.addGhost(b);
+    if (P && b.rank && (b === P || this.ally(b, P))) { this.state = 'over'; this.resultT = 1.6; }
+    if (b === P && !b.rank && mate && mate.alive) this.camTarget = mate; // watch your partner
+  }
+
   ev(e) { if (this.net && this.net.role === 'host') this.outbox.push(e); }
+  // An event only one Duo team's players get (pings, revive progress: nothing for the others to
+  // learn where a hidden enemy is). Without per-player sends (Steam P2P), everyone gets it.
+  evTeam(team, e) {
+    const N = this.net;
+    if (!N || N.role !== 'host') return;
+    if (!N.sendTo) { this.ev(e); return; }
+    for (const o of this.brawlers) if (o.team === team && o.human && o !== this.player) N.sendTo(o.id, { t: 'ev', list: [e] });
+  }
 
   /* ------------------------------ helpers ------------------------------ */
 
@@ -244,8 +464,8 @@ export class Game {
 
   // Whose eyes the screen shows: you, or on fog maps whoever the camera follows once you are out.
   get sightViewer() {
-    const P = this.player;
-    return P && P.alive ? P : (this.visionRadius ? this.camTarget : null);
+    const P = this.player, m = this.mateOf(P);
+    return P && P.alive ? P : m && m.alive ? m : (this.visionRadius ? this.camTarget : null);
   }
 
   // Where the fog wall is centred: you, or whoever the camera follows once you are out.
@@ -291,6 +511,7 @@ export class Game {
   damage(target, amount, source, fromSuper = false) {
     if (!target.alive || !this.authority) return;
     if (this.shielded && source && source !== target) return;
+    if (this.ally(source, target)) return; // Duo: no friendly fire
     if (target.ghostT > 0 && source !== target) return; // Tail Roll
     if (this.mode === 'attract' && target === this.star && amount >= target.hp) amount = Math.max(0, target.hp - 1); // the menu's star
     if (this.dojo) { // dummies never fall: one that would, fills back up
@@ -302,6 +523,7 @@ export class Game {
     amount = Math.round(amount);
     target.hp -= amount;
     target.lastHurt = this.time;
+    if (source && source !== target) { source.hitWho = target; source.hitAt = this.time; } // a bot partner joins in (ai.js)
     if (source && source !== target && !fromSuper) {
       const before = source.superCharge;
       source.superCharge = Math.min(1, source.superCharge + amount / source.type.superCost * (this.mutator === 'superRush' ? 2 : 1));
@@ -336,6 +558,22 @@ export class Game {
     }
   }
 
+  // Healing (Nurse Kappa, v0.14), on the authority; clients get a 'heal' event.
+  heal(b, amount) {
+    if (!this.authority || !b.alive || b.hp >= b.maxHp) return;
+    const a = Math.round(Math.min(amount, b.maxHp - b.hp));
+    if (a <= 0) return;
+    b.hp += a;
+    this.ev({ e: 'heal', id: b.id, a });
+    this.healFx(b, a);
+  }
+  healFx(b, a) {
+    b.stats.healed = (b.stats.healed || 0) + a;
+    if (!this.fxVisible(b)) return;
+    this.hud.floater(this.camera, b.pos.x, 2.9, b.pos.z, '+' + a, 'heal', 'heal>' + b.id);
+    this.effects.sparkBurst(b.pos.x, 1.4, b.pos.z, new THREE.Color(0.8, 3.2, 1.4), 8, 3, 0.5, 0.14);
+  }
+
   // Under 30% health: red pulsing edges (hud.js), a heartbeat (faster under 15%), muffled music.
   lowHealth(dt) {
     const P = this.player, f = P && P.alive && this.mode === 'play' && !this.ended ? P.hp / P.maxHp : 1;
@@ -353,19 +591,24 @@ export class Game {
 
   kill(b, killer, bySuper = false) {
     if (!b.alive) return;
-    b.rank = this.brawlers.filter(o => o.alive && o !== b).length + 1;
+    let ghost = false;
+    if (this.duo) { // placement per team (1..4), known once both partners are out
+      const mate = this.mateOf(b), up = !!(mate && mate.alive);
+      ghost = up && this.revives[b.team] > 0 && !this.ended;
+      b.rank = up ? 0 : this.teamsUp(b.team) + 1;
+    } else b.rank = this.brawlers.filter(o => o.alive && o !== b).length + 1;
     const bounty = b === this.crown && killer && killer !== b; // knocking out the crown pays 2 extra cubes
     const n = Math.max(1, b.cubes) + (bounty ? 2 : 0), x = b.pos.x, z = b.pos.z;
     if (bounty && killer === this.player) this.hud.floater(this.camera, x, 3.4, z, t('hud.bounty'), 'power');
-    this.killFx(b, killer, bySuper);
+    this.killFx(b, killer, bySuper, ghost);
     if (!this.authority) return;
     for (let k = 0; k < n; k++) this.dropCube(x, z, k, n);
-    this.ev({ e: 'kill', id: b.id, by: killer ? killer.id : null, rank: b.rank, sup: bySuper ? 1 : 0 });
+    this.ev({ e: 'kill', id: b.id, by: killer ? killer.id : null, rank: b.rank, sup: bySuper ? 1 : 0, gh: ghost ? 1 : 0 });
     if (killer && killer !== b) this.brains.get(killer)?.onKo(b);
     this.checkEnd();
   }
 
-  killFx(b, killer, bySuper = false) {
+  killFx(b, killer, bySuper = false, ghost = false) {
     const seen = this.fxVisible(b);
     b.alive = false;
     b.hp = 0;
@@ -398,26 +641,35 @@ export class Game {
     if (this.player) this.hud.killFeed(killer && killer !== b ? killer : null, b, this.player, bySuper);
     if (this.camTarget === b && killer && killer.alive) this.camTarget = killer;
     if (killer && killer === this.player && b !== killer && this.onFeat) { this.onFeat('ko'); if (bySuper) this.onFeat('superko'); }
-    if (b === this.player) { this.state = 'over'; this.resultT = 1.6; }
+    if (this.duo) this.duoKo(b, ghost);
+    else if (b === this.player) { this.state = 'over'; this.resultT = 1.6; }
   }
 
-  // Last one standing wins. Online, the match also ends once no human is left alive.
+  // Last one (Duo: last team) standing wins. Online, the match also ends once no human is left in it.
   checkEnd() {
     if (this.ended) return;
     const alive = this.brawlers.filter(o => o.alive);
-    if (alive.length === 1) {
+    if (this.duo ? alive.length && this.teamsUp() === 1 : alive.length === 1) {
       this.ended = true;
       const w = alive[0];
-      w.rank = 1;
-      w.win();
+      this.winners(w);
       if (this.mode === 'play') { this.feel.finalKo(!this.net); if (this.player) sfx('sting_finalko'); } // slow motion offline only: online the rules keep real time
       this.ev({ e: 'win', id: w.id });
       if (w.persona) { w.barkUntil = 0; this.bark(w, 'win'); }
-      if (w === this.player) { this.state = 'over'; this.resultT = 1.2; }
+      if (w === this.player || this.ally(w, this.player)) { this.state = 'over'; this.resultT = 1.2; }
       if (this.net) this.endT = 5;
-    } else if (this.net && !alive.some(o => o.human)) {
+    } else if (this.net && !this.brawlers.some(o => o.human && (o.alive || this.mateOf(o)?.alive))) { // Duo: a human whose partner stands still plays
       this.ended = true;
       this.endT = 3;
+    }
+  }
+
+  // The winner (and in Duo its partner, even knocked out): first place, the standing ones dance.
+  winners(w) {
+    for (const o of this.brawlers) {
+      if (o !== w && !this.ally(o, w)) continue;
+      o.rank = 1;
+      if (o.alive) o.win();
     }
   }
 
@@ -657,7 +909,8 @@ export class Game {
     const gx = num(m.gx, 0), gz = num(m.gz, 0), gl = Math.hypot(gx, gz);
     b.remoteIn = { ax, az, px, pz, f: m.f ? 1 : 0, s: Math.max(0, Math.min(1e6, Math.floor(num(m.s, 0)))),
       g: Math.max(0, Math.min(1e6, Math.floor(num(m.g, 0)))), gx: gl > 1e-6 ? gx / gl : ax, gz: gl > 1e-6 ? gz / gl : az,
-      em: Math.max(0, Math.min(1e6, Math.floor(num(m.em, 0)))), ei: Math.floor(num(m.ei, -1)) };
+      em: Math.max(0, Math.min(1e6, Math.floor(num(m.em, 0)))), ei: Math.floor(num(m.ei, -1)),
+      pg: Math.max(0, Math.min(1e6, Math.floor(num(m.pg, 0)))), qx: num(m.qx, NaN), qz: num(m.qz, NaN) };
     if (b.alive) this.checkMove(b, num(m.x, b.net.x), num(m.z, b.net.y), now);
   }
 
@@ -682,7 +935,7 @@ export class Game {
     const b = this.byId.get(id);
     if (!b || !this.authority || b.human || !b.alive) return;
     b.setHuman(true); b.netDriven = true; b.guard = null; b.remoteIn = null;
-    b.gadgetSeen = 0; b.superSeen = 0; b.emoteSeen = 0; // a rejoining client counts from 0 again
+    b.gadgetSeen = 0; b.superSeen = 0; b.emoteSeen = 0; b.pingSeen = 0; // a rejoining client counts from 0 again
     b.net.set(b.pos.x, b.pos.z);
     this.brains.delete(b);
   }
@@ -713,7 +966,8 @@ export class Game {
           // players spectate and get everything.
           for (const v of this.brawlers) {
             if (!v.human || v === this.player) continue;
-            const seen = v.alive ? alive.filter(b => b === v || this.canSee(v, b)) : alive;
+            const eye = v.alive ? v : this.duo && this.mateOf(v)?.alive ? this.mateOf(v) : null;
+            const seen = eye ? alive.filter(b => b === eye || this.ally(eye, b) || this.teamSees(eye, b)) : alive;
             const g = v.guard;
             N.sendTo(v.id, { t: 'snap', pt, b: seen.map(row), me: v.alive ? [r2(v.net.x), r2(v.net.y), g ? g.fix : 0] : undefined });
           }
@@ -724,7 +978,8 @@ export class Game {
       const p = this.player, i = this.localIn || {};
       N.send({ t: 'in', x: r2(p.pos.x), z: r2(p.pos.z), ax: r2(this.aimDir.x), az: r2(this.aimDir.z),
         px: r2(this.aimPoint.x), pz: r2(this.aimPoint.z), f: i.f ? 1 : 0, s: this.superSeq, g: this.gadgetSeq,
-        gx: r2(this.gadgetDir.x), gz: r2(this.gadgetDir.z), em: this.emoteSeq, ei: this.emoteIdx });
+        gx: r2(this.gadgetDir.x), gz: r2(this.gadgetDir.z), em: this.emoteSeq, ei: this.emoteIdx,
+        ...(this.pingAt ? { pg: this.pingSeq, qx: this.pingAt[0], qz: this.pingAt[1] } : {}) });
     }
   }
 
@@ -735,6 +990,7 @@ export class Game {
     const seen = new Set();
     for (const [id, x, z, f, hp, maxHp, ammo, sup, cubes, flags] of m.b) {
       const b = this.byId.get(id);
+      if (b && !b.alive && this.duo && !this.ended) { b.pos.set(x, 0, z); this.revive(this.ghostOf(b), b); b.netHidden = true; }
       if (!b || !b.alive) continue;
       seen.add(b);
       b.hp = hp; b.maxHp = maxHp; b.ammo = ammo; b.superCharge = sup; b.cubes = cubes;
@@ -780,12 +1036,17 @@ export class Game {
         case 'kill':
           if (!b) break;
           b.rank = e.rank;
-          if (b.alive) this.killFx(b, this.byId.get(e.by), !!e.sup);
+          if (b.alive) this.killFx(b, this.byId.get(e.by), !!e.sup, !!e.gh);
           break;
         case 'win':
           this.ended = true;
-          if (b) { b.rank = 1; b.win(); if (!this.feel.orbitWant) sfx('sting_finalko'); this.feel.finalKo(false); if (b === this.player) { this.state = 'over'; this.resultT = 1.2; } }
+          if (b) { this.winners(b); if (!this.feel.orbitWant) sfx('sting_finalko'); this.feel.finalKo(false); if (b === this.player || this.ally(b, this.player)) { this.state = 'over'; this.resultT = 1.2; } }
           break;
+        case 'heal': if (b && b.alive && Number.isFinite(e.a)) { b.hp = Math.min(b.maxHp, b.hp + e.a); this.healFx(b, e.a); } break;
+        case 'rv': { const G = this.ghostOf(b); if (G && Number.isFinite(e.p)) G.p = e.p; break; }
+        case 'ping': if (b && Number.isFinite(e.x) && Number.isFinite(e.z)) this.pingFx(b, e.k, e.x, e.z); break;
+        case 'gone': { const G = this.ghostOf(b); if (G) this.removeGhost(G); break; }
+        case 'revive': if (b && !b.alive) this.revive(this.ghostOf(b), b); break;
         case 'knock': if (b === this.player) b.knock.set(e.x, 0, e.z); break;
         case 'imm': if (b && b.visibleToPlayer) this.hud.floater(this.camera, b.pos.x, 3.1, b.pos.z, t('hud.immune'), 'immune'); break;
         case 'gad':
@@ -854,6 +1115,7 @@ export class Game {
     this.combat.update(dt);
     this.poison.update(dt, t);
     if (this.authority) this.poisonDamage(dt);
+    if (this.duo) this.updateGhosts(dt);
     this.updateItems(dt, t);
     this.updateCrown(t);
     this.updateDrops(dt);
@@ -862,6 +1124,7 @@ export class Game {
     for (let k = this.later.length - 1; k >= 0; k--) if (this.time >= this.later[k][0]) this.later.splice(k, 1)[0][1]();
     if (this.dojo) this.updateDojo();
     this.updateVisibility();
+    if (this.tether) this.updateTether();
     this.updateFoliage(dt);
     if (P && P.alive) this.updateAim();
 
@@ -890,6 +1153,10 @@ export class Game {
       if (I.f) this.tryAttack(b, I.ax, I.az, _v, false);
       if (I.s > (b.superSeen || 0)) { b.superSeen = I.s; this.tryAttack(b, I.ax, I.az, _v, true); }
       if (I.em > (b.emoteSeen || 0)) { b.emoteSeen = I.em; this.emote(b, I.ei); }
+      if (I.pg > (b.pingSeen || 0)) { // a ping, within 20 m of its sender
+        b.pingSeen = I.pg;
+        if (Math.hypot(I.qx - b.pos.x, I.qz - b.pos.z) < 20) this.ping(b, I.qx, I.qz);
+      }
       if (I.g > (b.gadgetSeen || 0)) {
         b.gadgetSeen = I.g;
         const G = GADGETS[b.type.key + b.gadget];
@@ -1058,7 +1325,7 @@ export class Game {
   chargeContact(b) {
     if (b.chargeHit) return;
     for (const o of this.brawlers) {
-      if (o === b || !this.hittable(o) || Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z) > b.radius + o.radius + 0.35) continue;
+      if (!this.hits(b, o) || Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z) > b.radius + o.radius + 0.35) continue;
       b.chargeHit = o;
       this.damage(o, 400 * b.dmgMul, b);
       if (o.alive && o.ccImmuneT <= 0) o.rootT = Math.max(o.rootT, 0.6);
@@ -1084,7 +1351,7 @@ export class Game {
   nearestFoe(p) {
     let best = null, bd = Infinity;
     for (const b of this.brawlers) {
-      if (b === p || !b.alive || !this.canSee(p, b)) continue;
+      if (b === p || !b.alive || this.ally(p, b) || !this.canSee(p, b)) continue;
       const d = Math.hypot(b.pos.x - p.pos.x, b.pos.z - p.pos.z);
       if (d < bd) { bd = d; best = b; }
     }
@@ -1143,7 +1410,7 @@ export class Game {
     const viewer = this.sightViewer;
     for (const b of this.brawlers) {
       if (!b.alive) { b.visibleToPlayer = false; continue; }
-      const v = !b.netHidden && (!viewer || b === viewer || this.canSee(viewer, b));
+      const v = !b.netHidden && (!viewer || b === viewer || this.ally(viewer, b) || (this.duo ? this.teamSees(viewer, b) : this.canSee(viewer, b)));
       if (v !== b.visibleToPlayer) b.setVisible(v);
       b.visibleToPlayer = v;
     }
@@ -1192,7 +1459,7 @@ export class Game {
     this.aimFan.scale.setScalar(9.5);
     this.aimFanS.scale.setScalar(11);
     this.aimRect.visible = T.key !== 'blaster' && !(T.key === 'frostbite' && sup);
-    this.aimTarget.visible = T.key === 'bomber' || (sup && (T.key === 'frostbite' || T.key === 'volt'));
+    this.aimTarget.visible = T.key === 'bomber' || (T.key === 'kappa' && !sup) || (sup && (T.key === 'frostbite' || T.key === 'volt'));
     if (T.key === 'gunslinger') this.aimRect.scale.set(sup ? 20 : 16, 1, sup ? 1.3 : 0.8);
     if (T.key === 'frostbite') {
       this.aimRect.scale.set(12, 1, 0.9);
@@ -1202,6 +1469,11 @@ export class Game {
       const d = THREE.MathUtils.clamp(this.aimDist, 2, T.range);
       this.aimRect.scale.set(sup ? d : 13, 1, sup ? 0.14 : 0.7);
       if (sup) { this.aimTarget.position.set(p.pos.x + dir.x * d, 0.065, p.pos.z + dir.z * d); this.aimTarget.scale.setScalar(3.2); }
+    }
+    if (T.key === 'kappa') { // a bubble lobbed where you aim; the super: the wave's 10 x 5 m path
+      const d = THREE.MathUtils.clamp(this.aimDist, 2, T.range);
+      this.aimRect.scale.set(sup ? 10.6 : d, 1, sup ? 5 : 0.14);
+      if (!sup) { this.aimTarget.position.set(p.pos.x + dir.x * d, 0.065, p.pos.z + dir.z * d); this.aimTarget.scale.setScalar(1.6); }
     }
     if (T.key === 'bomber') {
       const d = THREE.MathUtils.clamp(this.aimDist, 2, T.range);
