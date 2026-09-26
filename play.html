@@ -102,6 +102,20 @@
   </div>
 
   <div id="menu" class="overlay">
+    <!-- profile (v0.13): level, coins, trophies, and the progression menus -->
+    <div id="profileBar" class="pbar">
+      <div class="pb-top">
+        <button id="pbMe" class="pb-me"></button>
+        <span id="pbCoins" class="pb-chip"></span>
+        <span id="pbTrophies" class="pb-chip"></span>
+      </div>
+      <div class="pb-btns">
+        <button id="questsBtn"><i>📜</i><span data-i18n="meta.quests">QUESTS</span><em class="hidden"></em></button>
+        <button id="roadBtn"><i>🏆</i><span data-i18n="meta.road">TROPHY ROAD</span></button>
+        <button id="shopBtn"><i>🛒</i><span data-i18n="meta.shop">SHOP</span></button>
+        <button id="wardBtn"><i>👕</i><span data-i18n="meta.collection">COLLECTION</span><em class="hidden"></em></button>
+      </div>
+    </div>
     <div class="menu-card">
       <h1>AI SLOP<span>ARENA</span></h1>
       <p class="tag" data-i18n="menu.tag">Showdown · 8 brawlers · 5 maps with live weather · last one standing wins</p>
@@ -270,8 +284,10 @@
       <h2 id="resTitle">#1</h2>
       <p id="resSub"></p>
       <p id="resRank" class="res-rank hidden"></p>
+      <div id="resPodium" class="podium"></div>
       <div id="resStats" class="res-stats"></div>
       <div id="resMastery" class="res-mastery"></div>
+      <div id="resProgress" class="res-progress"></div>
       <div id="survey" class="survey hidden">
         <div id="svStep1"><b data-i18n="survey.title">Having fun?</b><div id="svFaces" class="sv-faces"></div>
           <button id="svLater" class="link" data-i18n="survey.later">Not now</button></div>
@@ -286,6 +302,15 @@
       <div class="row-btns hidden" id="onlineBtns"><button id="spectate" class="ghost" data-i18n="result.spectate">SPECTATE</button><span class="hint" data-i18n="result.backSoon">Back to the room when the match ends…</span></div>
     </div>
   </div>
+
+  <!-- progression menus (v0.13): quests, Trophy Road, shop, collection (metaui.js) -->
+  <div id="meta" class="overlay meta hidden">
+    <div class="meta-card">
+      <header class="meta-head"><h2 id="metaTitle"></h2><span id="metaCoins" class="pb-chip"></span><button id="metaClose" class="lobby-back" aria-label="Close">✕</button></header>
+      <div id="metaBody" class="meta-body"></div>
+    </div>
+  </div>
+  <div id="levelUp" class="overlay levelup hidden"></div>
 
   <script type="module" src="/src/main.js"></script>
 </body>

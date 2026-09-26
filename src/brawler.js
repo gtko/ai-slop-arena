@@ -161,7 +161,7 @@ export class Brawler {
     this.ccImmuneT = 0; // after a freeze: immune to the next one for a moment (no freeze chains)
     // Kit 2.0 (gadgets.js): loadout, charges, and the states gadgets put a brawler in
     this.gadget = 'A'; this.star = 1;
-    this.stats = { dmg: 0, kos: 0, cubes: 0, gadgets: 0 }; // match stats (result screen)
+    this.stats = { dmg: 0, kos: 0, cubes: 0, gadgets: 0, supers: 0, crates: 0, emotes: 0 }; // match stats (result screen, quests)
     this.gadgetCharges = GADGET_CHARGES; this.gadgetCd = 0;
     this.rootT = 0;     // rooted: can't move, can still shoot
     this.armorT = 0;    // Bark Skin: -35% damage taken

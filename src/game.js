@@ -243,6 +243,7 @@ export class Game {
     if (isSuper && b === this.player) { this.feel.punchTo(0.92, 0.3); duckMusic(); this.hud.superCutIn(b.type.key); } // own super: punch-in + portrait
     b.face(dx, dz);
     b.attacked(isSuper);
+    if (isSuper) b.stats.supers++;
     this.combat.attack(b, dx, dz, point, isSuper);
     this.ev({ e: 'atk', id: b.id, dx: r2(dx), dz: r2(dz), px: r2(point.x), pz: r2(point.z), s: isSuper ? 1 : 0 });
     return true;
@@ -410,6 +411,7 @@ export class Game {
   }
 
   crateFx(i, j, by = null) {
+    if (by) by.stats.crates++;
     if (by && by === this.player && this.onFeat && !this.dojo) this.onFeat('crate');
     const c = this.arena.center(i, j, _v);
     this.effects.debrisBurst(c.x, 0.3, c.z, WOOD, 16, 0.38, 6);
@@ -697,6 +699,7 @@ export class Game {
         case 'atk':
           if (!b || !b.alive) break;
           b.face(e.dx, e.dz); b.attacked(!!e.s); b.revealT = 1.2; b.lastAttack = this.time;
+          if (e.s) b.stats.supers++;
           if (e.s && b === this.player) { this.feel.punchTo(0.92, 0.3); duckMusic(); this.hud.superCutIn(b.type.key); }
           this.combat.attack(b, e.dx, e.dz, _v.set(e.px, 0, e.pz), !!e.s);
           break;

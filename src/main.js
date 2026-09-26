@@ -38,7 +38,11 @@ import { preloadFigurines, setFigurineDetail } from './figurines.js';
 import { preloadProps, PROPS } from './props.js';
 import { enableCartoonShading, cartoonGradePass } from './cartoon.js';
 import { PAD } from './input.js';
+import { MetaUI } from './metaui.js';
+import { awardMatch, leagueBotLevel } from './profile.js';
+import { recordMatch } from './quests.js';
 import './style.css';
+import './meta.css';
 
 installTelemetry(); // crash reports first: the rest of the start-up can fail
 translateDom();
@@ -251,7 +255,7 @@ if (touch) touch.setSuperLabel(t('hud.super'));
 // Android / iOS app: the back button closes panels and pauses the match, leaving the app pauses it.
 if (isNativeApp) {
   const pauseMatch = () => { if (!menus.paused && menus.ctx.isInMatch()) { menus.openPause(); return true; } return false; };
-  import('./native.js').then(m => m.bindAppEvents({ onBack: () => menus.back() || pauseMatch(), onHide: pauseMatch }))
+  import('./native.js').then(m => m.bindAppEvents({ onBack: () => meta.close() || menus.back() || pauseMatch(), onHide: pauseMatch }))
     .catch(e => console.warn('[native]', e));
 }
 
@@ -319,6 +323,9 @@ function pickBrawler(key) {
 }
 
 renderLoadout();
+
+// Progression menus (v0.13): profile bar, quests, Trophy Road, shop, collection.
+const meta = new MetaUI({ brawlers: Object.keys(TYPES), portrait, chosen: () => chosen, onWear: () => {} });
 
 function showMastery(m, key) {
   const el = $('#resMastery');
@@ -395,9 +402,10 @@ function play() {
   playMusic('m_' + mapKey);
   finalMusic = false;
   matchLeft('restart');
-  game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen) }], { level: botLevel() }), localId: 'me' });
+  const level = leagueBotLevel(chosen, botLevel()); // Bot League: this brawler's trophies nudge the bots
+  game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen) }], { level }), localId: 'me' });
   achievements.matchStart({ mapKey, brawler: chosen });
-  matchStarted({ mode: 'solo', map: mapKey, map_random: chosenMap === 'random', brawler: chosen, loadout: loadout(chosen), bot_level: botLevel(), humans: 1 });
+  matchStarted({ mode: 'solo', map: mapKey, map_random: chosenMap === 'random', brawler: chosen, loadout: loadout(chosen), bot_level: level, humans: 1 });
   presence(t('presence.solo', { map: t(`map.${mapKey}`) }));
   canvas.focus();
 }
@@ -881,7 +889,20 @@ game.onResult = (rank, won) => {
   // hidden level: the bots of the next solo / private match follow it (never shown)
   recordResult(rank, won);
   // mastery of the brawler you played: points, and a little ceremony when it levels up
-  if (played && played.brawler && TYPES[played.brawler]) showMastery(award(played.brawler, { rank, kos: played.kos }), played.brawler);
+  const key = played && played.brawler && TYPES[played.brawler] ? played.brawler : null;
+  if (key) {
+    const m = award(key, { rank, kos: played.kos });
+    showMastery(m, key);
+    // account level, Slop Coins, Bot League trophies (solo) and quests (v0.13)
+    const P = game.player, st = P ? P.stats : {};
+    const res = awardMatch({ rank, won, kos: played.kos, key, vsBots: played.mode === 'solo', mastery: m.after });
+    const q = recordMatch({ rank, won, brawler: key, kos: played.kos, dmg: Math.round(st.dmg || 0), cubes: st.cubes || 0,
+      gadgets: st.gadgets || 0, supers: st.supers || 0, crates: st.crates || 0, emotes: st.emotes || 0 }, Object.keys(TYPES));
+    meta.showResult(res, q, key);
+    track('progress', { level: res.after.level, xp: res.xp, coins: res.coins + q.coins, trophies: res.league ? res.league.total : undefined,
+      quests_done: q.moved.filter(x => x.done).length });
+    for (const x of q.moved) if (x.done) track('quest_completed', { kind: x.q.kind, weekly: x.weekly });
+  } else $('#resProgress').innerHTML = '';
   resultShown = true;
   // ranked (matchmaking) result: arrives from the server when the match ends (maybe already here)
   $('#resRank').classList.toggle('hidden', !matchmadeMatch);
