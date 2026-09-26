@@ -39,8 +39,8 @@ import { preloadProps, PROPS } from './props.js';
 import { enableCartoonShading, cartoonGradePass } from './cartoon.js';
 import { PAD } from './input.js';
 import { MetaUI, skinFilter, framed, titleText, num } from './metaui.js';
-import { awardMatch, leagueBotLevel, cosFor, unlock, owns } from './profile.js';
-import { parseCos, FRAMES } from './cosmetics.js';
+import { awardMatch, leagueBotLevel, cosFor, unlock, owns, wear, canWear } from './profile.js';
+import { parseCos, FRAMES, SKINS, GOLD_AT } from './cosmetics.js';
 import { EmoteWheel } from './emotewheel.js';
 import { weeklyMutator, MUT_ICONS } from './mutators.js';
 import { PERSONA_ICONS } from './ai.js';
@@ -302,9 +302,32 @@ for (const T of Object.values(TYPES)) {
   c.addEventListener('click', () => { sfx('click'); pickBrawler(T.key); });
   cards.appendChild(c);
 }
+// Skins of the chosen brawler, right under its name: the ones you own are one click away, the
+// others show how to get them (a click opens the collection on them).
+function renderSkins() {
+  const C = parseCos(cosFor(chosen)), root = $('#heroSkins');
+  root.innerHTML = `<small>${t('cos.tab.skin')}</small>` + SKINS.map((s, n) => {
+    const have = canWear('skin', n, chosen), on = C.skin === n;
+    const tip = `${t('cos.skin.' + s)}${have ? '' : ' · 🔒 ' + (s === 'gold' ? t('col.gold', { n: GOLD_AT }) : t('col.inShop'))}`;
+    return `<button class="hs${on ? ' on' : ''}${have ? '' : ' locked'}" data-n="${n}" role="radio" aria-checked="${on}" title="${tip}" aria-label="${tip}">
+      <img src="${portrait(chosen)}" alt="" style="filter:${skinFilter(chosen, n)}">${have ? '' : '<i>🔒</i>'}</button>`;
+  }).join('');
+  root.querySelectorAll('.hs').forEach(b => b.addEventListener('click', () => {
+    const n = +b.dataset.n;
+    sfx('click');
+    if (!canWear('skin', n, chosen)) { meta.skinOf = chosen; meta.tab = 'skin'; meta.open('collection'); return; }
+    if (parseCos(cosFor(chosen)).skin === n) return;
+    wear('skin', n, chosen);
+    track('cosmetic_equipped', { kind: 'skin', item: `skin:${chosen}:${n}`, from: 'home' });
+    meta.renderBar();
+    meta.onWear();
+  }));
+}
+
 function renderHero() {
   const T = TYPES[chosen], P = progress(chosen), C = parseCos(cosFor(chosen));
   $('.hero').style.setProperty('--c', hexOf(chosen));
+  renderSkins(); // only called once meta exists (after its creation below)
   $('#heroName').textContent = T.name;
   $('#heroRole').textContent = t(`brawler.${chosen}.role`);
   $('#heroDesc').textContent = t(`brawler.${chosen}.desc`);
