@@ -107,6 +107,7 @@ export class BotBrain {
     this.crate = null;
     this.stuck = 0;
     this.last = bot.pos.clone();
+    this.dodgeT = 0; this.dodgeX = 0; this.dodgeZ = 0; // no sidestep yet
   }
 
   // A spot within 8 m the threat cannot see, not in the gas, closest first, bushes preferred.
@@ -290,7 +291,7 @@ export class BotBrain {
   // and walk out of lava puddles and zap traps.
   dodge(dt, move) {
     const g = this.g, b = this.b;
-    this.dodgeT = (this.dodgeT || 0) - dt;
+    this.dodgeT -= dt;
     if (this.dodgeT > 0) { move.x += this.dodgeX * 1.6; move.z += this.dodgeZ * 1.6; return; }
     for (const B of g.combat.bullets) {
       if (B.owner === b || B.dodgeSeen?.has(b)) continue;

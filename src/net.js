@@ -65,7 +65,7 @@ export class Net {
         if (msg.t === 'error' && !welcomed) reject(new Error(serverError(msg)));
         this.emit(msg.t, msg);
       };
-      ws.onclose = () => { if (!welcomed) reject(new Error(t('err.unreachable'))); this.emit('closed', {}); };
+      ws.onclose = () => { if (!welcomed) { reject(new Error(t('err.unreachable'))); return; } this.emit('closed', {}); };
       ws.onerror = () => { if (!welcomed) reject(new Error(t('err.unreachable'))); };
       this.pingTimer = setInterval(() => this.send({ t: 'ping', at: performance.now() }), 2000);
     });

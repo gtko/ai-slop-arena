@@ -187,6 +187,7 @@ export class Game {
     this.resultT = -1;
     this.restartT = -1;
     this.camTarget = this.player || this.brawlers[0];
+    this.star = this.mode === 'attract' && this.showcaseRoster ? this.brawlers[0] : null; // menu showcase (main.js)
     this.camFocus.copy(this.camTarget.pos);
     this.feel.reset();
     // supply drops (authority schedules, everyone sees): ~40-50 s and ~85-95 s into the match
@@ -290,6 +291,7 @@ export class Game {
     if (!target.alive || !this.authority) return;
     if (this.shielded && source && source !== target) return;
     if (target.ghostT > 0 && source !== target) return; // Tail Roll
+    if (this.mode === 'attract' && target === this.star && amount >= target.hp) amount = Math.max(0, target.hp - 1); // the menu's star
     if (this.dojo) { // dummies never fall: one that would, fills back up
       if (target === this.player) return;
       if (source === this.player) this.dojoLog.push([this.time, Math.round(amount)]);
@@ -857,7 +859,7 @@ export class Game {
     if (this.mode === 'attract' && this.brawlers.filter(b => b.alive).length <= 1) {
       if (this.restartT < 0) this.restartT = 3;
       this.restartT -= dt;
-      if (this.restartT <= 0) this.newMatch({ mapKey: randomMap() });
+      if (this.restartT <= 0) this.newMatch({ mapKey: randomMap(), roster: this.showcaseRoster ? this.showcaseRoster() : null });
     }
   }
 
@@ -1221,7 +1223,8 @@ export class Game {
       desired.copy(tgt.pos);
       if (tgt === P && tgt.alive) { desired.x += F.lookX; desired.z += F.lookZ; }
     }
-    if (this.mode === 'attract') desired.x -= 5;
+    if (this.star && this.mode === 'attract') tgt = this.camTarget = this.star; // menu: always on your brawler
+    if (tgt) desired.copy(tgt.pos);
     desired.x = THREE.MathUtils.clamp(desired.x, -(HALF - 9), HALF - 9);
     desired.z = THREE.MathUtils.clamp(desired.z, -(HALF - 11), HALF - 6);
     desired.y = 0;
@@ -1233,6 +1236,7 @@ export class Game {
       const alive = this.brawlers.reduce((n, b) => n + (b.alive ? 1 : 0), 0);
       zoom = alive === 2 ? 1.1 : alive === 3 ? 1.06 : 1;
     }
+    if (this.star && this.mode === 'attract') zoom = this.menuZoom ?? 0.55; // close on the showcased brawler
     this.bushIdleT = P && P.alive && P.inBush && P.moveIntent.lengthSq() < 0.02 ? this.bushIdleT + dt : 0;
     if (this.bushIdleT > 1.5) zoom *= 0.94;
     F.update(dt, zoom);

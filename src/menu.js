@@ -302,7 +302,7 @@ export class Menus {
   /* ------------------------------ navigation ------------------------------ */
 
   activeOverlay() {
-    for (const id of ['#options', '#pause', '#result', '#lobby', '#meta', '#menu']) {
+    for (const id of ['#levelUp', '#options', '#pause', '#result', '#lobby', '#meta', '#menu']) {
       const o = $(id);
       if (o && !o.classList.contains('hidden')) return o;
     }
@@ -361,6 +361,7 @@ export class Menus {
 
   // returns true when the event was consumed
   back() {
+    if (!$('#levelUp').classList.contains('hidden')) { $('#luOk').click(); return true; }
     if (this.optionsOpen) { this.closeOptions(); return true; }
     if (this.paused) { this.closePause(); return true; }
     const root = this.activeOverlay();
