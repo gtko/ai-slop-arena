@@ -152,6 +152,8 @@ const TRAIL_FX = {
 
 /* ------------------------------------------------------------------ */
 
+const _m4 = new THREE.Matrix4(), _qq = new THREE.Quaternion(), _ee = new THREE.Euler(), _sc = new THREE.Vector3(), _cc = new THREE.Color();
+
 export class Effects {
   constructor(root) {
     this.root = root;
@@ -169,6 +171,47 @@ export class Effects {
     this.scorchTex = radialTexture('rgba(20,12,8,0.9)', 'rgba(20,12,8,0)', 128, 60);
     this.scorchGeo = new THREE.PlaneGeometry(1, 1);
     this.scorchGeo.rotateX(-Math.PI / 2);
+    // v0.15 (V07/V08): footprints in sand, snow and mud; rubble where a wall broke; a light beam on a
+    // freed power cube
+    const printTex = radialTexture('rgba(40,28,18,0.55)', 'rgba(40,28,18,0)', 64, 20);
+    this.prints = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.22, 0.36).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ map: printTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }), 96);
+    this.prints.count = 0; this.prints.frustumCulled = false;
+    this.printList = [];
+    root.add(this.prints);
+    this.rubble = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.2, 0), new THREE.MeshStandardMaterial({ roughness: 0.9, flatShading: true }), 320);
+    this.rubble.count = 0; this.rubble.frustumCulled = false; this.rubble.receiveShadow = true;
+    root.add(this.rubble);
+    this.beams = [];
+  }
+
+  // A footprint (alpha set by its age in update()).
+  print(x, z, ang, tint = 1) {
+    if (this.printList.length >= 96) this.printList.shift();
+    this.printList.push({ x, z, ang, life: 7, tint });
+  }
+
+  // Rubble left on the floor where a wall broke (stays for the match).
+  rubbleAt(x, z, color) {
+    const col = new THREE.Color(color);
+    for (let k = 0; k < 7 && this.rubble.count < 320; k++) {
+      const s = rnd(0.5, 1.4);
+      _m4.compose(_p.set(x + rnd(-0.8, 0.8), 0.06 * s, z + rnd(-0.8, 0.8)), _qq.setFromEuler(_ee.set(rnd(0, 6), rnd(0, 6), rnd(0, 6))), _sc.set(s, s * 0.6, s));
+      this.rubble.setMatrixAt(this.rubble.count, _m4);
+      this.rubble.setColorAt(this.rubble.count, _cc.copy(col).multiplyScalar(rnd(0.7, 1.05)));
+      this.rubble.count++;
+    }
+    this.rubble.instanceMatrix.needsUpdate = true;
+    if (this.rubble.instanceColor) this.rubble.instanceColor.needsUpdate = true;
+  }
+
+  // A thin column of light over a freed power cube.
+  beam(x, z, col, life = 1.2) {
+    const m = new THREE.Mesh(this.beamGeo || (this.beamGeo = new THREE.CylinderGeometry(0.35, 0.6, 7, 16, 1, true).translate(0, 3.5, 0)),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    m.position.set(x, 0, z);
+    this.root.add(m);
+    this.beams.push({ m, life, max: life });
   }
 
   // Jagged lightning ribbon through a list of [x, z] points (chain lightning), at chest height.
@@ -426,6 +469,25 @@ export class Effects {
       s.life -= dt;
       s.mesh.material.opacity = Math.min(1, Math.max(s.life, 0) / 3);
     }
+    // footprints fade out (one instanced mesh: the shrinking scale stands for the fade)
+    let n = 0;
+    for (const p of this.printList) {
+      p.life -= dt;
+      if (p.life <= 0) continue;
+      const k = Math.min(1, p.life / 2) * p.tint;
+      _m4.compose(_p.set(p.x, 0.022, p.z), _qq.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, p.ang), _sc.set(k, 1, k));
+      this.prints.setMatrixAt(n++, _m4);
+    }
+    this.printList = this.printList.filter(p => p.life > 0);
+    this.prints.count = n;
+    if (n) this.prints.instanceMatrix.needsUpdate = true;
+    for (const b of this.beams) {
+      b.life -= dt;
+      b.m.material.opacity = 0.5 * Math.max(0, b.life / b.max);
+      b.m.scale.set(1 + (1 - b.life / b.max) * 0.4, 1, 1 + (1 - b.life / b.max) * 0.4);
+      if (b.life <= 0) { this.root.remove(b.m); b.m.material.dispose(); }
+    }
+    this.beams = this.beams.filter(b => b.life > 0);
   }
 
   emit(pool) {
@@ -441,5 +503,9 @@ export class Effects {
     for (const r of this.rings) { r.life = 0; r.mesh.visible = false; }
     for (const s of this.scorches) this.root.remove(s.mesh);
     this.scorches.length = 0;
+    this.printList.length = 0; this.prints.count = 0;
+    this.rubble.count = 0;
+    for (const b of this.beams) { this.root.remove(b.m); b.m.material.dispose(); }
+    this.beams.length = 0;
   }
 }

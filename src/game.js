@@ -701,6 +701,7 @@ export class Game {
     if (!col) return;
     const c = this.arena.center(i, j, _v);
     this.effects.debrisBurst(c.x, 0.2, c.z, col, 14, 0.42, 6);
+    this.effects.rubbleAt(c.x, c.z, col); // V08: the rubble stays
     this.effects.dust(c.x, c.z, 8, 0xd9b27c, 1.4);
     this.shakeAt(c.x, c.z, 0.12);
     sfx('break', this.volumeAt(c.x, c.z));
@@ -724,6 +725,7 @@ export class Game {
     this.effects.debrisBurst(c.x, 0.3, c.z, WOOD, 16, 0.38, 6);
     this.effects.dust(c.x, c.z, 8, 0xc9a070, 1.2);
     this.effects.sparkBurst(c.x, 1.2, c.z, GREEN, 18, 6, 0.6);
+    this.effects.beam(c.x, c.z, new THREE.Color(0.4, 2.2, 0.8)); // V08: a light on the freed cube
     this.effects.flash(c.x, 1.5, c.z, 0.3, 1, 0.45, 40, 8, 0.4);
     sfx('crate', this.volumeAt(c.x, c.z));
   }

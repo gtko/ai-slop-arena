@@ -117,7 +117,8 @@ const lerpAngle = (a, b, t) => {
 
 // Seconds of immunity to crowd control once a freeze ends, so two novas can't chain-lock anyone.
 export const CC_IMMUNE = 1.5;
-const GROUND = { oasis: 'sand', dunes: 'sand', grove: 'grass', frost: 'snow', marsh: 'mud' };
+const GROUND = { oasis: 'sand', dunes: 'sand', grove: 'grass', frost: 'snow', marsh: 'mud', isles: 'grass' };
+const A_ICE = new Set(['I', 'W', '=']); // no prints on ice, water or bridges
 const RING = { me: new THREE.Color(0.3, 1.6, 2.0), foe: new THREE.Color(1.8, 0.25, 0.2), meCb: new THREE.Color(0.35, 0.9, 2.4), foeCb: new THREE.Color(2.2, 1.0, 0.05),
   mate: new THREE.Color(0.4, 2.2, 0.8), mateCb: new THREE.Color(1.4, 1.4, 2.6) };
 const LINE = { me: new THREE.Color(0x19b6ff), foe: new THREE.Color(0x5c0d14), meCb: new THREE.Color(0x3a8dff), foeCb: new THREE.Color(0x8a4400),
@@ -260,6 +261,13 @@ export class Brawler {
     if (!me && !(this.visibleToPlayer && Math.hypot(this.pos.x - g.camFocus.x, this.pos.z - g.camFocus.z) < 8)) return;
     const ground = this.inBush ? 'grass' : GROUND[g.mapKey] || 'stone';
     sfx('step_' + ground, (me ? 0.35 : 0.2 * g.volumeAt(this.pos.x, this.pos.z)) * (this.inBush ? 0.6 : 1));
+    // V07: a puff of dust and a footprint in soft ground (only where you can see: a print never
+    // gives away a hidden brawler)
+    if (!this.inBush && (ground === 'sand' || ground === 'snow' || ground === 'mud') && !A_ICE.has(g.arena.charAt(this.pos.x, this.pos.z))) {
+      const side = ph % 2 ? 1 : -1, c = Math.cos(this.facing), s = Math.sin(this.facing);
+      g.effects.print(this.pos.x + c * 0.16 * side, this.pos.z - s * 0.16 * side, this.facing, ground === 'snow' ? 0.8 : 1);
+      if (ground !== 'snow' || Math.random() < 0.5) g.effects.dust(this.pos.x, this.pos.z, 2, ground === 'snow' ? 0xf4f8ff : ground === 'mud' ? 0x6a5a44 : 0xe0c08a, 0.35);
+    }
   }
 
   // Readability: your brawler has a bright outline and ring, enemies a dark red one (the colour-blind
