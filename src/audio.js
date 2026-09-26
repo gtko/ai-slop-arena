@@ -26,6 +26,8 @@ const SFX = ['shot', 'shotgun', 'throw', 'boom', 'boom_big', 'hit', 'hurt', 'bre
   'shot_ray', 'shot_ice', 'shot_zap', 'hit_confirm', 'ko', 'sting_three', 'sting_duel', 'sting_finalko', 'heartbeat', 'immune',
   'step_sand', 'step_grass', 'step_snow', 'step_stone', 'step_mud', 'supply_siren', 'supply_land',
   'gad_dash', 'gad_bark', 'gad_flare', 'gad_icewall', 'gad_blink', 'gad_overclock', 'gad_hop', 'gad_fuse',
+  // v0.13 LEVEL UP: progression, emotes, arena events, weekly Chaos
+  'levelup', 'coin', 'stamp', 'emote', 'chest', 'buy', 'geyser_warn', 'geyser', 'meteor', 'rod_zap', 'blizzard', 'mushroom', 'chaos',
   ...['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt'].flatMap(k => [`bark_${k}_super`, `bark_${k}_cheer`])];
 const LOOPS = {
   amb_day: 'music/amb_day', amb_night: 'music/amb_night',
@@ -251,7 +253,8 @@ export function sfx(name, vol = 1, rate = 1) {
   }
   synth(FALLBACK[name] || name, vol);
 }
-const FALLBACK = { shot_ray: 'shot', shot_ice: 'shot', shot_zap: 'shot', hit_confirm: 'hit', ko: 'death' };
+const FALLBACK = { shot_ray: 'shot', shot_ice: 'shot', shot_zap: 'shot', hit_confirm: 'hit', ko: 'death', levelup: 'ready', coin: 'pickup', stamp: 'hit',
+  emote: 'click', chest: 'crate', buy: 'pickup', geyser_warn: 'gas', geyser: 'boom', meteor: 'boom_big', rod_zap: 'thunder', blizzard: 'gas', mushroom: 'pickup', chaos: 'super' };
 
 // Fades out the result jingle still playing, if any (new match, back to the menu...).
 function stopJingle() {

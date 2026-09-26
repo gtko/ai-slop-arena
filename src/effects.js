@@ -141,6 +141,14 @@ export function particle(x, y, z, vx, vy, vz, life, size, r, g, b, o) {
 }
 
 const rnd = (a, b) => a + Math.random() * (b - a);
+// Trails: colours (HDR, they glow), rise speed, size; `cube`: little tumbling cubes instead of sparks.
+const TRAIL_FX = {
+  sparkle: { col: [[4, 3.6, 1.6], [3.6, 3.6, 4]], up: 0.6, size: 0.13 },
+  bubbles: { col: [[1.2, 2.6, 3.6], [2, 3.2, 3.8]], up: 1.2, size: 0.2 },
+  flames: { col: [[4, 1.4, 0.2], [4, 2.6, 0.4]], up: 1.8, size: 0.2 },
+  hearts: { col: [[4, 0.8, 1.8], [3.6, 1.6, 2.6]], up: 1, size: 0.18 },
+  pixels: { col: [[0.3, 1, 0.5], [0.7, 0.3, 1], [1, 0.9, 0.2]], up: 0, size: 0.16, cube: true },
+};
 
 /* ------------------------------------------------------------------ */
 
@@ -344,6 +352,50 @@ export class Effects {
     this.debrisBurst(x, 0.8, z, _c, 10, 0.3, 5);
     this.sparkBurst(x, 1, z, new THREE.Color(4, 4, 4), 14, 7, 0.45);
     this.flash(x, 1.5, z, 1, 1, 1, 40, 8, 0.25);
+  }
+
+  // Cosmetic trail (cosmetics.js TRAILS): a few particles behind a running brawler.
+  trail(x, z, kind) {
+    const T = TRAIL_FX[kind];
+    if (!T) return;
+    const [r, g, b] = T.col[Math.floor(Math.random() * T.col.length)];
+    const pool = T.cube ? this.debris : this.sparks;
+    pool.spawn(particle(x + rnd(-0.3, 0.3), rnd(0.2, 0.9), z + rnd(-0.3, 0.3), rnd(-0.4, 0.4), T.up, rnd(-0.4, 0.4),
+      rnd(0.5, 0.8), T.size * rnd(0.7, 1.2), r, g, b, T.cube ? { grav: 6, spin: rnd(-6, 6), shrink: 0.4 } : { drag: 1.5, grav: -T.up * 0.3, spin: rnd(-3, 3) }));
+  }
+
+  // Cosmetic K.O. effect (cosmetics.js KOFX), on top of the usual K.O.
+  koBurst(x, z, kind) {
+    const C = n => new THREE.Color(...n);
+    switch (kind) {
+      case 'confetti':
+        for (const c of [[4, 0.6, 0.8], [0.6, 3, 4], [4, 3.4, 0.4], [0.8, 4, 1]]) this.debrisBurst(x, 1.4, z, C(c).multiplyScalar(0.25), 7, 0.16, 6);
+        this.sparkBurst(x, 1.6, z, C([4, 4, 4]), 16, 8, 0.5, 0.14);
+        break;
+      case 'pixels':
+        for (const c of [[0.6, 0.2, 0.9], [0.2, 0.9, 0.5], [0.95, 0.3, 0.8]]) this.debrisBurst(x, 1.2, z, C(c), 8, 0.28, 7);
+        this.flash(x, 1.2, z, 0.7, 0.3, 1, 30, 8, 0.3);
+        break;
+      case 'fireworks':
+        [[4, 0.8, 0.6], [0.6, 2.4, 4], [4, 3.4, 0.8]].forEach((c, i) => setTimeout(() => {
+          const px = x + rnd(-1.2, 1.2), pz = z + rnd(-1.2, 1.2);
+          this.sparkBurst(px, 3 + i * 0.6, pz, C(c), 24, 9, 0.7, 0.14);
+          this.flash(px, 3.5, pz, c[0] / 4, c[1] / 4, c[2] / 4, 40, 9, 0.25);
+        }, i * 160));
+        break;
+      case 'slime':
+        this.debrisBurst(x, 0.8, z, C([0.3, 0.95, 0.35]), 16, 0.34, 6);
+        this.ring(x, z, 1.8, C([0.8, 3.6, 1]), 0.5);
+        this.splash(x, z, 1.2);
+        break;
+      case 'stars':
+        for (let k = 0; k < 8; k++) {
+          const a = k / 8 * Math.PI * 2;
+          this.sparks.spawn(particle(x, 2.4, z, Math.cos(a) * 3.5, 2.5, Math.sin(a) * 3.5, 0.9, 0.34, 4, 3.4, 0.6, { drag: 2, grav: 4, spin: 8 }));
+        }
+        this.flash(x, 2.2, z, 1, 0.9, 0.4, 30, 7, 0.3);
+        break;
+    }
   }
 
   update(dt) {

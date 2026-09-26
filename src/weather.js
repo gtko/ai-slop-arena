@@ -168,6 +168,11 @@ export class Weather {
         S.sunI *= 0.75; S.shadowI *= 0.8; S.hemiI *= 1.2;
         mix(S, 'sun', 0.85, 0.92, 1, 0.5); mix(S, 'sky', 0.85, 0.9, 1, 0.5); mix(S, 'fog', 0.8, 0.86, 0.95, 0.7);
         S.fogNear = 26; S.fogFar = 72;
+        if (this.stormK > 0.01) { // blizzard (events.js): white-out
+          const k = this.stormK;
+          mix(S, 'fog', 0.9, 0.94, 1, k * 0.6);
+          S.fogNear -= 16 * k; S.fogFar -= 38 * k; S.sunI *= 1 - 0.4 * k;
+        }
         break;
       case 'sandstorm': {
         const g = this.gust;
@@ -265,10 +270,14 @@ export class Weather {
 
   updateSnow(dt, focus) {
     const F = this.flakes, p = F.p, v = F.v, t = this.t;
+    // blizzard (events.js sets `storm`): all the flakes, flying sideways
+    this.stormK = (this.stormK || 0) + ((this.storm || 0) - (this.stormK || 0)) * Math.min(1, dt * 1.5);
+    const gust = 1 + this.stormK * 7;
+    F.mesh.count = Math.max(1, Math.floor(F.n * Math.min(1, (this.density ?? 1) + this.stormK)));
     for (let i = 0; i < F.n; i++) {
       p[i * 3 + 1] -= v[i * 4] * dt;
       const w = Math.sin(t * v[i * 4 + 2] + v[i * 4 + 1]);
-      p[i * 3] += (0.9 + w * 0.8) * dt;
+      p[i * 3] += (0.9 + w * 0.8) * gust * dt;
       p[i * 3 + 2] += Math.cos(t * 0.7 + v[i * 4 + 1]) * 0.4 * dt;
       if (p[i * 3 + 1] < 0) p[i * 3 + 1] += BOX_Y;
       _p.set(focus.x + wrap(p[i * 3], BOX_X), p[i * 3 + 1], focus.z + wrap(p[i * 3 + 2], BOX_Z));

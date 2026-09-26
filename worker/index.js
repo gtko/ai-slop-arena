@@ -1,7 +1,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import * as Sentry from '@sentry/cloudflare';
 import { version } from '../package.json';
-import { ServerMatch, makeRoster, randomMap, validBrawler, validLoadout, MAP_KEYS } from './build/sim.js';
+import { ServerMatch, makeRoster, randomMap, validBrawler, validLoadout, validCos, COS_DEFAULT, weeklyMutator, MAP_KEYS } from './build/sim.js';
 import { rate, tierOf, pickGroup, botLevelFor, START_MMR } from './ranking.js';
 
 // AI SLOP ARENA — online server.
@@ -18,7 +18,7 @@ import { rate, tierOf, pickGroup, botLevelFor, START_MMR } from './ranking.js';
 // Steam friend lobbies (src/steamnet.js) stay peer-to-peer: a player hosts, with the same checks.
 // Errors of the Worker and of every Durable Object go to Sentry (SENTRY_DSN in wrangler.jsonc).
 
-const PROTOCOL = 3;          // clients send ?v=3; older builds are told to update
+const PROTOCOL = 4;          // clients send ?v=4 (v0.13: arena events, emotes); older builds are told to update
 const MAX_PLAYERS = 8;
 const CODE = /^[A-Z0-9]{4,6}$/;
 const QUEUE_BOTS_AFTER = 60 * 1000;     // matchmaking: after 1 minute, whoever is queued plays and bots fill up
@@ -120,6 +120,7 @@ class RoomObject extends DurableObject {
     this.rate = new Map();   // socket -> { t, n } message counter
     ctx.blockConcurrencyWhile(async () => {
       this.map = (await ctx.storage.get('map')) || 'random';
+      this.chaos = !!(await ctx.storage.get('chaos')); // Weekly Chaos on (private rooms only)
       this.preset = (await ctx.storage.get('preset')) || null; // matchmade room: { expect, map, deadline }
       this.kicked = new Set((await ctx.storage.get('kicked')) || []);
     });
@@ -156,8 +157,9 @@ class RoomObject extends DurableObject {
     this.ctx.acceptWebSocket(server);
     const brawler = BRAWLERS.has(url.searchParams.get('b')) ? url.searchParams.get('b').split(':')[0] : 'blaster';
     const lo = validLoadout(url.searchParams.get('lo')) ? url.searchParams.get('lo') : 'A1'; // gadget + star power
+    const cos = validCos(url.searchParams.get('cos')) ? url.searchParams.get('cos') : COS_DEFAULT; // looks (cosmetics.js)
     const me = {
-      id: crypto.randomUUID().slice(0, 8), name: clean(url.searchParams.get('name'), 14) || 'Player', brawler, lo,
+      id: crypto.randomUUID().slice(0, 8), name: clean(url.searchParams.get('name'), 14) || 'Player', brawler, lo, cos,
       // matchmade rooms have no leader (nobody may kick or change the map)
       host: !this.preset && !this.sockets().some(ws => ws !== server && this.info(ws).host),
       joined: Date.now(), ...who,
@@ -172,10 +174,10 @@ class RoomObject extends DurableObject {
 
   roster() {
     return this.sockets().map(ws => this.info(ws)).sort((a, b) => a.joined - b.joined)
-      .map(({ id, name, brawler, host, plat }) => ({ id, name, brawler, host, plat }));
+      .map(({ id, name, brawler, host, plat, cos }) => ({ id, name, brawler, host, plat, cos }));
   }
   broadcastRoom() {
-    this.broadcast({ t: 'room', players: this.roster(), inMatch: this.inMatch, map: this.map, matchmade: !!this.preset });
+    this.broadcast({ t: 'room', players: this.roster(), inMatch: this.inMatch, map: this.map, chaos: this.chaos && !this.preset, matchmade: !!this.preset });
   }
   broadcast(msg) {
     const raw = typeof msg === 'string' ? msg : JSON.stringify(msg);
@@ -193,9 +195,10 @@ class RoomObject extends DurableObject {
       : humans.reduce((sum, p) => sum + (p.lvl ?? 0.45), 0) / humans.length;
     // matchmade matches are ranked: remember who played, rated at the end
     this.ranked = this.preset ? humans.map(p => ({ id: p.id, key: p.cid || p.ip })) : null;
-    const roster = makeRoster(humans.map(p => ({ id: p.id, name: p.name, type: p.brawler, lo: p.lo, plat: p.plat })), { level });
+    const roster = makeRoster(humans.map(p => ({ id: p.id, name: p.name, type: p.brawler, lo: p.lo, cos: p.cos, plat: p.plat })), { level });
+    const mut = this.chaos && !this.preset ? weeklyMutator() : null; // never in ranked matches
     this.match = new ServerMatch({
-      map, roster,
+      map, roster, mut,
       send: msg => this.broadcast(msg),
       sendTo: (id, msg) => { const ws = this.byId(id); if (ws) ws.send(JSON.stringify(msg)); },
       onEnd: () => this.endMatch(),
@@ -210,7 +213,7 @@ class RoomObject extends DurableObject {
     // Loading screen: every client builds the match and says 'loaded'; we wait for all of them
     // (or LOAD_WAIT), then count down. The simulation only runs from the end of the countdown.
     this.loading = { ready: new Set(), humans: humans.map(p => p.id) };
-    this.broadcast({ t: 'start', map, roster, wait: LOAD_WAIT });
+    this.broadcast({ t: 'start', map, roster, mut, wait: LOAD_WAIT });
     this.broadcastRoom();
     this.loadTimer = setTimeout(() => this.go(), LOAD_WAIT);
   }
@@ -337,6 +340,7 @@ class RoomObject extends DurableObject {
         if (BRAWLERS.has(msg.brawler)) {
           me.brawler = msg.brawler.split(':')[0];
           if (validLoadout(msg.lo)) me.lo = msg.lo;
+          if (validCos(msg.cos)) me.cos = msg.cos;
           ws.serializeAttachment(me); this.broadcastRoom();
         }
         break;
@@ -349,6 +353,13 @@ class RoomObject extends DurableObject {
         break;
       case 'start':
         if (me.host && !this.inMatch) this.startMatch(this.map);
+        break;
+      case 'chaos': // Weekly Chaos on / off (room leader, not in matchmade rooms)
+        if (me.host && !this.preset) {
+          this.chaos = !!msg.on;
+          await this.ctx.storage.put('chaos', this.chaos);
+          this.broadcastRoom();
+        }
         break;
       case 'kick': { // room leader only, not in matchmade rooms
         const target = this.byId(msg.id);
@@ -390,8 +401,8 @@ class RoomObject extends DurableObject {
       }
     }
     const players = rest.map(s => this.info(s)).sort((a, b) => a.joined - b.joined)
-      .map(({ id, name, brawler, host, plat }) => ({ id, name, brawler, host, plat }));
-    const msg = JSON.stringify({ t: 'room', players, inMatch: this.inMatch, map: this.map, matchmade: !!this.preset });
+      .map(({ id, name, brawler, host, plat, cos }) => ({ id, name, brawler, host, plat, cos }));
+    const msg = JSON.stringify({ t: 'room', players, inMatch: this.inMatch, map: this.map, chaos: this.chaos && !this.preset, matchmade: !!this.preset });
     for (const s of rest) s.send(msg);
   }
 

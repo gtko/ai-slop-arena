@@ -38,7 +38,15 @@ import { preloadFigurines, setFigurineDetail } from './figurines.js';
 import { preloadProps, PROPS } from './props.js';
 import { enableCartoonShading, cartoonGradePass } from './cartoon.js';
 import { PAD } from './input.js';
+import { MetaUI, skinFilter, framed, titleText } from './metaui.js';
+import { awardMatch, leagueBotLevel, cosFor, unlock, owns } from './profile.js';
+import { parseCos, FRAMES } from './cosmetics.js';
+import { EmoteWheel } from './emotewheel.js';
+import { weeklyMutator, MUT_ICONS } from './mutators.js';
+import { PERSONA_ICONS } from './ai.js';
+import { recordMatch } from './quests.js';
 import './style.css';
+import './meta.css';
 
 installTelemetry(); // crash reports first: the rest of the start-up can fail
 translateDom();
@@ -248,10 +256,12 @@ menus.ctx.autoQuality = autoQuality;
 // Phones and tablets: virtual sticks + pause button (touch.js).
 const touch = isTouchDevice ? new TouchControls(input, { onPause: () => { if (!menus.paused && game.mode === 'play') menus.openPause(); } }) : null;
 if (touch) touch.setSuperLabel(t('hud.super'));
+// Emote wheel (v0.13): B, R3 or the 😀 touch button during a match.
+const wheel = new EmoteWheel(input, i => game.localEmote(i));
 // Android / iOS app: the back button closes panels and pauses the match, leaving the app pauses it.
 if (isNativeApp) {
   const pauseMatch = () => { if (!menus.paused && menus.ctx.isInMatch()) { menus.openPause(); return true; } return false; };
-  import('./native.js').then(m => m.bindAppEvents({ onBack: () => menus.back() || pauseMatch(), onHide: pauseMatch }))
+  import('./native.js').then(m => m.bindAppEvents({ onBack: () => meta.close() || menus.back() || pauseMatch(), onHide: pauseMatch }))
     .catch(e => console.warn('[native]', e));
 }
 
@@ -305,7 +315,7 @@ function renderLoadout() {
     const cur = loadout(key);
     setLoadout(key, b.dataset.g ? b.dataset.g + cur[1] : cur[0] + b.dataset.s);
     renderLoadout();
-    if (net.connected) net.send({ t: 'pick', brawler: key, lo: loadout(key) });
+    if (net.connected) net.send({ t: 'pick', brawler: key, lo: loadout(key), cos: cosFor(key) });
   }));
 }
 
@@ -314,11 +324,14 @@ function pickBrawler(key) {
   try { localStorage.setItem('iaslop-brawler', key); } catch { /* private mode */ }
   document.querySelectorAll('[data-key]').forEach(x => x.classList.toggle('on', x.dataset.key === key));
   renderLoadout();
-  if (net.connected) net.send({ t: 'pick', brawler: key, lo: loadout(key) });
+  if (net.connected) net.send({ t: 'pick', brawler: key, lo: loadout(key), cos: cosFor(key) });
   if ($('#ljAvatar')) showAvatar();
 }
 
 renderLoadout();
+
+// Progression menus (v0.13): profile bar, quests, Trophy Road, shop, collection.
+const meta = new MetaUI({ brawlers: Object.keys(TYPES), portrait, chosen: () => chosen, onWear: () => { if (net.connected) net.send({ t: 'pick', brawler: chosen, lo: loadout(chosen), cos: cosFor(chosen) }); } });
 
 function showMastery(m, key) {
   const el = $('#resMastery');
@@ -329,6 +342,25 @@ function showMastery(m, key) {
   if (m.after > m.before) setTimeout(() => sfx('ready'), 400);
   renderLoadout();
 }
+
+// Weekly Chaos (v0.13): this week's mutator, on or off for solo; the room leader sets it for a room.
+let chaosOn = false;
+try { chaosOn = localStorage.getItem('iaslop-chaos') === '1'; } catch { /* private mode */ }
+function chaosChip(btn, on, enabled = true) {
+  const m = weeklyMutator();
+  btn.innerHTML = `🌀 ${t('chaos.name')}: <b>${MUT_ICONS[m]} ${t('mut.' + m)}</b> <em>${on ? t('chaos.on') : t('chaos.off')}</em>`;
+  btn.classList.toggle('on', on);
+  btn.disabled = !enabled;
+  btn.title = t('mut.' + m + '.desc');
+}
+chaosChip($('#chaosBtn'), chaosOn);
+$('#chaosBtn').addEventListener('click', () => {
+  sfx('click');
+  chaosOn = !chaosOn;
+  try { localStorage.setItem('iaslop-chaos', chaosOn ? '1' : '0'); } catch { /* private mode */ }
+  chaosChip($('#chaosBtn'), chaosOn);
+});
+$('#chaosRoomBtn').addEventListener('click', () => { if (net.isHost) { sfx('click'); net.send({ t: 'chaos', on: !net.chaos }); } });
 
 // Map chips (menu + lobby share the markup builder).
 function buildMaps(root, onPick) {
@@ -380,7 +412,7 @@ function dojo() {
   playMusic('menu');
   finalMusic = true; // no final-showdown theme in the dojo
   matchLeft('restart');
-  game.newMatch({ mapKey: 'oasis', roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen) }], { level: 0.3 }), localId: 'me', dojo: true });
+  game.newMatch({ mapKey: 'oasis', roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen), cos: cosFor(chosen) }], { level: 0.3 }), localId: 'me', dojo: true });
   track('dojo_opened', { brawler: chosen, loadout: loadout(chosen) });
   canvas.focus();
 }
@@ -395,9 +427,12 @@ function play() {
   playMusic('m_' + mapKey);
   finalMusic = false;
   matchLeft('restart');
-  game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen) }], { level: botLevel() }), localId: 'me' });
+  const level = leagueBotLevel(chosen, botLevel()); // Bot League: this brawler's trophies nudge the bots
+  const mutator = chaosOn ? weeklyMutator() : null;
+  game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen), cos: cosFor(chosen) }], { level }), localId: 'me', mutator });
+  hud.titleCard();
   achievements.matchStart({ mapKey, brawler: chosen });
-  matchStarted({ mode: 'solo', map: mapKey, map_random: chosenMap === 'random', brawler: chosen, loadout: loadout(chosen), bot_level: botLevel(), humans: 1 });
+  matchStarted({ mode: 'solo', map: mapKey, map_random: chosenMap === 'random', brawler: chosen, loadout: loadout(chosen), bot_level: level, humans: 1, mutator });
   presence(t('presence.solo', { map: t(`map.${mapKey}`) }));
   canvas.focus();
 }
@@ -470,12 +505,12 @@ async function joinRoom(code, lobbyId = null, web = false) {
   try { if (!steam) localStorage.setItem('iaslop-name', name); } catch { /* ignore */ }
   status(t('lobby.connecting'));
   try {
-    const lo = loadout(chosen);
-    if (lobbyId) { use(steamNet); await net.joinLobby(lobbyId, name, chosen, lo); }
-    else if (steamNet && !code && !web) { use(steamNet); await net.create(name, chosen, lo); }
-    else if (web) { use(webNet); await net.connect(code || randomCode(), name, chosen, lo); }
-    else if (steamNet && await steam.findLobby(code)) { use(steamNet); await net.connect(code, name, chosen, lo); }
-    else { use(webNet); await net.connect(code, name, chosen, lo); }
+    const lo = loadout(chosen), cos = cosFor(chosen);
+    if (lobbyId) { use(steamNet); await net.joinLobby(lobbyId, name, chosen, lo, cos); }
+    else if (steamNet && !code && !web) { use(steamNet); await net.create(name, chosen, lo, cos); }
+    else if (web) { use(webNet); await net.connect(code || randomCode(), name, chosen, lo, cos); }
+    else if (steamNet && await steam.findLobby(code)) { use(steamNet); await net.connect(code, name, chosen, lo, cos); }
+    else { use(webNet); await net.connect(code, name, chosen, lo, cos); }
     if (net === webNet) presence(t('presence.room'));
     track('room_joined', { kind: net === steamNet ? 'steam_lobby' : net.matchmade ? 'matchmaking' : 'room', created: !code && !lobbyId, friend: !!lobbyId });
     status('');
@@ -593,9 +628,11 @@ onNet('room', m => {
   for (const p of m.players) {
     const li = document.createElement('li');
     const me = p.id === net.id;
-    li.innerHTML = `<img src="${portrait(typeOf(p.brawler))}" alt=""><span class="${me ? 'you' : ''}"></span>${p.host ? `<span class="crown">${t('lobby.host')}</span>` : ''}`
+    const C = parseCos(p.cos), key = typeOf(p.brawler);
+    li.innerHTML = `${framed(C.frame, `<img src="${portrait(key)}" alt="" style="filter:${skinFilter(key, C.skin)}">`, 'p-pf')}<span class="${me ? 'you' : ''}"></span>${p.host ? `<span class="crown">${t('lobby.host')}</span>` : ''}`
       + (me ? '' : `<span class="p-act"><button class="p-rep" title="${t('mod.report')}">⚑</button>${canKick ? `<button class="p-kick" title="${t('mod.kick')}">✕</button>` : ''}</span>`);
     li.children[1].textContent = (PLAT_ICON[p.plat] ? PLAT_ICON[p.plat] + ' ' : '') + (me ? t('lobby.you', { name: p.name }) : p.name);
+    if (C.title) li.children[1].dataset.title = titleText(C.title);
     if (!me) {
       li.querySelector('.p-rep').addEventListener('click', () => openReport(p));
       const k = li.querySelector('.p-kick');
@@ -613,6 +650,8 @@ onNet('room', m => {
   syncMaps($('#lobbyMaps'), lobbyMap);
   $('#lobbyMaps').querySelectorAll('.map').forEach(b => { b.disabled = !host; });
   $('#mapNote').textContent = host ? t('lobby.youPick') : t('lobby.hostPicks');
+  $('#chaosRoomBtn').classList.toggle('hidden', !!m.matchmade);
+  chaosChip($('#chaosRoomBtn'), !!m.chaos, host);
   $('#start').classList.toggle('hidden', !host);
   $('#waiting').classList.toggle('hidden', host);
   $('#waiting').textContent = m.inMatch ? t('lobby.inProgress') : m.matchmade ? t('mm.matchmade') : t('lobby.waiting');
@@ -637,9 +676,13 @@ function showMatchLoad(mapKey, roster) {
     el.dataset.id = r.id;
     el.dataset.human = r.human ? '1' : '';
     el.style.setProperty('--c', '#' + T.palette.main.toString(16).padStart(6, '0'));
-    el.innerHTML = `<span class="ml-ok">✓</span><img src="${portrait(typeOf(r.type))}" alt=""><div class="ml-name"></div><div class="ml-sub"></div><div class="ml-bar"><i></i></div>`;
+    const C = parseCos(r.cos);
+    if (r.human && C.frame) el.classList.add('ml-fr', 'fr-' + FRAMES[C.frame]);
+    el.innerHTML = `<span class="ml-ok">✓</span><img src="${portrait(typeOf(r.type))}" alt="" style="filter:${skinFilter(typeOf(r.type), C.skin)}"><div class="ml-name"></div><div class="ml-title"></div><div class="ml-sub"></div><div class="ml-bar"><i></i></div>`;
+    el.querySelector('.ml-title').textContent = r.human ? titleText(C.title) : '';
     el.querySelector('.ml-name').textContent = r.id === net.id ? t('lobby.you', { name: r.name }) : r.name;
-    el.querySelector('.ml-sub').textContent = r.human ? `${PLAT_ICON[r.plat] || '🌐'} ${T.name}` : `${t('load.bot')} · ${T.name}`;
+    el.querySelector('.ml-sub').textContent = r.human ? `${PLAT_ICON[r.plat] || '🌐'} ${T.name}`
+      : `${r.per ? PERSONA_ICONS[r.per] + ' ' + t('persona.' + r.per) : t('load.bot')} · ${T.name}`;
     if (!r.human) el.querySelector('.ml-bar i').style.width = '100%';
     cards.appendChild(el);
   }
@@ -679,6 +722,7 @@ async function goMatch(ms) {
   hud.show(true);
   game.time = 0; // the spawn shield counts from here
   game.state = 'playing';
+  hud.titleCard();
   canvas.focus();
 }
 
@@ -709,7 +753,7 @@ function matchmadeOver() {
 $('#mmAgain').addEventListener('click', () => { $('#result').classList.add('hidden'); openLobby(); findMatch(); });
 $('#mmMenu').addEventListener('click', () => { sfx('click'); $('#result').classList.add('hidden'); openLobby(); });
 
-async function startOnline(mapKey, roster, role) {
+async function startOnline(mapKey, roster, role, mutator = null) {
   matchmadeMatch = !!net.matchmade;
   resultShown = false;
   rankedText = '';
@@ -722,7 +766,7 @@ async function startOnline(mapKey, roster, role) {
   await nextFrame();
   // sendTo: per-player snapshots (only what each one can see); the Steam P2P host has it.
   const sendTo = role === 'host' && net.sendTo ? (id, msg) => net.sendTo(id, msg) : null;
-  game.newMatch({ mapKey, roster, localId: net.id, net: { role, send: msg => net.send(msg), sendTo } });
+  game.newMatch({ mapKey, roster, localId: net.id, net: { role, send: msg => net.send(msg), sendTo }, mutator });
   game.state = 'waiting'; // nothing moves until everyone is in
   game.localReady = false;
   const me = roster.find(r => r.id === net.id);
@@ -767,12 +811,12 @@ $('#start').addEventListener('click', () => {
   sfx('click');
   // Server rooms: the server builds the roster and starts everyone (the leader included).
   if (net.serverAuthority) { net.send({ t: 'start' }); return; }
-  const roster = makeRoster(net.players.map(p => ({ id: p.id, name: p.name, type: p.brawler, lo: p.lo })), { level: botLevel() });
-  const mapKey = resolveMap(lobbyMap);
-  net.send({ t: 'start', map: mapKey, roster });
-  startOnline(mapKey, roster, 'host');
+  const roster = makeRoster(net.players.map(p => ({ id: p.id, name: p.name, type: p.brawler, lo: p.lo, cos: p.cos })), { level: botLevel() });
+  const mapKey = resolveMap(lobbyMap), mut = net.chaos ? weeklyMutator() : null;
+  net.send({ t: 'start', map: mapKey, roster, mut });
+  startOnline(mapKey, roster, 'host', mut);
 });
-onNet('start', m => startOnline(m.map, m.roster, 'client'));
+onNet('start', m => startOnline(m.map, m.roster, 'client', m.mut));
 onNet('in', m => game.onInput(m));
 onNet('snap', m => game.applySnap(m));
 onNet('ev', m => game.applyEvents(m.list));
@@ -858,19 +902,50 @@ game.onFeat = (kind, n) => {
   else if (kind === 'crate') achievements.crate();
   else achievements.cubes(n);
 };
-// Result stat card: your damage, KOs, cubes and gadgets, and who dealt the most damage (MVP).
+// Result stat card: your damage, KOs, cubes and gadgets, then the match awards (v0.13): the MVP
+// (most damage) and the best at K.O.s, cubes, gadgets, supers, crates and emotes.
+const AWARDS = [['kos', '💀', 2], ['cubes', '💎', 3], ['supers', '🌟', 2], ['gadgets', '🧰', 3], ['crates', '📦', 3], ['emotes', '💬', 2]];
+const who = b => (b === game.player ? t('hud.you') : b.name);
 function showStats() {
   const P = game.player, el = $('#resStats');
   if (!P) { el.innerHTML = ''; return; }
-  const mvp = game.brawlers.reduce((a, b) => (b.stats.dmg > a.stats.dmg ? b : a), P);
   const tile = (icon, v, label) => `<div><span>${icon}</span><b>${v}</b><small>${label}</small></div>`;
+  const best = k => game.brawlers.reduce((a, b) => (b.stats[k] > a.stats[k] ? b : a), P);
+  const mvp = best('dmg');
+  const list = [{ b: mvp, html: `<i>👑</i><span>${t('award.mvp')}</span> <b></b>` }];
+  for (const [k, icon, min] of AWARDS) {
+    const b = best(k);
+    if (b.stats[k] >= min) list.push({ b, html: `<i>${icon}</i><span>${t('award.' + k, { n: b.stats[k] })}</span> <b></b>` });
+  }
+  // yours first, then the others; 5 at most
+  list.sort((x, y) => (y.b === P) - (x.b === P));
   el.innerHTML = tile('💥', Math.round(P.stats.dmg), t('result.dmg')) + tile('💀', P.stats.kos, t('result.kos'))
     + tile('💎', P.stats.cubes, t('result.cubes')) + tile(GADGET_ICONS[P.type.key + P.gadget], P.stats.gadgets, t('result.gadgets'))
-    + `<p class="mvp${mvp === P ? ' me' : ''}">👑 ${t('result.mvp', { name: mvp === P ? t('hud.you') : mvp.name, n: Math.round(mvp.stats.dmg) })}</p>`;
+    + `<div class="awards">${list.slice(0, 5).map(a => `<span class="award${a.b === P ? ' me' : ''}">${a.html}</span>`).join('')}</div>`;
+  el.querySelectorAll('.award b').forEach((n, i) => { n.textContent = who(list[i].b); });
+}
+
+// Podium (v0.13): the top 3 on steps, with their looks, once the match has a winner.
+let podiumFor = null, resultMatch = null;
+function showPodium() {
+  const el = $('#resPodium');
+  if (!game.ended || !game.player) { el.innerHTML = ''; $('.result').classList.remove('podium-on'); podiumFor = null; return; }
+  if (podiumFor === game.matchNo) return;
+  podiumFor = game.matchNo;
+  const top = game.brawlers.filter(b => b.rank >= 1 && b.rank <= 3).sort((a, b) => a.rank - b.rank);
+  const order = [top[1], top[0], top[2]].filter(Boolean); // 2 - 1 - 3
+  el.innerHTML = order.map(b => {
+    const C = b.cos;
+    return `<div class="pd p${b.rank}${b === game.player ? ' me' : ''}">${framed(C.frame, `<img src="${portrait(b.type.key)}" alt="" style="filter:${skinFilter(b.type.key, C.skin)}">`)}
+      <span class="pd-name"></span><span class="pd-title">${b.human ? titleText(C.title) : b.persona ? PERSONA_ICONS[b.persona] + ' ' + t('persona.' + b.persona) : ''}</span><span class="pd-step">${b.rank}</span></div>`;
+  }).join('');
+  el.querySelectorAll('.pd-name').forEach((n, i) => { n.textContent = who(order[i]); });
+  $('.result').classList.add('podium-on');
 }
 
 game.onResult = (rank, won) => {
   showStats();
+  showPodium();
   achievements.result(rank, won, { night: lighting.night >= 0.5 });
   if (played && !played.ended) {
     played.ended = true;
@@ -880,8 +955,24 @@ game.onResult = (rank, won) => {
   }
   // hidden level: the bots of the next solo / private match follow it (never shown)
   recordResult(rank, won);
+  resultMatch = game.matchNo;
+  // "Agent of Chaos": the first Weekly Chaos win
+  const chaosTitle = won && game.mutator && !owns('title:10') ? [unlock('title:10')] : [];
   // mastery of the brawler you played: points, and a little ceremony when it levels up
-  if (played && played.brawler && TYPES[played.brawler]) showMastery(award(played.brawler, { rank, kos: played.kos }), played.brawler);
+  const key = played && played.brawler && TYPES[played.brawler] ? played.brawler : null;
+  if (key) {
+    const m = award(key, { rank, kos: played.kos });
+    showMastery(m, key);
+    // account level, Slop Coins, Bot League trophies (solo) and quests (v0.13)
+    const P = game.player, st = P ? P.stats : {};
+    const res = awardMatch({ rank, won, kos: played.kos, key, vsBots: played.mode === 'solo', mastery: m.after });
+    const q = recordMatch({ rank, won, brawler: key, kos: played.kos, dmg: Math.round(st.dmg || 0), cubes: st.cubes || 0,
+      gadgets: st.gadgets || 0, supers: st.supers || 0, crates: st.crates || 0, emotes: st.emotes || 0 }, Object.keys(TYPES));
+    meta.showResult({ ...res, extra: chaosTitle }, q, key);
+    track('progress', { level: res.after.level, xp: res.xp, coins: res.coins + q.coins, trophies: res.league ? res.league.total : undefined,
+      quests_done: q.moved.filter(x => x.done).length });
+    for (const x of q.moved) if (x.done) track('quest_completed', { kind: x.q.kind, weekly: x.weekly });
+  } else $('#resProgress').innerHTML = '';
   resultShown = true;
   // ranked (matchmaking) result: arrives from the server when the match ends (maybe already here)
   $('#resRank').classList.toggle('hidden', !matchmadeMatch);
@@ -986,6 +1077,9 @@ function frame(ts) {
   renderer.info.reset();
   input.poll();
   menus.update(dt);
+  if (!$('#result').classList.contains('hidden') && game.ended && game.player && game.matchNo === resultMatch && podiumFor !== game.matchNo) { showPodium(); showStats(); } // solo: the bots finished the match
+  const inMatch = game.mode === 'play' && game.player && !menus.paused && !$('#hud').classList.contains('hidden') && $('#result').classList.contains('hidden');
+  if (inMatch) wheel.update(); else if (wheel.open) wheel.close();
   if (input.padHit(PAD.Y)) nextTimeOfDay();
   if (input.padHit(PAD.BACK)) setSetting('debugPanel', !settings.debugPanel);
   game.update(dt);

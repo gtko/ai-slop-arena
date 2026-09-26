@@ -268,13 +268,33 @@ if ( vEye > 0.0 && uLow > 0.0 ) {
   if ( vEye < lowEdge ) diffuseColor.rgb = uLid * ( vEye > lowEdge - 0.07 ? 0.55 : 1.0 );
 }`;
 
-function figurineMaterial(map, gain, flames = false, sway = null, eyes = null) {
+// Skins (v0.13, cosmetics.js): a hue turn + saturation + brightness of the painted texture, or gold.
+// Applied after the eyelids so they match the skin. uRecol = (hue radians, saturation, brightness).
+const RECOL_FRAG = /* glsl */`
+if ( uRecol.x != 0.0 || uRecol.y != 1.0 || uRecol.z != 1.0 ) {
+  vec3 yiq = mat3( 0.299, 0.596, 0.211, 0.587, -0.274, -0.523, 0.114, -0.322, 0.312 ) * diffuseColor.rgb;
+  float hc = cos( uRecol.x ), hs = sin( uRecol.x );
+  yiq.yz = vec2( yiq.y * hc + yiq.z * hs, yiq.z * hc - yiq.y * hs ) * uRecol.y; // same turn as CSS hue-rotate (the previews)
+  diffuseColor.rgb = max( mat3( 1.0, 1.0, 1.0, 0.956, -0.272, -1.106, 0.621, -0.647, 1.703 ) * yiq, 0.0 ) * uRecol.z;
+}
+if ( uGold > 0.0 ) {
+  float gl = dot( diffuseColor.rgb, vec3( 0.299, 0.587, 0.114 ) );
+  diffuseColor.rgb = mix( diffuseColor.rgb, vec3( 1.0, 0.74, 0.22 ) * ( 0.3 + gl * 1.25 ), uGold );
+}`;
+
+function figurineMaterial(map, gain, flames = false, sway = null, eyes = null, recol = null) {
   const rim = charMat(0xffffff);
   const m = new THREE.MeshPhysicalMaterial({ map, roughness: 0.6, metalness: 0, clearcoat: 0.3, clearcoatRoughness: 0.45 });
   const uGain = { value: gain };
   m.onBeforeCompile = (sh, r) => {
     rim.onBeforeCompile(sh, r);
     sh.uniforms.uGain = uGain;
+    if (recol) { // first: every later patch inserts its code before this one
+      Object.assign(sh.uniforms, recol);
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform vec3 uRecol;\nuniform float uGold;')
+        .replace('#include <map_fragment>', `#include <map_fragment>${RECOL_FRAG}`);
+    }
     if (sway) swayPatch(sh, sway);
     if (eyes) {
       Object.assign(sh.uniforms, eyes);
@@ -297,7 +317,7 @@ function figurineMaterial(map, gain, flames = false, sway = null, eyes = null) {
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
 totalEmissiveRadiance += diffuseColor.rgb * vFlame * ( 0.7 + 0.25 * sin( uTime * 17.0 + vViewPosition.y * 9.0 ) + 0.15 * sin( uTime * 29.0 ) );`);
   };
-  m.customProgramCacheKey = () => `figurine${flames ? '-flame' : ''}${sway ? '-sway' : ''}${eyes ? '-eyes' : ''}`;
+  m.customProgramCacheKey = () => `figurine${flames ? '-flame' : ''}${sway ? '-sway' : ''}${eyes ? '-eyes' : ''}${recol ? '-recol' : ''}`;
   rim.dispose();
   return m;
 }
@@ -315,7 +335,8 @@ export function buildFigurine(key) {
   // per brawler: its own lean of the soft parts
   const sway = T.sway ? { uSwayPush: { value: new THREE.Vector3() }, uSwayWind: shared.wind, uSwayTime: shared.time } : null;
   const eyes = T.lid ? { uBlink: { value: 0 }, uLow: { value: 0 }, uLid: { value: T.lid } } : null;
-  const mat = figurineMaterial(T.map, T.gain, T.flames, sway, eyes); // own material: hit flash and frost tint are per brawler
+  const recol = { uRecol: { value: new THREE.Vector3(0, 1, 1) }, uGold: { value: 0 } }; // skin (brawler.js setCos)
+  const mat = figurineMaterial(T.map, T.gain, T.flames, sway, eyes, recol); // own material: hit flash and frost tint are per brawler
   mesh.material = mat;
   mesh.castShadow = mesh.receiveShadow = true;
   mesh.frustumCulled = false; // bounds move with the pose
@@ -341,5 +362,5 @@ export function buildFigurine(key) {
   }
   const anim = new Animator(rig, T.clips);
   return { figurine: true, root, body, rig, mesh, skeleton: mesh.skeleton, anim, weapon: RIGS[key]?.weapon, style: RIGS[key]?.style, mats: [mat],
-    sway: sway && sway.uSwayPush.value, blink: eyes && eyes.uBlink, lowLid: eyes && eyes.uLow, disposables: lineMat === outlineMaterial(0.02) ? [] : [lineMat] };
+    sway: sway && sway.uSwayPush.value, blink: eyes && eyes.uBlink, lowLid: eyes && eyes.uLow, recol, disposables: lineMat === outlineMaterial(0.02) ? [] : [lineMat] };
 }

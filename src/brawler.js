@@ -4,6 +4,7 @@ import { buildModel as buildSculpted, OUTLINES } from './models.js';
 import { hasFigurine, buildFigurine } from './figurines.js';
 import { sfx } from './audio.js';
 import { GADGET_CHARGES, hasStar } from './gadgets.js';
+import { parseCos, SKINS, RECOLOURS, TRAILS, COS_DEFAULT } from './cosmetics.js';
 
 export const TYPES = {
   blaster: {
@@ -161,7 +162,7 @@ export class Brawler {
     this.ccImmuneT = 0; // after a freeze: immune to the next one for a moment (no freeze chains)
     // Kit 2.0 (gadgets.js): loadout, charges, and the states gadgets put a brawler in
     this.gadget = 'A'; this.star = 1;
-    this.stats = { dmg: 0, kos: 0, cubes: 0, gadgets: 0 }; // match stats (result screen)
+    this.stats = { dmg: 0, kos: 0, cubes: 0, gadgets: 0, supers: 0, crates: 0, emotes: 0 }; // match stats (result screen, quests)
     this.gadgetCharges = GADGET_CHARGES; this.gadgetCd = 0;
     this.rootT = 0;     // rooted: can't move, can still shoot
     this.armorT = 0;    // Bark Skin: -35% damage taken
@@ -178,6 +179,8 @@ export class Brawler {
     this.nextFlourish = 4 + Math.random() * 8;
     this.coughT = 0;
     this.greet = Math.random() < 0.35; // some wave hello when they pop in
+    this.trailT = 0;
+    this.setCos(COS_DEFAULT);
 
     const g = geos();
     this.ring = new THREE.Mesh(g.ring, new THREE.MeshBasicMaterial({
@@ -196,6 +199,18 @@ export class Brawler {
   }
 
   get radius() { return 0.62; }
+
+  // Cosmetics (v0.13, cosmetics.js): skin on the figurine; trail, K.O. effect, frame, title and
+  // icon are read where they show.
+  setCos(s) {
+    this.cos = parseCos(s);
+    const R = this.model.recol;
+    if (!R) return;
+    const name = SKINS[this.cos.skin], gold = name === 'gold', rc = RECOLOURS[this.type.key]?.[name];
+    R.uRecol.value.set(...(rc || [0, 1, 1]));
+    R.uGold.value = gold ? 1 : 0;
+    for (const m of this.model.mats) if (m.isMeshPhysicalMaterial) { m.metalness = gold ? 0.5 : 0; m.roughness = gold ? 0.3 : 0.6; m.clearcoat = gold ? 0.8 : 0.3; }
+  }
 
   // Humans hit at full strength and bots a bit softer (they aim with lead prediction). It depends on
   // who drives the brawler, never on which machine simulates the match: the Steam host, the online
@@ -289,7 +304,7 @@ export class Brawler {
         sfx('immune', this.g.volumeAt(this.pos.x, this.pos.z));
       }
     }
-    const statusMul = (this.freezeT > 0 || this.rootT > 0 ? 0 : this.slowT > 0 ? this.slowMul || 0.55 : 1) * (this.slowSelfT > 0 ? 0.8 : 1);
+    const statusMul = (this.freezeT > 0 || this.rootT > 0 ? 0 : this.slowT > 0 ? this.slowMul || 0.55 : 1) * (this.slowSelfT > 0 ? 0.8 : 1) * (this.g.speedMul ?? 1);
 
     // Brawl-style regen: 13%/s after 3s without dealing or taking damage.
     const calm = hasStar(this, 'sapRegen') ? 2 : 3; // star power: regen kicks in sooner
@@ -349,6 +364,11 @@ export class Brawler {
     this.walkAmp += ((speedFrac > 0.15 ? 1 : 0) - this.walkAmp) * (1 - Math.exp(-10 * dt));
     this.walkPhase += dt * 11 * Math.max(speedFrac, 0.2);
     this.footsteps();
+    // trail (cosmetic): only while running in sight, never out of a bush (it would give you away)
+    if (this.cos.trail && this.walkAmp > 0.5 && this.alive && !this.inBush && this.g.fxVisible(this) && (this.trailT -= dt) <= 0) {
+      this.trailT = 0.05;
+      this.g.effects.trail(this.pos.x, this.pos.z, TRAILS[this.cos.trail]);
+    }
     this.recoil = Math.max(0, this.recoil - dt * 6);
     if (m.figurine) this.animateFigurine(dt, speedFrac);
     else this.poseRig(dt, t);
@@ -474,6 +494,14 @@ export class Brawler {
     this.squashV = 0;
     this.hitstopT = Math.max(this.hitstopT, stop);
     this.model.anim?.hit();
+  }
+
+  // Emote (v0.13): a matching clip; while moving, over the upper body only.
+  emoteAnim(id) {
+    const A = this.model.anim;
+    if (!A || !this.alive) return;
+    const clip = { sleep: 'Bored', angry: 'Fidget', shock: 'Fidget', cry: 'Fidget', skull: 'Fidget', lol: 'Cheer', cool: 'Cheer', clown: 'Cheer' }[id] || 'Wave';
+    if (clip === 'Cheer' || this.walkAmp > 0.3) A.fire('Cheer'); else A.once(clip);
   }
 
   cheer() {

@@ -14,14 +14,18 @@ export const BRAWLER_KEYS = Object.keys(TYPES);
 export const MAP_KEYS = Object.keys(MAPS);
 export { makeRoster, randomMap };
 export { validBrawler, validLoadout } from '../gadgets.js';
+export { validCos, COS_DEFAULT } from '../cosmetics.js';
+export { weeklyMutator, MUTATORS } from '../mutators.js';
+export { EVENT_OF } from '../events.js';
+export { PERSONAS } from '../ai.js';
 
 export class ServerMatch {
   // send(msg): to every player; sendTo(id, msg): one player; onEnd(): match over; onCheat(id, kind)
-  constructor({ map, roster, send, sendTo, onEnd, onCheat }) {
+  constructor({ map, roster, mut = null, send, sendTo, onEnd, onCheat }) {
     const input = { rumble: noop, endFrame: noop, usingPad: false, usingTouch: false, touch: null };
     const g = this.game = new Game({ scene: new THREE.Scene(), camera: new THREE.PerspectiveCamera(), lighting: {}, lights: stub(), hud: stub(), input });
     g.weatherDensity = 0; // no particles to simulate
-    g.newMatch({ mapKey: map, roster, localId: null, headless: true, net: { role: 'host', send, sendTo } });
+    g.newMatch({ mapKey: map, roster, localId: null, headless: true, net: { role: 'host', send, sendTo }, mutator: mut });
     g.onMatchEnd = onEnd;
     g.onCheat = (b, kind) => onCheat && onCheat(b.id, kind, b.guard ? b.guard.strikes : 0);
     this.acc = 0;

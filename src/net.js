@@ -6,7 +6,7 @@ import { botLevel } from './skill.js';
 // room (it is the host); the leader only picks the map and starts. The Steam build's friend
 // lobbies use steamnet.js instead (a player hosts).
 
-export const PROTOCOL = 3; // must match worker/index.js; older clients are told to update
+export const PROTOCOL = 4; // must match worker/index.js; older clients are told to update
 
 // Server refusals come with a code we translate; bans keep the server's text (it has the date).
 export function serverError(msg) {
@@ -19,8 +19,8 @@ export function serverError(msg) {
 export function serverBase() { return serverOrigin().replace(/^http/, 'ws'); }
 
 // Query string every connection carries: protocol version, device id and platform (moderation).
-export function identityQuery(name, brawler, lo = 'A1') {
-  return `v=${PROTOCOL}&cid=${encodeURIComponent(clientId())}&plat=${platformName}&name=${encodeURIComponent(name)}&b=${brawler}&lo=${lo}&lvl=${botLevel().toFixed(2)}`;
+export function identityQuery(name, brawler, lo = 'A1', cos = '') {
+  return `v=${PROTOCOL}&cid=${encodeURIComponent(clientId())}&plat=${platformName}&name=${encodeURIComponent(name)}&b=${brawler}&lo=${lo}&lvl=${botLevel().toFixed(2)}${cos ? '&cos=' + cos : ''}`;
 }
 
 export function randomCode() {
@@ -49,17 +49,17 @@ export class Net {
   on(type, fn) { this.handlers.set(type, fn); return this; }
   emit(type, msg) { const h = this.handlers.get(type); if (h) h(msg); }
 
-  connect(code, name, brawler, lo) {
+  connect(code, name, brawler, lo, cos) {
     this.close();
     return new Promise((resolve, reject) => {
-      const url = `${serverBase()}/ws/${encodeURIComponent(code)}?${identityQuery(name, brawler, lo)}`;
+      const url = `${serverBase()}/ws/${encodeURIComponent(code)}?${identityQuery(name, brawler, lo, cos)}`;
       const ws = this.ws = new WebSocket(url);
       let welcomed = false;
       ws.onmessage = e => {
         let msg;
         try { msg = JSON.parse(e.data); } catch { return; }
         if (msg.t === 'welcome') { this.id = msg.id; this.code = msg.code; this.matchmade = !!msg.matchmade; welcomed = true; resolve(this); }
-        if (msg.t === 'room') { this.players = msg.players; this.inMatch = msg.inMatch; this.map = msg.map; this.matchmade = !!msg.matchmade; }
+        if (msg.t === 'room') { this.players = msg.players; this.inMatch = msg.inMatch; this.map = msg.map; this.chaos = !!msg.chaos; this.matchmade = !!msg.matchmade; }
         if (msg.t === 'kicked') this.kickedMsg = msg.msg;
         if (msg.t === 'pong') this.rtt = performance.now() - msg.at;
         if (msg.t === 'error' && !welcomed) reject(new Error(serverError(msg)));
