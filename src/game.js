@@ -11,7 +11,7 @@ import { MAPS, MAP_KEYS } from './maps.js';
 import { Weather } from './weather.js';
 import { t } from './i18n/index.js';
 import { Feel, weapon } from './feel.js';
-import { GADGETS, GADGET_CHARGES, GADGET_LOCKOUT, parseLoadout, flareFx } from './gadgets.js';
+import { GADGETS, GADGET_CHARGES, GADGET_LOCKOUT, parseLoadout, flareFx, gadgetFx } from './gadgets.js';
 
 const NAMES = ['Bolt', 'Nova', 'Rex', 'Juno', 'Pix', 'Kai', 'Moxie', 'Zed', 'Luna', 'Taro', 'Fizz', 'Oona', 'Brick', 'Echo'];
 const TYPE_KEYS = Object.keys(TYPES);
@@ -714,7 +714,7 @@ export class Game {
         case 'knock': if (b === this.player) b.knock.set(e.x, 0, e.z); break;
         case 'imm': if (b && b.visibleToPlayer) this.hud.floater(this.camera, b.pos.x, 3.1, b.pos.z, t('hud.immune'), 'immune'); break;
         case 'gad':
-          if (b && b !== this.player && b.alive) GADGETS[b.type.key + b.gadget]?.fx(this, b, e.dx, e.dz);
+          if (b && b !== this.player && b.alive) gadgetFx(this, b, e.dx, e.dz);
           if (b) b.stats.gadgets++;
           break;
         case 'flare': flareFx(this, e.x, e.z); break;
@@ -892,7 +892,7 @@ export class Game {
     const G = GADGETS[b.type.key + b.gadget];
     G.move?.(this, b, dx, dz);
     if (this.authority) this.gadgetEffect(b, dx, dz, point);
-    else { this.gadgetSeq++; this.gadgetDir.set(dx, 0, dz); G.fx(this, b, dx, dz); }
+    else { this.gadgetSeq++; this.gadgetDir.set(dx, 0, dz); gadgetFx(this, b, dx, dz); }
     if (b === this.player) this.hud.gadgetUsed();
     return true;
   }
@@ -901,7 +901,7 @@ export class Game {
   gadgetEffect(b, dx, dz, point) {
     const G = GADGETS[b.type.key + b.gadget];
     G.effect(this, b, dx, dz, point);
-    G.fx(this, b, dx, dz);
+    gadgetFx(this, b, dx, dz);
     b.stats.gadgets++;
     if (b.netDriven && b.guard && G.dist) b.guard.knock = Math.max(b.guard.knock, G.dist + 1.5); // a remote player dashes itself
     this.ev({ e: 'gad', id: b.id, dx: r2(dx), dz: r2(dz) });

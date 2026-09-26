@@ -8,7 +8,7 @@ import { sfx } from './audio.js';
 //  - move():   on the machine that controls the brawler (your own brawler, bots on the host): dashes,
 //              slides and hops are ordinary movement, so the host only widens its move check.
 //  - effect(): on the authority (solo, host, server): damage, roots, reveals, walls, buffs.
-//  - fx():     everywhere (the host broadcasts a 'gad' event): visuals and sound, if you can see it.
+//  - fx():     everywhere (the host broadcasts a 'gad' event): visuals, plus its `sound`, if you can see it.
 
 export const GADGET_CHARGES = 3, GADGET_LOCKOUT = 5;
 // HUD / lobby icon of each gadget
@@ -22,6 +22,7 @@ const dash = (b, dx, dz, dist, time, air = false) => { b.dash = { vx: dx * dist 
 
 export const GADGETS = {
   blasterA: {
+    sound: 'gad_dash',
     // Root Charge: 4 m shoulder dash; the first enemy bumped takes 400 and is rooted 0.6 s
     dist: 4,
     move(g, b, dx, dz) { dash(b, dx, dz, 4, 0.25); },
@@ -29,12 +30,14 @@ export const GADGETS = {
     fx(g, b, dx, dz) { g.effects.dust(b.pos.x, b.pos.z, 10, 0xb58a5a, 1.2); b.attacked(); },
   },
   blasterB: {
+    sound: 'gad_bark',
     // Bark Skin: 2.5 s of -35% damage taken, -20% speed
     move(g, b) { b.slowSelfT = 2.5; },
     effect(g, b) { b.armorT = 2.5; b.slowSelfT = 2.5; },
     fx(g, b) { g.effects.ring(b.pos.x, b.pos.z, 1.3, BARK, 0.6); g.effects.debrisBurst(b.pos.x, 1, b.pos.z, 0x8a5a2e, 8, 0.2, 3); },
   },
   gunslingerA: {
+    sound: 'gad_dash',
     // Tail Roll: 3.5 m roll, 0.25 s untouchable, +1 ammo
     dist: 3.5,
     move(g, b, dx, dz) { dash(b, dx, dz, 3.5, 0.22); },
@@ -42,6 +45,7 @@ export const GADGETS = {
     fx(g, b) { g.effects.dust(b.pos.x, b.pos.z, 8, 0xf0b8d0, 1); },
   },
   gunslingerB: {
+    sound: 'gad_flare',
     // Star Flare: a flare to the aim point (up to 16 m) that reveals everyone within 6 m for 3 s
     effect(g, b, dx, dz, p) {
       const [x, z] = reach(g, b, dx, dz, p, 16);
@@ -49,9 +53,10 @@ export const GADGETS = {
       g.ev({ e: 'flare', x: Math.round(x * 100) / 100, z: Math.round(z * 100) / 100 });
       flareFx(g, x, z);
     },
-    fx(g, b) { sfx('shot_ray', g.fxVisible(b) ? g.volumeAt(b.pos.x, b.pos.z) : 0); },
+    fx() {},
   },
   bomberA: {
+    sound: 'gad_hop',
     // Lava Hop: a 5 m jump (0.6 s in the air, over one wall at most); the landing burns 300/s for 2 s
     dist: 5.5, air: true,
     move(g, b, dx, dz) {
@@ -61,14 +66,16 @@ export const GADGETS = {
       dash(b, dx, dz, d, 0.6, true);
     },
     effect(g, b) { b.hopLandT = 0.6; },
-    fx(g, b) { g.effects.dust(b.pos.x, b.pos.z, 8, 0x6a4a3a, 1); sfx('throw', g.fxVisible(b) ? g.volumeAt(b.pos.x, b.pos.z) : 0); },
+    fx(g, b) { g.effects.dust(b.pos.x, b.pos.z, 8, 0x6a4a3a, 1); },
   },
   bomberB: {
+    sound: 'gad_fuse',
     // Fuse Cut: the next fireball flies 40% faster
     effect(g, b) { b.fuseNext = true; },
     fx(g, b) { g.effects.sparkBurst(b.pos.x, 1.6, b.pos.z, LAVA, 16, 5, 0.4, 0.14); },
   },
   frostbiteA: {
+    sound: 'gad_dash',
     // Ice Slide: 5 m slide in 0.35 s
     dist: 5,
     move(g, b, dx, dz) { dash(b, dx, dz, 5, 0.35); },
@@ -76,6 +83,7 @@ export const GADGETS = {
     fx(g, b) { g.effects.sparkBurst(b.pos.x, 0.3, b.pos.z, ICE, 18, 4, 0.5, 0.14); },
   },
   frostbiteB: {
+    sound: 'gad_icewall',
     // Ice Wall: 3 ice blocks across the aim, 4 m ahead, for 3 s: they stop bullets, feet and eyes
     effect(g, b, dx, dz) {
       const x = b.pos.x + dx * 4, z = b.pos.z + dz * 4, A = g.arena, tiles = [];
@@ -87,6 +95,7 @@ export const GADGETS = {
     fx(g, b) { g.effects.sparkBurst(b.pos.x, 1.2, b.pos.z, ICE, 10, 3, 0.4, 0.12); },
   },
   voltA: {
+    sound: 'gad_blink',
     // Blink: 5 m teleport after a 0.15 s charge, only where you can see; leaves a zap trap (500)
     dist: 5.5,
     move(g, b, dx, dz) {
@@ -99,6 +108,7 @@ export const GADGETS = {
     fx(g, b) { g.effects.ring(b.pos.x, b.pos.z, 1.1, ZAP, 0.4); g.effects.sparkBurst(b.pos.x, 1, b.pos.z, ZAP, 16, 5, 0.3, 0.12); },
   },
   voltB: {
+    sound: 'gad_overclock',
     // Overclock: instant full reload, +30% reload speed for 3 s
     move(g, b) { b.ammo = b.type.ammo; b.overclockT = 3; },
     effect(g, b) { b.ammo = b.type.ammo; b.overclockT = 3; },
@@ -140,3 +150,11 @@ export function flareFx(g, x, z) {
 }
 
 export { PINK };
+
+// The look and sound of a gadget, for everyone who can see its user.
+export function gadgetFx(g, b, dx, dz) {
+  const G = GADGETS[b.type.key + b.gadget];
+  if (!G) return;
+  G.fx(g, b, dx, dz);
+  if (g.fxVisible(b)) sfx(G.sound, g.volumeAt(b.pos.x, b.pos.z));
+}
