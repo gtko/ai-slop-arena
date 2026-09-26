@@ -19,7 +19,7 @@ const BRAWLERS = [
   { key: 'kappa', name: 'Nurse Kappa', role: 'Soigneuse', color: '#94d82d', hp: 3600, range: 11,
     desc: 'Infirmière kappa : ses bulles passent par-dessus les murs, la soignent quand elles touchent et soignent son partenaire en Duo. Super : un raz-de-marée qui balaie les ennemis et écarte le gaz.' },
   { key: 'pipchomp', name: 'Pip & Chomp', role: 'Assassin', color: '#2f9e44', hp: 4200, range: 4.5,
-    desc: 'Un petit champignon timide sur une plante carnivore : Chomp bondit et mord, Pip s'excuse. Super : un piège Venus, un buisson qui mord, enracine et révèle.' },
+    desc: 'Un petit champignon timide sur une plante carnivore : Chomp bondit et mord, Pip s\'excuse. Super : un piège Venus, un buisson qui mord, enracine et révèle.' },
   { key: 'mochi', name: 'Mochi', role: 'Tank', color: '#e64980', hp: 6800, range: 3.5,
     desc: 'Un phoque sumo en mochi à la fraise : ses coups de ventre repoussent (idéalement dans le vide). Super : Mochi Pound, un saut qui écrase, étourdit et aplatit les murs.' },
 ];

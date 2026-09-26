@@ -384,7 +384,9 @@ await test('duo: a ping reaches the partner only, once a second', () => {
 /* ------------------------------ Nurse Kappa (v0.14) ------------------------------ */
 
 function kappaMatch(lo = 'A1', duo = false) {
-  const m = new ServerMatch({ map: 'oasis', roster: makeRoster([{ id: 'k', name: 'k', type: 'kappa', lo }], { duo }), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
+  const roster = makeRoster([{ id: 'k', name: 'k', type: 'kappa', lo }], { duo });
+  for (const r of roster) if (!r.human) { r.type = 'volt'; r.lo = 'A1'; } // plain targets: no Heavyweight, no dash
+  const m = new ServerMatch({ map: 'oasis', roster, send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
   const g = m.game;
   while (g.time < 6) m.advance(0.05);
   g.brains.clear();
