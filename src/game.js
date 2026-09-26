@@ -147,6 +147,7 @@ export class Game {
     if (this.poison) this.poison.dispose();
     if (this.weather) this.weather.dispose();
     if (this.kit) this.kit.dispose();
+    if (this.ambient) this.ambient.dispose(); // its rigged animals live outside the arena group
     if (this.arena) this.arena.dispose();
 
     this.headless = headless; // the server: no one looks, so no cosmetics (kit.js)

@@ -228,7 +228,7 @@ function figurineOutline(width, flames, U) {
 
 // Average brightness of the painted texels (the atlas gaps are black), used to bring every
 // figurine to the same exposure: the generated textures come out dark and with baked shading.
-function textureGain(map) {
+export function textureGain(map) {
   try {
     const c = document.createElement('canvas');
     c.width = c.height = 64;
