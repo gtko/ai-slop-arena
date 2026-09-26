@@ -433,6 +433,7 @@ syncMaps($('#maps'), chosenMap);
 showMapPick();
 $('#mapPick').addEventListener('click', e => { sfx('click'); e.stopPropagation(); mapPopover($('#mapsPop').classList.contains('hidden')); });
 addEventListener('pointerdown', e => { if (!e.target.closest('#mapsPop, #mapPick')) mapPopover(false); });
+$('#tnTabs').addEventListener('click', () => mapPopover(false)); // a page (even opened with the keyboard) closes the picker
 const resolveMap = key => (key === 'random' || !MAPS[key] ? randomMap() : key);
 
 // The match being played, for the statistics (telemetry.js): how it started, KOs so far.
@@ -462,8 +463,9 @@ function leaveHome() {
 }
 // Esc / B / the Android back button on the home screen: the map picker, then the open page.
 menus.ctx.closePage = () => {
+  if (meta.close()) return true;
   if (!$('#mapsPop').classList.contains('hidden')) { mapPopover(false); $('#mapPick').focus({ preventScroll: true }); return true; }
-  return meta.close();
+  return false;
 };
 
 function dojo() {
@@ -508,7 +510,7 @@ let finalMusic = false; // the final showdown theme already started this match
 // the camera stays close on it (game.js updateCamera). It restarts when you pick another brawler or map.
 function showcaseRoster() {
   const roster = makeRoster([]), others = Object.keys(TYPES).filter(k => k !== chosen);
-  Object.assign(roster[0], { type: brawlerString(chosen), cos: cosFor(chosen), per: undefined });
+  Object.assign(roster[0], { type: brawlerString(chosen), lo: loadout(chosen), cos: cosFor(chosen), per: undefined });
   for (const r of roster.slice(1)) if (typeOf(r.type) === chosen) r.type = others[Math.floor(Math.random() * others.length)]; // one of a kind
   return roster;
 }
@@ -1089,9 +1091,10 @@ addEventListener('keydown', e => {
 
 // Menu showcase framing: shift the picture so the star stands in the middle of the free space
 // (between the brawler info and the play panel, under the navigation), not at the screen centre.
-let viewKey = '';
+let viewKey = '', viewFrames = 0;
 function frameShowcase() {
   const on = game.star && game.mode === 'attract' && !$('#menu').classList.contains('hidden');
+  if (on && viewKey !== 'off' && viewKey.startsWith(`${innerWidth}x${innerHeight}:`) && ++viewFrames % 30) return;
   let key = 'off', dx = 0, dy = 0;
   if (on) {
     const L = $('.hero-info').getBoundingClientRect(), R = $('.play-panel').getBoundingClientRect(), nav = $('.topnav').getBoundingClientRect();

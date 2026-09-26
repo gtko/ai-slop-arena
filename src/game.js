@@ -188,9 +188,9 @@ export class Game {
     this.restartT = -1;
     this.camTarget = this.player || this.brawlers[0];
     this.star = this.mode === 'attract' && this.showcaseRoster ? this.brawlers[0] : null; // menu showcase (main.js)
-    if (this.star) this.stageStar();
     this.camFocus.copy(this.camTarget.pos);
     this.feel.reset();
+    if (this.star) this.stageStar(); // after the reset: it sets the menu zoom straight away
     // supply drops (authority schedules, everyone sees): ~40-50 s and ~85-95 s into the match
     for (const D of this.dropping || []) this.fx.remove(D.beam, D.ring);
     if (dojo) this.setupDojo();

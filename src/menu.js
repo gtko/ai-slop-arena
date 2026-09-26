@@ -402,7 +402,7 @@ export class Menus {
     if (I.padHit(PAD.START)) {
       if (this.paused || this.optionsOpen) this.back();
       else if (!root && this.ctx.isInMatch()) this.openPause();
-      else if (root && root.id === 'meta') this.back();
+      else if (root && (root.id === 'meta' || root.id === 'mapsPop')) this.back();
       else if (root && root.id === 'menu') $('#play').click();
       return;
     }

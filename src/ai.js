@@ -153,7 +153,7 @@ export class BotBrain {
     const H = this.habits;
     const sight = 13 + this.skill * 9 + H.sight; // sharper bots notice targets from further away
     for (const o of g.brawlers) {
-      if (calm || o === b || !o.alive) continue;
+      if (calm || o === b || !o.alive || o === g.star) continue; // bots leave the menu's star alone
       const d = o.pos.distanceTo(b.pos);
       // A target that just ducked behind a wall is remembered for a moment (not one hiding in a bush).
       const seen = g.canSee(b, o);
