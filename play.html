@@ -101,38 +101,56 @@
     </div>
   </div>
 
-  <div id="menu" class="overlay">
-    <!-- profile (v0.13): level, coins, trophies, and the progression menus -->
-    <div id="profileBar" class="pbar">
-      <div class="pb-top">
-        <button id="pbMe" class="pb-me"></button>
-        <span id="pbCoins" class="pb-chip"></span>
-        <span id="pbTrophies" class="pb-chip"></span>
+  <div id="menu" class="overlay home">
+    <!-- top navigation (v0.13 menu): the pages, your currencies and profile -->
+    <header class="topnav">
+      <div class="tn-logo" aria-label="AI SLOP ARENA"><b>AI SLOP</b><span>ARENA</span></div>
+      <nav class="tn-tabs" id="tnTabs">
+        <button data-page="play" class="on"><i>⚔️</i><span data-i18n="nav.play">PLAY</span></button>
+        <button data-page="collection" id="wardBtn"><i>👕</i><span data-i18n="meta.collection">COLLECTION</span><em class="hidden"></em></button>
+        <button data-page="shop" id="shopBtn"><i>🛒</i><span data-i18n="meta.shop">SHOP</span></button>
+        <button data-page="quests" id="questsBtn"><i>📜</i><span data-i18n="meta.quests">QUESTS</span><em class="hidden"></em></button>
+        <button data-page="road" id="roadBtn"><i>🏆</i><span data-i18n="meta.road">TROPHY ROAD</span></button>
+      </nav>
+      <div class="tn-right">
+        <span id="pbCoins" class="tn-chip"></span>
+        <span id="pbTrophies" class="tn-chip"></span>
+        <button id="pbMe" class="tn-me"></button>
+        <button id="achBtn" class="tn-icon hidden" data-i18n-title="menu.achievements" title="Achievements">🏅</button>
+        <button id="optionsBtn" class="tn-icon" data-i18n-title="menu.options" title="Options">⚙️</button>
+        <button id="quitBtn" class="tn-icon hidden" data-i18n-title="menu.quit" title="Quit">⏻</button>
       </div>
-      <div class="pb-btns">
-        <button id="questsBtn"><i>📜</i><span data-i18n="meta.quests">QUESTS</span><em class="hidden"></em></button>
-        <button id="roadBtn"><i>🏆</i><span data-i18n="meta.road">TROPHY ROAD</span></button>
-        <button id="shopBtn"><i>🛒</i><span data-i18n="meta.shop">SHOP</span></button>
-        <button id="wardBtn"><i>👕</i><span data-i18n="meta.collection">COLLECTION</span><em class="hidden"></em></button>
+    </header>
+
+    <!-- your brawler, on show -->
+    <section class="hero">
+      <div class="hero-stage"><img id="heroArt" class="hero-art" alt="" /></div>
+      <div class="hero-info">
+        <em id="heroRole" class="hero-role"></em>
+        <h1 id="heroName" class="hero-name"></h1>
+        <div id="heroMastery" class="hero-mastery"></div>
+        <p id="heroDesc" class="hero-desc"></p>
+        <div id="heroStats" class="hero-stats"></div>
+        <div id="loadout"></div>
       </div>
-    </div>
-    <div class="menu-card">
-      <h1>AI SLOP<span>ARENA</span></h1>
-      <p class="tag" data-i18n="menu.tag">Showdown · 8 brawlers · 5 maps with live weather · last one standing wins</p>
-      <div id="cards"></div>
-      <div id="loadout"></div>
-      <div class="lbl-row"><span data-i18n="menu.map">Map</span><button id="chaosBtn" class="chaos-chip"></button></div>
-      <div id="maps" class="maps"></div>
-      <div class="row-btns left">
-        <button id="play" class="big" data-i18n="menu.solo">SOLO</button>
-        <button id="multi" class="big alt" data-i18n="menu.multi">MULTIPLAYER</button>
-        <button id="dojo" class="ghost" data-i18n="menu.dojo">TRAINING</button>
-        <button id="optionsBtn" class="ghost" data-i18n="menu.options">OPTIONS</button>
-        <button id="achBtn" class="ghost hidden" data-i18n="menu.achievements">ACHIEVEMENTS</button>
-        <button id="quitBtn" class="ghost hidden" data-i18n="menu.quit">QUIT</button>
+      <div id="cards" class="roster"></div>
+    </section>
+
+    <!-- play: mode, map, Weekly Chaos, the big button -->
+    <aside class="play-panel">
+      <div id="homeQuests" class="home-quests"></div>
+      <div class="pp-box">
+        <div class="pp-mode"><small data-i18n="menu.mode">SHOWDOWN</small><span data-i18n="menu.modeDesc">8 brawlers · last one standing</span></div>
+        <button id="mapPick" class="pp-map"></button>
+        <div id="maps" class="maps pp-maps hidden"></div>
+        <button id="chaosBtn" class="chaos-chip"></button>
+        <button id="play" class="pp-play"><b data-i18n="nav.play">PLAY</b><small data-i18n="menu.vsBots">Solo against bots</small></button>
+        <div class="pp-alt">
+          <button id="multi"><i>🌐</i><span data-i18n="menu.online">ONLINE</span></button>
+          <button id="dojo"><i>🥋</i><span data-i18n="menu.dojo">TRAINING</span></button>
+        </div>
       </div>
-      <p class="hint" data-i18n-html="menu.hint">Keyboard + mouse or gamepad · <kbd>Esc</kbd> / Start pauses · <kbd>T</kbd> time of day</p>
-    </div>
+    </aside>
   </div>
 
   <div id="lobby" class="overlay hidden">

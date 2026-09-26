@@ -47,6 +47,7 @@ import { PERSONA_ICONS } from './ai.js';
 import { recordMatch } from './quests.js';
 import './style.css';
 import './meta.css';
+import './home.css';
 
 installTelemetry(); // crash reports first: the rest of the start-up can fail
 translateDom();
@@ -284,16 +285,33 @@ let chosenMap = 'random';
 const MAP_ICON = { clear: '☀️', sandstorm: '🌪️', rain: '🌧️', snow: '❄️', fog: '🌫️' };
 const portrait = key => `${ASSET_BASE}ui/${key}.png`;
 
+// Home (v0.13 menu): the roster is a row of portrait tiles; the chosen brawler is on show (hero).
+const hexOf = key => '#' + TYPES[key].palette.main.toString(16).padStart(6, '0');
 const cards = $('#cards');
 for (const T of Object.values(TYPES)) {
   const c = document.createElement('button');
-  c.className = 'card' + (T.key === chosen ? ' on' : '');
+  c.className = 'rt' + (T.key === chosen ? ' on' : '');
   c.dataset.key = T.key;
-  const hex = '#' + T.palette.main.toString(16).padStart(6, '0');
-  c.innerHTML = `<span class="portrait" style="--c:${hex}"><img src="${portrait(T.key)}" alt="" onerror="this.remove()"></span><b>${T.name}</b><em>${t(`brawler.${T.key}.role`)}</em>
-    <p>${t(`brawler.${T.key}.desc`)}</p><span class="stat">${t('card.stat', { hp: T.hp, range: T.range })}</span>`;
+  c.style.setProperty('--c', hexOf(T.key));
+  c.title = `${T.name} · ${t(`brawler.${T.key}.role`)}`;
+  c.innerHTML = `<img src="${portrait(T.key)}" alt="" onerror="this.remove()"><b>${T.name}</b><i></i>`;
   c.addEventListener('click', () => { sfx('click'); pickBrawler(T.key); });
   cards.appendChild(c);
+}
+function renderHero() {
+  const T = TYPES[chosen], P = progress(chosen), C = parseCos(cosFor(chosen));
+  $('.hero').style.setProperty('--c', hexOf(chosen));
+  const art = $('#heroArt');
+  art.src = portrait(chosen);
+  art.style.filter = `${skinFilter(chosen, C.skin)} drop-shadow(0 10px 0 rgba(0, 0, 0, 0.3))`;
+  art.classList.remove('hero-in'); void art.offsetWidth; art.classList.add('hero-in');
+  $('#heroName').textContent = T.name;
+  $('#heroRole').textContent = t(`brawler.${chosen}.role`);
+  $('#heroDesc').textContent = t(`brawler.${chosen}.desc`);
+  $('#heroMastery').innerHTML = `<b>${t('menu.mastery', { n: P.level })}</b><i><u style="width:${(P.frac * 100).toFixed(0)}%"></u></i>`;
+  const bar = (label, v, max) => `<div><small>${label}</small><i><u style="width:${Math.min(100, v / max * 100).toFixed(0)}%"></u></i><b>${v}</b></div>`;
+  $('#heroStats').innerHTML = bar(t('menu.hp'), T.hp, 5000) + bar(t('menu.range'), T.range, 16) + bar(t('menu.speed'), T.speed, 7);
+  cards.querySelectorAll('.rt').forEach(c => { c.querySelector('i').textContent = progress(c.dataset.key).level; });
 }
 
 // Loadout of the chosen brawler: its mastery, gadget A / B and star power 1 / 2 (mastery.js gates).
@@ -301,11 +319,10 @@ const typeOf = s => { const k = parseLoadout(s).type; return Object.hasOwn(TYPES
 const STAR_ICONS = ['⭐', '🌟'];
 function renderLoadout() {
   const root = $('#loadout'), key = chosen, lo = loadout(key), P = progress(key);
-  const opt = (kind, v, icon, name, lock) => `<button class="lo-opt${lo.includes(v) ? ' on' : ''}${lock ? ' locked' : ''}" data-${kind}="${v}"${lock ? ' disabled' : ''}>
-    <span class="lo-ico">${lock ? '🔒' : icon}</span><span>${lock ? t('menu.locked', { n: lock }) : name}</span></button>`;
+  const opt = (kind, v, icon, name, lock) => `<button class="lo-opt${lo.includes(v) ? ' on' : ''}${lock ? ' locked' : ''}" data-${kind}="${v}"${lock ? ' disabled' : ''}
+    title="${lock ? t('menu.locked', { n: lock }) : name}"><span class="lo-ico">${lock ? '🔒' : icon}</span><span class="lo-name">${lock ? t('menu.locked', { n: lock }) : name}</span></button>`;
   const lvl = P.level;
-  root.innerHTML = `<div class="lo-mastery"><b>${t('menu.mastery', { n: lvl })}</b><i><u style="width:${(P.frac * 100).toFixed(0)}%"></u></i></div>
-    <div class="lo-group"><em>${t('menu.gadget')}</em>
+  root.innerHTML = `<div class="lo-group"><em>${t('menu.gadget')}</em>
       ${opt('g', 'A', GADGET_ICONS[key + 'A'], t(`gad.${key}A.name`), 0)}${opt('g', 'B', GADGET_ICONS[key + 'B'], t(`gad.${key}B.name`), lvl < GADGET_B_AT ? GADGET_B_AT : 0)}</div>
     <div class="lo-group"><em>${t('menu.star')}</em>
       ${opt('s', '1', STAR_ICONS[0], t(`star.${STARS[key][0]}.name`), 0)}${opt('s', '2', STAR_ICONS[1], t(`star.${STARS[key][1]}.name`), lvl < STAR_2_AT ? STAR_2_AT : 0)}</div>
@@ -324,14 +341,19 @@ function pickBrawler(key) {
   try { localStorage.setItem('iaslop-brawler', key); } catch { /* private mode */ }
   document.querySelectorAll('[data-key]').forEach(x => x.classList.toggle('on', x.dataset.key === key));
   renderLoadout();
+  renderHero();
   if (net.connected) net.send({ t: 'pick', brawler: key, lo: loadout(key), cos: cosFor(key) });
   if ($('#ljAvatar')) showAvatar();
 }
 
 renderLoadout();
 
-// Progression menus (v0.13): profile bar, quests, Trophy Road, shop, collection.
-const meta = new MetaUI({ brawlers: Object.keys(TYPES), portrait, chosen: () => chosen, onWear: () => { if (net.connected) net.send({ t: 'pick', brawler: chosen, lo: loadout(chosen), cos: cosFor(chosen) }); } });
+// Progression pages (v0.13): quests, Trophy Road, shop, collection, under the top navigation.
+const meta = new MetaUI({ brawlers: Object.keys(TYPES), portrait, chosen: () => chosen, onWear: () => {
+  renderHero();
+  if (net.connected) net.send({ t: 'pick', brawler: chosen, lo: loadout(chosen), cos: cosFor(chosen) });
+} });
+renderHero();
 
 function showMastery(m, key) {
   const el = $('#resMastery');
@@ -341,6 +363,7 @@ function showMastery(m, key) {
     <i><u style="width:${(m.frac * 100).toFixed(0)}%"></u></i><small>${t('result.mastery', { n: m.gained })}${unlock ? ' · ' + unlock : ''}</small></div>`;
   if (m.after > m.before) setTimeout(() => sfx('ready'), 400);
   renderLoadout();
+  renderHero();
 }
 
 // Weekly Chaos (v0.13): this week's mutator, on or off for solo; the room leader sets it for a room.
@@ -379,8 +402,17 @@ function buildMaps(root, onPick) {
   for (const [key, M] of Object.entries(MAPS)) add(key, t(`map.${key}`), t(`map.${key}.tag`), M.swatch[0], M.swatch[1], MAP_ICON[M.weather]);
 }
 const syncMaps = (root, key) => root.querySelectorAll('.map').forEach(m => m.classList.toggle('on', m.dataset.map === key));
-buildMaps($('#maps'), key => { chosenMap = key; syncMaps($('#maps'), key); });
+function showMapPick() {
+  const key = chosenMap, M = MAPS[key];
+  const b = $('#mapPick');
+  b.style.backgroundImage = key === 'random' ? '' : `linear-gradient(90deg, rgba(10,8,22,0.85) 30%, rgba(10,8,22,0.2)), url(${ASSET_BASE}ui/map_${key}.jpg)`;
+  b.innerHTML = `<small>${t('menu.map')}</small><b>${key === 'random' ? '🎲' : MAP_ICON[M.weather]} ${t(`map.${key}`)}</b><em>${t(`map.${key}.tag`)}</em><i>▾</i>`;
+}
+buildMaps($('#maps'), key => { chosenMap = key; syncMaps($('#maps'), key); showMapPick(); $('#maps').classList.add('hidden'); });
 syncMaps($('#maps'), chosenMap);
+showMapPick();
+$('#mapPick').addEventListener('click', e => { sfx('click'); e.stopPropagation(); $('#maps').classList.toggle('hidden'); });
+addEventListener('pointerdown', e => { if (!e.target.closest('#maps, #mapPick')) $('#maps').classList.add('hidden'); });
 const resolveMap = key => (key === 'random' || !MAPS[key] ? randomMap() : key);
 
 // The match being played, for the statistics (telemetry.js): how it started, KOs so far.
