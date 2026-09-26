@@ -365,6 +365,22 @@ await test('duo: a bot partner runs to revive you', () => {
   assert.ok(a.alive, 'the bot partner never revived');
 });
 
+await test('duo: a ping reaches the partner only, once a second', () => {
+  const { m, out, g } = duoMatch('oasis', [{ id: 'alice', party: 'P' }, { id: 'bob', party: 'P' }, 'carol']);
+  const a = g.byId.get('alice');
+  for (const id of ['alice', 'bob', 'carol']) g.byId.get(id).maxHp = g.byId.get(id).hp = 1e7;
+  while (g.time < 6) m.advance(0.05);
+  const at = { from: 'alice', x: a.net.x, z: a.net.y, ax: 1, az: 0, px: a.pos.x, pz: a.pos.z, f: 0, s: 0, g: 0 };
+  m.input({ ...at, pg: 1, qx: a.pos.x + 3, qz: a.pos.z });
+  m.advance(0.05);
+  m.input({ ...at, pg: 2, qx: a.pos.x + 3, qz: a.pos.z }); // too soon
+  m.advance(0.05);
+  const pings = id => (out.to[id] || []).filter(x => x.t === 'ev').flatMap(x => x.list).filter(e => e.e === 'ping');
+  assert.equal(pings('bob').length, 1, 'the partner did not get the ping');
+  assert.equal(pings('carol').length, 0, 'an enemy got the ping');
+  assert.ok(!events(out).some(e => e.e === 'ping'), 'the ping was broadcast');
+});
+
 /* ------------------------------ Nurse Kappa (v0.14) ------------------------------ */
 
 function kappaMatch(lo = 'A1', duo = false) {

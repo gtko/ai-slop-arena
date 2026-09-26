@@ -310,7 +310,7 @@ export class Game {
         }
         if (Math.hypot(mate.pos.x - G.x, mate.pos.z - G.z) < 2.5 && this.time - mate.lastHurt > 0.5) G.p += dt;
         if (G.p >= 3) { this.revive(G); continue; }
-        if (G.p - G.sent >= 0.25) { G.sent = G.p; this.ev({ e: 'rv', id: G.b.id, p: r2(G.p) }); }
+        if (G.p - G.sent >= 0.25) { G.sent = G.p; this.evTeam(G.b.team, { e: 'rv', id: G.b.id, p: r2(G.p) }); }
       }
       // what shows: the ghost bobs, its halo spins, the ring fills; enemies only see it in their sight
       const mine = !P || G.b === P || this.ally(G.b, P);
@@ -393,9 +393,8 @@ export class Game {
     b.pingOk = this.time + 1;
     const lim = HALF - 0.5, k0 = { x: THREE.MathUtils.clamp(x, -lim, lim), z: THREE.MathUtils.clamp(z, -lim, lim) };
     const k = this.pingKind(b, k0.x, k0.z), e = { e: 'ping', id: b.id, k, x: r2(k0.x), z: r2(k0.z) };
-    const mate = this.mateOf(b), N = this.net;
-    if (N && N.sendTo) { for (const o of [b, mate]) if (o && o.human && o !== this.player) N.sendTo(o.id, { t: 'ev', list: [e] }); } // the team only
-    else this.ev(e);
+    const mate = this.mateOf(b);
+    this.evTeam(b.team, e); // the team only
     this.pingFx(b, k, e.x, e.z);
     const brain = mate && this.brains.get(mate);
     if (brain && k !== 'danger') brain.ping = { x: e.x, z: e.z, t: this.time };
@@ -419,6 +418,14 @@ export class Game {
   }
 
   ev(e) { if (this.net && this.net.role === 'host') this.outbox.push(e); }
+  // An event only one Duo team's players get (pings, revive progress: nothing for the others to
+  // learn where a hidden enemy is). Without per-player sends (Steam P2P), everyone gets it.
+  evTeam(team, e) {
+    const N = this.net;
+    if (!N || N.role !== 'host') return;
+    if (!N.sendTo) { this.ev(e); return; }
+    for (const o of this.brawlers) if (o.team === team && o.human && o !== this.player) N.sendTo(o.id, { t: 'ev', list: [e] });
+  }
 
   /* ------------------------------ helpers ------------------------------ */
 
