@@ -3,6 +3,15 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.14.0](docs/releases/v0.14.0.md): Better together
+
+<a href="docs/releases/v0.14.0.md"><img src="docs/releases/img/v0.14.0-banner.png" alt="v0.14.0: better together" width="100%"></a>
+
+- 🤝 Duo Showdown: 4 teams of 2, revive your partner from their ghost, shared sight, bot partners.
+- 👯 Queue together with friends, pings for your partner only, a team HUD, ranked Duo.
+- 🐢 New brawler Nurse Kappa: healing soap bubbles and a Tidal Wave that parts the gas.
+- 🔄 Update required to play online.
+
 ## [v0.13.1](docs/releases/v0.13.1.md): New home
 
 <a href="docs/releases/v0.13.1.md"><img src="docs/releases/img/v0.13.1-banner.png" alt="v0.13.1: new home" width="100%"></a>
