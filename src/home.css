@@ -17,12 +17,12 @@
 .topnav { position: absolute; left: 0; right: 0; top: 0; height: var(--nav); z-index: 45; display: flex; align-items: center; gap: 18px;
   padding: 0 16px 0 68px; /* room for the sound button */
   background: linear-gradient(180deg, rgba(14, 11, 30, 0.97), rgba(14, 11, 30, 0.88)); border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35); }
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35); direction: ltr; /* the sound button is on the left in every language */ }
 .topnav::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 210, 63, 0.5), transparent); }
 .tn-logo { display: flex; flex-direction: column; line-height: 0.82; font-family: var(--display); white-space: nowrap; }
 .tn-logo b { font-weight: 400; font-size: 22px; color: var(--yellow); -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; }
 .tn-logo span { font-size: 17px; color: #fff; letter-spacing: 2px; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; }
-.tn-tabs { display: flex; height: 100%; gap: 2px; margin-left: 10px; }
+.tn-tabs { display: flex; height: 100%; gap: 2px; margin-left: 10px; min-width: 0; }
 .tn-tabs button { position: relative; display: flex; align-items: center; gap: 7px; height: 100%; padding: 0 16px; border: 0; background: none; color: var(--muted);
   font-family: var(--display); font-size: 16px; letter-spacing: 0.6px; cursor: pointer; transition: color 0.15s; }
 .tn-tabs button i { font-style: normal; font-size: 17px; filter: grayscale(0.5); transition: filter 0.15s, transform 0.15s; }
@@ -52,7 +52,8 @@
 .tn-who small { font-size: 11px; font-weight: 800; color: var(--muted); }
 .tn-icon { width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); color: #fff; font-size: 17px; cursor: pointer; }
 .tn-icon:hover { background: rgba(255, 255, 255, 0.14); }
-body:has(#menu:not(.hidden)) #sound { top: 13px; }
+body:has(#menu:not(.hidden)) #sound { top: 13px; z-index: 46; } /* over the pages, its panel too */
+body:has(#menu:not(.hidden)) #fpsBadge { top: calc(var(--nav) + 8px); }
 
 /* ------------------------------ the brawler on show ------------------------------ */
 .hero { position: absolute; left: 0; right: 380px; top: var(--nav); bottom: 0; }
@@ -123,7 +124,7 @@ body:has(#menu:not(.hidden)) #sound { top: 13px; }
 .pp-map b { font-family: var(--display); font-weight: 400; font-size: 19px; }
 .pp-map em { font-style: normal; font-size: 12px; font-weight: 800; color: #d9d3f0; }
 .pp-map i { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-style: normal; font-size: 16px; color: var(--muted); }
-.pp-maps { position: absolute; right: calc(100% + 12px); bottom: 0; width: 520px; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px; border-radius: 16px;
+.pp-maps { position: absolute; right: calc(100% + 12px); bottom: 0; width: 520px; max-width: calc(100vw - 100% - 40px); grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px; border-radius: 16px;
   background: rgba(14, 11, 30, 0.95); border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5); z-index: 5; animation: ewIn 0.15s both; }
 .pp-maps .map { height: 86px; }
 .play-panel .chaos-chip { margin: 0; padding: 7px 10px; border-radius: 10px; font-size: 11.5px; text-align: left; white-space: normal; }
@@ -138,6 +139,7 @@ body:has(#menu:not(.hidden)) #sound { top: 13px; }
   background: rgba(255, 255, 255, 0.06); color: #fff; font-family: var(--display); font-size: 15px; letter-spacing: 0.5px; cursor: pointer; transition: background 0.15s; }
 .pp-alt button:hover { background: rgba(255, 255, 255, 0.13); }
 .pp-alt button i { font-style: normal; font-size: 16px; }
+.pp-alt button span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 #multi { background: linear-gradient(#47b8f0, #2378c9); border-color: rgba(255, 255, 255, 0.25); }
 #multi:hover { filter: brightness(1.1); }
 
@@ -177,7 +179,8 @@ body:has(#menu:not(.hidden)) #sound { top: 13px; }
 #meta .col-brawlers button { width: 64px; height: 64px; border-width: 2px; }
 
 /* ------------------------------ narrower screens ------------------------------ */
-@media (max-width: 1250px) {
+@media (max-width: 1600px) { .tn-who { display: none; } }
+@media (max-width: 1450px) {
   .tn-tabs button span { display: none; }
   .tn-tabs button { padding: 0 14px; }
   .tn-tabs button i { font-size: 20px; }
@@ -192,6 +195,17 @@ body:has(#menu:not(.hidden)) #sound { top: 13px; }
   .roster { left: 24px; }
   .rt { width: 64px; height: 72px; }
   .rt img { height: 80px; }
+}
+
+/* laptops and short windows: the hero column must end above the roster */
+@media (max-height: 780px) {
+  .hero-info { top: 22px; gap: 6px; }
+  .hero-name { font-size: 50px; }
+  .hero-desc { display: none; }
+}
+@media (max-height: 640px) {
+  .hero-stats { display: none; }
+  #loadout .lo-desc { display: none; }
 }
 
 /* phones in landscape: everything within ~360-430 px of height */

@@ -15,7 +15,7 @@ export function installDevtools(A) {
   const dev = {
     run(n = 1) { for (let i = 0; i < n; i++) { ts += 1000 / 60; A.frame(ts); } },
     setup(type = 'blaster', mapIndex = 1) {
-      [...document.querySelectorAll('.card')].find(c => c.textContent.toLowerCase().includes(type))?.click();
+      document.querySelector(`#cards [data-key="${type}"]`)?.click();
       [...document.querySelectorAll('#maps > *')][mapIndex]?.click();
       document.querySelector('#play').click();
       A.renderer.setAnimationLoop(null);

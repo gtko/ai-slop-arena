@@ -266,7 +266,7 @@ if (isNativeApp) {
     .catch(e => console.warn('[native]', e));
 }
 
-$('#optionsBtn').addEventListener('click', () => { sfx('click'); menus.openOptions('#menu'); });
+$('#optionsBtn').addEventListener('click', () => { sfx('click'); leaveHome(); menus.openOptions('#menu'); });
 // Android app: achievements mirrored to Google Play Games, and a button for Play's achievements screen.
 if (platformName === 'android') {
   import('./playgames.js').then(m => m.setupPlayGames()).then(play => {
@@ -435,7 +435,19 @@ function matchLeft(reason) {
 /* ---- solo ---- */
 
 // Training dojo (v0.12): your brawler and loadout against dummies, no gas, unlimited gadgets.
+// Leaving the home screen (a match, the lobby, the options): no page or map picker left open.
+function leaveHome() {
+  meta.close();
+  $('#maps').classList.add('hidden');
+}
+// Esc / B / the Android back button on the home screen: the map picker, then the open page.
+menus.ctx.closePage = () => {
+  if (!$('#maps').classList.contains('hidden')) { $('#maps').classList.add('hidden'); return true; }
+  return meta.close();
+};
+
 function dojo() {
+  leaveHome();
   initAudio();
   sfx('click');
   $('#menu').classList.add('hidden');
@@ -450,6 +462,7 @@ function dojo() {
 }
 
 function play() {
+  leaveHome();
   initAudio();
   sfx('click');
   $('#menu').classList.add('hidden');
@@ -511,6 +524,7 @@ if (steam) {
 const status = msg => { $('#lobbyStatus').textContent = msg || ''; };
 
 function openLobby() {
+  leaveHome();
   initAudio();
   sfx('click');
   track('lobby_opened');
