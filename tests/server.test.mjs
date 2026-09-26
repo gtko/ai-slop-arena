@@ -2,7 +2,7 @@
 // Run with `npm test`. Plain Node, no framework: exits 1 on the first failure.
 import assert from 'node:assert/strict';
 
-const { ServerMatch, makeRoster } = await import(new URL('../worker/build/sim.js', import.meta.url));
+const { ServerMatch, makeRoster, validBrawler, validLoadout } = await import(new URL('../worker/build/sim.js', import.meta.url));
 let failed = 0;
 async function test(name, fn) {
   try { await fn(); console.log(`ok   ${name}`); } catch (e) { failed++; console.error(`FAIL ${name}\n     ${e.message}`); }
@@ -89,6 +89,16 @@ await test('a frost nova cannot freeze someone who just thawed', () => {
   f.pos.set(a.pos.x + 1, f.pos.y, a.pos.z);
   g.combat.nova(f);
   assert.ok(a.freezeT <= 0, 'frozen again while immune');
+});
+
+await test('brawler names and loadouts from the network are checked', () => {
+  for (const bad of ['constructor', 'constructor:B2', '__proto__', 'toString', 'volt:C3', 'Volt', '', null, 42]) assert.ok(!validBrawler(bad), `accepted ${bad}`);
+  for (const ok of ['volt', 'volt:B2', 'blaster:A1']) assert.ok(validBrawler(ok), `refused ${ok}`);
+  assert.ok(validLoadout('B2') && !validLoadout('C1') && !validLoadout('b2') && !validLoadout(undefined));
+  const m = new ServerMatch({ map: 'oasis', roster: makeRoster([{ id: 'alice', name: 'a', type: 'constructor', lo: 'B2' }, { id: 'bob', name: 'b', type: 'frostbite', lo: 'B2' }]), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
+  assert.equal(m.game.byId.get('alice').type.key, 'blaster', 'an unknown brawler did not fall back to Blaster');
+  const bob = m.game.byId.get('bob');
+  assert.ok(bob.gadget === 'B' && bob.star === 2, 'the separate loadout field was not applied');
 });
 
 await test('every gadget works, with 3 charges and a 5 s lockout', () => {

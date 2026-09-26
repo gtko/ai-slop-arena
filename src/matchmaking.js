@@ -11,9 +11,9 @@ export class Matchmaking {
   emit(type, msg) { const h = this.handlers.get(type); if (h) h(msg); }
   get searching() { return !!this.ws; }
 
-  start(name, brawler) {
+  start(name, brawler, lo) {
     this.cancel();
-    const ws = this.ws = new WebSocket(`${serverBase()}/mm?${identityQuery(name, brawler)}`);
+    const ws = this.ws = new WebSocket(`${serverBase()}/mm?${identityQuery(name, brawler, lo)}`);
     ws.onmessage = e => {
       let msg;
       try { msg = JSON.parse(e.data); } catch { return; }

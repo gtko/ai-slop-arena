@@ -287,7 +287,7 @@ for (const T of Object.values(TYPES)) {
 }
 
 // Loadout of the chosen brawler: its mastery, gadget A / B and star power 1 / 2 (mastery.js gates).
-const typeOf = s => parseLoadout(s).type;
+const typeOf = s => { const k = parseLoadout(s).type; return Object.hasOwn(TYPES, k) ? k : 'blaster'; };
 const STAR_ICONS = ['⭐', '🌟'];
 function renderLoadout() {
   const root = $('#loadout'), key = chosen, lo = loadout(key), P = progress(key);
@@ -305,7 +305,7 @@ function renderLoadout() {
     const cur = loadout(key);
     setLoadout(key, b.dataset.g ? b.dataset.g + cur[1] : cur[0] + b.dataset.s);
     renderLoadout();
-    if (net.connected) net.send({ t: 'pick', brawler: brawlerString(key) });
+    if (net.connected) net.send({ t: 'pick', brawler: key, lo: loadout(key) });
   }));
 }
 
@@ -314,7 +314,7 @@ function pickBrawler(key) {
   try { localStorage.setItem('iaslop-brawler', key); } catch { /* private mode */ }
   document.querySelectorAll('[data-key]').forEach(x => x.classList.toggle('on', x.dataset.key === key));
   renderLoadout();
-  if (net.connected) net.send({ t: 'pick', brawler: brawlerString(key) });
+  if (net.connected) net.send({ t: 'pick', brawler: key, lo: loadout(key) });
   if ($('#ljAvatar')) showAvatar();
 }
 
@@ -470,12 +470,12 @@ async function joinRoom(code, lobbyId = null, web = false) {
   try { if (!steam) localStorage.setItem('iaslop-name', name); } catch { /* ignore */ }
   status(t('lobby.connecting'));
   try {
-    const me = brawlerString(chosen);
-    if (lobbyId) { use(steamNet); await net.joinLobby(lobbyId, name, me); }
-    else if (steamNet && !code && !web) { use(steamNet); await net.create(name, me); }
-    else if (web) { use(webNet); await net.connect(code || randomCode(), name, me); }
-    else if (steamNet && await steam.findLobby(code)) { use(steamNet); await net.connect(code, name, me); }
-    else { use(webNet); await net.connect(code, name, me); }
+    const lo = loadout(chosen);
+    if (lobbyId) { use(steamNet); await net.joinLobby(lobbyId, name, chosen, lo); }
+    else if (steamNet && !code && !web) { use(steamNet); await net.create(name, chosen, lo); }
+    else if (web) { use(webNet); await net.connect(code || randomCode(), name, chosen, lo); }
+    else if (steamNet && await steam.findLobby(code)) { use(steamNet); await net.connect(code, name, chosen, lo); }
+    else { use(webNet); await net.connect(code, name, chosen, lo); }
     if (net === webNet) presence(t('presence.room'));
     track('room_joined', { kind: net === steamNet ? 'steam_lobby' : net.matchmade ? 'matchmaking' : 'room', created: !code && !lobbyId, friend: !!lobbyId });
     status('');
@@ -531,7 +531,7 @@ function findMatch() {
   try { if (!steam) localStorage.setItem('iaslop-name', name); } catch { /* ignore */ }
   sfx('click');
   status('');
-  mm.start(name, brawlerString(chosen));
+  mm.start(name, chosen, loadout(chosen));
   queuedAt = performance.now();
   track('mm_search_started', { brawler: chosen });
   $('#qCount').textContent = t('lobby.connecting');
@@ -767,7 +767,7 @@ $('#start').addEventListener('click', () => {
   sfx('click');
   // Server rooms: the server builds the roster and starts everyone (the leader included).
   if (net.serverAuthority) { net.send({ t: 'start' }); return; }
-  const roster = makeRoster(net.players.map(p => ({ id: p.id, name: p.name, type: p.brawler })), { level: botLevel() });
+  const roster = makeRoster(net.players.map(p => ({ id: p.id, name: p.name, type: p.brawler, lo: p.lo })), { level: botLevel() });
   const mapKey = resolveMap(lobbyMap);
   net.send({ t: 'start', map: mapKey, roster });
   startOnline(mapKey, roster, 'host');

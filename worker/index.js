@@ -1,7 +1,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import * as Sentry from '@sentry/cloudflare';
 import { version } from '../package.json';
-import { ServerMatch, makeRoster, randomMap, validBrawler, MAP_KEYS } from './build/sim.js';
+import { ServerMatch, makeRoster, randomMap, validBrawler, validLoadout, MAP_KEYS } from './build/sim.js';
 import { rate, tierOf, pickGroup, botLevelFor, START_MMR } from './ranking.js';
 
 // AI SLOP ARENA — online server.
@@ -154,9 +154,10 @@ class RoomObject extends DurableObject {
 
     const [client, server] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server);
-    const brawler = BRAWLERS.has(url.searchParams.get('b')) ? url.searchParams.get('b') : 'blaster';
+    const brawler = BRAWLERS.has(url.searchParams.get('b')) ? url.searchParams.get('b').split(':')[0] : 'blaster';
+    const lo = validLoadout(url.searchParams.get('lo')) ? url.searchParams.get('lo') : 'A1'; // gadget + star power
     const me = {
-      id: crypto.randomUUID().slice(0, 8), name: clean(url.searchParams.get('name'), 14) || 'Player', brawler,
+      id: crypto.randomUUID().slice(0, 8), name: clean(url.searchParams.get('name'), 14) || 'Player', brawler, lo,
       // matchmade rooms have no leader (nobody may kick or change the map)
       host: !this.preset && !this.sockets().some(ws => ws !== server && this.info(ws).host),
       joined: Date.now(), ...who,
@@ -192,7 +193,7 @@ class RoomObject extends DurableObject {
       : humans.reduce((sum, p) => sum + (p.lvl ?? 0.45), 0) / humans.length;
     // matchmade matches are ranked: remember who played, rated at the end
     this.ranked = this.preset ? humans.map(p => ({ id: p.id, key: p.cid || p.ip })) : null;
-    const roster = makeRoster(humans.map(p => ({ id: p.id, name: p.name, type: p.brawler, plat: p.plat })), { level });
+    const roster = makeRoster(humans.map(p => ({ id: p.id, name: p.name, type: p.brawler, lo: p.lo, plat: p.plat })), { level });
     this.match = new ServerMatch({
       map, roster,
       send: msg => this.broadcast(msg),
@@ -333,7 +334,11 @@ class RoomObject extends DurableObject {
         this.onLoaded(me);
         break;
       case 'pick':
-        if (BRAWLERS.has(msg.brawler)) { me.brawler = msg.brawler; ws.serializeAttachment(me); this.broadcastRoom(); }
+        if (BRAWLERS.has(msg.brawler)) {
+          me.brawler = msg.brawler.split(':')[0];
+          if (validLoadout(msg.lo)) me.lo = msg.lo;
+          ws.serializeAttachment(me); this.broadcastRoom();
+        }
         break;
       case 'map':
         if (me.host && (msg.map === 'random' || MAP_KEYS.includes(msg.map))) {

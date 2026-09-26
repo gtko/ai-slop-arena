@@ -49,6 +49,8 @@ function load() {
     saved.autoV = 1;
     Object.assign(s, saved);
     s.binds = { ...DEFAULT_BINDS, ...(saved.binds || {}) };
+    // settings saved before v0.12 have no figurine detail: take the one of their tier
+    if (saved.detail === undefined) s.detail = (QUALITY[s.preset === 'auto' ? s.autoTier || 'high' : s.preset] || QUALITY.high).detail;
   } catch { /* private mode or corrupt: defaults */ }
   return s;
 }

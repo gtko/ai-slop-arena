@@ -72,7 +72,7 @@ export const GADGETS = {
     sound: 'gad_fuse',
     // Fuse Cut: the next fireball flies 40% faster
     effect(g, b) { b.fuseNext = true; },
-    fx(g, b) { g.effects.sparkBurst(b.pos.x, 1.6, b.pos.z, LAVA, 16, 5, 0.4, 0.14); },
+    fx(g, b) { b.fuseNext = true; g.effects.sparkBurst(b.pos.x, 1.6, b.pos.z, LAVA, 16, 5, 0.4, 0.14); },
   },
   frostbiteA: {
     sound: 'gad_dash',
@@ -104,7 +104,10 @@ export const GADGETS = {
       while (d > 0.5 && (A.blocksMoveAt(b.pos.x + dx * d, b.pos.z + dz * d) || !A.los(b.pos.x, b.pos.z, b.pos.x + dx * d, b.pos.z + dz * d))) d -= 0.5;
       b.blink = { x: b.pos.x + dx * d, z: b.pos.z + dz * d, t: 0.15 };
     },
-    effect(g, b) { g.combat.zone({ x: b.pos.x, z: b.pos.z, r: 1.1, dmg: 500, once: true, t: 2, owner: b, col: ZAP, delay: 0.15 }); },
+    effect(g, b) {
+      const p = b.netDriven ? { x: b.net.x, z: b.net.y } : b.pos;
+      g.combat.zone({ x: p.x, z: p.z, r: 1.1, dmg: 500, once: true, t: 2, owner: b, col: ZAP, delay: 0.15 }, true);
+    },
     fx(g, b) { g.effects.ring(b.pos.x, b.pos.z, 1.1, ZAP, 0.4); g.effects.sparkBurst(b.pos.x, 1, b.pos.z, ZAP, 16, 5, 0.3, 0.12); },
   },
   voltB: {
@@ -133,7 +136,9 @@ export function parseLoadout(s) {
 }
 export const LOADOUT = /^[a-z]+(?::[AB][12])?$/;
 // A brawler string the network may carry: a known brawler, with or without a loadout.
-export const validBrawler = s => typeof s === 'string' && LOADOUT.test(s) && s.split(':')[0] in STARS;
+export const validBrawler = s => typeof s === 'string' && LOADOUT.test(s) && Object.hasOwn(STARS, s.split(':')[0]);
+// The loadout travels on its own ('B2') so older builds, which only know the brawler name, still work.
+export const validLoadout = s => typeof s === 'string' && /^[AB][12]$/.test(s);
 
 function reach(g, b, dx, dz, p, max) {
   let x = p ? p.x : b.pos.x + dx * max, z = p ? p.z : b.pos.z + dz * max;

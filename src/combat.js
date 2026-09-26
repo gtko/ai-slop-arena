@@ -247,7 +247,7 @@ export class Combat {
         }
         if (dead) break;
         for (const o of g.brawlers) {
-          if (o === B.owner || !o.alive) continue;
+          if (o === B.owner || !g.hittable(o)) continue;
           const dx = o.pos.x - B.x, dz = o.pos.z - B.z, rr = o.radius + B.r;
           if (dx * dx + dz * dz < rr * rr) {
             g.damage(o, B.dmg * B.owner.dmgMul, B.owner, B.breakWalls);
@@ -401,7 +401,7 @@ export class Combat {
     this.g.fx.add(m);
     this.zones.push({ ...o, T: o.t, tick: 0, delay: o.delay || 0, mesh: m });
     if (broadcast) this.g.ev({ e: 'zone', z: { x: Math.round(o.x * 100) / 100, z: Math.round(o.z * 100) / 100, r: o.r, dps: o.dps, dmg: o.dmg,
-      once: o.once, t: o.t, owner: o.owner && o.owner.id, col: [o.col.r, o.col.g, o.col.b] } });
+      once: o.once, t: o.t, delay: o.delay, owner: o.owner && o.owner.id, col: [o.col.r, o.col.g, o.col.b] } });
   }
 
   updateZones(dt) {
@@ -414,7 +414,7 @@ export class Combat {
       if (!gone && g.authority && Z.delay <= 0 && (Z.tick -= dt) <= 0) {
         Z.tick = 0.25;
         for (const o of g.brawlers) {
-          if (o === Z.owner || !o.alive || o.pos.y > 0.3 || Math.hypot(o.pos.x - Z.x, o.pos.z - Z.z) > Z.r + o.radius * 0.5) continue;
+          if (o === Z.owner || !g.hittable(o) || o.pos.y > 0.3 || Math.hypot(o.pos.x - Z.x, o.pos.z - Z.z) > Z.r + o.radius * 0.5) continue;
           if (Z.once) {
             g.damage(o, Z.dmg * (Z.owner ? Z.owner.dmgMul : 1), Z.owner);
             g.effects.sparkBurst(Z.x, 0.4, Z.z, Z.col, 20, 6, 0.4, 0.14);
@@ -434,7 +434,7 @@ export class Combat {
     const g = this.g, perma = hasStar(b, 'permafrost'), R = perma ? 6.25 : 5, x = b.pos.x, z = b.pos.z;
     if (g.authority) {
       for (const o of g.brawlers) {
-        if (o === b || !o.alive || Math.hypot(o.pos.x - x, o.pos.z - z) > R) continue;
+        if (o === b || !g.hittable(o) || Math.hypot(o.pos.x - x, o.pos.z - z) > R) continue;
         g.damage(o, 900 * b.dmgMul, b, true);
         if (!o.alive) continue;
         if (o.ccImmuneT > 0) {
@@ -461,7 +461,7 @@ export class Combat {
     for (let k = 0; k < B.chain; k++) {
       let best = null, bd = 5.5;
       for (const o of g.brawlers) {
-        if (hit.has(o) || !o.alive) continue;
+        if (hit.has(o) || !g.hittable(o)) continue;
         const d = Math.hypot(o.pos.x - from.pos.x, o.pos.z - from.pos.z);
         if (d < bd && g.arena.los(from.pos.x, from.pos.z, o.pos.x, o.pos.z)) { bd = d; best = o; }
       }
@@ -500,7 +500,7 @@ export class Combat {
       this.strikes.splice(i, 1);
       if (g.authority) {
         for (const o of g.brawlers) {
-          if (o === S.owner || !o.alive || Math.hypot(o.pos.x - S.x, o.pos.z - S.z) > 1.8) continue;
+          if (o === S.owner || !g.hittable(o) || Math.hypot(o.pos.x - S.x, o.pos.z - S.z) > 1.8) continue;
           g.damage(o, S.dmg * S.owner.dmgMul, S.owner, true);
         }
         const ti = A.toTile(S.x), tj = A.toTile(S.z);
@@ -529,13 +529,12 @@ export class Combat {
   clear() {
     for (const B of this.bullets) this.release(B.mesh);
     this.bullets.length = 0;
-    for (const B of this.bombs) this.g.fx.remove(B.mesh);
+    for (const B of this.bombs) { this.g.fx.remove(B.mesh); if (B.shadow) { this.g.fx.remove(B.shadow); B.shadow.material.dispose(); } }
     this.bombs.length = 0;
     this.strikes.length = 0;
     for (const Z of this.zones) this.g.fx.remove(Z.mesh);
     this.zones.length = 0;
     for (const W of this.windups) this.g.fx.remove(W.mesh);
     this.windups.length = 0;
-    for (const B of this.bombs) if (B.shadow) this.g.fx.remove(B.shadow);
   }
 }

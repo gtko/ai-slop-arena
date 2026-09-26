@@ -83,8 +83,10 @@ function prepare(key, gltf, aniso) {
 let detail = 1;
 export async function setFigurineDetail(ratio) {
   detail = ratio;
-  if (ratio < 0.99) await MeshoptSimplifier.ready;
-  for (const T of templates.values()) T.mesh.geometry.setIndex(lodIndex(T, detail));
+  try {
+    if (ratio < 0.99) await MeshoptSimplifier.ready;
+    for (const T of templates.values()) T.mesh.geometry.setIndex(lodIndex(T, detail));
+  } catch (e) { console.warn('figurine detail', e); } // no WebAssembly: full detail
 }
 
 function lodIndex(T, ratio) {

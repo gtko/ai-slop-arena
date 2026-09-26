@@ -11,7 +11,7 @@ import { MAPS, MAP_KEYS } from './maps.js';
 import { Weather } from './weather.js';
 import { t } from './i18n/index.js';
 import { Feel, weapon } from './feel.js';
-import { GADGETS, GADGET_CHARGES, GADGET_LOCKOUT, parseLoadout, flareFx, gadgetFx } from './gadgets.js';
+import { GADGETS, GADGET_CHARGES, GADGET_LOCKOUT, parseLoadout, validLoadout, flareFx, gadgetFx } from './gadgets.js';
 
 const NAMES = ['Bolt', 'Nova', 'Rex', 'Juno', 'Pix', 'Kai', 'Moxie', 'Zed', 'Luna', 'Taro', 'Fizz', 'Oona', 'Brick', 'Echo'];
 const TYPE_KEYS = Object.keys(TYPES);
@@ -26,12 +26,12 @@ const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.f
 export function makeRoster(humans = [], { level = 0.45 } = {}) {
   const spawns = shuffle([0, 1, 2, 3, 4, 5, 6, 7]);
   const names = shuffle(NAMES.slice());
-  const roster = humans.slice(0, 8).map((h, k) => ({ id: h.id, name: h.name, type: h.type, human: true, spawn: spawns[k], plat: h.plat }));
+  const roster = humans.slice(0, 8).map((h, k) => ({ id: h.id, name: h.name, type: h.type, lo: h.lo, human: true, spawn: spawns[k], plat: h.plat }));
   const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
   for (let k = roster.length; k < 8; k++) {
     const skill = Math.round(Math.min(0.97, Math.max(0.05, 0.12 + level * 0.8 + gauss() * 0.2)) * 100) / 100;
-    const lo = `:${Math.random() < 0.5 ? 'A' : 'B'}${Math.random() < 0.5 ? 1 : 2}`; // bots pick a random loadout
-    roster.push({ id: 'bot' + k, name: names[k], type: TYPE_KEYS[Math.floor(Math.random() * TYPE_KEYS.length)] + lo, human: false, spawn: spawns[k], skill });
+    const lo = `${Math.random() < 0.5 ? 'A' : 'B'}${Math.random() < 0.5 ? 1 : 2}`; // bots pick a random loadout
+    roster.push({ id: 'bot' + k, name: names[k], type: TYPE_KEYS[Math.floor(Math.random() * TYPE_KEYS.length)], lo, human: false, spawn: spawns[k], skill });
   }
   return roster;
 }
@@ -142,8 +142,9 @@ export class Game {
     this.player = null;
     for (const r of roster) {
       const isPlayer = r.id === localId;
-      const L = parseLoadout(r.type); // 'volt:B2' = Volt with gadget B and star power 2
-      const b = new Brawler(this, TYPES[L.type] ? L.type : 'blaster', { name: isPlayer ? t('hud.you') : r.name, isPlayer });
+      // loadout: r.lo ('B2' = gadget B, star power 2), or inside the type ('volt:B2', solo)
+      const L = parseLoadout(validLoadout(r.lo) ? `${String(r.type).split(':')[0]}:${r.lo}` : r.type);
+      const b = new Brawler(this, Object.hasOwn(TYPES, L.type) ? L.type : 'blaster', { name: isPlayer ? t('hud.you') : r.name, isPlayer });
       b.id = r.id;
       b.gadget = L.gadget; b.star = L.star;
       b.setHuman(!!r.human);
@@ -265,7 +266,7 @@ export class Game {
     if (this.dojo) { // dummies never fall: one that would, fills back up
       if (target === this.player) return;
       if (source === this.player) this.dojoLog.push([this.time, Math.round(amount)]);
-      if (amount >= target.hp) target.hp += target.maxHp;
+      if (amount >= target.hp) target.hp = amount + target.maxHp * 0.999; // lands at (almost) full health
     }
     if (target.armorT > 0) amount *= 0.65;               // Bark Skin
     amount = Math.round(amount);
@@ -409,7 +410,7 @@ export class Game {
   }
 
   crateFx(i, j, by = null) {
-    if (by && by === this.player && this.onFeat) this.onFeat('crate');
+    if (by && by === this.player && this.onFeat && !this.dojo) this.onFeat('crate');
     const c = this.arena.center(i, j, _v);
     this.effects.debrisBurst(c.x, 0.3, c.z, WOOD, 16, 0.38, 6);
     this.effects.dust(c.x, c.z, 8, 0xc9a070, 1.2);
@@ -447,7 +448,7 @@ export class Game {
     if (b.isPlayer) {
       sfx('pickup');
       this.hud.floater(this.camera, b.pos.x, 3.4, b.pos.z, t('hud.power'), 'power');
-      if (this.onFeat) this.onFeat('cubes', b.cubes);
+      if (this.onFeat && !this.dojo) this.onFeat('cubes', b.cubes);
     }
   }
 
@@ -512,8 +513,7 @@ export class Game {
       if (D.t > 0.7) continue;
       if (!D.crate) { // falling for the last 0.7 s
         this.fx.remove(D.beam, D.ring);
-        D.crate = this.arena.makeCrate(D.i, D.j, true);
-        this.arena.rev++;
+        D.crate = this.arena.makeCrate(D.i, D.j, true, false); // solid only once it lands
       }
       const k01 = Math.max(0, D.t) / 0.7;
       D.crate.position.y = 16 * k01 * k01;
@@ -521,13 +521,14 @@ export class Game {
       D.crate.position.y = 0;
       this.dropping.splice(k, 1);
       const c = this.arena.center(D.i, D.j, new THREE.Vector3());
+      if (this.arena.crateAt(D.i, D.j)) { this.arena.grid[D.j][D.i] = 'C'; this.arena.rev++; }
       this.effects.dust(c.x, c.z, 16, 0xc9a070, 2);
       this.effects.ring(c.x, c.z, 2.2, new THREE.Color(3, 2.4, 0.6), 0.5);
       this.shakeAt(c.x, c.z, 0.35);
       sfx('supply_land', this.volumeAt(c.x, c.z));
       if (this.authority) for (const o of this.brawlers) {
         const dx = o.pos.x - c.x, dz = o.pos.z - c.z, d = Math.hypot(dx, dz);
-        if (!o.alive || d > 1.6) continue;
+        if (!this.hittable(o) || d > 1.6) continue;
         this.damage(o, 300, null);
         this.applyKnock(o, (dx || 1) / (d || 1) * 9, dz / (d || 1) * 9);
       }
@@ -583,9 +584,9 @@ export class Game {
     let px = num(m.px, b.pos.x), pz = num(m.pz, b.pos.z);
     const pd = Math.hypot(px - b.pos.x, pz - b.pos.z);
     if (pd > reach) { px = b.pos.x + (px - b.pos.x) / pd * reach; pz = b.pos.z + (pz - b.pos.z) / pd * reach; }
-    const gl = Math.hypot(num(m.gx, 0), num(m.gz, 0)) || 0;
+    const gx = num(m.gx, 0), gz = num(m.gz, 0), gl = Math.hypot(gx, gz);
     b.remoteIn = { ax, az, px, pz, f: m.f ? 1 : 0, s: Math.max(0, Math.min(1e6, Math.floor(num(m.s, 0)))),
-      g: Math.max(0, Math.min(1e6, Math.floor(num(m.g, 0)))), gx: gl ? m.gx / gl : ax, gz: gl ? m.gz / gl : az };
+      g: Math.max(0, Math.min(1e6, Math.floor(num(m.g, 0)))), gx: gl > 1e-6 ? gx / gl : ax, gz: gl > 1e-6 ? gz / gl : az };
     if (b.alive) this.checkMove(b, num(m.x, b.net.x), num(m.z, b.net.y), now);
   }
 
@@ -596,8 +597,9 @@ export class Game {
     const allowed = b.type.speed * 1.35 * dt + 0.4 + g.knock;
     g.knock = Math.max(0, g.knock - 4 * dt);
     const d = Math.hypot(x - b.net.x, z - b.net.y);
+    const air = now < (g.airUntil || 0); // Lava Hop: over a wall is fine, not a landing inside one
     const ok = d <= allowed && (b.freezeT <= 0 || d < 0.3)
-      && Math.abs(x) < HALF && Math.abs(z) < HALF && !this.arena.blocksMoveAt(x, z);
+      && Math.abs(x) < HALF && Math.abs(z) < HALF && (air || !this.arena.blocksMoveAt(x, z));
     if (ok) { b.net.set(x, z); return; }
     g.fix++;                    // the next snapshot tells that player to snap back
     g.strikes++;
@@ -609,6 +611,7 @@ export class Game {
     const b = this.byId.get(id);
     if (!b || !this.authority || b.human || !b.alive) return;
     b.setHuman(true); b.netDriven = true; b.guard = null; b.remoteIn = null;
+    b.gadgetSeen = 0; b.superSeen = 0; // a rejoining client counts from 0 again
     b.net.set(b.pos.x, b.pos.z);
     this.brains.delete(b);
   }
@@ -716,6 +719,10 @@ export class Game {
         case 'gad':
           if (b && b !== this.player && b.alive) gadgetFx(this, b, e.dx, e.dz);
           if (b) b.stats.gadgets++;
+          if (b && b === this.player && Number.isFinite(e.c)) b.gadgetCharges = e.c; // the host's count
+          break;
+        case 'gadNo':
+          if (b && b === this.player) { b.gadgetCharges = e.c; b.gadgetCd = e.cd; }
           break;
         case 'flare': flareFx(this, e.x, e.z); break;
         case 'dropWarn': this.dropWarn(e.i, e.j); break;
@@ -804,7 +811,13 @@ export class Game {
       _v.set(I.px, 0, I.pz);
       if (I.f) this.tryAttack(b, I.ax, I.az, _v, false);
       if (I.s > (b.superSeen || 0)) { b.superSeen = I.s; this.tryAttack(b, I.ax, I.az, _v, true); }
-      if (I.g > (b.gadgetSeen || 0)) { b.gadgetSeen = I.g; if (this.spendGadget(b)) this.gadgetEffect(b, I.gx ?? I.ax, I.gz ?? I.az, _v); }
+      if (I.g > (b.gadgetSeen || 0)) {
+        b.gadgetSeen = I.g;
+        const G = GADGETS[b.type.key + b.gadget];
+        if (G && G.dist && b.guard) b.guard.knock = Math.max(b.guard.knock, G.dist + 1.5); // the client already dashed
+        if (this.spendGadget(b)) this.gadgetEffect(b, I.gx ?? I.ax, I.gz ?? I.az, _v);
+        else this.ev({ e: 'gadNo', id: b.id, c: b.gadgetCharges, cd: r2(Math.max(0, b.gadgetCd)) }); // refused: resync the client
+      }
     }
   }
 
@@ -872,7 +885,10 @@ export class Game {
   /* ------------------------------ gadgets (gadgets.js) ------------------------------ */
 
   canGadget(b) {
-    return b.alive && this.state !== 'idle' && b.freezeT <= 0 && b.gadgetCharges > 0 && b.gadgetCd <= 0 && !b.dash && !b.blink && !this.shielded;
+    const G = GADGETS[b.type.key + b.gadget];
+    return b.alive && this.state !== 'idle' && b.freezeT <= 0 && b.gadgetCharges > 0 && !this.shielded
+      && b.gadgetCd <= (b.netDriven ? 0.35 : 0) // remote press: its lockout started a little earlier
+      && !(G && G.dist && b.rootT > 0) && !b.dash && !b.blink; // rooted: no mobility gadget
   }
 
   spendGadget(b) {
@@ -904,15 +920,19 @@ export class Game {
     gadgetFx(this, b, dx, dz);
     b.stats.gadgets++;
     if (b.netDriven && b.guard && G.dist) b.guard.knock = Math.max(b.guard.knock, G.dist + 1.5); // a remote player dashes itself
-    this.ev({ e: 'gad', id: b.id, dx: r2(dx), dz: r2(dz) });
+    if (b.netDriven && b.guard && G.air) b.guard.airUntil = this.time + 0.9;
+    this.ev({ e: 'gad', id: b.id, dx: r2(dx), dz: r2(dz), c: b.gadgetCharges });
     if (this.onGadget) this.onGadget(b);
   }
+
+  // Tail Roll: untouchable (no hit, freeze, slow, push or root) for its split second.
+  hittable(o) { return o.alive && !(o.ghostT > 0); }
 
   // Root Charge: while charging, the first enemy touched takes 400 and is rooted 0.6 s.
   chargeContact(b) {
     if (b.chargeHit) return;
     for (const o of this.brawlers) {
-      if (o === b || !o.alive || Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z) > b.radius + o.radius + 0.35) continue;
+      if (o === b || !this.hittable(o) || Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z) > b.radius + o.radius + 0.35) continue;
       b.chargeHit = o;
       this.damage(o, 400 * b.dmgMul, b);
       if (o.alive && o.ccImmuneT <= 0) o.rootT = Math.max(o.rootT, 0.6);
@@ -923,8 +943,9 @@ export class Game {
 
   // Lava Hop: the landing spot burns for 2 s.
   hopLanded(b) {
-    this.combat.zone({ x: b.pos.x, z: b.pos.z, r: 2, dps: 300, t: 2, owner: b, col: new THREE.Color(3.4, 1.2, 0.2) }, true);
-    this.shakeAt(b.pos.x, b.pos.z, 0.25);
+    const p = b.netDriven ? { x: b.net.x, z: b.net.y } : b.pos; // a remote player lands where it says it is
+    this.combat.zone({ x: p.x, z: p.z, r: 2, dps: 300, t: 2, owner: b, col: new THREE.Color(3.4, 1.2, 0.2) }, true);
+    this.shakeAt(p.x, p.z, 0.25);
   }
 
   // Ice Wall tiles (authority picks them, clients copy): never on top of a brawler.

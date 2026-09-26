@@ -305,6 +305,8 @@ export class Brawler {
       const k = 1 - Math.exp(-14 * dt), nx = this.pos.x + (this.net.x - this.pos.x) * k, nz = this.pos.z + (this.net.y - this.pos.z) * k;
       if (Math.hypot(this.net.x - this.pos.x, this.net.y - this.pos.z) > 6) { this.pos.x = this.net.x; this.pos.z = this.net.y; }
       else { this.vel.set((nx - this.pos.x) / Math.max(dt, 1e-3), 0, (nz - this.pos.z) / Math.max(dt, 1e-3)); this.pos.x = nx; this.pos.z = nz; }
+    } else if ((this.dash || this.blink) && (this.freezeT > 0 || this.rootT > 0) && !this.dash?.air) { // frozen or rooted: stopped
+      this.dash = null; this.blink = null; this.vel.set(0, 0, 0);
     } else if (this.blink) { // Blink: a short charge, then there
       if ((this.blink.t -= dt) <= 0) { this.pos.x = this.blink.x; this.pos.z = this.blink.z; this.vel.set(0, 0, 0); this.blink = null; }
     } else if (this.dash) { // gadget dash, slide or hop: fixed velocity; on foot walls stop it, in the air it flies over

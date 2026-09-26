@@ -19,8 +19,8 @@ export function serverError(msg) {
 export function serverBase() { return serverOrigin().replace(/^http/, 'ws'); }
 
 // Query string every connection carries: protocol version, device id and platform (moderation).
-export function identityQuery(name, brawler) {
-  return `v=${PROTOCOL}&cid=${encodeURIComponent(clientId())}&plat=${platformName}&name=${encodeURIComponent(name)}&b=${brawler}&lvl=${botLevel().toFixed(2)}`;
+export function identityQuery(name, brawler, lo = 'A1') {
+  return `v=${PROTOCOL}&cid=${encodeURIComponent(clientId())}&plat=${platformName}&name=${encodeURIComponent(name)}&b=${brawler}&lo=${lo}&lvl=${botLevel().toFixed(2)}`;
 }
 
 export function randomCode() {
@@ -49,10 +49,10 @@ export class Net {
   on(type, fn) { this.handlers.set(type, fn); return this; }
   emit(type, msg) { const h = this.handlers.get(type); if (h) h(msg); }
 
-  connect(code, name, brawler) {
+  connect(code, name, brawler, lo) {
     this.close();
     return new Promise((resolve, reject) => {
-      const url = `${serverBase()}/ws/${encodeURIComponent(code)}?${identityQuery(name, brawler)}`;
+      const url = `${serverBase()}/ws/${encodeURIComponent(code)}?${identityQuery(name, brawler, lo)}`;
       const ws = this.ws = new WebSocket(url);
       let welcomed = false;
       ws.onmessage = e => {

@@ -341,7 +341,7 @@ export class Arena {
   }
 
   // One crate on tile (i, j). supply: a supply drop (gold bands, sturdier, 3 cubes inside).
-  makeCrate(i, j, supply = false) {
+  makeCrate(i, j, supply = false, solid = true) {
     const { sculpted, body, band, gem, bandMat, gemMat } = this.crateKit;
     {
       const g = new THREE.Group();
@@ -374,7 +374,7 @@ export class Arena {
       this.group.add(g);
       const hp = supply ? 4000 : 3200;
       this.crates.set(this.key(i, j), { i, j, hp, maxHp: hp, group: g, mat, gem: gm, shake: 0, flash: 0, supply });
-      this.grid[j][i] = 'C';
+      if (solid) this.grid[j][i] = 'C';
       return g;
     }
   }

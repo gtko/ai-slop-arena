@@ -1,5 +1,5 @@
 import { randomCode } from './net.js';
-import { validBrawler } from './gadgets.js';
+import { validBrawler, validLoadout } from './gadgets.js';
 import { presence, serverOrigin } from './platform.js';
 import { t } from './i18n/index.js';
 
@@ -57,37 +57,37 @@ export class SteamNet {
 
   /* ------------------------------ joining ------------------------------ */
 
-  async create(name, brawler) {
+  async create(name, brawler, lo = 'A1') {
     this.close();
     const code = randomCode();
     const info = await this.steam.createLobby({ code, max: MAX_PLAYERS }).catch(ipcError);
     this.enter(info);
-    this.roster = new Map([[this.id, { id: this.id, name: clean(name, 14) || 'Player', brawler: BRAWLERS.has(brawler) ? brawler : 'blaster', host: true, joined: Date.now() }]]);
+    this.roster = new Map([[this.id, { id: this.id, name: clean(name, 14) || 'Player', brawler: BRAWLERS.has(brawler) ? brawler : 'blaster', lo: validLoadout(lo) ? lo : 'A1', host: true, joined: Date.now() }]]);
     this.inMatch = false;
     this.broadcastRoom();
     return this;
   }
 
   // Same signature as Net.connect: join by room code.
-  async connect(code, name, brawler) {
+  async connect(code, name, brawler, lo = 'A1') {
     const id = await this.steam.findLobby(code);
     if (!id) throw new Error(t('err.notFound', { code }));
-    return this.joinLobby(id, name, brawler);
+    return this.joinLobby(id, name, brawler, lo);
   }
 
   // Join a lobby by id (invite, "Join game" in the friends list, or a room code lookup).
-  async joinLobby(lobbyId, name, brawler) {
+  async joinLobby(lobbyId, name, brawler, lo = 'A1') {
     this.close();
     const info = await this.steam.joinLobby(lobbyId).catch(ipcError);
     this.enter(info);
     if (info.members.length > MAX_PLAYERS) { this.close(); throw new Error(t('err.full')); }
     if (this.isHost) { // the lobby was empty: we own it now
-      this.roster = new Map([[this.id, { id: this.id, name: clean(name, 14) || 'Player', brawler, host: true, joined: Date.now() }]]);
+      this.roster = new Map([[this.id, { id: this.id, name: clean(name, 14) || 'Player', brawler, lo, host: true, joined: Date.now() }]]);
       this.broadcastRoom();
       return this;
     }
     // Say hello until the host answers with the roster.
-    const hello = { t: 'hello', name, brawler };
+    const hello = { t: 'hello', name, brawler, lo };
     await new Promise((resolve, reject) => {
       let tries = 0;
       const again = () => {
@@ -169,7 +169,7 @@ export class SteamNet {
     const me = this.roster.get(this.id);
     switch (msg.t) {
       case 'pick':
-        if (me && BRAWLERS.has(msg.brawler)) { me.brawler = msg.brawler; this.broadcastRoom(); }
+        if (me && BRAWLERS.has(msg.brawler)) { me.brawler = msg.brawler; if (validLoadout(msg.lo)) me.lo = msg.lo; this.broadcastRoom(); }
         break;
       case 'map':
         if (/^[a-z]{2,12}$/.test(msg.map)) { this.map = msg.map; this.broadcastRoom(); }
@@ -194,7 +194,7 @@ export class SteamNet {
 
   broadcastRoom() {
     const players = [...this.roster.values()].sort((a, b) => a.joined - b.joined)
-      .map(({ id, name, brawler, host }) => ({ id, name, brawler, host }));
+      .map(({ id, name, brawler, lo, host }) => ({ id, name, brawler, lo, host }));
     const msg = { t: 'room', players, inMatch: this.inMatch, map: this.map };
     this.toOthers(msg);
     this.steam.setLobbyData('map', this.map);
@@ -232,13 +232,13 @@ export class SteamNet {
         if (!p && this.roster.size >= MAX_PLAYERS) return;
         if (this.blocked.has(from)) return;
         this.roster.set(from, {
-          id: from, name: clean(msg.name, 14) || 'Player', brawler: BRAWLERS.has(msg.brawler) ? msg.brawler : 'blaster',
+          id: from, name: clean(msg.name, 14) || 'Player', brawler: BRAWLERS.has(msg.brawler) ? msg.brawler : 'blaster', lo: validLoadout(msg.lo) ? msg.lo : 'A1',
           host: false, joined: p ? p.joined : Date.now(),
         });
         this.broadcastRoom();
         break;
       case 'pick':
-        if (p && BRAWLERS.has(msg.brawler)) { p.brawler = msg.brawler; this.broadcastRoom(); }
+        if (p && BRAWLERS.has(msg.brawler)) { p.brawler = msg.brawler; if (validLoadout(msg.lo)) p.lo = msg.lo; this.broadcastRoom(); }
         break;
       case 'in':
         if (p) { msg.from = from; this.emit('in', msg); }
