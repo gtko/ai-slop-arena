@@ -484,6 +484,16 @@ await test('Windmill Isles: 8 spawns on land, no gas, the islands crumble and th
   const before = land();
   while (g.time < 62) m.advance(0.05);
   assert.ok(land() < before * 0.7, `the outer islands did not fall (${before} -> ${land()})`);
+  // once everything planned has fallen, the ground left is all one piece (no side cut off behind the windmill)
+  for (const S of g.kit.plan.slice(g.kit.step)) g.kit.crumble(S.tiles); // the bots may end the match first
+  const open = []; for (let j = 0; j < 25; j++) for (let i = 0; i < 25; i++) if (A.walkable(i, j)) open.push(A.key(i, j));
+  const reach = new Set(), todo = [open[0]];
+  while (todo.length) {
+    const k = todo.pop(); if (reach.has(k)) continue; reach.add(k);
+    const i = k % 25, j = Math.floor(k / 25);
+    for (const [a, b] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) if (A.walkable(a, b)) todo.push(A.key(a, b));
+  }
+  assert.ok(open.length >= 16 && reach.size === open.length, `the last ground is split (${reach.size} of ${open.length} tiles reachable)`);
 });
 
 await test('Windmill Isles: a bot match plays to the end', () => {

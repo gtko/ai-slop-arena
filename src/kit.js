@@ -113,7 +113,7 @@ export class MapKit {
     if (middle) {
       const ci = (N - 1) / 2, far = ([a, b]) => Math.hypot(a - ci, b - ci);
       const maxR = Math.max(...middle.tiles.map(far));
-      for (let r = maxR, at = 95; r > 2.9; r--, at += 10) { // a last ring of ground around a 3 x 3 windmill
+      for (let r = maxR, at = 95; r > 3.9; r--, at += 10) { // keeps a whole ring (2 tiles wide) around a 3 x 3 windmill
         const ring = middle.tiles.filter(p => far(p) > r - 1 && far(p) <= r);
         if (ring.length) plan.push({ at, tiles: ring });
       }
