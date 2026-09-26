@@ -28,6 +28,8 @@ const SFX = ['shot', 'shotgun', 'throw', 'boom', 'boom_big', 'hit', 'hurt', 'bre
   'gad_dash', 'gad_bark', 'gad_flare', 'gad_icewall', 'gad_blink', 'gad_overclock', 'gad_hop', 'gad_fuse',
   // v0.13 LEVEL UP: progression, emotes, arena events, weekly Chaos
   'levelup', 'coin', 'stamp', 'emote', 'chest', 'buy', 'geyser_warn', 'geyser', 'meteor', 'rod_zap', 'blizzard', 'mushroom', 'chaos',
+  // v0.14 BETTER TOGETHER: revives, pings
+  'revive', 'ping', 'ghost',
   ...['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt'].flatMap(k => [`bark_${k}_super`, `bark_${k}_cheer`])];
 const LOOPS = {
   amb_day: 'music/amb_day', amb_night: 'music/amb_night',

@@ -42,10 +42,99 @@ export class Hud {
     this.hurtEl.id = 'hurt';
     this.dpsEl = document.createElement('div');
     this.dpsEl.id = 'dps';
-    this.root.append(this.feed, this.banner, this.lowEl, this.hurtEl, this.dpsEl);
+    // Duo (v0.14): your partner's card (health, knock-out, revive), the revive hearts, an arrow to
+    // your partner when off screen, and the pings
+    this.team = document.createElement('div');
+    this.team.id = 'teamCard';
+    this.mateArrow = document.createElement('div');
+    this.mateArrow.id = 'mateArrow';
+    this.pingsEl = document.createElement('div');
+    this.pingsEl.id = 'pings';
+    this.ghostEl = document.createElement('div'); // you are knocked out: how long your partner has to revive you
+    this.ghostEl.id = 'ghostMsg';
+    this.root.append(this.feed, this.banner, this.lowEl, this.hurtEl, this.dpsEl, this.team, this.mateArrow, this.pingsEl, this.ghostEl);
+    this.pings = [];
+  }
+
+  // A ping marker (game.js pingFx): an icon over the spot for 4 s, kept on screen at the edge.
+  ping(x, z, icon, who, kind) {
+    if (!this.live) return;
+    const el = document.createElement('div');
+    el.className = `ping ${who} ${kind}`;
+    el.innerHTML = `<b>${icon}</b>`;
+    this.pingsEl.appendChild(el);
+    this.pings.push({ x, z, el, t: 4 });
+    while (this.pings.length > 4) this.pings.shift().el.remove();
+  }
+
+  setupTeam(game) {
+    const P = game.player, m = game.duo ? game.mateOf(P) : null;
+    this.mate = m;
+    this.team.classList.toggle('hidden', !m);
+    this.mateArrow.className = 'hidden';
+    this.pings.forEach(p => p.el.remove());
+    this.pings = [];
+    if (!m) return;
+    this.team.innerHTML = `<img src="${BASE}assets/ui/${m.type.key}.png" alt="" /><div><b class="tc-name"></b><div class="tc-hp"><i></i></div><small class="tc-st"></small></div><span class="tc-hearts"></span>`;
+    this.team.querySelector('.tc-name').textContent = m.name;
+    this.tc = { hp: this.team.querySelector('.tc-hp i'), st: this.team.querySelector('.tc-st'), hearts: this.team.querySelector('.tc-hearts'), key: '' };
+  }
+
+  updateTeam(dt, camera, game) {
+    const m = this.mate, P = game.player;
+    for (let k = this.pings.length - 1; k >= 0; k--) {
+      const p = this.pings[k];
+      if ((p.t -= dt) <= 0) { p.el.remove(); this.pings.splice(k, 1); continue; }
+      this.edge(camera, p.x, 1.2, p.z, p.el, 40);
+      p.el.style.opacity = Math.min(1, p.t / 0.5).toFixed(2);
+    }
+    const MG = P && !P.alive && game.duo ? game.ghostOf(P) : null;
+    const gm = MG ? (MG.p > 0 ? t('hud.beingRevived', { n: Math.round(MG.p / 3 * 100) }) : t('hud.youGhost', { n: Math.ceil(Math.max(0, MG.t)) })) : '';
+    if (gm !== this.ghostTxt) { this.ghostTxt = gm; this.ghostEl.textContent = gm; this.ghostEl.classList.toggle('on', !!gm); }
+    if (!m || !P) return;
+    const G = !m.alive ? game.ghostOf(m) : null;
+    const f = m.alive ? Math.max(0, m.hp / m.maxHp) : 0;
+    const st = m.alive ? '' : G ? (G.p > 0 ? t('hud.reviving', { n: Math.round(G.p / 3 * 100) }) : t('hud.ghost', { n: Math.ceil(Math.max(0, G.t)) })) : t('hud.mateOut');
+    const hearts = game.revives[m.team] ?? 0;
+    const key = `${f.toFixed(3)}|${st}|${hearts}`;
+    if (key !== this.tc.key) {
+      this.tc.key = key;
+      this.tc.hp.style.width = (f * 100).toFixed(1) + '%';
+      this.tc.hp.className = f < 0.3 ? 'low' : '';
+      this.tc.st.textContent = st;
+      this.tc.hearts.innerHTML = '<i>♥</i>'.repeat(hearts) + '<i class="off">♥</i>'.repeat(Math.max(0, 2 - hearts));
+      this.tc.hearts.title = t('hud.revivesLeft', { n: hearts });
+      this.team.classList.toggle('down', !m.alive);
+    }
+    // off screen: an arrow at the edge toward your partner (or its ghost)
+    const tx = m.alive ? m.pos.x : G ? G.x : null, tz = m.alive ? m.pos.z : G ? G.z : null;
+    if (tx === null || !P.alive) { this.mateArrow.className = 'hidden'; return; }
+    const off = this.edge(camera, tx, 1.6, tz, this.mateArrow, 46, true);
+    this.mateArrow.className = off ? (G ? 'ghost' : '') : 'hidden';
+  }
+
+  // Place el over a world point, clamped inside the screen edges; arrow: rotate it toward the point.
+  // Returns whether the point is off screen.
+  edge(camera, x, y, z, el, pad, arrow = false) {
+    _v.set(x, y, z).project(camera);
+    const w = innerWidth, h = innerHeight, behind = _v.z > 1;
+    let sx = (_v.x * 0.5 + 0.5) * w, sy = (-_v.y * 0.5 + 0.5) * h;
+    if (behind) { sx = w - sx; sy = h - sy; }
+    const off = behind || sx < pad || sx > w - pad || sy < pad || sy > h - pad;
+    const cx = Math.min(w - pad, Math.max(pad, sx)), cy = Math.min(h - pad, Math.max(pad, sy));
+    const rot = arrow ? ` rotate(${Math.atan2(sy - h / 2, sx - w / 2).toFixed(3)}rad)` : '';
+    el.style.transform = `translate(${cx.toFixed(1)}px,${cy.toFixed(1)}px) translate(-50%,-50%)${rot}`;
+    el.classList.toggle('edge', off);
+    return off;
   }
 
   show(on) { this.root.classList.toggle('hidden', !on); }
+  // "BRAWLERS LEFT" or, in Duo, "TEAMS LEFT"
+  setLeftLabel(duo) {
+    const el = this.aliveEl.nextElementSibling;
+    if (el) el.textContent = t(duo ? 'hud.teamsLeft' : 'hud.left');
+    document.body.classList.toggle('duo', !!duo);
+  }
 
   // Weekly Chaos: a pill at the top while it runs, and a title card when the match starts.
   setMutator(m) {
@@ -84,7 +173,7 @@ export class Hud {
     this.play = !!player;
     for (const b of brawlers) {
       const el = document.createElement('div');
-      el.className = 'ov ' + (b === player ? 'me' : 'foe');
+      el.className = 'ov ' + (b === player ? 'me' : b.g.ally(b, player) ? 'mate' : 'foe');
       el.innerHTML = `
         <div class="ov-bubble"></div>
         <div class="ov-name">${b === player ? t('hud.you') : (b.persona ? PERSONA_ICONS[b.persona] + ' ' : '') + b.name}<span class="ov-cubes"></span></div>
@@ -133,7 +222,8 @@ export class Hud {
     this.dpsEl.style.display = game.dojo ? '' : 'none';
     if (game.dojo) { const v = game.dojoDps; if (v !== this.lastDps) { this.dpsEl.innerHTML = `<b>${v}</b><small>${t('hud.dps')}</small><p>${t('hud.dojoHint')}</p>`; this.lastDps = v; } }
 
-    const alive = game.brawlers.filter(b => b.alive).length;
+    this.updateTeam(dt, camera, game);
+    const alive = game.duo ? game.teamsUp() : game.brawlers.filter(b => b.alive).length; // Duo: teams left
     if (alive !== this.lastAlive) {
       if (this.play && !game.ended && alive < this.lastAlive) {
         if (alive === 3) { this.showBanner(t('hud.threeLeft'), 'three'); sfx('sting_three'); }

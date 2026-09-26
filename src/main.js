@@ -263,6 +263,15 @@ const touch = isTouchDevice ? new TouchControls(input, { onPause: () => { if (!m
 if (touch) touch.setSuperLabel(t('hud.super'));
 // Emote wheel (v0.13): B, R3 or the 😀 touch button during a match.
 const wheel = new EmoteWheel(input, i => game.localEmote(i));
+// Duo pings (v0.14): G, the X button, or the 📍 touch button (shown in Duo only)
+if ($('#touch')) {
+  const pb = document.createElement('button');
+  pb.className = 't-ping';
+  pb.textContent = '📍';
+  pb.setAttribute('aria-label', t('opt.act.ping'));
+  pb.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); game.localPing(); });
+  $('#touch').appendChild(pb);
+}
 // Android / iOS app: the back button closes panels and pauses the match, leaving the app pauses it.
 if (isNativeApp) {
   const pauseMatch = () => { if (!menus.paused && menus.ctx.isInMatch()) { menus.openPause(); return true; } return false; };
@@ -1322,6 +1331,7 @@ function frame(ts) {
   if (!$('#result').classList.contains('hidden') && game.ended && game.player && game.matchNo === resultMatch && podiumFor !== game.matchNo) { showPodium(); showStats(); } // solo: the bots finished the match
   const inMatch = game.mode === 'play' && game.player && !menus.paused && !$('#hud').classList.contains('hidden') && $('#result').classList.contains('hidden');
   if (inMatch) wheel.update(); else if (wheel.open) wheel.close();
+  if (inMatch && (input.hit(settings.binds.ping || 'KeyG') || input.padHit(PAD.X))) game.localPing(); // Duo pings
   if (input.padHit(PAD.Y)) nextTimeOfDay();
   if (input.padHit(PAD.BACK)) setSetting('debugPanel', !settings.debugPanel);
   frameShowcase();
