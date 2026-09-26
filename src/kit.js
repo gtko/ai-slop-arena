@@ -11,7 +11,7 @@ import { t } from './i18n/index.js';
 //      (no attacks up there); the landing hits enemies around for 150.
 //   E  explosive barrel: 600 HP, then 900 in 2.5 m with a big push, and the next barrels go too.
 //   H  healing mushroom: +1200 health over 2 s, grows back in 20 s.
-//   M  the windmill (a 2 x 2 landmark): blocks feet, bullets and sight.
+//   M  the windmill (a square landmark, 3 x 3 in the middle of Windmill Isles): blocks feet, bullets and sight.
 // Maps with `crumble` (Windmill Isles) have no gas: the outer islands break off one after the
 // other, then the middle island shrinks, each time after a 5 s telegraph.
 // Rules run on the authority (solo, host, server); clients get 'kit' events and draw the same.
@@ -71,8 +71,9 @@ export class MapKit {
     Object.assign(p, { x: c.x, z: c.z, dx, dz, dist: dist || PAD_MIN });
   }
 
-  // Land tiles grouped into islands (bridges and void apart). The outer islands fall in two waves
-  // (40 s, 60 s), the bridges at 80 s, then the middle island shrinks a ring every 10 s.
+  // Land tiles grouped into islands (bridges and void apart). The outer islands fall in two waves,
+  // the small ones first (40 s, 60 s), the bridges at 80 s, then the middle island shrinks a round
+  // ring every 10 s down to the ground right around the windmill.
   crumblePlan() {
     const A = this.A, seen = new Set(), islands = [];
     const land = (i, j) => { const ch = A.get(i, j); return ch !== 'V' && ch !== '=' && ch !== 'X'; };
@@ -93,18 +94,22 @@ export class MapKit {
     }
     islands.sort((a, b) => b.d - a.d);
     const middle = islands.pop(); // the closest to the centre stays
-    const outer = islands.filter(s => s.tiles.length > 2).sort((a, b) => a.ang - b.ang);
+    const outer = islands.filter(s => s.tiles.length > 2).sort((a, b) => a.tiles.length - b.tiles.length || a.ang - b.ang);
     const plan = [];
-    // opposite islands together: 0+2 then 1+3 (by angle), any extra ones with the second wave
-    const waves = [[], []];
-    outer.forEach((s, k) => waves[k % 2].push(...s.tiles));
+    // the smaller half first, then the bigger half (same-sized islands fall together)
+    const waves = [[], []], cut = outer.length ? outer[Math.floor((outer.length - 1) / 2)].tiles.length : 0;
+    outer.forEach(s => waves[s.tiles.length <= cut ? 0 : 1].push(...s.tiles));
+    if (!waves[1].length) { // all the same size: opposite islands together, by angle
+      waves[0] = [];
+      [...outer].sort((a, b) => a.ang - b.ang).forEach((s, k) => waves[k % 2].push(...s.tiles));
+    }
     [40, 60].forEach((at, k) => { if (waves[k].length) plan.push({ at, tiles: waves[k] }); });
     const bridges = [...this.bridges.values()].map(b => [b.i, b.j]);
     if (bridges.length) plan.push({ at: 80, tiles: bridges });
     if (middle) {
-      const ci = (N - 1) / 2, far = ([a, b]) => Math.max(Math.abs(a - ci), Math.abs(b - ci));
+      const ci = (N - 1) / 2, far = ([a, b]) => Math.hypot(a - ci, b - ci);
       const maxR = Math.max(...middle.tiles.map(far));
-      for (let r = maxR, at = 95; r > 1.5; r--, at += 10) {
+      for (let r = maxR, at = 95; r > 2.9; r--, at += 10) { // a last ring of ground around a 3 x 3 windmill
         const ring = middle.tiles.filter(p => far(p) > r - 1 && far(p) <= r);
         if (ring.length) plan.push({ at, tiles: ring });
       }
@@ -190,10 +195,14 @@ export class MapKit {
       G.add(this.rock);
       this.buildSky();
     }
-    // the windmill: a 2 x 2 stone tower, a red roof and turning sails, facing south (the camera)
+    // the windmill: a stone tower, a red roof and turning sails, facing south (the camera); built
+    // for a 2 x 2 block, scaled to the size of the square of 'M'
     for (let j = 0; j < N - 1; j++) for (let i = 0; i < N - 1; i++) {
       if (A.get(i, j) !== 'M' || A.get(i - 1, j) === 'M' || A.get(i, j - 1) === 'M') continue;
-      const c = A.center(i, j, new THREE.Vector3()).add(new THREE.Vector3(TILE / 2, 0, TILE / 2)), g = new THREE.Group();
+      let n = 1;
+      while (A.get(i + n, j) === 'M') n++;
+      const c = A.center(i, j, new THREE.Vector3()).add(new THREE.Vector3(TILE * (n - 1) / 2, 0, TILE * (n - 1) / 2)), g = new THREE.Group();
+      g.scale.setScalar(n / 2 * 0.9);
       const stone = new THREE.MeshStandardMaterial({ color: 0xece2cf, roughness: 0.85 }), roofM = new THREE.MeshStandardMaterial({ color: 0xc8453a, roughness: 0.7 });
       const wood = new THREE.MeshStandardMaterial({ color: 0x8a5a34, roughness: 0.8 }), cloth = new THREE.MeshStandardMaterial({ color: 0xfff6e0, roughness: 0.9, side: THREE.DoubleSide });
       const tower = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.85, 5.2, 14), stone); tower.position.y = 2.6;
@@ -268,14 +277,14 @@ export class MapKit {
     const wing = new THREE.BufferGeometry();
     wing.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0.16, 0, 0, -0.14, 0.95, 0, -0.18, 0, 0, 0.16, 0.95, 0, -0.18, 0.62, 0, 0.04], 3));
     wing.computeVertexNormals();
-    const gull = new THREE.MeshStandardMaterial({ color: 0xf6f6f2, roughness: 0.8, side: THREE.DoubleSide, flatShading: true });
+    const gull = new THREE.MeshStandardMaterial({ color: 0xf6f6f2, emissive: 0x8a929c, roughness: 0.8, side: THREE.DoubleSide, flatShading: true }); // lit from below too
     this.birds = [];
     for (let f = 0; f < 4; f++) {
       const F = { r: 14 + R() * 26, y: -3.5 - R() * 6, w: (0.12 + R() * 0.08) * (f % 2 ? 1 : -1), a: R() * TAU };
       const n = 3 + Math.floor(R() * 4);
       for (let k = 0; k < n; k++) {
         const side = k % 2 ? 1 : -1, row = Math.ceil(k / 2) * 1.8;
-        this.birds.push({ F, ox: side * row * 0.9, oz: -row * 0.8 + (R() - 0.5) * 0.3, oy: (R() - 0.5) * 0.4, ph: R() * TAU, s: 1.7 + R() * 0.6 });
+        this.birds.push({ F, ox: side * row * 0.9, oz: -row * 0.8 + (R() - 0.5) * 0.3, oy: (R() - 0.5) * 0.4, ph: R() * TAU, s: 1.2 + R() * 0.4 });
       }
     }
     const nb = this.birds.length;
