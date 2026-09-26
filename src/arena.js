@@ -316,10 +316,12 @@ export class Arena {
 
   // Arena floor as one quad per dry tile, leaving holes where the water basins sink in.
   // UVs match the old single plane (v = 1 at -z) so the checker texture lines up.
-  groundGeometry() {
+  // keep(i, j): a subset of the floor (kit.js lifts a doomed island out to shake it on its own)
+  groundGeometry(keep = null) {
     const pos = [], uv = [], idx = [], S = N * TILE;
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
       if ('WIV='.includes(this.grid[j][i])) continue; // water / ice basins, the void, bridges (kit.js)
+      if (keep && !keep(i, j)) continue;
       const x0 = (i - N / 2) * TILE, z0 = (j - N / 2) * TILE, o = pos.length / 3;
       for (const [x, z] of [[x0, z0 + TILE], [x0 + TILE, z0 + TILE], [x0 + TILE, z0], [x0, z0]]) {
         pos.push(x, 0, z);
@@ -370,10 +372,10 @@ export class Arena {
   }
 
   // Crumbling islands (kit.js): redraw the floor without the fallen tiles; bushes there go.
-  rebuildGround() {
+  rebuildGround(keep = null) {
     if (!this.groundMesh) return;
     this.groundMesh.geometry.dispose();
-    this.groundMesh.geometry = this.groundGeometry();
+    this.groundMesh.geometry = this.groundGeometry(keep);
   }
   hideBush(i, j) {
     const k = this.bushIndex?.get(this.key(i, j));

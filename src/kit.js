@@ -34,6 +34,7 @@ export class MapKit {
     this.group = new THREE.Group();
     A.group.add(this.group); // disposed with the arena
     this.pads = []; this.shrooms = []; this.bridges = new Map(); this.falling = []; this.doomed = new Set();
+    this.lifted = []; // doomed islands lifted out of the floor: they shake, then drop in one piece
     this.traps = []; this.puffs = []; // Pip & Chomp's Venus Traps and spore clouds (v0.15)
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
       const ch = A.get(i, j);
@@ -169,44 +170,24 @@ export class MapKit {
       this.bridgeMesh.castShadow = this.bridgeMesh.receiveShadow = true;
       G.add(this.bridgeMesh);
     }
-    // sky maps: rock under every island tile, clouds far below
+    // sky maps: rock under every island tile, then clouds, birds and far islets below (buildSky)
     if (this.map.sky) {
       const land = [];
       for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const ch = A.get(i, j); if (ch !== 'V' && ch !== '=') land.push([i, j]); }
-      const geo = new THREE.CylinderGeometry(1.45, 0.7, 4.2, 6, 1).translate(0, -2.1, 0);
-      this.rock = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: 0x8a6a4e, roughness: 0.95, flatShading: true }), land.length);
+      const geo = new THREE.CylinderGeometry(1.3, 0.7, 4.2, 6, 1).translate(0, -2.14, 0); // 1.3: the 1-tile rifts stay open; just under the grass (no z-fighting)
+      this.rock = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, flatShading: true }), land.length);
       this.rockIdx = new Map();
+      const col = new THREE.Color();
       land.forEach(([i, j], k) => {
         A.center(i, j, _v);
         _q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, (i * 7 + j * 13) % 6);
         _m.compose(_v.setY(0), _q, _s.set(1, 0.7 + ((i * 31 + j * 17) % 10) / 16, 1));
         this.rock.setMatrixAt(k, _m);
+        this.rock.setColorAt(k, col.setHSL(0.07 + ((i * 5 + j * 3) % 4) * 0.01, 0.3, 0.36 + ((i * 11 + j * 7) % 5) * 0.025));
         this.rockIdx.set(A.key(i, j), k);
       });
       G.add(this.rock);
-      const c = document.createElement('canvas');
-      c.width = c.height = 256;
-      const x = c.getContext('2d');
-      if (x) {
-        x.fillStyle = '#7cc0f4'; x.fillRect(0, 0, 256, 256);
-        // soft clouds, drawn 9 times around so the texture tiles without a seam
-        for (let k = 0; k < 26; k++) {
-          const cx = Math.random() * 256, cy = Math.random() * 256, r = 10 + Math.random() * 24, a = 0.18 + Math.random() * 0.3;
-          for (const ox of [-256, 0, 256]) for (const oy of [-256, 0, 256]) {
-            const gr = x.createRadialGradient(cx + ox, cy + oy, 0, cx + ox, cy + oy, r);
-            gr.addColorStop(0, `rgba(255,255,255,${a})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
-            x.fillStyle = gr; x.beginPath(); x.arc(cx + ox, cy + oy, r, 0, 7); x.fill();
-          }
-        }
-      }
-      const tex = new THREE.CanvasTexture(c);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(4, 4);
-      tex.userData.perMatch = true;
-      const sea = new THREE.Mesh(new THREE.PlaneGeometry(400, 400).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tex, fog: false }));
-      sea.position.y = -22;
-      G.add(sea);
-      this.clouds = tex;
+      this.buildSky();
     }
     // the windmill: a 2 x 2 stone tower, a red roof and turning sails, facing south (the camera)
     for (let j = 0; j < N - 1; j++) for (let i = 0; i < N - 1; i++) {
@@ -231,12 +212,170 @@ export class MapKit {
       G.add(g);
       this.sails = hub;
     }
-    // doomed tiles: red cracks that blink before they fall
-    this.cracks = new THREE.InstancedMesh(new THREE.PlaneGeometry(1.9, 1.9).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({ color: 0xff4a3a, transparent: true, opacity: 0.4, depthWrite: false }), N * N);
-    this.cracks.count = 0;
-    this.cracks.renderOrder = 1;
-    G.add(this.cracks);
+  }
+
+  // Below the islands: a sea of clouds far down, puffy clouds drifting at every depth, gull flocks
+  // circling and a ring of little far islets bobbing (cosmetic, all kept under the play level).
+  buildSky() {
+    const G = this.group, R = Math.random, TAU = Math.PI * 2;
+    const c = document.createElement('canvas');
+    c.width = c.height = 256;
+    const x = c.getContext('2d');
+    if (x) {
+      x.fillStyle = '#86c6f5'; x.fillRect(0, 0, 256, 256);
+      // soft clouds, drawn 9 times around so the texture tiles without a seam
+      for (let k = 0; k < 34; k++) {
+        const cx = R() * 256, cy = R() * 256, r = 10 + R() * 30, a = 0.25 + R() * 0.35;
+        for (const ox of [-256, 0, 256]) for (const oy of [-256, 0, 256]) {
+          const gr = x.createRadialGradient(cx + ox, cy + oy, 0, cx + ox, cy + oy, r);
+          gr.addColorStop(0, `rgba(255,255,255,${a})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
+          x.fillStyle = gr; x.beginPath(); x.arc(cx + ox, cy + oy, r, 0, 7); x.fill();
+        }
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(4, 4);
+      tex.userData.perMatch = true;
+      const sea = new THREE.Mesh(new THREE.PlaneGeometry(400, 400).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tex, fog: false }));
+      sea.position.y = -30;
+      G.add(sea);
+      this.clouds = tex;
+    }
+
+    // puffy clouds: a few spheres each, one instanced mesh; some deep below, some around the rim
+    const puffs = [];
+    this.cloudList = [];
+    for (let k = 0; k < 22; k++) {
+      const rim = k >= 14, a = R() * TAU, d = rim ? 36 + R() * 14 : 6 + R() * 44, sz = rim ? 1.3 + R() * 0.9 : 0.9 + R() * 1.2;
+      const C = { x: Math.cos(a) * d, y: rim ? -9 - R() * 5 : -8 - R() * 14, z: Math.sin(a) * d, v: 0.4 + R() * 0.6, p: [] };
+      const n = 4 + Math.floor(R() * 4);
+      for (let q = 0; q < n; q++) {
+        const f = 1 - Math.abs(q - (n - 1) / 2) / n; // the middle puffs are the biggest
+        C.p.push([(q - (n - 1) / 2) * 1.5 * sz + (R() - 0.5) * sz, (R() - 0.3) * 0.7 * sz, (R() - 0.5) * 1.6 * sz, (1.1 + R() * 0.8) * sz * (0.55 + f * 0.6), puffs.length]);
+        puffs.push(0);
+      }
+      this.cloudList.push(C);
+    }
+    this.cloudMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xc4d8f0, emissiveIntensity: 0.55, roughness: 1, flatShading: true }), puffs.length);
+    G.add(this.cloudMesh);
+    this.placeClouds(0);
+
+    // gulls: flocks in a loose V circling under the islands, flapping then gliding
+    const body = new THREE.ConeGeometry(0.13, 0.62, 5).rotateX(Math.PI / 2);
+    const wing = new THREE.BufferGeometry();
+    wing.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0.16, 0, 0, -0.14, 0.95, 0, -0.18, 0, 0, 0.16, 0.95, 0, -0.18, 0.62, 0, 0.04], 3));
+    wing.computeVertexNormals();
+    const gull = new THREE.MeshStandardMaterial({ color: 0xf6f6f2, roughness: 0.8, side: THREE.DoubleSide, flatShading: true });
+    this.birds = [];
+    for (let f = 0; f < 4; f++) {
+      const F = { r: 14 + R() * 26, y: -3.5 - R() * 6, w: (0.12 + R() * 0.08) * (f % 2 ? 1 : -1), a: R() * TAU };
+      const n = 3 + Math.floor(R() * 4);
+      for (let k = 0; k < n; k++) {
+        const side = k % 2 ? 1 : -1, row = Math.ceil(k / 2) * 1.8;
+        this.birds.push({ F, ox: side * row * 0.9, oz: -row * 0.8 + (R() - 0.5) * 0.3, oy: (R() - 0.5) * 0.4, ph: R() * TAU, s: 1.7 + R() * 0.6 });
+      }
+    }
+    const nb = this.birds.length;
+    this.birdBody = new THREE.InstancedMesh(body, gull, nb);
+    this.birdWingL = new THREE.InstancedMesh(wing, gull, nb);
+    this.birdWingR = new THREE.InstancedMesh(wing, gull, nb);
+    G.add(this.birdBody, this.birdWingL, this.birdWingR);
+
+    // far islets: a grassy top on an upside-down rock, a round tree or a tiny windmill
+    const rock = new THREE.ConeGeometry(1, 1, 7).rotateX(Math.PI).translate(0, -0.5, 0);
+    const top = new THREE.CylinderGeometry(1, 0.94, 0.3, 7).translate(0, 0.15, 0);
+    const trunk = new THREE.CylinderGeometry(0.12, 0.16, 0.9, 6).translate(0, 0.75, 0), crown = new THREE.IcosahedronGeometry(0.6, 1);
+    const mat = {
+      rock: new THREE.MeshStandardMaterial({ color: 0x8a6a4e, roughness: 0.95, flatShading: true }),
+      grass: new THREE.MeshStandardMaterial({ color: 0x8fcf63, roughness: 0.9, flatShading: true }),
+      wood: new THREE.MeshStandardMaterial({ color: 0x7a5232, roughness: 0.85 }),
+      leaf: new THREE.MeshStandardMaterial({ color: 0x5fae4a, roughness: 0.85, flatShading: true }),
+      stone: new THREE.MeshStandardMaterial({ color: 0xece2cf, roughness: 0.85 }),
+      roof: new THREE.MeshStandardMaterial({ color: 0xc8453a, roughness: 0.7 }),
+    };
+    this.islets = [];
+    const count = 9, a0 = R() * TAU;
+    for (let k = 0; k < count; k++) {
+      const a = a0 + k / count * TAU + (R() - 0.5) * 0.4, d = 33 + R() * 12, sz = 1.4 + R() * 1.6, g = new THREE.Group();
+      const rk = new THREE.Mesh(rock, mat.rock); rk.scale.set(sz, sz * (1.6 + R()), sz);
+      const gr = new THREE.Mesh(top, mat.grass); gr.scale.set(sz, 1, sz);
+      g.add(rk, gr);
+      if (k % 3 === 0) { // a tiny windmill, sails turning
+        const tw = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.42, 1.3, 8).translate(0, 0.95, 0), mat.stone);
+        const rf = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.45, 8).translate(0, 1.82, 0), mat.roof);
+        const hub = new THREE.Group(); hub.position.set(0, 1.35, 0.4);
+        for (let q = 0; q < 4; q++) { const sp = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.9, 0.03).translate(0, 0.45, 0), mat.stone); sp.rotation.z = q * Math.PI / 2; hub.add(sp); }
+        g.add(tw, rf, hub);
+        g.userData.hub = hub;
+      } else for (let q = 0; q < 1 + (k % 2); q++) {
+        const t = new THREE.Group(), cr = new THREE.Mesh(crown, mat.leaf);
+        cr.position.y = 1.35; cr.scale.setScalar(0.8 + R() * 0.5);
+        t.add(new THREE.Mesh(trunk, mat.wood), cr);
+        t.position.set((R() - 0.5) * sz * 0.9, 0, (R() - 0.5) * sz * 0.9);
+        g.add(t);
+      }
+      g.position.set(Math.cos(a) * d, -5 - R() * 7, Math.sin(a) * d);
+      g.rotation.y = -a + Math.PI / 2; // the windmills face the middle
+      G.add(g);
+      this.islets.push({ g, y: g.position.y, ph: R() * TAU });
+    }
+
+    // the cracks drawn over a doomed island (world UVs of the floor, 4 x 4 tiles per texture)
+    const cc = document.createElement('canvas');
+    cc.width = cc.height = 256;
+    const y = cc.getContext('2d');
+    if (y) {
+      y.strokeStyle = 'rgba(62,38,22,1)'; y.lineCap = 'round';
+      const crack = (px, py, ang, len, w) => {
+        for (let k = 0; k < len; k++) {
+          const nx = px + Math.cos(ang) * 7, ny = py + Math.sin(ang) * 7;
+          y.lineWidth = w; y.beginPath(); y.moveTo(px, py); y.lineTo(nx, ny); y.stroke();
+          px = nx; py = ny; ang += (R() - 0.5) * 0.9; w = Math.max(0.8, w * 0.93);
+          if (R() < 0.12 && w > 1.4) crack(px, py, ang + (R() < 0.5 ? 1 : -1) * (0.6 + R() * 0.6), len - k - 2, w * 0.7);
+        }
+      };
+      for (let k = 0; k < 9; k++) crack(R() * 256, R() * 256, R() * TAU, 14 + R() * 16, 3.2);
+      const tex = new THREE.CanvasTexture(cc);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(N / 4, N / 4);
+      tex.userData.perMatch = true;
+      this.crackTex = tex;
+    }
+    this.pebble = new THREE.DodecahedronGeometry(0.28);
+    this.pebbleMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4e, roughness: 0.95, flatShading: true });
+  }
+
+  placeClouds(dt) {
+    const M = this.cloudMesh;
+    for (const C of this.cloudList) {
+      C.x += C.v * dt;
+      if (C.x > 70) C.x -= 140;
+      for (const [dx, dy, dz, r, k] of C.p) {
+        _m.compose(_v.set(C.x + dx, C.y + dy, C.z + dz), _q.identity(), _s.set(r, r * 0.72, r));
+        M.setMatrixAt(k, _m);
+      }
+    }
+    M.instanceMatrix.needsUpdate = true;
+  }
+
+  flyBirds(t) {
+    const B = this.birds, _r = new THREE.Matrix4(), _w = new THREE.Matrix4();
+    B.forEach((b, k) => {
+      const F = b.F, a = F.a + F.w * t, dir = Math.sign(F.w);
+      // along the circle: heading is the tangent
+      const hx = -Math.sin(a) * dir, hz = Math.cos(a) * dir, yaw = Math.atan2(hx, hz);
+      const px = Math.cos(a) * F.r + Math.cos(yaw) * b.ox + hx * b.oz, pz = Math.sin(a) * F.r - Math.sin(yaw) * b.ox + hz * b.oz;
+      _q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, yaw);
+      _m.compose(_v.set(px, F.y + b.oy + Math.sin(t * 0.8 + b.ph) * 0.3, pz), _q, _s.setScalar(b.s));
+      this.birdBody.setMatrixAt(k, _m);
+      const cyc = (t * 0.35 + b.ph) % 2, flap = cyc < 1.2 ? Math.sin(t * 11 + b.ph) * 0.65 : 0.12; // flap, then glide
+      _r.makeRotationZ(flap);
+      this.birdWingR.setMatrixAt(k, _w.multiplyMatrices(_m, _r));
+      _r.makeRotationZ(-flap).multiply(_w.makeScale(-1, 1, 1));
+      this.birdWingL.setMatrixAt(k, _w.multiplyMatrices(_m, _r));
+    });
+    this.birdBody.instanceMatrix.needsUpdate = this.birdWingL.instanceMatrix.needsUpdate = this.birdWingR.instanceMatrix.needsUpdate = true;
   }
 
   /* ------------------------------ rules ------------------------------ */
@@ -402,24 +541,99 @@ export class MapKit {
   }
   doom(tiles) {
     for (const [i, j] of tiles) this.doomed.add(this.A.key(i, j));
-    this.drawCracks();
+    this.lift(tiles);
     const g = this.g;
     if (g.player && tiles.length) {
       sfx('crumble_warn');
       g.hud.showBanner?.(t('hud.islandFalls'), 'three');
     }
   }
-  drawCracks() {
+  // A doomed island leaves the floor mesh for its own (ground, rock, cracks): it shakes harder and
+  // harder for the 5 s telegraph, sheds pebbles and dust, then drops in one piece (crumble).
+  lift(tiles) {
     const A = this.A;
-    let k = 0;
-    for (const key of this.doomed) {
-      const i = key % N, j = Math.floor(key / N);
-      A.center(i, j, _v);
-      _m.makeTranslation(_v.x, 0.06, _v.z);
-      this.cracks.setMatrixAt(k++, _m);
+    if (!A.groundMesh || !this.rock) return;
+    const left = new Set(tiles.filter(([i, j]) => !'V='.includes(A.get(i, j))).map(([i, j]) => A.key(i, j)));
+    while (left.size) { // one piece per connected island, so each one tips around its own middle
+      const first = left.values().next().value, keys = new Set([first]), stack = [first];
+      left.delete(first);
+      while (stack.length) {
+        const k = stack.pop(), i = k % N, j = Math.floor(k / N);
+        for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const n = A.key(i + di, j + dj);
+          if (left.has(n)) { left.delete(n); keys.add(n); stack.push(n); }
+        }
+      }
+      let cx = 0, cz = 0;
+      for (const k of keys) { A.center(k % N, Math.floor(k / N), _v); cx += _v.x / keys.size; cz += _v.z / keys.size; }
+      const grp = new THREE.Group(), geo = A.groundGeometry((i, j) => keys.has(A.key(i, j))).translate(-cx, 0, -cz);
+      const ground = new THREE.Mesh(geo, A.groundMesh.material);
+      ground.receiveShadow = true;
+      grp.add(ground);
+      let cracks = null;
+      if (this.crackTex) {
+        cracks = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: this.crackTex, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+        cracks.position.y = 0.01; // world UVs: the cracks stay put on the ground texture
+        cracks.renderOrder = 1;
+        grp.add(cracks);
+      }
+      const idx = [...keys].filter(k => this.rockIdx.has(k)).map(k => this.rockIdx.get(k));
+      const rock = new THREE.InstancedMesh(this.rock.geometry, this.rock.material, idx.length), off = new THREE.Matrix4().makeTranslation(-cx, 0, -cz), col = new THREE.Color();
+      idx.forEach((r, n) => {
+        this.rock.getMatrixAt(r, _m); rock.setMatrixAt(n, _m.premultiply(off));
+        this.rock.getColorAt(r, col); rock.setColorAt(n, col);
+        this.rock.setMatrixAt(r, ZERO);
+      });
+      this.rock.instanceMatrix.needsUpdate = true;
+      grp.add(rock);
+      grp.position.set(cx, 0, cz);
+      this.group.add(grp);
+      this.lifted.push({ grp, keys, rock, cracks, cx, cz, t0: this.g.time, pebble: 0, fall: null });
     }
-    this.cracks.count = k;
-    this.cracks.instanceMatrix.needsUpdate = true;
+    this.rebuildFloor();
+  }
+  rebuildFloor() {
+    const A = this.A, out = new Set();
+    for (const L of this.lifted) if (!L.fall) for (const k of L.keys) out.add(k);
+    A.rebuildGround(out.size ? (i, j) => !out.has(A.key(i, j)) : null);
+  }
+  updateLifted(dt) {
+    const g = this.g;
+    for (let n = this.lifted.length - 1; n >= 0; n--) {
+      const L = this.lifted[n], G = L.grp;
+      if (L.fall) { // dropping away, tipping over
+        L.fall.vy += 16 * dt;
+        G.position.y -= L.fall.vy * dt;
+        G.rotation.x += L.fall.rx * dt; G.rotation.z += L.fall.rz * dt;
+        if ((L.fall.t -= dt) <= 0) {
+          this.group.remove(G);
+          G.children[0].geometry.dispose();
+          L.cracks?.material.dispose();
+          L.rock.dispose();
+          this.lifted.splice(n, 1);
+        }
+        continue;
+      }
+      const p = Math.min(1, (g.time - L.t0) / DOOM_WARN), amp = 0.02 + 0.13 * p * p;
+      G.position.set(L.cx + (Math.random() - 0.5) * amp * 2, (Math.random() - 0.5) * amp * 0.6, L.cz + (Math.random() - 0.5) * amp * 2);
+      G.rotation.set(Math.sin(g.time * 23) * amp * 0.05, 0, Math.cos(g.time * 19) * amp * 0.05);
+      if (L.cracks) L.cracks.material.opacity = Math.min(0.85, 0.15 + p * 0.9);
+      // pebbles off the underside, dust on top, more and more of them
+      if ((L.pebble -= dt) <= 0) {
+        L.pebble = 0.35 - p * 0.25;
+        const keys = [...L.keys], k = keys[Math.floor(Math.random() * keys.length)];
+        this.A.center(k % N, Math.floor(k / N), _v);
+        const m = new THREE.Mesh(this.pebble, this.pebbleMat);
+        m.position.set(_v.x + (Math.random() - 0.5) * 1.6, -0.6 - Math.random() * 2, _v.z + (Math.random() - 0.5) * 1.6);
+        m.scale.setScalar(0.6 + Math.random() * 0.9);
+        this.group.add(m);
+        this.falling.push({ m, vy: 0, rx: (Math.random() - 0.5) * 6, rz: (Math.random() - 0.5) * 6, t: 1.6, shared: true });
+        if (Math.random() < 0.5) g.effects.dust(_v.x, _v.z, 2 + Math.round(p * 3), 0xb89a74, 0.8);
+      }
+    }
+    // standing on it: the ground rumbles under your feet
+    const P = g.player;
+    if (P && P.alive && this.doomedAt(P.pos.x, P.pos.z) && (this.rumble = (this.rumble || 0) - dt) <= 0) { this.rumble = 0.45; g.shakeAt(P.pos.x, P.pos.z, 0.1); }
   }
   doomedAt(x, z) { return this.doomed.has(this.A.key(this.A.toTile(x), this.A.toTile(z))); }
   // The closest open tile that is not about to fall (bots running from a crumbling island).
@@ -452,15 +666,21 @@ export class MapKit {
       A.grid[j][i] = 'V';
       if (this.rock && this.rockIdx.has(key)) { this.rock.setMatrixAt(this.rockIdx.get(key), ZERO); this.rock.instanceMatrix.needsUpdate = true; }
       A.center(i, j, _v);
-      if (Math.random() < 0.5) this.chunk(_v.x, _v.z, 0x7fbf5a, 1);
+      if (!this.lifted.some(L => L.keys.has(key)) && Math.random() < 0.5) this.chunk(_v.x, _v.z, 0x7fbf5a, 1);
+    }
+    for (const L of this.lifted) if (!L.fall && tiles.some(([i, j]) => L.keys.has(A.key(i, j)))) {
+      L.fall = { vy: 0, rx: (Math.random() - 0.5) * 0.5, rz: (Math.random() - 0.5) * 0.5, t: 3.2 };
+      L.grp.rotation.set(0, 0, 0);
+      L.grp.position.set(L.cx, 0, L.cz);
+      if (L.cracks) L.cracks.material.opacity = 0.85;
+      this.g.effects.dust(L.cx, L.cz, 14, 0xb89a74, Math.sqrt(L.keys.size) * 1.2);
     }
     A.rev++;
-    A.rebuildGround?.();
+    this.rebuildFloor();
     for (let k = g.items.length - 1; k >= 0; k--) { // cubes on the fallen ground fall with it
       const it = g.items[k];
       if (A.charAt(it.tx, it.tz) === 'V') { g.fx.remove(it.mesh); g.items.splice(k, 1); }
     }
-    this.drawCracks();
     if (tiles.length) { g.shakeAt(g.camFocus.x, g.camFocus.z, 0.5); sfx('crumble', 0.9); }
   }
 
@@ -584,11 +804,17 @@ export class MapKit {
     if (this.sails) this.sails.rotation.z += dt * 0.6;
     if (this.padMat) this.padMat.emissiveIntensity = 0.6 + 0.5 * Math.sin(g.time * 5);
     if (this.clouds) this.clouds.offset.x += dt * 0.004;
-    if (this.cracks.count) this.cracks.material.opacity = 0.25 + 0.3 * (Math.sin(g.time * 12) > 0 ? 1 : 0);
+    if (this.cloudMesh) this.placeClouds(dt);
+    if (this.birds) this.flyBirds(performance.now() / 1000);
+    if (this.islets) for (const I of this.islets) {
+      I.g.position.y = I.y + Math.sin(g.time * 0.5 + I.ph) * 0.35;
+      if (I.g.userData.hub) I.g.userData.hub.rotation.z += dt * 0.9;
+    }
+    this.updateLifted(dt);
     for (let k = this.falling.length - 1; k >= 0; k--) {
       const F = this.falling[k];
       F.vy += 18 * dt; F.m.position.y -= F.vy * dt; F.m.rotation.x += F.rx * dt; F.m.rotation.z += F.rz * dt;
-      if ((F.t -= dt) <= 0) { this.group.remove(F.m); F.m.geometry.dispose(); F.m.material.dispose(); this.falling.splice(k, 1); }
+      if ((F.t -= dt) <= 0) { this.group.remove(F.m); if (!F.shared) { F.m.geometry.dispose(); F.m.material.dispose(); } this.falling.splice(k, 1); }
     }
   }
 }
