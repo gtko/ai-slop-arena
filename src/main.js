@@ -302,16 +302,24 @@ for (const T of Object.values(TYPES)) {
   c.addEventListener('click', () => { sfx('click'); pickBrawler(T.key); });
   cards.appendChild(c);
 }
-// Skins of the chosen brawler, right under its name: the ones you own are one click away, the
-// others show how to get them (a click opens the collection on them).
+// Skins of the chosen brawler: a carousel row above the brawler row (it scrolls, with arrows and
+// the mouse wheel, however many skins there are). Owned ones are one click away; locked ones show
+// how to get them and open the collection on them.
 function renderSkins() {
   const C = parseCos(cosFor(chosen)), root = $('#heroSkins');
-  root.innerHTML = `<small>${t('cos.tab.skin')}</small>` + SKINS.map((s, n) => {
+  const owned = SKINS.filter((s, n) => canWear('skin', n, chosen)).length;
+  $('#skinCount').textContent = `${owned}/${SKINS.length}`;
+  root.innerHTML = SKINS.map((s, n) => {
     const have = canWear('skin', n, chosen), on = C.skin === n;
-    const tip = `${t('cos.skin.' + s)}${have ? '' : ' · 🔒 ' + (s === 'gold' ? t('col.gold', { n: GOLD_AT }) : t('col.inShop'))}`;
+    const how = s === 'gold' ? t('col.gold', { n: GOLD_AT }) : t('col.inShop');
+    const tip = `${t('cos.skin.' + s)}${have ? '' : ' · 🔒 ' + how}`;
     return `<button class="hs${on ? ' on' : ''}${have ? '' : ' locked'}" data-n="${n}" role="radio" aria-checked="${on}" title="${tip}" aria-label="${tip}">
-      <img src="${portrait(chosen)}" alt="" style="filter:${skinFilter(chosen, n)}">${have ? '' : '<i>🔒</i>'}</button>`;
+      <span class="hs-art"><img src="${portrait(chosen)}" alt="" style="filter:${skinFilter(chosen, n)}">${have ? '' : '<i>🔒</i>'}</span><b>${t('cos.skin.' + s)}</b></button>`;
   }).join('');
+  // keep the worn skin in view (the row scrolls when there are more skins than room)
+  const cur = root.querySelector('.hs.on');
+  if (cur) root.scrollLeft = cur.offsetLeft - (root.clientWidth - cur.offsetWidth) / 2;
+  root.parentElement.classList.toggle('scrolls', root.scrollWidth > root.clientWidth + 2);
   root.querySelectorAll('.hs').forEach(b => b.addEventListener('click', () => {
     const n = +b.dataset.n;
     sfx('click');
@@ -323,6 +331,15 @@ function renderSkins() {
     meta.onWear();
   }));
 }
+
+$('.skinbar').querySelectorAll('.sb-arrow').forEach(b => b.addEventListener('click', () => {
+  const tr = $('#heroSkins');
+  tr.scrollBy({ left: +b.dataset.d * tr.clientWidth * 0.8, behavior: 'smooth' });
+}));
+$('#heroSkins').addEventListener('wheel', e => {
+  const tr = e.currentTarget;
+  if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && tr.scrollWidth > tr.clientWidth) { tr.scrollLeft += e.deltaY; e.preventDefault(); }
+}, { passive: false });
 
 function renderHero() {
   const T = TYPES[chosen], P = progress(chosen), C = parseCos(cosFor(chosen));

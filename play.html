@@ -128,12 +128,21 @@
         <em id="heroRole" class="hero-role"></em>
         <h1 id="heroName" class="hero-name"></h1>
         <div id="heroMastery" class="hero-mastery"></div>
-        <div id="heroSkins" class="hero-skins" role="radiogroup"></div>
         <p id="heroDesc" class="hero-desc"></p>
         <div id="heroStats" class="hero-stats"></div>
         <div id="loadout"></div>
       </div>
-      <div id="cards" class="roster"></div>
+      <div class="picker">
+        <div class="skinbar">
+          <div class="sb-head"><b data-i18n="cos.tab.skin">SKINS</b><small id="skinCount"></small></div>
+          <div class="sb-row">
+            <button class="sb-arrow" data-d="-1" aria-label="‹">‹</button>
+            <div id="heroSkins" class="sb-track" role="radiogroup"></div>
+            <button class="sb-arrow" data-d="1" aria-label="›">›</button>
+          </div>
+        </div>
+        <div id="cards" class="roster"></div>
+      </div>
     </section>
 
     <!-- play: mode, map, Weekly Chaos, the big button -->
