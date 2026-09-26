@@ -158,6 +158,8 @@ export class BotBrain {
     const calm = g.time < this.graceUntil && !provoked;
     const H = this.habits;
     const sight = 13 + this.skill * 9 + H.sight; // sharper bots notice targets from further away
+    // Duo partner (B02): focus whoever the partner is fighting
+    const mate = g.mateOf(b), focus = mate && mate.alive ? g.brains.get(mate)?.target || (g.time - (mate.hitAt ?? -9) < 3 ? mate.hitWho : null) : null;
     for (const o of g.brawlers) {
       if (calm || o === b || !o.alive || g.ally(b, o)) continue;
       const d = o.pos.distanceTo(b.pos);
@@ -167,7 +169,7 @@ export class BotBrain {
       const recall = o === this.target && g.time - (this.seenAt || 0) < 2.5 && !(o.inBush && o.revealT <= 0);
       if (d > sight || !(seen || recall)) continue;
       if (H.camp && !provoked && o !== this.target && d > T.range * 0.8) continue; // campers wait for you to come close
-      const s = d + (o.hp / o.maxHp) * (4 + H.lowHp) - (o === this.target ? 2 : 0);
+      const s = d + (o.hp / o.maxHp) * (4 + H.lowHp) - (o === this.target ? 2 : 0) - (o === focus ? 4 : 0);
       if (s < bestS) { bestS = s; best = o; }
     }
     if (best !== this.target) { this.seen = 0; this.seenAt = g.time; if (best && best.human && Math.random() < 0.5) g.bark(b, 'spot'); } // memory starts with the new target
@@ -182,6 +184,18 @@ export class BotBrain {
       else this.setGoal(this.goal);
       return;
     }
+
+    // Duo: a knocked-out partner comes first (unless the gas is on its ghost or about to be)
+    const G = mate && !mate.alive ? g.ghostOf(mate) : null;
+    if (G && A.ring(A.toTile(G.x), A.toTile(G.z)) > P.level + (P.nextIn < 3 ? 1 : 0)) {
+      this.mode = 'revive';
+      if (Math.hypot(G.x - b.pos.x, G.z - b.pos.z) > 1.2) this.setGoal(new THREE.Vector3(G.x, 0, G.z));
+      else { this.path.length = 0; this.hasGoal = false; }
+      return;
+    }
+    // a ping from the partner (pings, hud): go there, unless a fight is on
+    const ping = this.ping && g.time - this.ping.t < 8 ? this.ping : null;
+    if (ping && !best && Math.hypot(ping.x - b.pos.x, ping.z - b.pos.z) > 2) { this.mode = 'ping'; this.setGoal(new THREE.Vector3(ping.x, 0, ping.z)); return; }
 
     if (best) {
       const d = best.pos.distanceTo(b.pos), hpF = b.hp / b.maxHp;
@@ -209,6 +223,13 @@ export class BotBrain {
       if (d > want + 2 || !clear) { this.mode = 'chase'; this.setGoal(best.pos.clone()); }
       else { this.mode = 'strafe'; this.path.length = 0; this.hasGoal = false; }
       this.want = want;
+      return;
+    }
+
+    // Duo: stay within 6 m of the partner
+    if (mate && mate.alive && Math.hypot(mate.pos.x - b.pos.x, mate.pos.z - b.pos.z) > 6) {
+      this.mode = 'follow';
+      this.setGoal(mate.pos.clone());
       return;
     }
 

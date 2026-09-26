@@ -438,6 +438,7 @@ export class Game {
     amount = Math.round(amount);
     target.hp -= amount;
     target.lastHurt = this.time;
+    if (source && source !== target) { source.hitWho = target; source.hitAt = this.time; } // a bot partner joins in (ai.js)
     if (source && source !== target && !fromSuper) {
       const before = source.superCharge;
       source.superCharge = Math.min(1, source.superCharge + amount / source.type.superCost * (this.mutator === 'superRush' ? 2 : 1));

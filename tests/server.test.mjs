@@ -353,5 +353,17 @@ await test('duo: a match ends with one team standing, placements 1-4 per team', 
   }
 });
 
+await test('duo: a bot partner runs to revive you', () => {
+  const { m, g } = duoMatch('oasis', ['alice']);
+  const a = g.byId.get('alice'), mate = g.mateOf(a);
+  for (const [o] of [...g.brains]) if (o !== mate) g.brains.delete(o); // only the partner thinks
+  mate.maxHp = mate.hp = 1e7;
+  g.time = 10;
+  a.pos.x += (Math.sign(-a.pos.x) || 1) * 4; // a few metres from the partner
+  g.damage(a, 1e6, g.brawlers.find(o => o !== a && o !== mate));
+  for (let i = 0; i < 20 * 12 && !a.alive; i++) m.advance(0.05);
+  assert.ok(a.alive, 'the bot partner never revived');
+});
+
 if (failed) { console.error(`\n${failed} test(s) failed`); process.exit(1); }
 console.log('\nall server tests passed');
