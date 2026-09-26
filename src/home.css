@@ -572,3 +572,56 @@ body.touch #touch .t-super b { top: 50%; margin-top: 12px; font-size: 9px; }
   .hs b { font-size: 8.5px; }
   .sb-arrow { width: 24px; height: 24px; font-size: 15px; }
 }
+
+/* ======================= two currencies, brawlers to unlock, the shop's tabs ======================= */
+.gem { display: inline-block; width: 0.95em; height: 0.95em; margin-right: 0.28em; vertical-align: -0.12em; transform: rotate(45deg) scale(var(--s, 1)); border-radius: 3px;
+  background: linear-gradient(135deg, #f4c8ff 0%, #b56bff 45%, #6a2bd6 100%); border: 2px solid var(--ink); box-sizing: border-box; box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.45); }
+.gem.gem-lg { width: 34px; height: 34px; border-width: 3px; border-radius: 6px; }
+.gem-n { font-family: var(--display); white-space: nowrap; color: #e6c4ff; }
+#metaCoins { display: flex; gap: 12px; }
+
+/* shop tabs and cards */
+.sh-tabs { margin-bottom: 14px; }
+.sh-two { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.sh-two span { font-size: 11px; font-weight: 900; color: var(--muted); }
+.sh-two .sh-buy { margin: 0; padding: 6px 10px; font-size: 15px; }
+.sh-buy.by-coins { background: linear-gradient(#ffe36b, #ffbf1f); }
+.sh-buy:not(.by-coins):not(.sh-wear):not([disabled]) { background: linear-gradient(#d9a8ff, #9a5cf0); color: var(--ink); }
+.sh-buy .gem-n { color: var(--ink); }
+.sh-buy.short .gem-n { color: #e6c4ff; }
+.sh-buy.soon { background: rgba(255, 255, 255, 0.08); color: var(--muted); font-size: 13px; }
+.sh-brawlers { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.sh-brawler .sh-ico { height: 150px; width: 100%; border-radius: 12px; overflow: hidden; align-items: flex-end;
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--c) 55%, #fff) 0%, var(--c) 60%, color-mix(in srgb, var(--c) 45%, #000) 100%); }
+.sh-brawler .sh-ico img { height: 160px; margin-bottom: -8px; }
+.sh-gems { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.sh-pack .sh-ico { height: 100px; }
+.sh-pack b { font-size: 22px; }
+.sh-pack small { font-size: 15px; color: #fff; }
+.sh-item.earned { opacity: 0.8; }
+
+/* home: locked brawlers and their price */
+.rt .rt-lock { display: none; position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); text-decoration: none; font-size: 22px; filter: drop-shadow(0 2px 2px #000); }
+.rt.locked img { filter: grayscale(0.7) brightness(0.6); }
+.rt.locked .rt-lock { display: block; }
+.hero-unlock { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 14px; background: rgba(16, 13, 32, 0.8); border: 1px solid rgba(255, 210, 63, 0.4); backdrop-filter: blur(6px); }
+.hero-unlock > b { font-family: var(--display); font-weight: 400; font-size: 15px; color: var(--yellow); }
+.hero-unlock small { font-size: 11px; font-weight: 800; color: var(--muted); }
+.hu-row { display: flex; align-items: center; gap: 8px; }
+.hu-row span { font-size: 11px; font-weight: 900; color: var(--muted); }
+.hu-buy { padding: 7px 14px; border-radius: 10px; border: 2px solid var(--ink); box-shadow: 0 3px 0 var(--ink); font-family: var(--display); font-size: 16px; cursor: pointer; background: linear-gradient(#ffe36b, #ffbf1f); }
+.hu-buy[data-cur="gems"] { background: linear-gradient(#d9a8ff, #9a5cf0); }
+.hu-buy .coin-n, .hu-buy .gem-n { color: var(--ink); }
+.hu-buy.short { opacity: 0.5; cursor: default; }
+#play.locked, #multi.locked { filter: grayscale(0.8) brightness(0.7); cursor: not-allowed; }
+@media (max-height: 520px) and (orientation: landscape) {
+  .hero-unlock { padding: 5px 8px; gap: 3px; }
+  .hero-unlock small { display: none; }
+  .hu-buy { padding: 3px 8px; font-size: 12px; }
+  #pbGems { display: none; }
+}
+/* a locked brawler: its price takes the description's place, so the column stays above the picker */
+.hero-info:has(.hero-unlock:not(.hidden)) .hero-desc, .hero-info:has(.hero-unlock:not(.hidden)) #loadout .lo-desc { display: none; }
+.sh-item.earned .sh-buy { background: rgba(255, 255, 255, 0.08); color: var(--text); opacity: 1; font-size: 13px; }
+.sh-pack.featured { grid-row: auto; border-color: rgba(214, 160, 255, 0.6); }
+.sh-pack.featured .sh-ico { height: 100px; }

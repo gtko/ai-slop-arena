@@ -38,9 +38,9 @@ import { preloadFigurines, setFigurineDetail } from './figurines.js';
 import { preloadProps, PROPS } from './props.js';
 import { enableCartoonShading, cartoonGradePass } from './cartoon.js';
 import { PAD } from './input.js';
-import { MetaUI, skinFilter, framed, titleText, num } from './metaui.js';
-import { awardMatch, leagueBotLevel, cosFor, unlock, owns, wear, canWear } from './profile.js';
-import { parseCos, FRAMES, SKINS, GOLD_AT } from './cosmetics.js';
+import { MetaUI, skinFilter, framed, titleText, num, coin, gem } from './metaui.js';
+import { awardMatch, leagueBotLevel, cosFor, unlock, owns, wear, canWear, ownsBrawler, buy, coins, gems } from './profile.js';
+import { parseCos, FRAMES, SKINS, GOLD_AT, BRAWLER_PRICE } from './cosmetics.js';
 import { EmoteWheel } from './emotewheel.js';
 import { weeklyMutator, MUT_ICONS } from './mutators.js';
 import { PERSONA_ICONS } from './ai.js';
@@ -285,6 +285,7 @@ if (platformName === 'android') {
 }
 
 let chosen = localStorage.getItem('iaslop-brawler') || 'blaster';
+if (!ownsBrawler(chosen)) chosen = 'blaster'; // a brawler you own (the starters are free)
 let chosenMap = 'random';
 const MAP_ICON = { clear: '☀️', sandstorm: '🌪️', rain: '🌧️', snow: '❄️', fog: '🌫️' };
 const portrait = key => `${ASSET_BASE}ui/${key}.png`;
@@ -298,7 +299,7 @@ for (const T of Object.values(TYPES)) {
   c.dataset.key = T.key;
   c.style.setProperty('--c', hexOf(T.key));
   c.title = `${T.name} · ${t(`brawler.${T.key}.role`)}`;
-  c.innerHTML = `<img src="${portrait(T.key)}" alt="" onerror="this.remove()"><b>${T.name}</b><i></i>`;
+  c.innerHTML = `<img src="${portrait(T.key)}" alt="" onerror="this.remove()"><b>${T.name}</b><i></i><u class="rt-lock" aria-hidden="true">🔒</u>`;
   c.addEventListener('click', () => { sfx('click'); pickBrawler(T.key); });
   cards.appendChild(c);
 }
@@ -341,8 +342,29 @@ $('#heroSkins').addEventListener('wheel', e => {
   if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && tr.scrollWidth > tr.clientWidth) { tr.scrollLeft += e.deltaY; e.preventDefault(); }
 }, { passive: false });
 
+// A brawler you don't own yet: its price under the name (Slop Coins or Gems); Solo and Online wait,
+// Training lets you try it.
+function renderUnlock() {
+  const own = ownsBrawler(chosen), el = $('#heroUnlock');
+  el.classList.toggle('hidden', own);
+  for (const id of ['#play', '#multi']) { $(id).disabled = !own; $(id).classList.toggle('locked', !own); }
+  $('#multi').title = $('#play').title = own ? '' : t('menu.unlockFirst');
+  cards.querySelectorAll('.rt').forEach(c => c.classList.toggle('locked', !ownsBrawler(c.dataset.key)));
+  if (own) return;
+  const btn = (cur, price, have, money) => `<button class="hu-buy${have < price ? ' short' : ''}" data-cur="${cur}" data-price="${price}"${have < price ? ' disabled' : ''}>${money}</button>`;
+  el.innerHTML = `<b>🔒 ${t('menu.locked2')}</b><div class="hu-row">${btn('coins', BRAWLER_PRICE.coins, coins(), coin(BRAWLER_PRICE.coins))}<span>${t('shop.or')}</span>${btn('gems', BRAWLER_PRICE.gems, gems(), gem(BRAWLER_PRICE.gems))}</div><small>${t('menu.tryDojo')}</small>`;
+  el.querySelectorAll('.hu-buy:not([disabled])').forEach(b => b.addEventListener('click', () => {
+    if (!buy('brawler:' + chosen, +b.dataset.price, b.dataset.cur)) return;
+    sfx('buy');
+    track('shop_purchase', { item: 'brawler:' + chosen, price: +b.dataset.price, currency: b.dataset.cur, from: 'home' });
+    meta.renderBar();
+    renderHero();
+  }));
+}
+
 function renderHero() {
   const T = TYPES[chosen], P = progress(chosen), C = parseCos(cosFor(chosen));
+  renderUnlock();
   $('.hero').style.setProperty('--c', hexOf(chosen));
   renderSkins(); // only called once meta exists (after its creation below)
   $('#heroName').textContent = T.name;
@@ -396,7 +418,7 @@ function pickBrawler(key) {
 renderLoadout();
 
 // Progression pages (v0.13): quests, Trophy Road, shop, collection, under the top navigation.
-const meta = new MetaUI({ brawlers: Object.keys(TYPES), portrait, chosen: () => chosen, onWear: () => {
+const meta = new MetaUI({ brawlers: Object.keys(TYPES), portrait, chosen: () => chosen, colorOf: hexOf, onWallet: () => renderUnlock(), onBrawler: key => { renderHero(); if (key === chosen) showcaseAgain(); }, onWear: () => {
   renderHero();
   showcaseAgain();
   if (net.connected) net.send({ t: 'pick', brawler: chosen, lo: loadout(chosen), cos: cosFor(chosen) });
@@ -525,6 +547,7 @@ function dojo() {
 }
 
 function play() {
+  if (!ownsBrawler(chosen)) return;
   leaveHome();
   document.body.classList.remove('in-dojo');
   initAudio();
@@ -605,7 +628,9 @@ if (steam) {
 const status = msg => { $('#lobbyStatus').textContent = msg || ''; };
 
 function openLobby() {
+  if (!ownsBrawler(chosen)) return false;
   leaveHome();
+  lobbyCards.querySelectorAll('button').forEach(b => { b.disabled = !ownsBrawler(b.dataset.key); });
   initAudio();
   sfx('click');
   track('lobby_opened');
@@ -615,6 +640,7 @@ function openLobby() {
   playMusic('lobby');
   loadRank();
   showAvatar();
+  return true;
 }
 function showRoomView(inRoom) {
   $('#lobbyJoin').classList.toggle('hidden', inRoom || mm.searching);
@@ -735,7 +761,7 @@ for (const T of Object.values(TYPES)) {
   b.dataset.key = T.key;
   b.className = T.key === chosen ? 'on' : '';
   b.innerHTML = `<img src="${portrait(T.key)}" alt="">${T.name}`;
-  b.addEventListener('click', () => { sfx('click'); pickBrawler(T.key); });
+  b.addEventListener('click', () => { if (!ownsBrawler(T.key)) return; sfx('click'); pickBrawler(T.key); });
   lobbyCards.appendChild(b);
 }
 buildMaps($('#lobbyMaps'), key => {
@@ -1198,6 +1224,7 @@ if (steam) {
     if (menus.paused) menus.closePause();
     if (net.connected) net.close();
     toMenu();
+    if (!ownsBrawler(chosen)) pickBrawler(Object.keys(TYPES).find(ownsBrawler)); // an invite: join with a brawler you own
     openLobby();
     joinRoom(null, id);
   };

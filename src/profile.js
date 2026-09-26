@@ -6,15 +6,23 @@
 //    climb; the bots of your next solo match follow them a little;
 //  - cosmetics you own and the ones you wear (cosmetics.js).
 
-import { FREE, GOLD_AT, cosString, SKINS } from './cosmetics.js';
+import { FREE, GOLD_AT, cosString, SKINS, STARTERS } from './cosmetics.js';
 
 const KEY = 'iaslop-profile';
-const blank = () => ({ xp: 0, coins: 0, owned: [...FREE], trophies: {}, road: 0,
+const blank = () => ({ v: 2, xp: 0, coins: 0, gems: 0, owned: [...FREE, ...STARTERS.map(k => 'brawler:' + k)], trophies: {}, road: 0,
   wear: { skins: {}, trail: 0, ko: 0, frame: 0, title: 1, icon: 0 }, seen: [] });
 let P = blank();
 try {
   const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
   if (raw && typeof raw === 'object') P = { ...P, ...raw, wear: { ...P.wear, ...raw.wear } };
+  // v0.13.1: brawlers are owned. Anyone who played before keeps all five (nothing is taken away).
+  // a veteran: a profile from before v0.13.1, or no profile yet but mastery points (v0.12 and older)
+  const veteran = raw ? !raw.v : (() => { try { return Object.keys(JSON.parse(localStorage.getItem('iaslop-mastery') || '{}')).length > 0; } catch { return false; } })();
+  if (veteran) {
+    for (const k of ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt']) if (!P.owned.includes('brawler:' + k)) P.owned.push('brawler:' + k); // the five of before
+    P.v = 2;
+    P.gems ??= 0;
+  }
 } catch { /* private mode */ }
 for (const id of FREE) if (!P.owned.includes(id)) P.owned.push(id); // items made free later
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch { /* private mode */ } };
@@ -29,12 +37,11 @@ export function levelInfo(xp = P.xp) {
 }
 export const level = () => levelInfo().level;
 export const coins = () => P.coins;
+export const gems = () => P.gems || 0;
 
-// Cosmetics some levels give (the others pay coins only).
-export const LEVEL_REWARDS = {
-  2: 'frame:1', 3: 'title:2', 4: 'emote:cool', 5: 'trail:1', 6: 'icon:5', 7: 'frame:2', 8: 'ko:1', 9: 'emote:love',
-  10: 'frame:3', 12: 'title:8', 14: 'icon:17', 15: 'trail:4', 18: 'ko:5', 20: 'title:13', 25: 'frame:10', 30: 'title:14',
-};
+// Levels pay Slop Coins (for brawlers); a few milestones also give a prestige look that is never
+// sold (cosmetics are otherwise Gems only).
+export const LEVEL_REWARDS = { 10: 'frame:3', 20: 'title:13', 25: 'frame:10', 30: 'title:14' };
 export const levelCoins = L => 50 + 10 * Math.min(L, 20);
 
 /* ------------------------------ Bot League ------------------------------ */
@@ -50,10 +57,10 @@ export function trophyDelta(key, rank) {
 
 // Trophy Road: rewards along your total trophies (every brawler counts).
 export const ROAD = [
-  [10, 'coins:100'], [25, 'emote:shock'], [40, 'coins:150'], [60, 'icon:28'], [80, 'trail:2'], [100, 'coins:200'],
-  [130, 'frame:5'], [160, 'title:7'], [200, 'coins:250'], [240, 'ko:3'], [280, 'emote:clown'], [330, 'coins:300'],
-  [380, 'frame:8'], [440, 'trail:3'], [500, 'title:12'], [570, 'coins:400'], [650, 'ko:4'], [740, 'icon:29'],
-  [850, 'frame:9'], [1000, 'title:14'],
+  [10, 'coins:100'], [25, 'coins:150'], [40, 'coins:150'], [60, 'icon:28'], [80, 'coins:200'], [100, 'coins:250'],
+  [130, 'coins:250'], [160, 'coins:300'], [200, 'coins:300'], [240, 'coins:350'], [280, 'coins:350'], [330, 'coins:400'],
+  [380, 'coins:400'], [440, 'coins:450'], [500, 'title:12'], [570, 'coins:500'], [650, 'coins:550'], [740, 'icon:29'],
+  [850, 'coins:700'], [1000, 'title:14'],
 ];
 // How far along the road you are: the next milestone and the share of the way to it.
 export const roadClaimed = () => P.road; // milestones already paid
@@ -129,13 +136,19 @@ export function unlock(id) { const r = give(id); save(); return r; }
 
 /* ------------------------------ shop and wardrobe ------------------------------ */
 
-export function buy(id, price) {
-  if (owns(id) || P.coins < price) return false;
-  P.coins -= price;
+// Buy with 'gems' (cosmetics, brawlers) or 'coins' (brawlers only).
+export function buy(id, price, currency = 'gems') {
+  const wallet = currency === 'coins' ? 'coins' : 'gems';
+  if (owns(id) || (P[wallet] || 0) < price) return false;
+  if (currency === 'coins' && !id.startsWith('brawler:')) return false; // coins never buy looks
+  P[wallet] -= price;
   P.owned.push(id);
   save();
   return true;
 }
+export const ownsBrawler = key => owns('brawler:' + key);
+// Gems from a pack (the store's purchase callback; test mode in dev builds only, see metaui.js).
+export function addGems(n) { P.gems = (P.gems || 0) + n; save(); }
 
 export const wearing = () => P.wear;
 export function wear(kind, n, brawler) {
@@ -156,7 +169,7 @@ export function cosFor(brawler) {
 }
 
 // Items unlocked but not looked at yet (a dot on the collection button).
-export const unseen = () => P.owned.filter(id => !P.seen.includes(id) && !FREE.includes(id));
+export const unseen = () => P.owned.filter(id => !P.seen.includes(id) && !FREE.includes(id) && !id.startsWith('brawler:'));
 export function markSeen() { P.seen = P.owned.slice(); save(); }
 
 // Dev tools / tests: add coins.

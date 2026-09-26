@@ -8,12 +8,13 @@ import { track } from './telemetry.js';
 import * as Pr from './profile.js';
 import { board, reroll, resetIn, QUEST_ICONS } from './quests.js';
 import { SKINS, RECOLOURS, TRAILS, TRAIL_ICONS, KOFX, KOFX_ICONS, EMOTES, EMOTE_ICONS, FRAMES, TITLES, ICONS, GOLD_AT,
-  shopPool, priceOf, kindOf } from './cosmetics.js';
+  shopPool, priceOf, kindOf, BRAWLER_PRICE, GEM_PACKS } from './cosmetics.js';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 export const num = n => Number(n).toLocaleString(lang); // numbers in the game's language, not the browser's
 export const coin = n => `<span class="coin-n"><i class="coin"></i>${typeof n === 'number' ? num(n) : n}</span>`;
+export const gem = n => `<span class="gem-n"><i class="gem"></i>${typeof n === 'number' ? num(n) : n}</span>`;
 const unit = (u, v) => { try { return new Intl.NumberFormat(lang, { style: 'unit', unit: u, unitDisplay: 'narrow' }).format(v); } catch { return v + u[0]; } };
 const clock = ms => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 1440 ? t('meta.days', { n: Math.floor(m / 1440) }) : `${unit('hour', Math.floor(m / 60))} ${unit('minute', m % 60)}`; };
 const cap = s => s[0].toUpperCase() + s.slice(1);
@@ -72,8 +73,8 @@ function markQuestsSeen(B) { try { localStorage.setItem(SEEN, JSON.stringify(don
 
 export class MetaUI {
   // brawlers: keys; portrait(key) -> url; chosen() -> current brawler; onWear(): what you wear changed
-  constructor({ brawlers, portrait, chosen, onWear }) {
-    Object.assign(this, { brawlers, portrait, chosen, onWear });
+  constructor({ brawlers, portrait, chosen, onWear, onBrawler, colorOf, onWallet }) {
+    Object.assign(this, { brawlers, portrait, chosen, onWear, onBrawler, colorOf, onWallet });
     this.view = null;
     this.tab = 'skin';
     this.panel = $('#meta');
@@ -110,6 +111,8 @@ export class MetaUI {
       <em><u style="width:${(q.n / q.target * 100).toFixed(0)}%"></u></em><b>${q.done ? '✓' : `${num(q.n)}/${num(q.target)}`}</b></li>`;
     $('#homeQuests').innerHTML = `<h3>${t('meta.quests')}<small>${B.daily.filter(q => q.done).length}/3</small></h3><ul>${B.daily.map(row).join('')}</ul>`;
     $('#pbCoins').innerHTML = coin(Pr.coins());
+    $('#pbGems').innerHTML = gem(Pr.gems());
+    this.onWallet?.();
     $('#pbTrophies').innerHTML = `🏆 ${num(Pr.totalTrophies())}`;
     // red badges only for something new: a quest just finished, an item just unlocked
     const fresh = unseenQuests(B);
@@ -154,7 +157,7 @@ export class MetaUI {
     const V = { quests: () => this.quests(), road: () => this.road(), shop: () => this.shop(), collection: () => this.collection() };
     $('#metaTitle').textContent = t('meta.' + this.view);
     $('#metaSub').textContent = '';
-    $('#metaCoins').innerHTML = coin(Pr.coins());
+    $('#metaCoins').innerHTML = coin(Pr.coins()) + gem(Pr.gems());
     $('#metaCoins').classList.toggle('hidden', this.view !== 'shop'); // the nav already shows your coins
     V[this.view]();
   }
@@ -237,31 +240,75 @@ export class MetaUI {
     this.onWear();
   }
   shop() {
-    const items = this.shopItems(), R = resetIn(), have = Pr.coins();
-    $('#metaSub').textContent = t('shop.refresh', { time: clock(R.day) });
-    this.body.innerHTML = `<div class="shop">${items.map((id, i) => {
-      const v = itemView(id, this.portrait), own = Pr.owns(id), full = priceOf(id), price = Math.round(full * (i === 0 ? 0.8 : 1));
-      const kind = kindOf(id), wear = own && WEARABLE.has(kind);
+    const R = resetIn(), tab = this.shopTab ||= 'featured';
+    const tabs = ['featured', 'brawlers', 'skins', 'effects', 'emotes', 'profile', 'gems'];
+    const pool = shopPool(this.brawlers).filter(id => !EARNED_HERE.has(id));
+    $('#metaSub').textContent = tab === 'featured' ? t('shop.refresh', { time: clock(R.day) }) : '';
+    const gemsHave = Pr.gems(), coinsHave = Pr.coins();
+    // one buy button: the price in a currency, what you're missing, or equip / owned
+    const buyBtn = (id, price, cur = 'gems') => {
+      const have = cur === 'coins' ? coinsHave : gemsHave, money = cur === 'coins' ? coin : gem, short = have < price;
+      return `<button class="sh-buy${short ? ' short' : ''}${cur === 'coins' ? ' by-coins' : ''}" data-id="${id}" data-price="${price}" data-cur="${cur}"${short ? ' disabled' : ''}>${money(price)}${short ? `<small>${t('shop.missing', { n: num(price - have) })}</small>` : ''}</button>`;
+    };
+    const card = (id, { price = priceOf(id), deal = 0, cls = '' } = {}) => {
+      const v = itemView(id, this.portrait), own = Pr.owns(id), wear = own && WEARABLE.has(kindOf(id)), cost = Math.round(price * (1 - deal));
       let btn;
-      if (!own) btn = `<button class="sh-buy${have < price ? ' short' : ''}" data-id="${id}" data-price="${price}"${have < price ? ' disabled' : ''}>${coin(price)}${have < price ? `<small>${t('shop.missing', { n: num(price - have) })}</small>` : ''}</button>`;
+      if (!own) btn = buyBtn(id, cost);
       else if (wear && !this.worn(id)) btn = `<button class="sh-buy sh-wear" data-wear="${id}">${t('shop.equip')}</button>`;
       else btn = `<button class="sh-buy" disabled>${wear ? t('col.equipped') : t('shop.owned')}</button>`;
-      return `<div class="sh-item${i === 0 ? ' featured' : ''}${own ? ' own' : ''}">${i === 0 && !own ? `<em class="sh-deal">-20%</em>` : ''}
+      return `<div class="sh-item ${cls}${own ? ' own' : ''}">${deal && !own ? `<em class="sh-deal">-${Math.round(deal * 100)}%</em>` : ''}
         <span class="sh-ico">${v.icon}</span><b>${esc(v.name || v.sub)}</b><small>${esc(v.name ? v.sub : '')}</small>
-        ${i === 0 && !own ? `<s class="sh-was">${num(full)}</s>` : ''}${btn}</div>`;
-    }).join('')}</div>
-    <p class="meta-foot">${t('shop.fair')}</p>`;
+        ${deal && !own ? `<s class="sh-was">${num(price)}</s>` : ''}${btn}</div>`;
+    };
+    let body = '';
+    if (tab === 'featured') body = `<div class="shop">${this.shopItems().map((id, i) => card(id, { deal: i === 0 ? 0.2 : 0, cls: i === 0 ? 'featured' : '' })).join('')}</div>`;
+    else if (tab === 'brawlers') {
+      // every brawler: the starters are free, the others cost Slop Coins or Gems
+      body = `<div class="shop sh-brawlers">${this.brawlers.map(k => {
+        const own = Pr.ownsBrawler(k), id = 'brawler:' + k;
+        return `<div class="sh-item sh-brawler${own ? ' own' : ''}" style="--c:${this.colorOf(k)}"><span class="sh-ico"><img src="${this.portrait(k)}" alt=""></span>
+          <b>${cap(k)}</b><small>${esc(t(`brawler.${k}.role`))}</small>
+          ${own ? `<button class="sh-buy" disabled>${t('shop.owned')}</button>` : `<div class="sh-two">${buyBtn(id, BRAWLER_PRICE.coins, 'coins')}<span>${t('shop.or')}</span>${buyBtn(id, BRAWLER_PRICE.gems, 'gems')}</div>`}</div>`;
+      }).join('')}</div>`;
+    } else if (tab === 'skins') {
+      const key = this.shopSkinsOf || this.chosen();
+      const pick = `<div class="col-brawlers">${this.brawlers.map(k => `<button data-b="${k}" class="${k === key ? 'on' : ''}" title="${cap(k)}" aria-label="${cap(k)}" aria-pressed="${k === key}"><img src="${this.portrait(k)}" alt=""></button>`).join('')}</div>`;
+      body = pick + `<div class="shop">${pool.filter(id => id.startsWith(`skin:${key}:`)).map(id => card(id)).join('')}${Pr.owns(`skin:${key}:3`) ? card(`skin:${key}:3`) : card(`skin:${key}:3`, { cls: 'earned' }).replace(/<button class="sh-buy[^"]*"[^>]*>[\s\S]*?<\/button>/, `<button class="sh-buy" disabled>🔒 ${t('col.gold', { n: GOLD_AT })}</button>`)}</div>`;
+    } else if (tab === 'effects') body = `<div class="shop">${pool.filter(id => /^(trail|ko):/.test(id)).map(id => card(id)).join('')}</div>`;
+    else if (tab === 'emotes') body = `<div class="shop">${pool.filter(id => id.startsWith('emote:')).map(id => card(id)).join('')}</div>`;
+    else if (tab === 'profile') body = `<div class="shop">${pool.filter(id => /^(frame|title|icon):/.test(id)).map(id => card(id)).join('')}</div>`;
+    else if (tab === 'gems') {
+      // real payment comes with the store integration (Steam, Google Play, Apple, Stripe); until then the
+      // packs are shown, and only development builds can add test Gems
+      const test = import.meta.env.DEV;
+      body = `<p class="meta-lead">${t('shop.gemsLead')}</p><div class="shop sh-gems">${GEM_PACKS.map(([n, eur], i) => `<div class="sh-item sh-pack${i === 2 ? ' featured' : ''}">
+        <span class="sh-ico"><i class="gem gem-lg" style="--s:${1 + i * 0.18}"></i></span><b>${gem(n)}</b>
+        <small>${new Intl.NumberFormat(lang, { style: 'currency', currency: 'EUR' }).format(eur)}</small>
+        <button class="sh-buy${test ? '' : ' soon'}" data-pack="${n}"${test ? '' : ' disabled'}>${test ? t('shop.gemsTest', { n: num(n) }) : t('shop.gemsSoon')}</button></div>`).join('')}</div>`;
+    }
+    this.body.innerHTML = `<div class="col-tabs sh-tabs">${tabs.map(k => `<button class="col-tab${k === tab ? ' on' : ''}" data-stab="${k}">${t('shop.tab.' + k)}</button>`).join('')}</div>
+      ${body}<p class="meta-foot">${t('shop.fair')}</p>`;
+    this.body.querySelectorAll('[data-stab]').forEach(b => b.addEventListener('click', () => { sfx('click'); this.shopTab = b.dataset.stab; this.render(); }));
+    this.body.querySelectorAll('.col-brawlers [data-b]').forEach(b => b.addEventListener('click', () => { sfx('click'); this.shopSkinsOf = b.dataset.b; this.render(); }));
     this.body.querySelectorAll('.sh-buy[data-id]:not([disabled])').forEach(b => b.addEventListener('click', () => {
-      if (!Pr.buy(b.dataset.id, +b.dataset.price)) return;
+      const { id, cur } = b.dataset, price = +b.dataset.price;
+      if (!Pr.buy(id, price, cur)) return;
       sfx('buy');
-      track('shop_purchase', { item: b.dataset.id, price: +b.dataset.price });
+      track('shop_purchase', { item: id, price, currency: cur });
+      if (id.startsWith('brawler:')) this.onBrawler?.(id.slice(8));
       this.render();
       this.renderBar();
-      this.body.querySelector(`[data-wear="${b.dataset.id}"]`)?.focus({ preventScroll: true });
+      this.body.querySelector(`[data-wear="${id}"]`)?.focus({ preventScroll: true });
     }));
     this.body.querySelectorAll('[data-wear]').forEach(b => b.addEventListener('click', () => {
       sfx('click');
       this.wearItem(b.dataset.wear);
+      this.render();
+      this.renderBar();
+    }));
+    this.body.querySelectorAll('[data-pack]:not([disabled])').forEach(b => b.addEventListener('click', () => {
+      Pr.addGems(+b.dataset.pack); // development builds only (see above)
+      sfx('buy');
       this.render();
       this.renderBar();
     }));
