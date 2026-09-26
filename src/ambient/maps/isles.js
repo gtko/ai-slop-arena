@@ -52,7 +52,7 @@ export default function isles(L) {
     { shape: 'box', args: [0.04, 0.12, 0.04], pos: [0.07, 0.06, 0], color: 0xffa21a },
     { shape: 'box', args: [0.04, 0.12, 0.04], pos: [-0.07, 0.06, 0], color: 0xffa21a },
   ]);
-  L.walkers({ geometry: hen, count: 4, on: byMill, gait: 'waddle', speed: 0.7, pause: [1, 3.5], range: 2, shy: 2.5, scale: [0.85, 1.05] });
+  L.critters({ key: 'hen', toy: hen, count: 4, on: byMill, gait: 'waddle', speed: 0.6, run: 1.8, pause: [1, 3.5], range: 2, shy: 2.5, extra: 0.8, scale: [0.85, 1.05] });
   const cat = L.toy([
     { shape: 'sphere', args: [0.16, 0.9, 0.85, 1.6], pos: [0, 0.24, -0.03], color: 0xf28c28 },
     { shape: 'sphere', args: [0.13], pos: [0, 0.38, 0.27], color: 0xf28c28 },
@@ -65,7 +65,7 @@ export default function isles(L) {
     { shape: 'box', args: [0.07, 0.14, 0.07], pos: [0.08, 0.07, -0.2], color: 0xf28c28 },
     { shape: 'box', args: [0.07, 0.14, 0.07], pos: [-0.08, 0.07, -0.2], color: 0xf28c28 },
   ]);
-  L.walkers({ geometry: cat, count: 1, on: byMill, speed: 0.55, pause: [5, 12], range: 3, shy: 3, scale: [0.85, 0.85] });
+  L.critters({ key: 'cat', toy: cat, count: 1, on: byMill, speed: 0.55, run: 2.6, pause: [5, 12], range: 3, shy: 3, scale: [0.85, 0.85], rigScale: 1.3 });
 
   // squirrels on the grass next to the round trees: they vanish with their island (walkers hide a
   // critter whose tile is gone)
@@ -77,7 +77,7 @@ export default function isles(L) {
     { shape: 'cone', args: [0.025, 0.07, 3], pos: [0.035, 0.26, 0.12], color: 0x8a3e18 },
     { shape: 'cone', args: [0.025, 0.07, 3], pos: [-0.035, 0.26, 0.12], color: 0x8a3e18 },
   ]);
-  L.walkers({ geometry: squirrel, count: 3, on: byTree, gait: 'hop', speed: 1.8, pause: [0.6, 2.5], range: 1.5, shy: 3.5, scale: [1.1, 1.3] });
+  L.critters({ key: 'squirrel', toy: squirrel, count: 3, on: byTree, gait: 'hop', speed: 1.8, run: 3, pause: [0.6, 2.5], range: 1.5, shy: 3.5, scale: [1.1, 1.3] });
 
   /* sparrows: hop and peck in the grass, flit about, fly off from a visible brawler or a shaking
      island to another one, or away off the map (and back later onto what is left) */
@@ -122,6 +122,8 @@ export default function isles(L) {
     fly(b, _v.set(Math.cos(a) * 45, 8, Math.sin(a) * 45), 2);
     b.leaving = true;
   };
+  // the rigged sparrow (fauna.js) replaces the toy body and wings once loaded: Idle, Hop, Peck, Fly
+  const SP = L.rig('sparrow', ns);
   const birds = L.spots(grass, ns).map(p => ({ p: p.setY(0), from: new V3(), to: new V3(), hop: new V3(), st: 'ground', wait: R() * 3, hu: -1, peck: 0, yaw: R() * 6.3, ph: R() * 6.3, s: 1.2 + R() * 0.25, u: 0, dur: 1, h: 1, leaving: false }));
   body.count = wr.count = wl.count = birds.length;
 
@@ -196,6 +198,16 @@ export default function isles(L) {
         const to = land(null);
         if (to) { const a = R() * PI * 2; b.p.set(Math.cos(a) * 40, 7, Math.sin(a) * 40); fly(b, to, 1); } else b.wait = 5;
       }
+      if (SP.ready) {
+        if (b.st === 'away') { SP.pose(k, 0, 0, 0, 0, 0, 0, 0); return; }
+        if (b.st === 'fly') SP.play(k, 'Fly', 1, 0.15);
+        else if (b.hu >= 0) { if (b.hu < 0.2 && (SP.done(k) || SP.current(k) !== 'Hop')) SP.play(k, 'Hop', SP.T.clips.Hop ? SP.T.clips.Hop.duration / 0.2 : 1, 0.05, true); }
+        else if (b.peck > 0) { if (b.peck > 0.4 && !(SP.current(k) === 'Peck' && !SP.done(k))) SP.play(k, 'Peck', 1, 0.08, true); }
+        else if (SP.done(k) || SP.current(k) === 'Fly') SP.play(k, 'Idle', 1, 0.2);
+        // the clips carry the pecking and flapping: only the flight's nose-up stays
+        SP.pose(k, b.p.x, y, b.p.z, b.yaw, b.st === 'fly' ? pitch : 0, 0, b.s * 1.1);
+        return;
+      }
       if (b.st === 'away') { body.setMatrixAt(k, ZERO); wr.setMatrixAt(k, ZERO); wl.setMatrixAt(k, ZERO); return; }
       _q.setFromEuler(_e.set(pitch, b.yaw, 0, 'YXZ'));
       _m.compose(_v.set(b.p.x, y, b.p.z), _q, _s.setScalar(b.s));
@@ -207,5 +219,6 @@ export default function isles(L) {
       wl.setMatrixAt(k, _r.multiplyMatrices(_w, _f));
     });
     body.instanceMatrix.needsUpdate = wr.instanceMatrix.needsUpdate = wl.instanceMatrix.needsUpdate = true;
+    if (SP.ready) body.visible = wr.visible = wl.visible = false;
   });
 }

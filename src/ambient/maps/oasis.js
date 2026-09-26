@@ -1,4 +1,4 @@
-// Oasis: lizards basking by the rocks, jerboas hopping on the sand, dragonflies over the pond,
+// Oasis: lizards basking by the rocks, a fennec or two, jerboas hopping on the sand, dragonflies over the pond,
 // butterflies on the golden grass, vultures soaring high and warm dust motes in the light.
 export default function oasis(L) {
   const A = L.arena, P = Math.PI;
@@ -17,11 +17,23 @@ export default function oasis(L) {
     { shape: 'box', args: [0.24, 0.04, 0.05], pos: [0, 0.03, 0.1], rot: [0, 0.35, 0], color: 0x178f74 }, // legs
     { shape: 'box', args: [0.24, 0.04, 0.05], pos: [0, 0.03, -0.1], rot: [0, -0.35, 0], color: 0x178f74 },
   ]);
-  L.walkers({
-    geometry: lizard, count: 10, on: (ch, i, j) => ch === '.' && (!homing || nearRock(i, j)),
-    speed: 1.7, pause: [2, 6], range: 1.5, gait: 'scuttle', shy: 3, scale: [0.65, 0.85],
+  // rigged (fauna.js: Walk scurry, Look, TailFlick, Pushup), the toy standing in until it loads
+  L.critters({
+    key: 'lizard', toy: lizard, count: 8, on: (ch, i, j) => ch === '.' && (!homing || nearRock(i, j)),
+    speed: 1.7, run: 3.2, pause: [2, 6], range: 1.5, gait: 'scuttle', shy: 3, scale: [0.65, 0.85], rigScale: 1.5, turn: 9,
   });
   homing = false;
+
+  // fennec foxes: rare, trot far and rest long, sit and look around
+  const fennec = L.toy([
+    { shape: 'sphere', args: [0.12, 0.85, 0.8, 1.6], pos: [0, 0.24, 0], color: 0xf2c98a },
+    { shape: 'box', args: [0.15, 0.13, 0.14], pos: [0, 0.33, 0.2], color: 0xf2c98a },
+    { shape: 'cone', args: [0.07, 0.2, 4], pos: [0.07, 0.47, 0.18], rot: [0, 0, -0.45], color: 0xf7b88a },
+    { shape: 'cone', args: [0.07, 0.2, 4], pos: [-0.07, 0.47, 0.18], rot: [0, 0, 0.45], color: 0xf7b88a },
+    ...[[0.05, 0.1], [-0.05, 0.1], [0.05, -0.1], [-0.05, -0.1]].map(([x, z]) => ({ shape: 'box', args: [0.04, 0.18, 0.04], pos: [x, 0.09, z], color: 0xe0b070 })),
+    { shape: 'cone', args: [0.06, 0.22, 5], pos: [0, 0.26, -0.28], rot: [-1.9, 0, 0], color: 0xf2c98a },
+  ]);
+  L.critters({ key: 'fennec', toy: fennec, count: 2, gait: 'scuttle', speed: 0.8, run: 3, pause: [4, 10], range: 5, shy: 4, scale: [0.95, 1.05], rigScale: 1.2 });
 
   // jerboas: sandy hoppers with big pink ears and a long tufted tail, 0.4 m
   const jerboa = L.toy([
@@ -34,7 +46,7 @@ export default function oasis(L) {
     { shape: 'box', args: [0.05, 0.05, 0.14], pos: [0.05, 0.025, -0.02], color: 0xe0a95e }, // hind feet
     { shape: 'box', args: [0.05, 0.05, 0.14], pos: [-0.05, 0.025, -0.02], color: 0xe0a95e },
   ]);
-  L.walkers({ geometry: jerboa, count: 5, speed: 1.4, pause: [1, 3.5], range: 3, gait: 'hop', shy: 4, scale: [0.9, 1.1] });
+  L.walkers({ geometry: jerboa, count: 4, speed: 1.4, pause: [1, 3.5], range: 3, gait: 'hop', shy: 4, scale: [0.9, 1.1] });
 
   // vultures: dark brown, pink head, white ruff and wing band; soaring slowly high above the rim
   const vulture = L.toy([
@@ -48,7 +60,7 @@ export default function oasis(L) {
     { shape: 'box', args: [0.85, 0.035, 0.12], pos: [0.52, 0, -0.14], color: 0xefe6d6 }, // light band
     ...[0.12, 0, -0.12].map((z, k) => ({ shape: 'box', args: [0.26, 0.025, 0.07], pos: [1.08, 0, z], rot: [0, (k - 1) * 0.25, 0], color: 0x2c1810 })), // fingers
   ]);
-  L.flock({ body: vulture, wing, count: 5, flocks: 2, radius: [15, 24], height: [10, 13], speed: 0.13, flap: 1.1, glide: 0.85, spread: 3.2, scale: [1, 1.2] });
+  L.flock({ key: 'vulture', body: vulture, wing, count: 5, flocks: 2, radius: [15, 24], height: [10, 13], speed: 0.13, flap: 1.1, glide: 0.85, spread: 3.2, scale: [1, 1.2] });
 
   // dragonflies darting over the pond
   const dragonfly = L.toy([
