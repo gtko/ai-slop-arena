@@ -193,6 +193,7 @@ export class MetaUI {
       if (rd) return t('col.onRoad', { n: rd[0] });
       if (/^skin:\w+:3$/.test(id)) return t('col.gold', { n: GOLD_AT });
       if (id === 'title:11') return t('col.weekly');
+      if (id === 'title:10') return t('col.chaos');
       return t('col.inShop');
     };
     let tiles = [];

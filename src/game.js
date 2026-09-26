@@ -15,6 +15,7 @@ import { GADGETS, GADGET_CHARGES, GADGET_LOCKOUT, parseLoadout, validLoadout, fl
 import { KOFX, validCos, EMOTES, EMOTE_ICONS } from './cosmetics.js';
 import { PERSONAS } from './ai.js';
 import { ArenaEvents } from './events.js';
+import { validMutator } from './mutators.js';
 
 const NAMES = ['Bolt', 'Nova', 'Rex', 'Juno', 'Pix', 'Kai', 'Moxie', 'Zed', 'Luna', 'Taro', 'Fizz', 'Oona', 'Brick', 'Echo'];
 const TYPE_KEYS = Object.keys(TYPES);
@@ -117,7 +118,8 @@ export class Game {
   // opts: { mapKey, roster, localId, net }. No localId = attract mode (bots only, menu backdrop).
   // headless: the authoritative server (worker/ -> src/server/sim.js), a real match with no local player.
   // dojo: training (M05) - no gas, no drops, the bots are dummies in front of you that never fall.
-  newMatch({ mapKey = 'oasis', roster = null, localId = null, net = null, headless = false, dojo = false } = {}) {
+  // mutator: the Weekly Chaos of this match (mutators.js), or null.
+  newMatch({ mapKey = 'oasis', roster = null, localId = null, net = null, headless = false, dojo = false, mutator = null } = {}) {
     for (const b of this.brawlers) b.dispose();
     this.brawlers = [];
     this.brains.clear();
@@ -144,10 +146,16 @@ export class Game {
     const real = !!localId || headless;
     this.dojo = dojo;
     this.dojoLog = [];
-    this.poison = new Poison(this, dojo ? { startAt: 1e9 } : real ? {} : { startAt: 18, interval: 6 });
+    const M = this.mutator = real && !dojo && validMutator(mutator) ? mutator : null;
+    this.poison = new Poison(this, dojo ? { startAt: 1e9 } : real ? (M === 'gasBreath' ? { startAt: 16, interval: 4.5 } : {}) : { startAt: 18, interval: 6 });
     this.visionRadius = MAPS[this.mapKey].vision || 0;
     // How far anyone sees (fog maps use their fog wall instead); the sandstorm cuts it shorter.
     this.sightRange = this.visionRadius ? 0 : MAPS[this.mapKey].weather === 'sandstorm' ? 11 : 14;
+    // Night Hunt: night falls on every map, you see 9 m (fog maps: a tighter fog wall)
+    if (M === 'nightHunt') { if (this.visionRadius) this.visionRadius *= 0.8; else this.sightRange = 9; }
+    this.nightOverride(M === 'nightHunt');
+    this.gadgetLockout = M === 'gadgetFrenzy' ? 2 : GADGET_LOCKOUT;
+    this.rainT = 12;
     roster = roster || makeRoster([]);
     this.player = null;
     for (const r of roster) {
@@ -158,6 +166,7 @@ export class Game {
       b.id = r.id;
       b.gadget = L.gadget; b.star = L.star;
       if (validCos(r.cos)) b.setCos(r.cos);
+      if (M === 'gadgetFrenzy') b.gadgetCharges = 6;
       if (!r.human && PERSONAS.includes(r.per)) b.persona = r.per;
       b.setHuman(!!r.human);
       if (r.skill !== undefined) b.skill = r.skill;
@@ -190,6 +199,7 @@ export class Game {
     this.gadgetSeq = 0;
     this.emoteSeq = 0;
     this.hud.setup(this.brawlers, this.player);
+    this.hud.setMutator(M);
     this.aim.visible = this.aimTarget.visible = !!this.player;
   }
 
@@ -290,7 +300,7 @@ export class Game {
     target.lastHurt = this.time;
     if (source && source !== target && !fromSuper) {
       const before = source.superCharge;
-      source.superCharge = Math.min(1, source.superCharge + amount / source.type.superCost);
+      source.superCharge = Math.min(1, source.superCharge + amount / source.type.superCost * (this.mutator === 'superRush' ? 2 : 1));
       if (source.isPlayer && before < 1 && source.superCharge >= 1) { sfx('ready'); this.input.rumble(0.5, 0.5, 90); }
     }
     this.ev({ e: 'dmg', id: target.id, a: amount, s: source ? source.id : null, u: fromSuper ? 1 : 0 });
@@ -568,6 +578,25 @@ export class Game {
     sfx('supply_siren', Math.max(0.35, this.volumeAt(c.x, c.z)));
   }
 
+  // Cube Rain (Weekly Chaos): from 12 s on, 2 power cubes fall on open ground every 6 s.
+  cubeRain() {
+    if (!this.authority || this.ended || this.mode !== 'play' || this.time < this.rainT) return;
+    this.rainT = this.time + 6;
+    const A = this.arena;
+    for (let k = 0; k < 2; k++) {
+      const [i, j] = A.randomOpenTile(this.poison.level + 2), c = A.center(i, j, new THREE.Vector3());
+      this.dropCube(c.x, c.z, 0, 1);
+    }
+  }
+
+  // Night Hunt: night for the whole match, whatever the time-of-day setting; given back after.
+  nightOverride(on) {
+    const L = this.lighting;
+    if (!L || !L.setPreset) return;
+    if (on && !this.savedTod) { this.savedTod = { cycle: L.cycle, t: L.target }; L.cycle = false; L.setPreset(3); }
+    else if (!on && this.savedTod) { L.cycle = this.savedTod.cycle; L.setPreset(Math.round(this.savedTod.t) % 4); this.savedTod = null; }
+  }
+
   // Bounty crown: whoever carries the most power cubes (5 or more, no tie) wears it. Knocking them
   // out drops 2 extra cubes. It only shows when you can see its wearer: no reveal through walls.
   updateCrown(t) {
@@ -808,6 +837,7 @@ export class Game {
     this.updateCrown(t);
     this.updateDrops(dt);
     this.events.update(dt);
+    if (this.mutator === 'cubeRain') this.cubeRain();
     if (this.dojo) this.updateDojo();
     this.updateVisibility();
     this.updateFoliage(dt);
@@ -968,7 +998,7 @@ export class Game {
   spendGadget(b) {
     if (!this.canGadget(b)) return false;
     b.gadgetCharges--;
-    b.gadgetCd = GADGET_LOCKOUT;
+    b.gadgetCd = this.gadgetLockout;
     b.revealT = Math.max(b.revealT, 1.2); // using a gadget gives you away, like firing
     return true;
   }

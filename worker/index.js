@@ -1,7 +1,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import * as Sentry from '@sentry/cloudflare';
 import { version } from '../package.json';
-import { ServerMatch, makeRoster, randomMap, validBrawler, validLoadout, validCos, COS_DEFAULT, MAP_KEYS } from './build/sim.js';
+import { ServerMatch, makeRoster, randomMap, validBrawler, validLoadout, validCos, COS_DEFAULT, weeklyMutator, MAP_KEYS } from './build/sim.js';
 import { rate, tierOf, pickGroup, botLevelFor, START_MMR } from './ranking.js';
 
 // AI SLOP ARENA — online server.
@@ -120,6 +120,7 @@ class RoomObject extends DurableObject {
     this.rate = new Map();   // socket -> { t, n } message counter
     ctx.blockConcurrencyWhile(async () => {
       this.map = (await ctx.storage.get('map')) || 'random';
+      this.chaos = !!(await ctx.storage.get('chaos')); // Weekly Chaos on (private rooms only)
       this.preset = (await ctx.storage.get('preset')) || null; // matchmade room: { expect, map, deadline }
       this.kicked = new Set((await ctx.storage.get('kicked')) || []);
     });
@@ -176,7 +177,7 @@ class RoomObject extends DurableObject {
       .map(({ id, name, brawler, host, plat, cos }) => ({ id, name, brawler, host, plat, cos }));
   }
   broadcastRoom() {
-    this.broadcast({ t: 'room', players: this.roster(), inMatch: this.inMatch, map: this.map, matchmade: !!this.preset });
+    this.broadcast({ t: 'room', players: this.roster(), inMatch: this.inMatch, map: this.map, chaos: this.chaos && !this.preset, matchmade: !!this.preset });
   }
   broadcast(msg) {
     const raw = typeof msg === 'string' ? msg : JSON.stringify(msg);
@@ -195,8 +196,9 @@ class RoomObject extends DurableObject {
     // matchmade matches are ranked: remember who played, rated at the end
     this.ranked = this.preset ? humans.map(p => ({ id: p.id, key: p.cid || p.ip })) : null;
     const roster = makeRoster(humans.map(p => ({ id: p.id, name: p.name, type: p.brawler, lo: p.lo, cos: p.cos, plat: p.plat })), { level });
+    const mut = this.chaos && !this.preset ? weeklyMutator() : null; // never in ranked matches
     this.match = new ServerMatch({
-      map, roster,
+      map, roster, mut,
       send: msg => this.broadcast(msg),
       sendTo: (id, msg) => { const ws = this.byId(id); if (ws) ws.send(JSON.stringify(msg)); },
       onEnd: () => this.endMatch(),
@@ -211,7 +213,7 @@ class RoomObject extends DurableObject {
     // Loading screen: every client builds the match and says 'loaded'; we wait for all of them
     // (or LOAD_WAIT), then count down. The simulation only runs from the end of the countdown.
     this.loading = { ready: new Set(), humans: humans.map(p => p.id) };
-    this.broadcast({ t: 'start', map, roster, wait: LOAD_WAIT });
+    this.broadcast({ t: 'start', map, roster, mut, wait: LOAD_WAIT });
     this.broadcastRoom();
     this.loadTimer = setTimeout(() => this.go(), LOAD_WAIT);
   }
@@ -352,6 +354,13 @@ class RoomObject extends DurableObject {
       case 'start':
         if (me.host && !this.inMatch) this.startMatch(this.map);
         break;
+      case 'chaos': // Weekly Chaos on / off (room leader, not in matchmade rooms)
+        if (me.host && !this.preset) {
+          this.chaos = !!msg.on;
+          await this.ctx.storage.put('chaos', this.chaos);
+          this.broadcastRoom();
+        }
+        break;
       case 'kick': { // room leader only, not in matchmade rooms
         const target = this.byId(msg.id);
         if (me.host && !this.preset && target && target !== ws) await this.kick(target, 'leader', 'kicked by leader', me.cid || me.ip);
@@ -393,7 +402,7 @@ class RoomObject extends DurableObject {
     }
     const players = rest.map(s => this.info(s)).sort((a, b) => a.joined - b.joined)
       .map(({ id, name, brawler, host, plat, cos }) => ({ id, name, brawler, host, plat, cos }));
-    const msg = JSON.stringify({ t: 'room', players, inMatch: this.inMatch, map: this.map, matchmade: !!this.preset });
+    const msg = JSON.stringify({ t: 'room', players, inMatch: this.inMatch, map: this.map, chaos: this.chaos && !this.preset, matchmade: !!this.preset });
     for (const s of rest) s.send(msg);
   }
 

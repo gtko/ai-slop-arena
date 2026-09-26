@@ -175,6 +175,10 @@ export class SteamNet {
       case 'map':
         if (/^[a-z]{2,12}$/.test(msg.map)) { this.map = msg.map; this.broadcastRoom(); }
         break;
+      case 'chaos':
+        this.chaos = !!msg.on;
+        this.broadcastRoom();
+        break;
       case 'start':
         this.inMatch = true;
         this.toOthers(msg);
@@ -196,7 +200,7 @@ export class SteamNet {
   broadcastRoom() {
     const players = [...this.roster.values()].sort((a, b) => a.joined - b.joined)
       .map(({ id, name, brawler, lo, cos, host }) => ({ id, name, brawler, lo, cos, host }));
-    const msg = { t: 'room', players, inMatch: this.inMatch, map: this.map };
+    const msg = { t: 'room', players, inMatch: this.inMatch, map: this.map, chaos: !!this.chaos };
     this.toOthers(msg);
     this.steam.setLobbyData('map', this.map);
     this.applyRoom(msg);
@@ -207,6 +211,7 @@ export class SteamNet {
     this.players = m.players;
     this.inMatch = m.inMatch;
     this.map = m.map;
+    this.chaos = !!m.chaos;
     presence(t(m.inMatch ? 'presence.online' : 'presence.room'), this.lobby, m.players.length);
   }
 

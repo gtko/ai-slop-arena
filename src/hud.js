@@ -3,6 +3,7 @@ import { t } from './i18n/index.js';
 import { sfx } from './audio.js';
 import { GADGET_LOCKOUT, GADGET_ICONS } from './gadgets.js';
 import { PERSONA_ICONS } from './ai.js';
+import { MUT_ICONS } from './mutators.js';
 
 const $ = s => document.querySelector(s);
 const _v = new THREE.Vector3();
@@ -45,6 +46,31 @@ export class Hud {
   }
 
   show(on) { this.root.classList.toggle('hidden', !on); }
+
+  // Weekly Chaos: a pill at the top while it runs, and a title card when the match starts.
+  setMutator(m) {
+    if (!this.mutPill) {
+      this.mutPill = document.createElement('div');
+      this.mutPill.className = 'pill mut-pill';
+      $('#top').appendChild(this.mutPill);
+      this.card = document.createElement('div');
+      this.card.id = 'chaosCard';
+      this.root.appendChild(this.card);
+    }
+    this.mutator = m;
+    this.mutPill.classList.toggle('hidden', !m);
+    this.card.className = '';
+    if (m) this.mutPill.innerHTML = `<b>${MUT_ICONS[m]}</b><small>${t('mut.' + m)}</small>`;
+  }
+  titleCard() {
+    const m = this.mutator;
+    if (!m || !this.card) return;
+    this.card.innerHTML = `<small>🌀 ${t('chaos.name')}</small><i>${MUT_ICONS[m]}</i><b>${t('mut.' + m)}</b><p>${t('mut.' + m + '.desc')}</p>`;
+    this.card.className = '';
+    void this.card.offsetWidth;
+    this.card.className = 'on';
+    sfx('chaos');
+  }
   get live() { return this.play && !this.root.classList.contains('hidden'); }
 
   setup(brawlers, player) {
@@ -132,7 +158,7 @@ export class Hud {
       // gadget: its icon, 3 charge pips, the lockout ring filling back up
       const ic = GADGET_ICONS[p.type.key + p.gadget] || '✦';
       if (this.gadgetIcon.textContent !== ic) this.gadgetIcon.textContent = ic;
-      const cd = Math.max(0, p.gadgetCd) / GADGET_LOCKOUT, c2 = 2 * Math.PI * 44;
+      const cd = Math.max(0, p.gadgetCd) / (game.gadgetLockout || GADGET_LOCKOUT), c2 = 2 * Math.PI * 44;
       this.gadgetArc.style.strokeDasharray = `${c2 * (1 - cd)} ${c2}`;
       this.gadgetEl.classList.toggle('ready', p.alive && p.gadgetCharges > 0 && cd <= 0);
       this.gadgetEl.classList.toggle('empty', p.gadgetCharges <= 0);

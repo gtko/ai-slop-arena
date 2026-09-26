@@ -42,6 +42,8 @@ import { MetaUI, skinFilter, framed, titleText } from './metaui.js';
 import { awardMatch, leagueBotLevel, cosFor } from './profile.js';
 import { parseCos, FRAMES } from './cosmetics.js';
 import { EmoteWheel } from './emotewheel.js';
+import { weeklyMutator, MUT_ICONS } from './mutators.js';
+import { unlock } from './profile.js';
 import { PERSONA_ICONS } from './ai.js';
 import { recordMatch } from './quests.js';
 import './style.css';
@@ -342,6 +344,25 @@ function showMastery(m, key) {
   renderLoadout();
 }
 
+// Weekly Chaos (v0.13): this week's mutator, on or off for solo; the room leader sets it for a room.
+let chaosOn = false;
+try { chaosOn = localStorage.getItem('iaslop-chaos') === '1'; } catch { /* private mode */ }
+function chaosChip(btn, on, enabled = true) {
+  const m = weeklyMutator();
+  btn.innerHTML = `🌀 ${t('chaos.name')}: <b>${MUT_ICONS[m]} ${t('mut.' + m)}</b> <em>${on ? t('chaos.on') : t('chaos.off')}</em>`;
+  btn.classList.toggle('on', on);
+  btn.disabled = !enabled;
+  btn.title = t('mut.' + m + '.desc');
+}
+chaosChip($('#chaosBtn'), chaosOn);
+$('#chaosBtn').addEventListener('click', () => {
+  sfx('click');
+  chaosOn = !chaosOn;
+  try { localStorage.setItem('iaslop-chaos', chaosOn ? '1' : '0'); } catch { /* private mode */ }
+  chaosChip($('#chaosBtn'), chaosOn);
+});
+$('#chaosRoomBtn').addEventListener('click', () => { if (net.isHost) { sfx('click'); net.send({ t: 'chaos', on: !net.chaos }); } });
+
 // Map chips (menu + lobby share the markup builder).
 function buildMaps(root, onPick) {
   root.innerHTML = '';
@@ -408,9 +429,11 @@ function play() {
   finalMusic = false;
   matchLeft('restart');
   const level = leagueBotLevel(chosen, botLevel()); // Bot League: this brawler's trophies nudge the bots
-  game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen), cos: cosFor(chosen) }], { level }), localId: 'me' });
+  const mutator = chaosOn ? weeklyMutator() : null;
+  game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen), cos: cosFor(chosen) }], { level }), localId: 'me', mutator });
+  hud.titleCard();
   achievements.matchStart({ mapKey, brawler: chosen });
-  matchStarted({ mode: 'solo', map: mapKey, map_random: chosenMap === 'random', brawler: chosen, loadout: loadout(chosen), bot_level: level, humans: 1 });
+  matchStarted({ mode: 'solo', map: mapKey, map_random: chosenMap === 'random', brawler: chosen, loadout: loadout(chosen), bot_level: level, humans: 1, mutator });
   presence(t('presence.solo', { map: t(`map.${mapKey}`) }));
   canvas.focus();
 }
@@ -628,6 +651,8 @@ onNet('room', m => {
   syncMaps($('#lobbyMaps'), lobbyMap);
   $('#lobbyMaps').querySelectorAll('.map').forEach(b => { b.disabled = !host; });
   $('#mapNote').textContent = host ? t('lobby.youPick') : t('lobby.hostPicks');
+  $('#chaosRoomBtn').classList.toggle('hidden', !!m.matchmade);
+  chaosChip($('#chaosRoomBtn'), !!m.chaos, host);
   $('#start').classList.toggle('hidden', !host);
   $('#waiting').classList.toggle('hidden', host);
   $('#waiting').textContent = m.inMatch ? t('lobby.inProgress') : m.matchmade ? t('mm.matchmade') : t('lobby.waiting');
@@ -698,6 +723,7 @@ async function goMatch(ms) {
   hud.show(true);
   game.time = 0; // the spawn shield counts from here
   game.state = 'playing';
+  hud.titleCard();
   canvas.focus();
 }
 
@@ -728,7 +754,7 @@ function matchmadeOver() {
 $('#mmAgain').addEventListener('click', () => { $('#result').classList.add('hidden'); openLobby(); findMatch(); });
 $('#mmMenu').addEventListener('click', () => { sfx('click'); $('#result').classList.add('hidden'); openLobby(); });
 
-async function startOnline(mapKey, roster, role) {
+async function startOnline(mapKey, roster, role, mutator = null) {
   matchmadeMatch = !!net.matchmade;
   resultShown = false;
   rankedText = '';
@@ -741,7 +767,7 @@ async function startOnline(mapKey, roster, role) {
   await nextFrame();
   // sendTo: per-player snapshots (only what each one can see); the Steam P2P host has it.
   const sendTo = role === 'host' && net.sendTo ? (id, msg) => net.sendTo(id, msg) : null;
-  game.newMatch({ mapKey, roster, localId: net.id, net: { role, send: msg => net.send(msg), sendTo } });
+  game.newMatch({ mapKey, roster, localId: net.id, net: { role, send: msg => net.send(msg), sendTo }, mutator });
   game.state = 'waiting'; // nothing moves until everyone is in
   game.localReady = false;
   const me = roster.find(r => r.id === net.id);
@@ -787,11 +813,11 @@ $('#start').addEventListener('click', () => {
   // Server rooms: the server builds the roster and starts everyone (the leader included).
   if (net.serverAuthority) { net.send({ t: 'start' }); return; }
   const roster = makeRoster(net.players.map(p => ({ id: p.id, name: p.name, type: p.brawler, lo: p.lo, cos: p.cos })), { level: botLevel() });
-  const mapKey = resolveMap(lobbyMap);
-  net.send({ t: 'start', map: mapKey, roster });
-  startOnline(mapKey, roster, 'host');
+  const mapKey = resolveMap(lobbyMap), mut = net.chaos ? weeklyMutator() : null;
+  net.send({ t: 'start', map: mapKey, roster, mut });
+  startOnline(mapKey, roster, 'host', mut);
 });
-onNet('start', m => startOnline(m.map, m.roster, 'client'));
+onNet('start', m => startOnline(m.map, m.roster, 'client', m.mut));
 onNet('in', m => game.onInput(m));
 onNet('snap', m => game.applySnap(m));
 onNet('ev', m => game.applyEvents(m.list));
@@ -930,6 +956,7 @@ game.onResult = (rank, won) => {
   }
   // hidden level: the bots of the next solo / private match follow it (never shown)
   recordResult(rank, won);
+  if (won && game.mutator) unlock('title:10'); // "Agent of Chaos": win a Weekly Chaos match
   // mastery of the brawler you played: points, and a little ceremony when it levels up
   const key = played && played.brawler && TYPES[played.brawler] ? played.brawler : null;
   if (key) {

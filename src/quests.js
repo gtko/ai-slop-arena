@@ -3,6 +3,7 @@
 // its stamp and pays at once. One reroll a day swaps an unfinished daily quest.
 
 import { grant, owns, unlock } from './profile.js';
+import { weekIndex } from './mutators.js'; // the same weeks as the Weekly Chaos
 
 const KEY = 'iaslop-quests';
 // kind -> [target range, coins]; {brawler} quests count matches with that brawler.
@@ -15,8 +16,6 @@ const WEEKLY_COINS = 300, WEEKLY_XP = 150, DAILY_XP = 30;
 export const QUEST_ICONS = { play: '🎮', top4: '🏅', win: '🏆', kos: '💀', dmg: '💥', cubes: '💎', gadgets: '🧰', supers: '🌟', crates: '📦', brawler: '🎭', emotes: '💬' };
 
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
-// Week number from Monday (UTC), the same everywhere: the weekly quest and the weekly Chaos.
-export const weekIndex = (now = Date.now()) => Math.floor((now / 864e5 + 3) / 7);
 // Time left until the next local midnight / next Monday 00:00 UTC, in ms.
 export function resetIn() {
   const now = new Date(), mid = new Date(now); mid.setHours(24, 0, 0, 0);

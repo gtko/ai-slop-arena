@@ -59,7 +59,7 @@ export class Net {
         let msg;
         try { msg = JSON.parse(e.data); } catch { return; }
         if (msg.t === 'welcome') { this.id = msg.id; this.code = msg.code; this.matchmade = !!msg.matchmade; welcomed = true; resolve(this); }
-        if (msg.t === 'room') { this.players = msg.players; this.inMatch = msg.inMatch; this.map = msg.map; this.matchmade = !!msg.matchmade; }
+        if (msg.t === 'room') { this.players = msg.players; this.inMatch = msg.inMatch; this.map = msg.map; this.chaos = !!msg.chaos; this.matchmade = !!msg.matchmade; }
         if (msg.t === 'kicked') this.kickedMsg = msg.msg;
         if (msg.t === 'pong') this.rtt = performance.now() - msg.at;
         if (msg.t === 'error' && !welcomed) reject(new Error(serverError(msg)));

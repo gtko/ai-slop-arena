@@ -60,7 +60,7 @@ export function shopPool(brawlers) {
   return pool.filter(id => !EARNED.has(id));
 }
 // Items only levels, the Trophy Road or mastery give.
-export const EARNED = new Set(['frame:3', 'frame:10', 'title:13', 'title:14', 'title:12', 'title:11', 'icon:29', 'icon:28']);
+export const EARNED = new Set(['frame:3', 'frame:10', 'title:10', 'title:13', 'title:14', 'title:12', 'title:11', 'icon:29', 'icon:28']);
 
 export const kindOf = id => id.split(':')[0];
 export const priceOf = id => PRICE[kindOf(id)] || 0;
