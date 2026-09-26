@@ -4,6 +4,7 @@
 
 import { t } from './i18n/index.js';
 import { sfx } from './audio.js';
+import { track } from './telemetry.js';
 import * as Pr from './profile.js';
 import { board, reroll, resetIn, QUEST_ICONS } from './quests.js';
 import { SKINS, RECOLOURS, TRAILS, TRAIL_ICONS, KOFX, KOFX_ICONS, EMOTES, EMOTE_ICONS, FRAMES, TITLES, ICONS, GOLD_AT,
@@ -129,7 +130,7 @@ export class MetaUI {
     </div>
     <p class="meta-foot">${t('quest.resetDay', { time: clock(R.day) })} · ${t('quest.resetWeek', { time: clock(R.week) })}${B.rerolled ? '' : ' · ' + t('quest.rerollHint')}</p>`;
     this.body.querySelectorAll('.q-reroll').forEach(b => b.addEventListener('click', () => {
-      if (reroll(+b.dataset.i, this.brawlers)) { sfx('click'); this.render(); }
+      if (reroll(+b.dataset.i, this.brawlers)) { sfx('click'); track('quest_rerolled'); this.render(); }
     }));
   }
 
@@ -176,6 +177,7 @@ export class MetaUI {
     this.body.querySelectorAll('.sh-buy:not([disabled])').forEach(b => b.addEventListener('click', () => {
       if (!Pr.buy(b.dataset.id, +b.dataset.price)) return;
       sfx('buy');
+      track('shop_purchase', { item: b.dataset.id, price: +b.dataset.price });
       this.render();
       this.renderBar();
     }));
@@ -222,6 +224,7 @@ export class MetaUI {
       if (n < 0 || !Pr.canWear(this.tab, n, key)) return;
       sfx('click');
       Pr.wear(this.tab, n, key);
+      track('cosmetic_equipped', { kind: this.tab, item: n, brawler: this.tab === 'skin' ? key : undefined });
       this.render();
       this.renderBar();
       this.onWear();
