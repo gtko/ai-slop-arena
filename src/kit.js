@@ -69,7 +69,7 @@ export class MapKit {
     Object.assign(p, { x: c.x, z: c.z, dx, dz, dist: dist || PAD_MIN });
   }
 
-  // Land tiles grouped into islands (bridges and void apart). The outer islands fall two by two
+  // Land tiles grouped into islands (bridges and void apart). The outer islands fall in two waves
   // (40 s, 60 s), the bridges at 80 s, then the middle island shrinks a ring every 10 s.
   crumblePlan() {
     const A = this.A, seen = new Set(), islands = [];
