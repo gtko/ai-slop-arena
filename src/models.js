@@ -380,7 +380,37 @@ function volt(rig, M, P) {
   rig.add(rig.head, ellipsoid(0.1, 0.1, 0.1), toy(0xfff2a0, { emissive: 0xffd23f, ei: 4 }), [0.2, 0.82, 0]);
 }
 
-const BUILDERS = { blaster, gunslinger, bomber, frostbite, volt };
+// Nurse Kappa: lime-green river imp, white nurse dress with a coral plus, teal shell, water dish on the head.
+function kappa(rig, M, P) {
+  const skin = toyCache(0x94d82d, 0.55), dress = toyCache(0xf6f3ee, 0.6), coral = toyCache(0xff6b6b, 0.45);
+  const shell = toyCache(0x0ca678, 0.3, { coat: 0.8 }), beak = toyCache(0xffc93c, 0.4), hair = toyCache(0x3f8f3a, 0.6);
+  const water = toyCache(0x8fd3ff, 0.15, { coat: 1 });
+  body(rig, M, { top: dress, sleeve: dress, pants: skin, shoe: skin, glove: skin, belly: 0.46 });
+  dress.side = THREE.DoubleSide;
+  rig.add(rig.torso, lathe([[0.45, 0.3], [0.5, 0.1], [0.58, -0.15], [0.6, -0.26]], 28), dress);
+  rig.add(rig.torso, cyl(0.47, 0.47, 0.08, 24), coral, [0, 0.24, 0]); // belt
+  rig.add(rig.torso, rbox(0.22, 0.07, 0.04, 0.02), coral, [0, 0.55, 0.45]); // the rounded plus
+  rig.add(rig.torso, rbox(0.07, 0.22, 0.04, 0.02), coral, [0, 0.55, 0.45]);
+  rig.add(rig.torso, ellipsoid(0.46, 0.5, 0.24), shell, [0, 0.46, -0.4]); // turtle shell
+  rig.add(rig.head, ellipsoid(0.5, 0.47, 0.47, 26, 18), M.skin);
+  face(rig, M, { iris: 0x151515, browColor: 0x3f8f3a });
+  rig.add(rig.head, ellipsoid(0.17, 0.07, 0.14), beak, [0, -0.12, 0.46]);
+  for (let k = 0; k < 12; k++) { // a ring of short hair around the dish
+    const a = k / 12 * Math.PI * 2;
+    rig.add(rig.head, ellipsoid(0.13, 0.06, 0.17), hair, [Math.sin(a) * 0.36, 0.33, Math.cos(a) * 0.36], [0.5 * Math.cos(a), a, -0.5 * Math.sin(a)]);
+  }
+  rig.add(rig.head, cyl(0.3, 0.3, 0.07, 28), water, [0, 0.43, 0]);
+  rig.add(rig.head, rbox(0.28, 0.15, 0.16, 0.05), dress, [0.3, 0.44, 0.1], [0, 0, -0.45]); // nurse cap
+  rig.add(rig.head, rbox(0.1, 0.03, 0.02, 0.01), coral, [0.32, 0.45, 0.19], [0, 0, -0.45]);
+  // the bubble syringe
+  rig.add(rig.gun, cyl(0.13, 0.13, 0.5, 18), toyCache(0xcdeeff, 0.1, { coat: 1 }), [0, -0.12, 0.1], [Math.PI / 2, 0, 0]);
+  for (const [z, r] of [[0.03, 0.06], [0.18, 0.05], [-0.07, 0.05]]) rig.add(rig.gun, ellipsoid(r, r, r), water, [0.03, -0.12, z]);
+  rig.add(rig.gun, cyl(0.07, 0.12, 0.12, 16), coral, [0, -0.12, 0.41], [Math.PI / 2, 0, 0]); // nozzle
+  rig.add(rig.gun, cyl(0.03, 0.03, 0.25, 8), coral, [0, -0.12, -0.25], [Math.PI / 2, 0, 0]); // plunger
+  rig.add(rig.gun, cyl(0.1, 0.1, 0.04, 16), coral, [0, -0.12, -0.38], [Math.PI / 2, 0, 0]);
+}
+
+const BUILDERS = { blaster, gunslinger, bomber, frostbite, volt, kappa };
 
 export function buildModel(T) {
   matCache = new Map();

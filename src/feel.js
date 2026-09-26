@@ -9,6 +9,7 @@ const WEAPONS = {
   bomber: [0.06, 0.2, 0.3], bomberS: [0.11, 0.55, 0.55],
   frostbite: [0.035, 0.05, 0.15], frostbiteS: [0.12, 0.1, 0.4],
   volt: [0.045, 0.06, 0.18], voltS: [0.07, 0.3, 0.35],
+  kappa: [0.04, 0.08, 0.2], kappaS: [0.08, 0.35, 0.4],
 };
 const DEFAULT = [0.03, 0.05, 0.18];
 export const weapon = (source, sup) => (source && WEAPONS[source.type.key + (sup ? 'S' : '')]) || DEFAULT;

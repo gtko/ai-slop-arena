@@ -14,6 +14,7 @@ export const RECOLOURS = {
   bomber: { candy: [3.1, 1.2, 1.05], shadow: [4.2, 0.6, 0.7] },
   frostbite: { candy: [2.4, 1.3, 1.05], shadow: [3.3, 0.8, 0.68] },
   volt: { candy: [1.9, 1.3, 1.05], shadow: [-1.6, 0.9, 0.7] },
+  kappa: { candy: [-2.3, 1.15, 1.05], shadow: [2.2, 0.75, 0.7] },
 };
 export const GOLD_AT = 10; // mastery level that gives the golden figurine
 

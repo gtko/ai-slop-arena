@@ -37,6 +37,13 @@ export const TYPES = {
     hp: 3100, speed: 6.8, ammo: 3, reload: 1.35, range: 13, superCost: 2600, projSpeed: 26,
     palette: { main: 0x3ec6e0, dark: 0x2b3a4a, accent: 0xffd23f, hair: 0x9aa7b4, skin: 0x8fa2b5 },
   },
+  // v0.14 BETTER TOGETHER: the support who ships with Duo (docs/brainstorm/iter3_maya.md, iter3_kenji.md §4)
+  kappa: {
+    key: 'kappa', name: 'Nurse Kappa', role: 'Healer',
+    desc: 'A bossy river-imp nurse who lobs soap bubbles over walls: a splash that hurts enemies heals her, and in Duo it heals her partner. Super: a tidal wave that sweeps enemies away and parts the gas.',
+    hp: 3600, speed: 6.2, ammo: 3, reload: 1.7, range: 11, superCost: 2600, projSpeed: 16,
+    palette: { main: 0x94d82d, dark: 0x0ca678, accent: 0xff6b6b, hair: 0x3f8f3a, skin: 0x94d82d },
+  },
 };
 
 let G = null; // shared geometries
@@ -292,6 +299,7 @@ export class Brawler {
     const T = this.type, A = this.g.arena;
     if (this.ammo < T.ammo) this.ammo = Math.min(T.ammo, this.ammo + dt / T.reload * (this.overclockT > 0 ? 1.3 : 1));
     this.gadgetCd -= dt; this.rootT -= dt; this.armorT -= dt; this.ghostT -= dt; this.slowSelfT -= dt; this.overclockT -= dt;
+    if (this.bowlSlowAt && t >= this.bowlSlowAt) { this.bowlSlowAt = 0; this.slowSelfT = 4; } // Bowl Splash: the bowl is empty
     if (this.chargeT > 0) { this.chargeT -= dt; if (this.g.authority) this.g.chargeContact(this); }
     if (this.hopLandT > 0 && (this.hopLandT -= dt) <= 0 && this.g.authority) this.g.hopLanded(this);
     this.fireCd -= dt;

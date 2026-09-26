@@ -102,7 +102,7 @@ await test('brawler names and loadouts from the network are checked', () => {
 });
 
 await test('every gadget works, with 3 charges and a 5 s lockout', () => {
-  for (const type of ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt']) for (const gad of ['A', 'B']) {
+  for (const type of ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt', 'kappa']) for (const gad of ['A', 'B']) {
     const m = new ServerMatch({ map: 'oasis', roster: makeRoster([{ id: 'alice', name: 'a', type: `${type}:${gad}1` }]), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
     const g = m.game;
     while (g.time < 6) m.advance(0.05);
@@ -363,6 +363,74 @@ await test('duo: a bot partner runs to revive you', () => {
   g.damage(a, 1e6, g.brawlers.find(o => o !== a && o !== mate));
   for (let i = 0; i < 20 * 12 && !a.alive; i++) m.advance(0.05);
   assert.ok(a.alive, 'the bot partner never revived');
+});
+
+/* ------------------------------ Nurse Kappa (v0.14) ------------------------------ */
+
+function kappaMatch(lo = 'A1', duo = false) {
+  const m = new ServerMatch({ map: 'oasis', roster: makeRoster([{ id: 'k', name: 'k', type: 'kappa', lo }], { duo }), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
+  const g = m.game;
+  while (g.time < 6) m.advance(0.05);
+  g.brains.clear();
+  const k = g.byId.get('k');
+  k.netDriven = false;
+  return { m, g, k };
+}
+const place = (o, x, z) => { o.pos.set(x, 0, z); o.net.set(x, z); o.vel.set(0, 0, 0); o.moveIntent.set(0, 0, 0); };
+// an open spot: 7 tiles of floor in a row along +x
+function openRow(g) {
+  const A = g.arena;
+  for (let j = 4; j < 21; j++) for (let i = 3; i < 14; i++) if ([...Array(9)].every((_, d) => A.get(i + d, j) === '.')) return A.center(i, j, g.arena.spawns[0].clone());
+  throw new Error('no open row');
+}
+
+await test('Kappa: a bubble that splashes an enemy hurts it and heals her', () => {
+  const { m, g, k } = kappaMatch();
+  const foe = g.brawlers.find(o => o !== k && !g.ally(k, o)), c = openRow(g);
+  place(k, c.x, c.z); place(foe, c.x + 6, c.z);
+  for (const o of g.brawlers) if (o !== k && o !== foe) place(o, -40, -40);
+  k.hp = 1000;
+  assert.ok(g.tryAttack(k, 1, 0, foe.pos.clone(), false));
+  for (let i = 0; i < 30; i++) m.advance(0.05);
+  assert.ok(foe.hp <= foe.maxHp - 500, `the bubble did ${foe.maxHp - foe.hp}`);
+  assert.ok(k.hp >= 1300, `no heal: ${k.hp}`);
+});
+
+await test('Kappa: in Duo the splash heals her partner, Bowl Splash heals over time', () => {
+  const { m, g, k } = kappaMatch('B1', true);
+  const mate = g.mateOf(k), c = openRow(g);
+  place(k, c.x, c.z); place(mate, c.x + 5, c.z);
+  mate.hp = 1000;
+  g.tryAttack(k, 1, 0, mate.pos.clone(), false);
+  for (let i = 0; i < 30; i++) m.advance(0.05);
+  mate.lastHurt = g.time; // (no regen in the way)
+  assert.ok(mate.hp >= 1000 + 500 * 1.3 - 5, `partner not healed (Hydrotherapy): ${mate.hp}`);
+  k.hp = 1000; place(mate, c.x + 1, c.z); mate.hp = 1000;
+  assert.ok(g.useGadget(k, 1, 0, k.pos));
+  for (let i = 0; i < 40; i++) m.advance(0.05);
+  assert.ok(k.hp > 2000 && mate.hp > 2000, `Bowl Splash: ${k.hp} ${mate.hp}`);
+  for (let i = 0; i < 30; i++) m.advance(0.05);
+  assert.ok(k.slowSelfT > 0, 'the empty bowl does not slow her');
+});
+
+await test('Kappa: the Tidal Wave hits, pushes (or pulls) and parts the gas', () => {
+  for (const star of [1, 2]) {
+    const { m, g, k } = kappaMatch('A' + star);
+    const foe = g.brawlers.find(o => o !== k), c = openRow(g);
+    for (const o of g.brawlers) if (o !== k && o !== foe) place(o, -40, -40);
+    place(k, c.x, c.z); place(foe, c.x + 4, c.z);
+    foe.ccImmuneT = 0;
+    k.superCharge = 1;
+    const x0 = foe.pos.x, hp = foe.hp;
+    assert.ok(g.tryAttack(k, 1, 0, foe.pos.clone(), true));
+    assert.ok(!g.poison.isPoisonedAt(c.x + 5, c.z) && g.poison.inLane(c.x + 5, c.z), 'no lane');
+    for (let i = 0; i < 20; i++) m.advance(0.05);
+    assert.ok(hp - foe.hp >= 900 * k.dmgMul - 1, `the wave did ${hp - foe.hp}`);
+    if (star === 1) assert.ok(foe.pos.x > x0 + 1.5, `not pushed: ${foe.pos.x - x0}`);
+    else assert.ok(foe.pos.x < x0 - 1, `not pulled: ${foe.pos.x - x0}`);
+    for (let i = 0; i < 30; i++) m.advance(0.05);
+    assert.ok(!g.poison.inLane(c.x + 5, c.z), 'the lane never closes');
+  }
 });
 
 if (failed) { console.error(`\n${failed} test(s) failed`); process.exit(1); }

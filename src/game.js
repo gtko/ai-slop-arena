@@ -548,6 +548,22 @@ export class Game {
     }
   }
 
+  // Healing (Nurse Kappa, v0.14), on the authority; clients get a 'heal' event.
+  heal(b, amount) {
+    if (!this.authority || !b.alive || b.hp >= b.maxHp) return;
+    const a = Math.round(Math.min(amount, b.maxHp - b.hp));
+    if (a <= 0) return;
+    b.hp += a;
+    this.ev({ e: 'heal', id: b.id, a });
+    this.healFx(b, a);
+  }
+  healFx(b, a) {
+    b.stats.healed = (b.stats.healed || 0) + a;
+    if (!this.fxVisible(b)) return;
+    this.hud.floater(this.camera, b.pos.x, 2.9, b.pos.z, '+' + a, 'heal', 'heal>' + b.id);
+    this.effects.sparkBurst(b.pos.x, 1.4, b.pos.z, new THREE.Color(0.8, 3.2, 1.4), 8, 3, 0.5, 0.14);
+  }
+
   // Under 30% health: red pulsing edges (hud.js), a heartbeat (faster under 15%), muffled music.
   lowHealth(dt) {
     const P = this.player, f = P && P.alive && this.mode === 'play' && !this.ended ? P.hp / P.maxHp : 1;
@@ -1015,6 +1031,7 @@ export class Game {
           this.ended = true;
           if (b) { this.winners(b); if (!this.feel.orbitWant) sfx('sting_finalko'); this.feel.finalKo(false); if (b === this.player || this.ally(b, this.player)) { this.state = 'over'; this.resultT = 1.2; } }
           break;
+        case 'heal': if (b && b.alive && Number.isFinite(e.a)) { b.hp = Math.min(b.maxHp, b.hp + e.a); this.healFx(b, e.a); } break;
         case 'rv': { const G = this.ghostOf(b); if (G && Number.isFinite(e.p)) G.p = e.p; break; }
         case 'ping': if (b && Number.isFinite(e.x) && Number.isFinite(e.z)) this.pingFx(b, e.k, e.x, e.z); break;
         case 'gone': { const G = this.ghostOf(b); if (G) this.removeGhost(G); break; }
@@ -1431,7 +1448,7 @@ export class Game {
     this.aimFan.scale.setScalar(9.5);
     this.aimFanS.scale.setScalar(11);
     this.aimRect.visible = T.key !== 'blaster' && !(T.key === 'frostbite' && sup);
-    this.aimTarget.visible = T.key === 'bomber' || (sup && (T.key === 'frostbite' || T.key === 'volt'));
+    this.aimTarget.visible = T.key === 'bomber' || (T.key === 'kappa' && !sup) || (sup && (T.key === 'frostbite' || T.key === 'volt'));
     if (T.key === 'gunslinger') this.aimRect.scale.set(sup ? 20 : 16, 1, sup ? 1.3 : 0.8);
     if (T.key === 'frostbite') {
       this.aimRect.scale.set(12, 1, 0.9);
@@ -1441,6 +1458,11 @@ export class Game {
       const d = THREE.MathUtils.clamp(this.aimDist, 2, T.range);
       this.aimRect.scale.set(sup ? d : 13, 1, sup ? 0.14 : 0.7);
       if (sup) { this.aimTarget.position.set(p.pos.x + dir.x * d, 0.065, p.pos.z + dir.z * d); this.aimTarget.scale.setScalar(3.2); }
+    }
+    if (T.key === 'kappa') { // a bubble lobbed where you aim; the super: the wave's 10 x 5 m path
+      const d = THREE.MathUtils.clamp(this.aimDist, 2, T.range);
+      this.aimRect.scale.set(sup ? 10.6 : d, 1, sup ? 5 : 0.14);
+      if (!sup) { this.aimTarget.position.set(p.pos.x + dir.x * d, 0.065, p.pos.z + dir.z * d); this.aimTarget.scale.setScalar(1.6); }
     }
     if (T.key === 'bomber') {
       const d = THREE.MathUtils.clamp(this.aimDist, 2, T.range);

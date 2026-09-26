@@ -681,3 +681,4 @@ button.lj-tile:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--in
 @media (max-height: 520px) { #banner { font-size: 40px; -webkit-text-stroke: 4px var(--ink); } #banner.duel { font-size: 48px; } .ko-stamp { font-size: 32px; } #killfeed .kf { font-size: 11px; } #killfeed img { width: 20px; height: 20px; } }
 .floater.heal { color: var(--green); font-size: 22px; }
 #banner.event { color: #b18cff; font-size: 58px; }
+.floater.heal { color: #7dffa8; font-size: 20px; }

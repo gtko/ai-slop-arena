@@ -63,6 +63,7 @@ const segDist = (p, a, b) => {
   return Math.hypot(p.x - (a.x + dx * k), p.z - (a.z + dz * k));
 };
 const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
+const LOB = new Set(['bomber', 'kappa']); // lobbed attacks fly over walls
 
 // Bot personas (v0.13, B02): every bot is a character with its own habits, an icon on its name
 // plate and a few lines in speech bubbles (bark.<persona>.<spot|ko|hurt|win> in the i18n files).
@@ -219,7 +220,7 @@ export class BotBrain {
         return;
       }
       const want = T.key === 'blaster' ? 4.5 : T.range * 0.7;
-      const clear = T.key === 'bomber' || A.los(b.pos.x, b.pos.z, best.pos.x, best.pos.z);
+      const clear = LOB.has(T.key) || A.los(b.pos.x, b.pos.z, best.pos.x, best.pos.z);
       if (d > want + 2 || !clear) { this.mode = 'chase'; this.setGoal(best.pos.clone()); }
       else { this.mode = 'strafe'; this.path.length = 0; this.hasGoal = false; }
       this.want = want;
@@ -335,7 +336,7 @@ export class BotBrain {
       return;
     }
     for (const Z of g.combat.zones) {
-      if (Z.owner === b) continue;
+      if (Z.owner === b || Z.heal) continue; // (a heal puddle is nothing to run from)
       const dx = b.pos.x - Z.x, dz = b.pos.z - Z.z, d = Math.hypot(dx, dz);
       if (d < Z.r + 1 && d > 1e-3) { move.x += dx / d * 1.5; move.z += dz / d * 1.5; }
     }
@@ -369,6 +370,7 @@ export class BotBrain {
     if (T === 'frostbite') return near(this.b.pos, 4.5) >= 1;
     if (T === 'blaster') return d < 6;
     if (T === 'volt') return near(tgt.pos, 3) >= 2 || low;
+    if (T === 'kappa') return d < 8 && (near(tgt.pos, 3) >= 1 || low || this.b.inPoison);
     if (T === 'bomber') return low || tgt.inBush || !g.arena.los(this.b.pos.x, this.b.pos.z, tgt.pos.x, tgt.pos.z) || near(tgt.pos, 3.6) >= 2;
     return low || d < this.b.type.range * 0.6; // gunslinger: finisher or a sure hit
   }
@@ -389,6 +391,7 @@ export class BotBrain {
     else if (k === 'bomberB') { if (d < b.type.range && b.ammo >= 1) use = [ux, uz]; }
     else if (k === 'frostbiteB') { if (hurt && d > 3 && d < 9) use = [ux, uz]; }
     else if (k === 'voltB') { if (b.ammo < 1 && d < b.type.range) use = [ux, uz]; }
+    else if (k === 'kappaB') { const m = g.mateOf(b); if (b.hp < b.maxHp * 0.55 || (m && m.alive && m.hp < m.maxHp * 0.5 && m.pos.distanceTo(b.pos) < 2)) use = [ux, uz]; }
     if (use && Math.random() < 0.35 + this.skill * 0.5) g.useGadget(b, use[0], use[1], o.pos);
   }
 
@@ -399,7 +402,7 @@ export class BotBrain {
       const d = tgt.pos.distanceTo(b.pos);
       const range = T.key === 'blaster' ? 8.6 : T.range * 0.95;
       if (d > range || this.seen < 1.3 - this.skill * 1.0) return; // reaction time: ~1.2 s .. 0.3 s
-      if (T.key !== 'bomber' && !A.los(b.pos.x, b.pos.z, tgt.pos.x, tgt.pos.z)) return;
+      if (!LOB.has(T.key) && !A.los(b.pos.x, b.pos.z, tgt.pos.x, tgt.pos.z)) return;
       const travel = d / T.projSpeed;
       const lead = this.skill * this.skill * 1.0;                          // clumsy bots aim where you are
       const err = (0.5 * (1 - this.skill) ** 1.5 + 0.04) * gauss();      // radians: ~0.4 (clumsy) .. 0.05 (sharp)
@@ -408,7 +411,7 @@ export class BotBrain {
       const a = Math.atan2(dx, dz) + err, l = Math.hypot(dx, dz);
       dx = Math.sin(a) * l; dz = Math.cos(a) * l;
       const point = _v.set(b.pos.x + dx, 0, b.pos.z + dz);
-      const superRange = T.key === 'frostbite' ? 4.5 : range * 0.9;
+      const superRange = T.key === 'frostbite' ? 4.5 : T.key === 'kappa' ? 9 : range * 0.9;
       if (b.superCharge >= 1 && d < superRange && this.superGood(tgt, d) && Math.random() < 0.35 + this.skill * 0.5) {
         g.tryAttack(b, dx, dz, point, true);
       } else if (this.fireCd <= 0 && b.ammo >= 1) {
@@ -419,7 +422,7 @@ export class BotBrain {
       // opening grace: no crate shots that could hit someone standing in the way or next to it; spread
       // weapons (Blaster pellets, Frostbite's side shards) can miss the crate and fly on to full range
       if (g.time < this.graceUntil && g.brawlers.some(o => o !== b && o.alive && (segDist(o.pos, b.pos, cp) < 2.4 || inFan(b, cp, o)))) return;
-      if (d < T.range * 0.9 && (T.key === 'bomber' || A.los(b.pos.x, b.pos.z, cp.x, cp.z, 1.1))) {
+      if (d < T.range * 0.9 && (LOB.has(T.key) || A.los(b.pos.x, b.pos.z, cp.x, cp.z, 1.1))) {
         if (g.tryAttack(b, cp.x - b.pos.x, cp.z - b.pos.z, cp, false)) this.fireCd = 0.5 + Math.random() * 0.5;
       }
     }
