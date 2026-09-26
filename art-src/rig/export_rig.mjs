@@ -16,6 +16,8 @@ export const RIGS = {
   frostbite: { weapon: 'R', style: 'staff' },
   volt: { weapon: 'both', style: 'cast' },
   kappa: { weapon: 'R', style: 'throw' },
+  pipchomp: { weapon: 'R', style: 'bite' },
+  mochi: { weapon: 'R', style: 'slam' },
 };
 
 const SRC = 'art-src/figurines', OUT = 'art-src/rig/work', MARKS = 'art-src/rig/landmarks';
