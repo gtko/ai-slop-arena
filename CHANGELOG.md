@@ -3,6 +3,15 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.12.0](docs/releases/v0.12.0.md): Gadgets
+
+<a href="docs/releases/v0.12.0.md"><img src="docs/releases/img/v0.12.0-banner.png" alt="v0.12.0: gadgets" width="100%"></a>
+
+- 🧰 10 gadgets and 10 star powers, unlocked with mastery; pick your loadout before the match.
+- 🪂 Supply drops, a bounty crown on the cube leader, supers you can see coming.
+- 🤖 Smarter bots; every brawler within 44-58% top 4.
+- 🥋 Training dojo, a result stat card with the MVP.
+
 ## [v0.11.0](docs/releases/v0.11.0.md): Impact
 
 <a href="docs/releases/v0.11.0.md"><img src="docs/releases/img/v0.11.0-banner.png" alt="v0.11.0: impact" width="100%"></a>

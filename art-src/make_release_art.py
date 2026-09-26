@@ -923,6 +923,57 @@ def v0110():
     ], 'v0.11.0-sound.png', cols=2)
 
 
+def v0120():
+    banner('v0.12.0', 'GADGETS', 'Pick your trick. Time it. Outplay.',
+           [('🧰', '10 gadgets'), ('⭐', '10 star powers'), ('🪂', 'Supply drops'), ('🥋', 'Training')],
+           'v0.12.0-banner.png', ('frostbite', 'volt', 'bomber'))
+
+    # the 10 gadgets (src/gadgets.js): per brawler, A (mobility) and B (utility)
+    rows = [('blaster', '🐏', 'Root Charge', 'dash, root the first foe', '🪵', 'Bark Skin', '-35% damage for 2.5 s'),
+            ('gunslinger', '🌀', 'Tail Roll', 'roll, untouchable, +1 ammo', '🎆', 'Star Flare', 'reveals bushes for 3 s'),
+            ('bomber', '🦘', 'Lava Hop', 'jump over a wall, burn', '🧨', 'Fuse Cut', 'next fireball 40% faster'),
+            ('frostbite', '⛸️', 'Ice Slide', '5 m slide', '🧊', 'Ice Wall', '3 ice blocks for 3 s'),
+            ('volt', '⚡', 'Blink', 'teleport, leave a zap trap', '🔋', 'Overclock', 'full reload, faster reload')]
+    W, H = 1600, 900
+    img = background(W, H, glow=(0.5, 0.3))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'PICK YOUR TRICK', display(56), YELLOW, anchor='ma')
+    d.text((560, 118), 'A · MOBILITY', font=display(28), fill=(125, 227, 255), anchor='ma')
+    d.text((1180, 118), 'B · UTILITY', font=display(28), fill=YELLOW, anchor='ma')
+    for k, (key, ia, na, da, ib, nb, db) in enumerate(rows):
+        y = 160 + k * 142
+        p = Image.open(os.path.join(ROOT, 'public', 'assets', 'ui', key + '.png')).convert('RGBA')
+        p = p.resize((int(p.width * 124 / p.height), 124), Image.LANCZOS)
+        img.alpha_composite(p, (70 + (130 - p.width) // 2, y))
+        for x0, icon, name, desc, col in ((260, ia, na, da, (125, 227, 255)), (880, ib, nb, db, YELLOW)):
+            card(img, (x0, y + 8, x0 + 600, y + 124), outline=col, radius=22)
+            d.text((x0 + 22, y + 36), icon, font=emoji(52), embedded_color=True)
+            d.text((x0 + 104, y + 26), name, font=display(34), fill=col)
+            d.text((x0 + 104, y + 74), desc, font=body(24, 'Bold'), fill=TEXT)
+    img.convert('RGB').save(os.path.join(OUT, 'v0.12.0-gadgets.png'), optimize=True)
+
+    feats = [('⭐', 'Star powers', ['one passive of two', 'per brawler, picked', 'before the match']),
+             ('🎖️', 'Mastery', ['level 2 unlocks gadget B', 'level 4 star power 2', 'up to level 10']),
+             ('🪂', 'Supply drops', ['a gold crate falls twice', 'per match, 3 cubes inside', 'a beacon warns you']),
+             ('👑', 'Bounty crown', ['the cube leader wears it', 'KO them: 2 extra cubes', 'cubes now +300 HP']),
+             ('🤖', 'Smarter bots', ['they dodge, hide to heal,', 'use gadgets and time', 'their supers']),
+             ('🥋', 'Training dojo', ['dummies, no gas,', 'unlimited gadgets,', 'damage per second'])]
+    W, H = 1600, 840
+    img = background(W, H, glow=(0.5, 0.3))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'MORE WAYS TO WIN', display(56), YELLOW, anchor='ma')
+    cw, chh, gx, gy = 470, 300, 30, 30
+    x0 = (W - (3 * cw + 2 * gx)) // 2
+    for i, (icon, head, lines) in enumerate(feats):
+        x, y = x0 + (i % 3) * (cw + gx), 140 + (i // 3) * (chh + gy)
+        card(img, (x, y, x + cw, y + chh), outline=(150, 120, 230), radius=26)
+        d.text((x + cw // 2, y + 22), icon, font=emoji(58), embedded_color=True, anchor='ma')
+        d.text((x + cw // 2, y + 108), head, font=display(34), fill=YELLOW, anchor='ma')
+        for li, line in enumerate(lines):
+            d.text((x + cw // 2, y + 164 + li * 36), line, font=body(23, 'Bold'), fill=TEXT, anchor='ma')
+    img.convert('RGB').save(os.path.join(OUT, 'v0.12.0-more.png'), optimize=True)
+
+
 if __name__ == '__main__':
     import sys
     os.makedirs(OUT, exist_ok=True)
@@ -942,5 +993,6 @@ if __name__ == '__main__':
     v0100()
     v0101()
     v0110()
+    v0120()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')
