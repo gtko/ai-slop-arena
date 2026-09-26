@@ -43,8 +43,15 @@ export const ICONS = ['p:blaster', 'p:gunslinger', 'p:bomber', 'p:frostbite', 'p
 // What a new player owns. Keys: 'skin:<brawler>:<n>', 'trail:<n>', 'ko:<n>', 'emote:<id>', 'frame:<n>', 'title:<n>', 'icon:<n>'.
 export const FREE = ['title:1', ...EMOTE_FREE.map(e => 'emote:' + e), 'icon:0', 'icon:1', 'icon:2', 'icon:3', 'icon:4'];
 
-// Price in Slop Coins (earned only by playing: there is nothing to buy with money).
-export const PRICE = { skin: 750, trail: 400, ko: 450, emote: 150, frame: 300, title: 200, icon: 100 };
+// Two currencies (v0.13.1): Slop Coins, earned by playing, buy brawlers; Gems, bought with real
+// money, buy brawlers and cosmetics. Cosmetics are Gems only: they never make anyone stronger.
+// Cosmetic prices in Gems:
+export const PRICE = { skin: 290, trail: 150, ko: 190, emote: 60, frame: 120, title: 80, icon: 40 };
+// Brawlers: the 3 starters are free; the others cost Slop Coins or Gems.
+export const STARTERS = ['blaster', 'gunslinger', 'bomber'];
+export const BRAWLER_PRICE = { coins: 1500, gems: 240 };
+// Gem packs: [gems, price in EUR] (real payment comes with the store integration; see metaui.js).
+export const GEM_PACKS = [[100, 0.99], [550, 4.99], [1200, 9.99], [2600, 19.99], [7000, 49.99]];
 
 // Every item the shop may offer: recolours, trails, K.O. effects, emotes, frames, titles, icons.
 // Rewards of levels and the Trophy Road are left out (they are earned, not sold).
