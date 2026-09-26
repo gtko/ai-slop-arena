@@ -24,8 +24,10 @@ export const HALF = (N * TILE) / 2;
 
 // Layouts live in maps.js. 'K' = indestructible prop, 'I' = walkable ice.
 // 'G': a Frostbite ice wall (gadget), temporary
-const MOVE_BLOCK = new Set(['X', '#', 'W', 'C', 'T', 'K', 'G']);
-const SHOT_BLOCK = new Set(['X', '#', 'C', 'T', 'K', 'G']);
+const MOVE_BLOCK = new Set(['X', '#', 'W', 'C', 'T', 'K', 'G', 'V', 'E', 'M']);
+const SHOT_BLOCK = new Set(['X', '#', 'C', 'T', 'K', 'G', 'E', 'M']);
+// what explosions and bullets break like a crate (kit.js: 'E' is an explosive barrel)
+export const isCrate = ch => ch === 'C' || ch === 'E';
 export const WALL_H = 2.1;
 export const BOUND_H = 2.7;
 
@@ -67,7 +69,7 @@ export class Arena {
       const row = [];
       for (let i = 0; i < N; i++) {
         const q = QUARTER[Math.min(j, N - 1 - j)];
-        let ch = (q && q[Math.min(i, N - 1 - i)]) || '.';
+        let ch = map.full ? (map.full[j] && map.full[j][i]) || 'V' : (q && q[Math.min(i, N - 1 - i)]) || '.';
         if (ch === 'S') { this.spawns.push(this.center(i, j)); ch = '.'; }
         row.push(ch);
       }
@@ -133,12 +135,14 @@ export class Arena {
   }
 
   // Push a circle out of blocked tiles (rounded corners -> smooth sliding).
-  collideCircle(p, r) {
+  // voidOk: a pushed brawler goes over the edge (kit.js makes it fall); once over the void, the void
+  // never pushes it back.
+  collideCircle(p, r, voidOk = false) {
     for (let it = 0; it < 2; it++) {
-      const ci = this.toTile(p.x), cj = this.toTile(p.z);
+      const ci = this.toTile(p.x), cj = this.toTile(p.z), over = this.get(ci, cj) === 'V';
       for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
-        const i = ci + di, j = cj + dj;
-        if (!MOVE_BLOCK.has(this.get(i, j))) continue;
+        const i = ci + di, j = cj + dj, ch = this.get(i, j);
+        if (!MOVE_BLOCK.has(ch) || (ch === 'V' && (voidOk || over))) continue;
         const x0 = (i - N / 2) * TILE, z0 = (j - N / 2) * TILE;
         const cx = Math.max(x0, Math.min(p.x, x0 + TILE));
         const cz = Math.max(z0, Math.min(p.z, z0 + TILE));
@@ -178,7 +182,7 @@ export class Arena {
   /* ------------------------------ building ----------------------------- */
 
   buildGround() {
-    const M = this.map, key = M.ground + M.checker;
+    const M = this.map, key = M.ground + M.checker + (M.groundTones || []).join(); // cartoon grounds differ by their tones
     const cartoon = M.ground === 'cartoon';
     if (!groundMaps.has(key)) groundMaps.set(key, cartoon ? cartoonGround(...(M.groundTones || [])) : groundTexture(image(M.ground) || image('sand'), M.checker));
     const map = groundMaps.get(key).clone();
@@ -195,6 +199,8 @@ export class Arena {
     );
     ground.receiveShadow = true;
     this.group.add(ground);
+    this.groundMesh = ground;
+    if (M.sky) return; // floating islands: the void all around (kit.js draws the sky below)
 
     // Grass ring around the arena (a full plane would cover the sunken water basins).
     // ShapeGeometry UVs are in world units, so the repeat is "tiles per unit".
@@ -293,6 +299,7 @@ export class Arena {
     const [bh, bs, bl] = this.map.bush;
     const mesh = new THREE.InstancedMesh(geo, mat, tiles.length);
     mesh.customDepthMaterial = depth;
+    this.bushIndex = new Map(tiles.map(([i, j], k) => [this.key(i, j), k]));
     tiles.forEach(([i, j], k) => {
       this.center(i, j, _v);
       _q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, this.rand() * Math.PI * 2);
@@ -312,7 +319,7 @@ export class Arena {
   groundGeometry() {
     const pos = [], uv = [], idx = [], S = N * TILE;
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-      if (this.grid[j][i] === 'W' || this.grid[j][i] === 'I') continue;
+      if ('WIV='.includes(this.grid[j][i])) continue; // water / ice basins, the void, bridges (kit.js)
       const x0 = (i - N / 2) * TILE, z0 = (j - N / 2) * TILE, o = pos.length / 3;
       for (const [x, z] of [[x0, z0 + TILE], [x0 + TILE, z0 + TILE], [x0 + TILE, z0], [x0, z0]]) {
         pos.push(x, 0, z);
@@ -339,6 +346,40 @@ export class Arena {
     const gemMat = new THREE.MeshStandardMaterial({ color: 0x3dff7a, emissive: 0x22ff66, emissiveIntensity: 1.1, roughness: 0.3 });
     this.crateKit = { sculpted, body, band, gem, bandMat, gemMat };
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) if (this.grid[j][i] === 'C') this.makeCrate(i, j);
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) if (this.grid[j][i] === 'E') this.makeBarrel(i, j);
+  }
+
+  // Explosive barrel (kit.js): red, striped, 600 HP; it stays an 'E' tile until it goes off.
+  makeBarrel(i, j) {
+    const g = new THREE.Group();
+    this.center(i, j, g.position);
+    const mat = new THREE.MeshStandardMaterial({ color: 0xd8342c, roughness: 0.45, metalness: 0.2 });
+    const ring = new THREE.MeshStandardMaterial({ color: 0x2a2a30, roughness: 0.5, metalness: 0.6 });
+    const band = new THREE.MeshStandardMaterial({ color: 0xffd23f, roughness: 0.5 });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 1.35, 18), mat); body.position.y = 0.68;
+    const add = (m, y, s = 1) => { const o = new THREE.Mesh(new THREE.CylinderGeometry(0.66 * s, 0.66 * s, 0.1, 18), m); o.position.y = y; g.add(o); };
+    g.add(body);
+    add(ring, 0.1); add(ring, 1.3); add(band, 0.68, 0.985);
+    const sign = new THREE.Mesh(new THREE.CircleGeometry(0.22, 3), new THREE.MeshBasicMaterial({ color: 0x111111 }));
+    sign.position.set(0, 0.95, 0.63); g.add(sign);
+    g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    g.rotation.y = this.rand() * Math.PI * 2;
+    this.group.add(g);
+    // no power cube inside: its "gem" is a dummy so crate code (spin, flash) just works
+    this.crates.set(this.key(i, j), { i, j, hp: 600, maxHp: 600, group: g, mat, gem: new THREE.Object3D(), shake: 0, flash: 0, barrel: true });
+  }
+
+  // Crumbling islands (kit.js): redraw the floor without the fallen tiles; bushes there go.
+  rebuildGround() {
+    if (!this.groundMesh) return;
+    this.groundMesh.geometry.dispose();
+    this.groundMesh.geometry = this.groundGeometry();
+  }
+  hideBush(i, j) {
+    const k = this.bushIndex?.get(this.key(i, j));
+    if (k === undefined) return;
+    this.bushes.setMatrixAt(k, ZERO);
+    this.bushes.instanceMatrix.needsUpdate = true;
   }
 
   // One crate on tile (i, j). supply: a supply drop (gold bands, sturdier, 3 cubes inside).
@@ -403,13 +444,14 @@ export class Arena {
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
       if (this.grid[j][i] === 'T') { this.center(i, j, _v); place(_v.x, 0, _v.z, true); }
     }
-    for (const k of [6, 12, 18]) for (const [i, j] of [[0, k], [N - 1, k], [k, 0], [k, N - 1]]) {
+    if (!this.map.sky) for (const k of [6, 12, 18]) for (const [i, j] of [[0, k], [N - 1, k], [k, 0], [k, N - 1]]) {
       this.center(i, j, _v); place(_v.x, BOUND_H, _v.z, false);
     }
     this.night = 0;
   }
 
   buildDecor() {
+    if (this.map.sky) return; // nothing around floating islands
     const M = this.map, kinds = Object.entries(M.trees);
     const pick = () => { let r = this.rand(); for (const [k, w] of kinds) { if ((r -= w) <= 0) return k; } return kinds[0][0]; };
     const byKind = {};
@@ -594,7 +636,13 @@ export class Arena {
     this.crates.delete(this.key(i, j));
     this.grid[j][i] = '.';
     this.rev++;
-    return true;
+    this.disposeCrate(c);
+    return c; // (truthy: the crate, so callers can tell a barrel)
+  }
+  // Barrels own their geometry and materials; crates share theirs (except the hit-flash material).
+  disposeCrate(c) {
+    if (c.barrel) c.group.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+    else if (c.mat) c.mat.dispose();
   }
 
   /* ------------------------------ per frame ---------------------------- */
@@ -646,6 +694,7 @@ export class Arena {
       pool.add(f.x, f.y, f.z, 1.0, 0.5, 0.18, 22 * amt * (f.flicker || 1), 10);
     }
     for (const c of this.crates.values()) {
+      if (c.barrel) continue; // no power cube inside
       const p = c.group.position;
       pool.add(p.x, 2.6, p.z, 0.3, 1.0, 0.45, 0.8 + 2.5 * night, 5);
     }

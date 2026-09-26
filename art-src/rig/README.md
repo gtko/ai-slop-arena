@@ -31,14 +31,14 @@ carry no weights. Every bone's local X axis is its side axis (knees, elbows and 
 | BushIdle | ✓ | hiding in a bush: squatting, peeking left and right |
 | Slide | ✓ | sliding on ice with no input: arms windmilling |
 | Aim | ✓ | upper body, held while aiming |
-| Shoot | | upper body, every shot (per weapon style: gun kick, overhead throw, staff thrust, palm push) |
+| Shoot | | upper body, every shot (per weapon style: gun kick, overhead throw, staff thrust, palm push, lunge and snap, belly bump) |
 | Super | | full body (upper body only while running), per style |
 | Hit | | added on top of anything when hurt |
 | Death | | knocked out: staggers, falls on the back, stays down, then vanishes in a puff |
 | Victory | ✓ | last one standing: jumping, fists up |
 | Wave | | hello, when some brawlers pop in |
 | Bored | | idle for a while: sigh, foot tapping, checks the watch, head shake |
-| Fidget | | idle for a while, one per brawler: shotgun on the shoulder (Blaster), revolver twirl (Gunslinger), fireball juggling (Bomber), staff taps and shivers (Frostbite), glitch and reboot (Volt), balancing and patting the water dish, syringe twirl (Kappa) |
+| Fidget | | idle for a while, one per brawler: shotgun on the shoulder (Blaster), revolver twirl (Gunslinger), fireball juggling (Bomber), staff taps and shivers (Frostbite), glitch and reboot (Volt), balancing and patting the water dish, syringe twirl (Kappa), the rider pats the wiggling plant (Pip & Chomp), belly pats (Mochi) |
 | Cough | | upper body, in the poison gas |
 | Cheer | | upper body, fist pump after a knockout |
 

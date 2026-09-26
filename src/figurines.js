@@ -27,6 +27,8 @@ export const RIGS = {
   frostbite: { weapon: 'R', style: 'staff' },
   volt: { weapon: 'both', style: 'cast' },
   kappa: { weapon: 'R', style: 'throw' },
+  pipchomp: { weapon: 'R', style: 'bite' },
+  mochi: { weapon: 'R', style: 'slam' },
 };
 
 const templates = new Map(); // type key -> { scene, clips, map, gain, flames }

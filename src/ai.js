@@ -186,6 +186,14 @@ export class BotBrain {
       return;
     }
 
+    // Windmill Isles: off an island about to fall, toward the middle (kit.js)
+    if (g.kit.doomed.size && g.kit.doomedAt(b.pos.x, b.pos.z)) {
+      this.mode = 'flee-gas';
+      if (!this.hasGoal || g.kit.doomedAt(this.goal.x, this.goal.z)) { const s = g.kit.safeSpot(b); if (s) this.setGoal(s, true); }
+      else this.setGoal(this.goal);
+      return;
+    }
+
     // Duo: a knocked-out partner comes first (unless the gas is on its ghost or about to be)
     const G = mate && !mate.alive ? g.ghostOf(mate) : null;
     if (G && A.ring(A.toTile(G.x), A.toTile(G.z)) > P.level + (P.nextIn < 3 ? 1 : 0)) {
@@ -244,6 +252,7 @@ export class BotBrain {
 
     let crate = null, cd = 30;
     for (const c of A.crates.values()) {
+      if (c.barrel) continue; // (nothing inside)
       const d = c.group.position.distanceTo(b.pos);
       if (d < cd) { cd = d; crate = c; }
     }
@@ -370,6 +379,8 @@ export class BotBrain {
     if (T === 'frostbite') return near(this.b.pos, 4.5) >= 1;
     if (T === 'blaster') return d < 6;
     if (T === 'volt') return near(tgt.pos, 3) >= 2 || low;
+    if (T === 'pipchomp') return d < 6;
+    if (T === 'mochi') return d < 8.5 && (near(tgt.pos, 4) >= 1 || low);
     if (T === 'kappa') return d < 8 && (near(tgt.pos, 3) >= 1 || low || this.b.inPoison);
     if (T === 'bomber') return low || tgt.inBush || !g.arena.los(this.b.pos.x, this.b.pos.z, tgt.pos.x, tgt.pos.z) || near(tgt.pos, 3.6) >= 2;
     return low || d < this.b.type.range * 0.6; // gunslinger: finisher or a sure hit
@@ -391,6 +402,8 @@ export class BotBrain {
     else if (k === 'bomberB') { if (d < b.type.range && b.ammo >= 1) use = [ux, uz]; }
     else if (k === 'frostbiteB') { if (hurt && d > 3 && d < 9) use = [ux, uz]; }
     else if (k === 'voltB') { if (b.ammo < 1 && d < b.type.range) use = [ux, uz]; }
+    else if (k === 'pipchompB') { if (hurt && d < 8) use = [ux, uz]; }
+    else if (k === 'mochiB') { if (hurt && d < 5) use = [ux, uz]; }
     else if (k === 'kappaB') { const m = g.mateOf(b); if (b.hp < b.maxHp * 0.55 || (m && m.alive && m.hp < m.maxHp * 0.5 && m.pos.distanceTo(b.pos) < 2)) use = [ux, uz]; }
     if (use && Math.random() < 0.35 + this.skill * 0.5) g.useGadget(b, use[0], use[1], o.pos);
   }
@@ -411,7 +424,7 @@ export class BotBrain {
       const a = Math.atan2(dx, dz) + err, l = Math.hypot(dx, dz);
       dx = Math.sin(a) * l; dz = Math.cos(a) * l;
       const point = _v.set(b.pos.x + dx, 0, b.pos.z + dz);
-      const superRange = T.key === 'frostbite' ? 4.5 : T.key === 'kappa' ? 9 : range * 0.9;
+      const superRange = T.key === 'frostbite' ? 4.5 : T.key === 'kappa' ? 9 : T.key === 'pipchomp' ? 7.5 : T.key === 'mochi' ? 8.5 : range * 0.9;
       if (b.superCharge >= 1 && d < superRange && this.superGood(tgt, d) && Math.random() < 0.35 + this.skill * 0.5) {
         g.tryAttack(b, dx, dz, point, true);
       } else if (this.fireCd <= 0 && b.ammo >= 1) {

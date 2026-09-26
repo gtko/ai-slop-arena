@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { Arena, HALF } from './arena.js';
+import { Arena, HALF, isCrate } from './arena.js';
+import { MapKit } from './kit.js';
 import { Brawler, TYPES } from './brawler.js';
 import { Combat } from './combat.js';
 import { Poison } from './poison.js';
@@ -11,7 +12,7 @@ import { MAPS, MAP_KEYS } from './maps.js';
 import { Weather } from './weather.js';
 import { t } from './i18n/index.js';
 import { Feel, weapon } from './feel.js';
-import { GADGETS, GADGET_CHARGES, GADGET_LOCKOUT, parseLoadout, validLoadout, flareFx, gadgetFx } from './gadgets.js';
+import { GADGETS, GADGET_CHARGES, GADGET_LOCKOUT, parseLoadout, validLoadout, flareFx, gadgetFx, hasStar } from './gadgets.js';
 import { KOFX, validCos, EMOTES, EMOTE_ICONS } from './cosmetics.js';
 import { PERSONAS } from './ai.js';
 import { ArenaEvents } from './events.js';
@@ -156,6 +157,7 @@ export class Game {
     this.arena = new Arena(this.scene, MAPS[this.mapKey]);
     this.weather = this.lighting.weather = new Weather(this, MAPS[this.mapKey].weather);
     this.weather.setDensity(this.weatherDensity ?? 1);
+    this.kit = new MapKit(this); // jump pads, barrels, bridges, the void... (v0.15)
     const real = !!localId || headless;
     this.dojo = dojo;
     this.dojoLog = [];
@@ -164,7 +166,7 @@ export class Game {
     // Duo Showdown (v0.14): 4 teams of 2, from the roster's teams. The gas waits a little longer
     // (35 s, then a ring every 8 s) so partners can regroup.
     this.duo = real && !dojo && roster.some(r => Number.isInteger(r.team));
-    this.poison = new Poison(this, dojo ? { startAt: 1e9 } : real ? (M === 'gasBreath' ? { startAt: 16, interval: 4.5 } : this.duo ? { startAt: 35, interval: 8 } : {}) : { startAt: 18, interval: 6 });
+    this.poison = new Poison(this, dojo || (real && MAPS[this.mapKey].crumble) ? { startAt: 1e9 } : real ? (M === 'gasBreath' ? { startAt: 16, interval: 4.5 } : this.duo ? { startAt: 35, interval: 8 } : {}) : { startAt: 18, interval: 6 });
     this.visionRadius = MAPS[this.mapKey].vision || 0;
     // How far anyone sees (fog maps use their fog wall instead); the sandstorm cuts it shorter.
     this.sightRange = this.visionRadius ? 0 : MAPS[this.mapKey].weather === 'sandstorm' ? 11 : 14;
@@ -266,8 +268,15 @@ export class Game {
   // Buddy Revive: a KO'd partner leaves a ghost for 15 s where it fell. The partner standing within
   // 2.5 m for 3 s in all (the count pauses while the reviver is being hit) brings it back at 40%
   // health with no cubes. The gas reaching the ghost ends it. 2 revives per team per match.
+  // The nearest ground to a spot (a ring-out's cubes and ghost wait there, not over the void).
+  groundNear(x, z) {
+    const A = this.arena, [i, j] = A.nearestWalkable(A.toTile(x), A.toTile(z));
+    return A.center(i, j, new THREE.Vector3());
+  }
+
   addGhost(b) {
-    const x = b.pos.x, z = b.pos.z, mine = !this.player || b === this.player || this.ally(b, this.player);
+    const s = b.fell ? this.groundNear(b.pos.x, b.pos.z) : b.pos;
+    const x = s.x, z = s.z, mine = !this.player || b === this.player || this.ally(b, this.player);
     const col = mine ? new THREE.Color(0.7, 2.4, 2.8) : new THREE.Color(2.4, 0.9, 0.8), grp = new THREE.Group(); // bright: it glows through fog and bloom
     const mat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.5, depthWrite: false });
     const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.7, 4, 12), mat);
@@ -384,7 +393,7 @@ export class Game {
     for (const o of this.brawlers) if (o.alive && !this.ally(o, b) && o !== b && Math.hypot(o.pos.x - x, o.pos.z - z) < 2.5 && this.teamSees(b, o)) return 'attack';
     if (this.items.some(it => Math.hypot(it.x - x, it.z - z) < 2)) return 'loot';
     const A = this.arena, i = A.toTile(x), j = A.toTile(z);
-    if (A.get(i, j) === 'C') return 'loot';
+    if (A.get(i, j) === 'C') return 'loot'; // (not a barrel)
     const P = this.poison, closing = P.level > 0 || P.nextIn < 8; // the next ring of gas, once it is coming
     if (P.isPoisonedAt(x, z) || (closing && A.ring(i, j) <= P.level + 1)) return 'danger';
     return 'go';
@@ -451,6 +460,7 @@ export class Game {
     if (this.sightRange && d > this.sightRange) return false;
     if (!this.inSight(viewer.pos, target.pos)) return false;
     if (!target.inBush || target.revealT > 0) return true;
+    if (d < 8 && target.hp < target.maxHp * 0.35 && hasStar(viewer, 'huntersNose')) return true; // Pip & Chomp star power
     return d < 3.6;
   }
 
@@ -475,16 +485,30 @@ export class Game {
   }
 
   tryAttack(b, dx, dz, point, isSuper) {
-    if (!b.alive || this.state === 'idle' || b.freezeT > 0) return false;
+    if (!b.alive || this.state === 'idle' || b.freezeT > 0 || b.stickyT > 0) return false; // Sticky Mochi: no attacks
+    if ((b.dash && b.dash.air) || (b.netDriven && b.guard && this.time < (b.guard.airUntil || 0) - 0.3)) return false; // nor in the air
     const l = Math.hypot(dx, dz);
     if (l < 1e-4) { dx = Math.sin(b.facing); dz = Math.cos(b.facing); } else { dx /= l; dz /= l; }
     if (isSuper) {
       if (b.superCharge < 1) return false;
       b.superCharge = 0;
     } else {
-      if (b.ammo < 1 || b.fireCd > 0 || b.burst.length) return false;
+      if (b.ammo < 1 || b.fireCd > 0 || b.burst.length || b.stickyT > 0) return false;
       b.ammo -= 1;
       b.fireCd = b.type.key === 'gunslinger' ? 0.55 : 0.4;
+    }
+    // Chomp's lunge bends up to 15° toward an enemy you can see within 4.5 m (authority: the
+    // attack event carries the bent direction to everyone)
+    if (!isSuper && b.type.key === 'pipchomp' && this.authority) {
+      let best = null, ba = 0.27;
+      for (const o of this.brawlers) {
+        if (!this.hits(b, o) || !this.teamSees(b, o)) continue;
+        const ox = o.pos.x - b.pos.x, oz = o.pos.z - b.pos.z, od = Math.hypot(ox, oz);
+        if (od > 4.5 + o.radius || od < 1e-3) continue;
+        const a = Math.acos(Math.max(-1, Math.min(1, (ox * dx + oz * dz) / od)));
+        if (a < ba) { ba = a; best = [ox / od, oz / od]; }
+      }
+      if (best) [dx, dz] = best;
     }
     b.lastAttack = this.time;
     b.revealT = 1.2;
@@ -497,8 +521,11 @@ export class Game {
     return true;
   }
 
-  applyKnock(o, x, z) {
+  // by: who pushed (a push into the void is their K.O., kit.js)
+  applyKnock(o, x, z, by = null) {
     if (!this.authority || this.shielded) return;
+    if (by && by !== o) o.pushBy = { by, t: this.time };
+    if (hasStar(o, 'heavyweight')) { x *= 0.5; z *= 0.5; } // Mochi star power
     if (o.netDriven) {
       this.ev({ e: 'knock', id: o.id, x: r2(x), z: r2(z) }); // remote players move themselves
       if (o.guard) o.guard.knock = Math.max(o.guard.knock, Math.hypot(x, z) * 0.6 + 1.5); // allow the push
@@ -520,6 +547,7 @@ export class Game {
       if (amount >= target.hp) target.hp = amount + target.maxHp * 0.999; // lands at (almost) full health
     }
     if (target.armorT > 0) amount *= 0.65;               // Bark Skin
+    if (target.stickyT > 0) amount *= 0.4;               // Sticky Mochi
     amount = Math.round(amount);
     target.hp -= amount;
     target.lastHurt = this.time;
@@ -598,12 +626,12 @@ export class Game {
       b.rank = up ? 0 : this.teamsUp(b.team) + 1;
     } else b.rank = this.brawlers.filter(o => o.alive && o !== b).length + 1;
     const bounty = b === this.crown && killer && killer !== b; // knocking out the crown pays 2 extra cubes
-    const n = Math.max(1, b.cubes) + (bounty ? 2 : 0), x = b.pos.x, z = b.pos.z;
+    const n = Math.max(1, b.cubes) + (bounty ? 2 : 0), g0 = b.fell ? this.groundNear(b.pos.x, b.pos.z) : b.pos, x = g0.x, z = g0.z;
     if (bounty && killer === this.player) this.hud.floater(this.camera, x, 3.4, z, t('hud.bounty'), 'power');
     this.killFx(b, killer, bySuper, ghost);
     if (!this.authority) return;
     for (let k = 0; k < n; k++) this.dropCube(x, z, k, n);
-    this.ev({ e: 'kill', id: b.id, by: killer ? killer.id : null, rank: b.rank, sup: bySuper ? 1 : 0, gh: ghost ? 1 : 0 });
+    this.ev({ e: 'kill', id: b.id, by: killer ? killer.id : null, rank: b.rank, sup: bySuper ? 1 : 0, gh: ghost ? 1 : 0, f: b.fell ? 1 : 0 });
     if (killer && killer !== b) this.brains.get(killer)?.onKo(b);
     this.checkEnd();
   }
@@ -625,7 +653,8 @@ export class Game {
       b.hitstopT = 0.15;
       const kx = killer && killer !== b ? b.pos.x - killer.pos.x : Math.sin(b.facing), kz = killer && killer !== b ? b.pos.z - killer.pos.z : Math.cos(b.facing);
       const l = Math.hypot(kx, kz) || 1;
-      b.launch = { vx: kx / l * 3.2, vz: kz / l * 3.2, vy: 4.2 };
+      b.launch = b.fell ? { vx: 0, vz: 0, vy: -1, fall: true } : { vx: kx / l * 3.2, vz: kz / l * 3.2, vy: 4.2 };
+      if (b.fell) sfx('fall', this.volumeAt(b.pos.x, b.pos.z));
       this.shakeAt(b.pos.x, b.pos.z, 0.3);
       sfx('death', this.volumeAt(b.pos.x, b.pos.z));
     }
@@ -679,6 +708,7 @@ export class Game {
     if (!col) return;
     const c = this.arena.center(i, j, _v);
     this.effects.debrisBurst(c.x, 0.2, c.z, col, 14, 0.42, 6);
+    this.effects.rubbleAt(c.x, c.z, col); // V08: the rubble stays
     this.effects.dust(c.x, c.z, 8, 0xd9b27c, 1.4);
     this.shakeAt(c.x, c.z, 0.12);
     sfx('break', this.volumeAt(c.x, c.z));
@@ -686,8 +716,9 @@ export class Game {
   }
 
   damageCrate(i, j, dmg, by = null) {
-    const supply = this.arena.crateAt(i, j)?.supply;
+    const C = this.arena.crateAt(i, j), supply = C?.supply;
     if (!this.authority || !this.arena.hitCrate(i, j, dmg)) return;
+    if (C.barrel) { this.ev({ e: 'crate', i, j, by: by ? by.id : null }); this.kit.barrelBoom(i, j, by); return; } // an explosive barrel
     this.crateFx(i, j, by);
     const n = supply ? 3 : 1;
     for (let k = 0; k < n; k++) this.dropCube(_v.x, _v.z, k, n);
@@ -701,6 +732,7 @@ export class Game {
     this.effects.debrisBurst(c.x, 0.3, c.z, WOOD, 16, 0.38, 6);
     this.effects.dust(c.x, c.z, 8, 0xc9a070, 1.2);
     this.effects.sparkBurst(c.x, 1.2, c.z, GREEN, 18, 6, 0.6);
+    this.effects.beam(c.x, c.z, new THREE.Color(0.4, 2.2, 0.8)); // V08: a light on the freed cube
     this.effects.flash(c.x, 1.5, c.z, 0.3, 1, 0.45, 40, 8, 0.4);
     sfx('crate', this.volumeAt(c.x, c.z));
   }
@@ -725,8 +757,10 @@ export class Game {
     b.cubes++;
     b.stats.cubes++;
     b.refreshDmg();
-    b.maxHp += 300; // v0.12: +300 (was +400), the cube leader snowballs less
-    b.hp += 300;
+    const up = b.type.cubeHp || 300; // v0.12: +300 (was +400), the cube leader snowballs less; Mochi +250
+    b.maxHp += up;
+    b.hp += up;
+    if (hasStar(b, 'secondHelping')) this.heal(b, 800);
     this.fx.remove(it.mesh);
     this.items.splice(this.items.indexOf(it), 1);
     this.effects.sparkBurst(it.x, 1, it.z, GREEN, 14, 5, 0.5);
@@ -902,7 +936,7 @@ export class Game {
     let ax = num(m.ax, 0), az = num(m.az, 1);
     const al = Math.hypot(ax, az) || 1;
     ax /= al; az /= al;
-    const reach = b.type.range + 2;
+    const reach = Math.max(b.type.range, b.type.superReach || 0) + 2; // supers aimed further than the attack (Pound 9 m, trap 8 m)
     let px = num(m.px, b.pos.x), pz = num(m.pz, b.pos.z);
     const pd = Math.hypot(px - b.pos.x, pz - b.pos.z);
     if (pd > reach) { px = b.pos.x + (px - b.pos.x) / pd * reach; pz = b.pos.z + (pz - b.pos.z) / pd * reach; }
@@ -922,8 +956,9 @@ export class Game {
     g.knock = Math.max(0, g.knock - 4 * dt);
     const d = Math.hypot(x - b.net.x, z - b.net.y);
     const air = now < (g.airUntil || 0); // Lava Hop: over a wall is fine, not a landing inside one
+    const pushed = g.knock > 0.5 && this.arena.charAt(x, z) === 'V'; // knocked over the edge: it falls (kit.js)
     const ok = d <= allowed && (b.freezeT <= 0 || d < 0.3)
-      && Math.abs(x) < HALF && Math.abs(z) < HALF && (air || !this.arena.blocksMoveAt(x, z));
+      && Math.abs(x) < HALF && Math.abs(z) < HALF && (air || pushed || !this.arena.blocksMoveAt(x, z));
     if (ok) { b.net.set(x, z); return; }
     g.fix++;                    // the next snapshot tells that player to snap back
     g.strikes++;
@@ -959,7 +994,7 @@ export class Game {
         this.netT = 1 / 15;
         const alive = this.brawlers.filter(b => b.alive), pt = r2(this.poison.timer);
         const row = b => [b.id, r2(b.pos.x), r2(b.pos.z), r2(b.facing), Math.round(b.hp), b.maxHp,
-          r2(b.ammo), r2(b.superCharge), b.cubes, (b.revealT > 0 ? 2 : 0) | (b.slowT > 0 ? 4 : 0) | (b.freezeT > 0 ? 8 : 0) | (b.rootT > 0 ? 16 : 0)];
+          r2(b.ammo), r2(b.superCharge), b.cubes, (b.revealT > 0 ? 2 : 0) | (b.slowT > 0 ? 4 : 0) | (b.freezeT > 0 ? 8 : 0) | (b.rootT > 0 ? 16 : 0) | (b.stunned ? 32 : 0)];
         if (N.sendTo) {
           // One snapshot per player with only what that player can see: brawlers hidden in a bush
           // or behind the fog are simply not sent, so no client can reveal them. Knocked-out
@@ -998,6 +1033,7 @@ export class Game {
       // status effects are decided by the host; our own brawler needs them too (we move it locally)
       b.slowT = flags & 4 ? 0.2 : Math.min(b.slowT, 0);
       b.freezeT = flags & 8 ? 0.2 : Math.min(b.freezeT, 1e-4); // a tiny rest so update() still sees the thaw (immunity fx)
+      b.stunned = !!(flags & 32);
       b.rootT = flags & 16 ? 0.2 : Math.min(b.rootT, 0);
       if (b !== this.player) {
         b.net.set(x, z); b.netFacing = f;
@@ -1036,12 +1072,15 @@ export class Game {
         case 'kill':
           if (!b) break;
           b.rank = e.rank;
+          if (e.f) b.fell = true;
           if (b.alive) this.killFx(b, this.byId.get(e.by), !!e.sup, !!e.gh);
           break;
         case 'win':
           this.ended = true;
           if (b) { this.winners(b); if (!this.feel.orbitWant) sfx('sting_finalko'); this.feel.finalKo(false); if (b === this.player || this.ally(b, this.player)) { this.state = 'over'; this.resultT = 1.2; } }
           break;
+        case 'bite': if (Number.isFinite(e.x)) this.combat.biteFx(e.x, e.z); break;
+        case 'miss': if (b) this.combat.missFx(b); break;
         case 'heal': if (b && b.alive && Number.isFinite(e.a)) { b.hp = Math.min(b.maxHp, b.hp + e.a); this.healFx(b, e.a); } break;
         case 'rv': { const G = this.ghostOf(b); if (G && Number.isFinite(e.p)) G.p = e.p; break; }
         case 'ping': if (b && Number.isFinite(e.x) && Number.isFinite(e.z)) this.pingFx(b, e.k, e.x, e.z); break;
@@ -1067,7 +1106,12 @@ export class Game {
         case 'zone': this.combat.zone({ ...e.z, owner: this.byId.get(e.z.owner), col: new THREE.Color(...e.z.col) }); break;
         case 'zap': this.effects.arc(e.pts, new THREE.Color(3.2, 4.2, 5.2)); break;
         case 'wall': this.breakWall(e.i, e.j, true); break;
-        case 'crate': if (this.arena.hitCrate(e.i, e.j, 1e9)) this.crateFx(e.i, e.j, this.byId.get(e.by)); break;
+        case 'crate': {
+          const C = this.arena.hitCrate(e.i, e.j, 1e9);
+          if (C && C.barrel) this.kit.barrelBoom(e.i, e.j, null); else if (C) this.crateFx(e.i, e.j, this.byId.get(e.by));
+          break;
+        }
+        case 'kit': this.kit.onEvent(e); break;
         case 'item': this.spawnItem(e.id, e.x, e.z, e.tx, e.tz); break;
         case 'pick': {
           const it = this.items.find(o => o.id === e.item), by = this.byId.get(e.by);
@@ -1115,6 +1159,7 @@ export class Game {
     this.combat.update(dt);
     this.poison.update(dt, t);
     if (this.authority) this.poisonDamage(dt);
+    this.kit.update(dt);
     if (this.duo) this.updateGhosts(dt);
     this.updateItems(dt, t);
     this.updateCrown(t);
@@ -1334,6 +1379,25 @@ export class Game {
     }
   }
 
+  // Mochi's Belly Slide: each enemy bumped on the way takes 200 and is pushed aside.
+  slideContact(b) {
+    const [dx, dz] = b.slideDir || [b.dash ? b.dash.vx : 0, b.dash ? b.dash.vz : 1], l = Math.hypot(dx, dz) || 1;
+    for (const o of this.brawlers) {
+      if (b.slideHit?.has(o) || !this.hits(b, o) || Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z) > b.radius + o.radius + 0.3) continue;
+      (b.slideHit ||= new Set()).add(o);
+      this.damage(o, 200 * b.dmgMul, b);
+      const side = (o.pos.x - b.pos.x) * -dz + (o.pos.z - b.pos.z) * dx >= 0 ? 1 : -1;
+      if (o.alive) this.applyKnock(o, -dz / l * side * 6, dx / l * side * 6, b);
+    }
+  }
+  // Sticky Mochi: enemies touching the blob are slowed.
+  stickyContact(b) {
+    for (const o of this.brawlers) {
+      if (!this.hits(b, o) || Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z) > b.radius + o.radius + 0.4) continue;
+      o.slowT = Math.max(o.slowT, 0.3); o.slowMul = 0.6;
+    }
+  }
+
   // Lava Hop: the landing spot burns for 2 s.
   hopLanded(b) {
     const p = b.netDriven ? { x: b.net.x, z: b.net.y } : b.pos; // a remote player lands where it says it is
@@ -1427,6 +1491,14 @@ export class Game {
     const want = P && P.alive && P.inBush ? 1 : 0;
     shared.revealAmt.value += (want - shared.revealAmt.value) * (1 - Math.exp(-8 * dt));
     if (P) shared.reveal.value.set(P.pos.x, P.pos.z, 3.4);
+    // Hidden in a bush: your brawler goes see-through and the screen edges turn leafy green. Only
+    // what you do yourself shows you (a shot, a gadget, an emote, a hit: revealT); an enemy close
+    // enough to spot you is never shown, it would give that enemy away.
+    if (P) {
+      const hid = P.alive && P.inBush && P.revealT <= 0 && this.mode === 'play' && !this.dojo;
+      P.hiddenLook(hid, dt);
+      this.hud.bushEdge?.(P.hideK || 0);
+    }
   }
 
   /* ------------------------------ aim indicator ------------------------------ */
@@ -1437,9 +1509,10 @@ export class Game {
     const fan = s => { const g = new THREE.CircleGeometry(1, 40, -s / 2, s); g.rotateX(-Math.PI / 2); return g; };
     this.aimFan = new THREE.Mesh(fan(0.56), this.aimMat);
     this.aimFanS = new THREE.Mesh(fan(0.76), this.aimMat);
+    this.aimCone = new THREE.Mesh(fan(1.24), this.aimMat); // Mochi's belly bump
     const rect = new THREE.PlaneGeometry(1, 1); rect.rotateX(-Math.PI / 2); rect.translate(0.5, 0, 0);
     this.aimRect = new THREE.Mesh(rect, this.aimMat);
-    this.aim.add(this.aimFan, this.aimFanS, this.aimRect);
+    this.aim.add(this.aimFan, this.aimFanS, this.aimRect, this.aimCone);
     const disc = new THREE.CircleGeometry(1, 48); disc.rotateX(-Math.PI / 2);
     this.aimTarget = new THREE.Mesh(disc, this.aimMat);
     this.aim.renderOrder = this.aimTarget.renderOrder = 1;
@@ -1459,7 +1532,14 @@ export class Game {
     this.aimFan.scale.setScalar(9.5);
     this.aimFanS.scale.setScalar(11);
     this.aimRect.visible = T.key !== 'blaster' && !(T.key === 'frostbite' && sup);
-    this.aimTarget.visible = T.key === 'bomber' || (T.key === 'kappa' && !sup) || (sup && (T.key === 'frostbite' || T.key === 'volt'));
+    this.aimTarget.visible = T.key === 'bomber' || (T.key === 'kappa' && !sup) || (sup && (T.key === 'frostbite' || T.key === 'volt' || T.key === 'pipchomp' || T.key === 'mochi'));
+    this.aimCone.visible = T.key === 'mochi' && !sup;
+    if (this.aimCone.visible) { this.aimRect.visible = false; this.aimCone.scale.setScalar(3.5); }
+    if (T.key === 'pipchomp' || T.key === 'mochi') { // a 4 m lunge; supers: a trap (8 m) or a landing (9 m) where you aim
+      const far = T.key === 'mochi' ? 9 : 8, d = THREE.MathUtils.clamp(this.aimDist, 2, far);
+      this.aimRect.scale.set(sup ? d : 4, 1, sup ? 0.14 : 1.1);
+      if (sup) { this.aimTarget.position.set(p.pos.x + dir.x * d, 0.065, p.pos.z + dir.z * d); this.aimTarget.scale.setScalar(T.key === 'mochi' ? 4 : 1); }
+    }
     if (T.key === 'gunslinger') this.aimRect.scale.set(sup ? 20 : 16, 1, sup ? 1.3 : 0.8);
     if (T.key === 'frostbite') {
       this.aimRect.scale.set(12, 1, 0.9);

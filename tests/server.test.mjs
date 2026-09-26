@@ -102,7 +102,7 @@ await test('brawler names and loadouts from the network are checked', () => {
 });
 
 await test('every gadget works, with 3 charges and a 5 s lockout', () => {
-  for (const type of ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt', 'kappa']) for (const gad of ['A', 'B']) {
+  for (const type of ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt', 'kappa', 'pipchomp', 'mochi']) for (const gad of ['A', 'B']) {
     const m = new ServerMatch({ map: 'oasis', roster: makeRoster([{ id: 'alice', name: 'a', type: `${type}:${gad}1` }]), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
     const g = m.game;
     while (g.time < 6) m.advance(0.05);
@@ -384,7 +384,9 @@ await test('duo: a ping reaches the partner only, once a second', () => {
 /* ------------------------------ Nurse Kappa (v0.14) ------------------------------ */
 
 function kappaMatch(lo = 'A1', duo = false) {
-  const m = new ServerMatch({ map: 'oasis', roster: makeRoster([{ id: 'k', name: 'k', type: 'kappa', lo }], { duo }), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
+  const roster = makeRoster([{ id: 'k', name: 'k', type: 'kappa', lo }], { duo });
+  for (const r of roster) if (!r.human) { r.type = 'volt'; r.lo = 'A1'; } // plain targets: no Heavyweight, no dash
+  const m = new ServerMatch({ map: 'oasis', roster, send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
   const g = m.game;
   while (g.time < 6) m.advance(0.05);
   g.brains.clear();
@@ -432,7 +434,7 @@ await test('Kappa: in Duo the splash heals her partner, Bowl Splash heals over t
 await test('Kappa: the Tidal Wave hits, pushes (or pulls) and parts the gas', () => {
   for (const star of [1, 2]) {
     const { m, g, k } = kappaMatch('A' + star);
-    const foe = g.brawlers.find(o => o !== k), c = openRow(g);
+    const foe = g.brawlers.find(o => o !== k && o.type.key !== 'mochi'), c = openRow(g); // (Heavyweight halves pushes)
     for (const o of g.brawlers) if (o !== k && o !== foe) place(o, -40, -40);
     place(k, c.x, c.z); place(foe, c.x + 4, c.z);
     foe.ccImmuneT = 0;
@@ -447,6 +449,212 @@ await test('Kappa: the Tidal Wave hits, pushes (or pulls) and parts the gas', ()
     for (let i = 0; i < 30; i++) m.advance(0.05);
     assert.ok(!g.poison.inLane(c.x + 5, c.z), 'the lane never closes');
   }
+});
+
+/* ------------------------------ Windmill Isles and the map kit (v0.15) ------------------------------ */
+
+function kitMatch(map) {
+  const m = new ServerMatch({ map, roster: makeRoster([{ id: 'alice', name: 'a', type: 'volt' }]), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
+  const g = m.game;
+  while (g.time < 6) m.advance(0.05);
+  g.brains.clear();
+  for (const b of g.brawlers) { b.netDriven = false; b.moveIntent.set(0, 0, 0); }
+  return { m, g };
+}
+const tiles = (g, ch) => { const out = []; for (let j = 0; j < 25; j++) for (let i = 0; i < 25; i++) if (g.arena.get(i, j) === ch) out.push([i, j]); return out; };
+const stand = (o, x, z) => { o.pos.set(x, 0, z); o.net.set(x, z); o.vel.set(0, 0, 0); o.moveIntent.set(0, 0, 0); o.knock.set(0, 0, 0); };
+
+await test('Windmill Isles: 8 spawns on land, no gas, the islands crumble and the match ends', () => {
+  const { m, g } = kitMatch('isles');
+  assert.equal(g.arena.spawns.length, 8);
+  for (const s of g.arena.spawns) assert.notEqual(g.arena.charAt(s.x, s.z), 'V', 'a spawn over the void');
+  assert.ok(g.kit.crumbles && g.poison.startAt > 1e8, 'gas instead of crumbling');
+  g.brains.clear();
+  const land = () => tiles(g, '.').length;
+  const before = land();
+  while (g.time < 62) m.advance(0.05);
+  assert.ok(land() < before * 0.7, `the outer islands did not fall (${before} -> ${land()})`);
+});
+
+await test('Windmill Isles: a bot match plays to the end', () => {
+  const m = new ServerMatch({ map: 'isles', roster: makeRoster([{ id: 'alice', name: 'a', type: 'volt' }]), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
+  const g = m.game;
+  g.net = null; g.onLeft('alice');
+  let falls = 0;
+  for (let i = 0; i < 20 * 400 && !g.ended; i++) { m.advance(0.05); }
+  falls = g.brawlers.filter(b => b.fell).length;
+  assert.ok(g.ended, `no winner after ${Math.round(g.time)} s (${g.brawlers.filter(b => b.alive).length} left)`);
+  console.log(`     (ended at ${Math.round(g.time)} s, ${falls} ring-outs)`);
+});
+
+await test('ring-out: pushed onto the void, you fall; the pusher gets the K.O.', () => {
+  const { m, g } = kitMatch('isles');
+  const [a, b] = g.brawlers;
+  // a land tile next to the void, the void to the east
+  const A = g.arena;
+  let spot = null;
+  for (let j = 1; j < 24 && !spot; j++) for (let i = 1; i < 23; i++) if (A.get(i, j) === '.' && A.get(i + 1, j) === 'V' && A.get(i + 2, j) === 'V') { spot = A.center(i, j); break; }
+  assert.ok(spot, 'no edge');
+  for (const o of g.brawlers) if (o !== a && o !== b) stand(o, 0, 0);
+  stand(a, spot.x, spot.z); stand(b, spot.x - 3, spot.z);
+  a.maxHp = a.hp = 1e6;
+  const kos = b.stats.kos;
+  g.applyKnock(a, 16, 0, b);
+  for (let i = 0; i < 30 && a.alive; i++) m.advance(0.05);
+  assert.ok(!a.alive, 'did not fall');
+  assert.equal(b.stats.kos, kos + 1, 'the pusher got no K.O.');
+  // walking alone never takes you over the edge
+  stand(b, spot.x, spot.z); b.moveIntent.set(1, 0, 0);
+  for (let i = 0; i < 40; i++) { b.moveIntent.set(1, 0, 0); m.advance(0.05); }
+  assert.ok(b.alive, 'walked off the edge');
+});
+
+await test('explosive barrels: 900 around, a push, and the next barrel goes too', () => {
+  const { m, g } = kitMatch('isles');
+  const A = g.arena, bs = tiles(g, 'E');
+  assert.ok(bs.length >= 4);
+  const [i, j] = bs[0], c = A.center(i, j), o = g.brawlers[1];
+  stand(o, c.x + 1.8, c.z);
+  o.maxHp = o.hp = 5000;
+  g.damageCrate(i, j, 700, g.brawlers[0]);
+  m.advance(0.05);
+  assert.equal(A.get(i, j), '.', 'the barrel is still there');
+  assert.ok(o.hp <= 5000 - 900, `no blast damage: ${5000 - o.hp}`);
+  // chain: two barrels side by side
+  const { m: m2, g: g2 } = kitMatch('dunes');
+  const d = tiles(g2, 'E');
+  assert.ok(d.length >= 1, 'Dunes has no barrel'); // 4 on the map; bots may have shot some in the first seconds
+  const A2 = g2.arena;
+  A2.grid[d[0][1]][d[0][0] + 1] = 'E'; A2.makeBarrel(d[0][0] + 1, d[0][1]);
+  g2.damageCrate(d[0][0], d[0][1], 1e9, null);
+  for (let k = 0; k < 10; k++) m2.advance(0.05);
+  assert.notEqual(A2.get(d[0][0] + 1, d[0][1]), 'E', 'no chain reaction');
+});
+
+await test('jump pads send you to open ground toward the middle; Oasis has 4', () => {
+  const { m, g } = kitMatch('oasis');
+  assert.equal(g.kit.pads.length, 4);
+  const { m: mi, g: gi } = kitMatch('isles');
+  for (const p of gi.kit.pads) {
+    const o = gi.brawlers[1];
+    o.alive = true; stand(o, p.x, p.z); o.dash = null;
+    for (let k = 0; k < 30; k++) mi.advance(0.05);
+    assert.ok(o.alive, 'a pad threw someone into the void');
+    const ch = gi.arena.charAt(o.pos.x, o.pos.z);
+    assert.ok(ch !== 'V' && Math.hypot(o.pos.x - p.x, o.pos.z - p.z) > 5, `bad landing ${ch}`);
+  }
+});
+
+await test('bridges break under explosions; mushrooms heal and grow back', () => {
+  const { m, g } = kitMatch('isles');
+  const [i, j] = tiles(g, '=')[0], c = g.arena.center(i, j);
+  g.kit.damageArea(c.x, c.z, 0.5, 700);
+  assert.equal(g.arena.get(i, j), '=', 'broke too early');
+  g.kit.damageArea(c.x, c.z, 0.5, 700);
+  assert.equal(g.arena.get(i, j), 'V', 'the bridge did not break');
+  const [si, sj] = tiles(g, 'H')[0], sc = g.arena.center(si, sj), o = g.brawlers[1];
+  for (const x of g.brawlers) if (x !== o) stand(x, 0, 0);
+  stand(o, sc.x, sc.z); o.hp = 1000; o.lastHurt = g.time;
+  for (let k = 0; k < 50; k++) { o.lastHurt = g.time; m.advance(0.05); }
+  assert.ok(o.hp >= 2150, `mushroom heal: ${o.hp}`);
+  assert.ok(!g.kit.shrooms.find(s => s.i === si && s.j === sj).ready, 'the mushroom is still there');
+});
+
+/* ------------------------------ Pip & Chomp, Mochi (v0.15) ------------------------------ */
+
+function duel(type, lo = 'A1') {
+  const m = new ServerMatch({ map: 'oasis', roster: makeRoster([{ id: 'me', name: 'me', type, lo }]), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
+  const g = m.game;
+  while (g.time < 6) m.advance(0.05);
+  g.brains.clear();
+  for (const b of g.brawlers) { b.netDriven = false; b.moveIntent.set(0, 0, 0); }
+  const me = g.byId.get('me'), foe = g.brawlers.find(o => o !== me && o.type.key !== 'mochi'), c = openRow(g);
+  for (const o of g.brawlers) if (o !== me && o !== foe) place(o, -40, -40);
+  place(me, c.x, c.z);
+  foe.maxHp = foe.hp = 20000; foe.ccImmuneT = 0;
+  return { m, g, me, foe, c };
+}
+
+await test('Pip & Chomp: the lunge moves you and bites the first enemy (bending up to 15°)', () => {
+  const { m, g, me, foe, c } = duel('pipchomp');
+  place(foe, c.x + 3.5, c.z + 0.7); // off the aim line, within the magnetism
+  const x0 = me.pos.x;
+  assert.ok(g.tryAttack(me, 1, 0, foe.pos.clone(), false));
+  for (let i = 0; i < 10; i++) m.advance(0.05);
+  assert.ok(me.pos.x > x0 + 2, 'the lunge did not move Pip');
+  assert.ok(20000 - foe.hp >= 800 * me.dmgMul - 1, `bite: ${20000 - foe.hp}`);
+  const miss = duel('pipchomp');
+  place(miss.foe, miss.c.x - 6, miss.c.z);
+  const hp = miss.foe.hp;
+  miss.g.tryAttack(miss.me, 1, 0, miss.me.pos.clone(), false);
+  for (let i = 0; i < 10; i++) miss.m.advance(0.05);
+  assert.equal(miss.foe.hp, hp, 'a bite behind the back');
+});
+
+await test('Venus Trap: a bush that bites, roots and reveals the first enemy, one per Pip', () => {
+  const { m, g, me, foe, c } = duel('pipchomp');
+  place(foe, c.x - 20, c.z);
+  me.superCharge = 1;
+  assert.ok(g.tryAttack(me, 1, 0, { x: c.x + 5, z: c.z }, true));
+  assert.equal(g.kit.traps.length, 1, 'no trap');
+  const T = g.kit.traps[0];
+  assert.equal(g.arena.get(T.i, T.j), 'B', 'the trap is not a bush');
+  me.superCharge = 1;
+  g.tryAttack(me, 1, 0, { x: c.x + 7, z: c.z }, true);
+  assert.equal(g.kit.traps.length, 1, 'two traps');
+  const T2 = g.kit.traps[0];
+  place(foe, T2.x, T2.z);
+  m.advance(0.05);
+  assert.equal(g.kit.traps.length, 0, 'the trap did not go off');
+  assert.ok(foe.rootT > 0.8 && foe.revealT > 2.5, 'no root / reveal');
+  assert.ok(20000 - foe.hp >= 790, `trap damage ${20000 - foe.hp}`);
+});
+
+await test('Mochi: 3 jelly waves push enemies back; the Pound lands, hurts and stuns', () => {
+  const { m, g, me, foe, c } = duel('mochi');
+  assert.equal(me.maxHp, 6800);
+  place(foe, c.x + 2, c.z);
+  assert.ok(g.tryAttack(me, 1, 0, foe.pos.clone(), false));
+  for (let i = 0; i < 8; i++) m.advance(0.05);
+  assert.ok(20000 - foe.hp >= 420 * 2 * me.dmgMul, `bump: ${20000 - foe.hp}`);
+  assert.ok(foe.pos.x > c.x + 2.5, 'not pushed back');
+  place(foe, c.x + 6, c.z); foe.ccImmuneT = 0;
+  const hp = foe.hp;
+  me.superCharge = 1;
+  assert.ok(g.tryAttack(me, 1, 0, foe.pos.clone(), true));
+  for (let i = 0; i < 24; i++) m.advance(0.05);
+  assert.ok(Math.hypot(me.pos.x - foe.pos.x, me.pos.z - foe.pos.z) < 2.5, 'Mochi did not leap');
+  assert.ok(hp - foe.hp >= 1000 * me.dmgMul - 1, `pound: ${hp - foe.hp}`);
+  assert.ok(foe.stunned || foe.freezeT > 0, 'no stun');
+});
+
+await test('Mochi star powers: Heavyweight halves pushes, Second Helping heals on a cube; +250 HP a cube', () => {
+  const a = duel('mochi', 'A1'), b = duel('mochi', 'A2');
+  a.me.knock.set(0, 0, 0); a.g.applyKnock(a.me, 10, 0, null);
+  assert.equal(a.me.knock.x, 5, 'Heavyweight');
+  const hp = b.me.maxHp;
+  b.me.hp = 1000;
+  b.g.dropCube(b.me.pos.x, b.me.pos.z, 0, 1);
+  for (let i = 0; i < 20; i++) b.m.advance(0.05);
+  assert.equal(b.me.maxHp, hp + 250);
+  assert.ok(b.me.hp >= 1000 + 250 + 800 - 1, `Second Helping: ${b.me.hp}`);
+});
+
+await test('an online player crossing the void on a jump pad does not fall (the host waits for the landing)', () => {
+  const m = new ServerMatch({ map: 'isles', roster: makeRoster([{ id: 'alice', name: 'a', type: 'volt' }]), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
+  const g = m.game;
+  while (g.time < 6) m.advance(0.05);
+  g.brains.clear();
+  const a = g.byId.get('alice'), p = g.kit.pads[0];
+  a.maxHp = a.hp = 1e6;
+  const send = (x, z) => m.input({ from: 'alice', x, z, ax: 1, az: 0, px: x, pz: z, f: 0, s: 0, g: 0 });
+  // walk onto the pad (teleport-free: the host saw us there), then fly the arc the client would
+  a.pos.set(p.x, 0, p.z); a.net.set(p.x, p.z);
+  send(p.x, p.z); m.advance(0.05);
+  for (let k = 1; k <= 16; k++) { const f = k / 16; send(p.x + p.dx * p.dist * f, p.z + p.dz * p.dist * f); m.advance(0.05); }
+  for (let k = 0; k < 6; k++) m.advance(0.05);
+  assert.ok(a.alive, 'the host killed a player in the air over the void');
+  assert.notEqual(g.arena.charAt(a.net.x, a.net.y), 'V', 'landed on the void');
 });
 
 if (failed) { console.error(`\n${failed} test(s) failed`); process.exit(1); }

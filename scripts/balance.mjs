@@ -19,6 +19,7 @@ for (let i = 0; i < N; i++) {
   roster.forEach(r => { r.skill = 0.6; });
   const m = new ServerMatch({ map, roster, send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
   const g = m.game;
+  g.net = null; // bots only: the "no human left" rule of online matches must not end it early
   while (g.brawlers.filter(b => b.alive).length > 1 && g.time < 300) m.advance(0.05);
   for (const b of g.brawlers) {
     const rank = b.alive ? 1 : b.rank || 8;

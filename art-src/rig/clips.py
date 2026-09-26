@@ -111,6 +111,8 @@ POSE_DEFAULTS = {
     'throw_raise': -2.6,   # throwers: arm pitch of the cocked throw
     'mouth': [0, 0, 0],    # shift of the coughing hand's target (in front of the mouth)
     'watch': [0, 0, 0],    # shift of the watch-checking hand's target (in front of the chest)
+    'belly': [0, 0, 0],    # shift of the belly-patting flippers' target (Mochi)
+    'pat': [0, 0, 0],      # shift of the plant-patting hand's target (Pip & Chomp)
 }
 
 
@@ -691,16 +693,64 @@ def c_slide(C, t, dur=1.0):
     return P
 
 
+def ready_pose(P, C, k=1.0):
+    """Body-attack styles (no gun to raise): the whole body gets ready.
+      bite  leaning forward ready to pounce, the pouch hand up, the free hand on the plant
+      slam  feet planted, leaning forward, flippers out and forward"""
+    if C.style == 'bite':  # (Spine, Spine1: the plant; Spine2 and up: the rider)
+        P.pre('Spine', q(X, 0.14 * k))
+        P.pre('Spine1', q(X, 0.1 * k))
+        P.pre('Spine2', q(X, 0.08 * k))
+        P.head(-0.2 * k)
+        for s, sg in (('L', 1), ('R', -1)):
+            d = (sg * 0.55, -0.7, 0.15) if C.armed(s) else (sg * 0.75, -0.45, -0.35)
+            blend_arm(P, s, C.arm_to(s, d), k, (-0.5 if C.armed(s) else -0.2, 0, 0))
+    else:  # slam
+        P.spine(0.22 * k)
+        P.head(-0.2 * k)
+        for s, sg in (('L', 1), ('R', -1)):
+            d = (sg * 0.7, -0.55, -0.45) if C.armed(s) else (sg * 0.8, -0.5, -0.2)  # the paddle low, face clear
+            blend_arm(P, s, C.arm_to(s, d), k, (-0.35, 0, 0))
+
+
 def c_aim(C, t, dur=1.0):
     P = stance(C, 0, 0.0)
     br = math.sin(TAU * t / dur)
-    aim_arms(P, C, 0.0)
-    P.spine(br * 0.01)
+    if C.style in ('bite', 'slam'):
+        ready_pose(P, C)
+        P.spine(br * 0.03)  # coiled, bobbing a little
+    else:
+        aim_arms(P, C, 0.0)
+        P.spine(br * 0.01)
     return P
 
 
 def c_shoot(C, t):
     P = stance(C, 0, 0.0)
+    if C.style == 'bite':  # the whole plant lunges forward and snaps its jaws, the rider jolted
+        ready_pose(P, C)
+        lunge = kick(t, 0.02, 0.07, 9.0)
+        snap = kick(t, 0.09, 0.03, 14.0)  # the jaws clap shut at the end of the lunge
+        P.loc.y = -0.12 * lunge
+        P.pre('Spine', q(X, 0.2 * lunge - 0.1 * snap))
+        P.pre('Spine1', q(X, 0.14 * lunge - 0.08 * snap))
+        P.pre('Spine2', q(X, -0.12 * lunge))  # the rider is thrown back a little ...
+        P.head(-0.1 * lunge + 0.15 * snap)  # ... and nods with the snap
+        P.pre('RightArm', q(X, -0.4 * lunge))
+        return P
+    if C.style == 'slam':  # belly bump: lean back, then thrust the belly forward
+        ready_pose(P, C, 1 - env(t, 0.0, 0.08, 0.3, 0.45))
+        back = env(t, 0.0, 0.1, 0.1, 0.16)
+        bump = kick(t, 0.14, 0.05, 7.0)
+        P.loc.y = 0.04 * back - 0.16 * bump
+        P.hips(-0.1 * back - 0.12 * bump)
+        P.pre('Spine', q(X, -0.2 * back + 0.25 * bump))   # the belly leads ...
+        P.pre('Spine1', q(X, -0.12 * back - 0.25 * bump))  # ... the chest stays back
+        P.pre('Spine2', q(X, -0.08 * back - 0.15 * bump))
+        P.head(0.15 * back + 0.15 * bump)
+        for s, sg in (('L', 1), ('R', -1)):  # flippers flung back
+            blend_arm(P, s, C.arm_to(s, (sg * 0.75, 0.45, -0.3)), max(back, bump), (-0.1, 0, 0))
+        return P
     r = kick(t, 0.02, 0.04 if C.style != 'throw' else 0.08, 7.0)
     aim_arms(P, C, r)
     return P
@@ -763,6 +813,38 @@ def c_super(C, t):
             else:
                 blend_arm(P, s, C.arm_to(s, (0.85 if s == 'L' else -0.85, 0, 0.3)), ramp(t, 0.2, 0.4) * (1 - ramp(t, 0.8, 1.1)), (-0.3, 0, 0))
         P.head(-0.2 * tuck - 0.1 * slam)
+    elif st == 'bite':  # crouch and plant: the plant hunkers down, the rider reaches to the ground
+        down = env(t, 0.0, 0.3, 0.75, 1.1)
+        shake = math.sin(t * 50) * 0.03 * env(t, 0.3, 0.35, 0.7, 0.75)
+        P.loc.z = -0.16 * down
+        P.loc.y = 0.03 * down
+        P.hips(0.08 * down)
+        P.pre('Spine', q(X, 0.12 * down))
+        P.pre('Spine1', q(X, 0.1 * down))
+        P.spine(0, 0, shake)
+        P.head(-0.1 * down)
+        for s in ('L', 'R'):
+            P.leg_ik(s, 0, 0, 0.06 if s == 'L' else -0.06)
+        for s, sg in (('L', 1), ('R', -1)):
+            if C.armed(s):  # the pouch pressed down to the ground in front
+                blend_arm(P, s, C.arm_to(s, (sg * 0.3, -0.45, -0.85)), down, (0, 0, 0))
+            else:  # the other hand holds on
+                blend_arm(P, s, C.arm_to(s, (sg * 0.8, -0.2, -0.5)), down, (-0.3, 0, 0))
+    elif st == 'slam':  # a jump, arms up, and a big landing squash
+        squat = env(t, 0.0, 0.18, 0.2, 0.28)
+        air = clamp01((t - 0.24) / 0.36)
+        hop = math.sin(math.pi * air) * (0.24 <= t <= 0.6)
+        land = env(t, 0.58, 0.64, 0.72, 1.05)
+        P.loc.z = -0.12 * squat + 0.5 * hop - 0.16 * land
+        P.hips(0.1 * squat + 0.12 * land)
+        P.spine(0.15 * squat - 0.12 * hop + 0.3 * land)
+        P.head(-0.25 * hop - 0.1 * land)
+        for s in ('L', 'R'):
+            P.leg_ik(s, 0.03 * hop, max(0.0, P.loc.z) + 0.08 * hop, 0.05 if s == 'L' else -0.05)
+        rise = ramp(t, 0.2, 0.35) * (1 - ramp(t, 0.58, 0.66))
+        for s, sg in (('L', 1), ('R', -1)):
+            blend_arm(P, s, C.arm_to(s, C.up_dir(s, -0.2, 0.05)), rise, (-0.2, 0, 0))
+            blend_arm(P, s, C.arm_to(s, (sg * 0.95, -0.2, -0.1)), land, (-0.1, 0, 0))  # arms out on landing
     else:  # cast: arms to the sky, lifted off the ground by the storm
         lift = env(t, 0.1, 0.35, 0.75, 1.05)
         tremble = math.sin(t * 60) * 0.03 * lift
@@ -813,8 +895,27 @@ def c_death(C, t):
     return P
 
 
+def belly_pat(P, C, s, lift, k):
+    """Flipper s on the front of the belly (lift 0 = on it, 1 = raised off it), blended by k."""
+    sg = SIDE[s][1]
+    tc, tr = C.torso_ell or (C.head['Spine1'], Vector((0.4, 0.4, 0.4)))
+    z = C.head['Spine'].z + 0.1
+    target = Vector((sg * tr.x * 0.45, tc.y - tr.y * 0.9 - 0.06 - 0.12 * lift, z + 0.08 * lift)) + Vector(C.over['belly'])
+    blend_reach(P, s, target, (sg, 0.2, -0.6), k)
+
+
 def c_victory(C, t, dur=1.2):
-    """Jumping for joy, fists in the air (loops)."""
+    """Jumping for joy, fists in the air (loops). Mochi drums its belly instead."""
+    if C.key == 'mochi':
+        P = stance(C, t, 0.0)
+        beat = TAU * t / dur * 4  # 4 beats per loop, the flippers alternating
+        bounce = 0.5 + 0.5 * math.cos(2 * beat)
+        P.loc.z = 0.03 * bounce
+        P.spine(-0.12, 0, math.sin(beat) * 0.06)
+        P.head(-0.3, math.sin(beat) * 0.12, 0)
+        for s, ph in (('L', 0.0), ('R', math.pi)):
+            belly_pat(P, C, s, 0.5 + 0.5 * math.sin(beat + ph), 1.0)
+        return P
     squat = env(t, 0.0, 0.2, 0.22, 0.32) + env(t, 0.78, 0.88, 0.95, 1.2)
     air = clamp01((t - 0.28) / 0.52)
     hop = math.sin(math.pi * air) * (0.28 <= t <= 0.8)
@@ -936,6 +1037,28 @@ def c_fidget(C, t):
         e = env(t, 1.3, 1.5, 2.6, 2.9)
         blend_arm(P, w, q(X, -0.6) @ C.hang[w], e, (-0.7, 0, 0))
         P.pre(SIDE[w][0] + 'Hand', q(X, -spin * e))
+    elif k == 'pipchomp':  # the rider pats the plant's head, the plant wiggles happily
+        s = C.free
+        sg = SIDE[s][1]
+        pat = env(t, 0.1, 0.45, 1.9, 2.3)
+        tap = 0.5 + 0.5 * math.cos(TAU * 3.0 * (t - 0.45))
+        # the small arm reaches down beside the rider onto the plant's head
+        target = C.head[SIDE[s][0] + 'Arm'] + Vector((sg * 0.1, -0.06, -0.19 + 0.06 * tap)) + Vector(C.over['pat'])
+        blend_reach(P, s, target, (sg, 0.2, -0.5), pat)
+        P.head(0.25 * pat, sg * 0.2 * pat, 0)  # looking down at it
+        wig = env(t, 0.9, 1.1, 2.5, 2.9) * math.sin(TAU * 2.2 * (t - 0.9))
+        P.pre('Spine', E3(0, 0.1 * wig, 0.12 * wig))  # the plant wiggles under the rider
+        P.pre('Spine1', E3(0, 0.08 * wig, 0.1 * wig))
+        P.pre('Spine2', E3(0, -0.12 * wig, -0.18 * wig))  # the rider stays upright
+        P.head(-0.15 * env(t, 2.0, 2.3, 2.6, 2.95))  # a happy look up
+    elif k == 'mochi':  # pats its belly with both flippers, content
+        e = env(t, 0.1, 0.4, 2.4, 2.85)
+        for s, ph in (('L', 0.0), ('R', 0.5)):
+            lift = 0.5 + 0.5 * math.cos(TAU * 2.0 * (t - 0.4) + ph * math.pi)
+            belly_pat(P, C, s, lift, e)
+        P.spine(-0.08 * e)
+        P.head(-0.15 * e, math.sin(TAU * 0.5 * t) * 0.15 * e, 0.1 * e)
+        P.loc.z = 0.015 * e * math.sin(TAU * 4.0 * t)
     elif k == 'frostbite':  # taps the staff twice, then shivers
         e = env(t, 0.1, 0.3, 1.5, 1.8)
         tap = abs(math.sin(math.pi * clamp01((t - 0.3) / 1.2) * 2))

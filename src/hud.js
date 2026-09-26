@@ -50,10 +50,18 @@ export class Hud {
     this.mateArrow.id = 'mateArrow';
     this.pingsEl = document.createElement('div');
     this.pingsEl.id = 'pings';
+    this.bushEl = document.createElement('div'); // hidden in a bush: leafy screen edges
+    this.bushEl.id = 'bushEdge';
+    this.root.appendChild(this.bushEl);
     this.ghostEl = document.createElement('div'); // you are knocked out: how long your partner has to revive you
     this.ghostEl.id = 'ghostMsg';
     this.root.append(this.feed, this.banner, this.lowEl, this.hurtEl, this.dpsEl, this.team, this.mateArrow, this.pingsEl, this.ghostEl);
     this.pings = [];
+  }
+
+  bushEdge(k) {
+    const v = k > 0.02 ? k.toFixed(2) : '0';
+    if (v !== this.bushV) { this.bushEl.style.opacity = v; this.bushV = v; }
   }
 
   // A ping marker (game.js pingFx): an icon over the spot for 4 s, kept on screen at the edge.
@@ -175,7 +183,7 @@ export class Hud {
       const el = document.createElement('div');
       el.className = 'ov ' + (b === player ? 'me' : b.g.ally(b, player) ? 'mate' : 'foe');
       el.innerHTML = `
-        <div class="ov-bubble"></div>
+        <div class="ov-bubble"></div>${b === player ? '<div class="ov-eye"><b></b><small></small></div>' : ''}
         <div class="ov-name">${b === player ? t('hud.you') : (b.persona ? PERSONA_ICONS[b.persona] + ' ' : '') + b.name}<span class="ov-cubes"></span></div>
         <div class="ov-hp"><div class="ov-lag"></div><div class="ov-fill"></div><span class="ov-num"></span></div>
         ${b === player ? '<div class="ov-ammo"><i><b></b></i><i><b></b></i><i><b></b></i></div>' : ''}`;
@@ -183,6 +191,7 @@ export class Hud {
       this.items.set(b, {
         el, fill: el.querySelector('.ov-fill'), lag: el.querySelector('.ov-lag'), num: el.querySelector('.ov-num'),
         cubes: el.querySelector('.ov-cubes'), ammo: [...el.querySelectorAll('.ov-ammo b')], bubble: el.querySelector('.ov-bubble'), bubbleT: 0,
+        eye: el.querySelector('.ov-eye'), eyeNum: el.querySelector('.ov-eye small'),
         shown: true, lagV: 1, lastHp: -1, lastCubes: -1, lastT: '',
       });
     }
@@ -214,6 +223,12 @@ export class Hud {
         o.ammo[k].style.width = (Math.min(1, Math.max(0, b.ammo - k)) * 100).toFixed(0) + '%';
       }
       o.el.classList.toggle('hidden-bush', b.inBush);
+      if (o.eye) { // your own plate: hidden (eye closed) or giving yourself away (eye open, seconds left)
+        const st = b === game.player && b.inBush && game.mode === 'play' && !game.dojo ? (b.revealT > 0 ? 'seen' : 'hid') : '';
+        const txt = st === 'seen' ? Math.max(0.1, b.revealT).toFixed(1) : '';
+        if (st !== o.eyeSt) { o.eye.className = 'ov-eye ' + st; o.eyeSt = st; }
+        if (txt !== o.eyeTxt) { o.eyeNum.textContent = txt; o.eyeTxt = txt; }
+      }
       if (o.bubbleT > 0 && (o.bubbleT -= dt) <= 0) o.bubble.className = 'ov-bubble';
       const regen = b.regen && b.hp < b.maxHp;
       if (regen !== o.regen) { o.el.classList.toggle('regen', regen); o.regen = regen; } // healing: the bar glows
@@ -232,8 +247,14 @@ export class Hud {
       this.aliveEl.textContent = alive;
       this.lastAlive = alive;
     }
-    const P = game.poison;
-    if (P) {
+    const P = game.poison, K = game.kit;
+    if (K && K.crumbles && K.nextIn !== Infinity && !game.dojo) { // then the gas, once the islands are gone
+      const n = K.nextIn;
+      this.poisonPill.style.display = '';
+      this.poisonPill.classList.toggle('warn', n < 6 && n > 0);
+      this.poisonEl.textContent = n === Infinity ? t('hud.max') : `${Math.floor(Math.max(0, n) / 60)}:${String(Math.ceil(Math.max(0, n)) % 60).padStart(2, '0')}`;
+      this.poisonPill.querySelector('small').textContent = t('hud.islandIn');
+    } else if (P) {
       const n = P.nextIn;
       this.poisonPill.style.display = game.dojo ? 'none' : '';
       this.poisonPill.classList.toggle('warn', n < 6 && n > 0);

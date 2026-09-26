@@ -21,6 +21,7 @@ TRACKS = {  # name: (model, prompt)
     'm_dunes': ('google/lyria-3-pro-preview', 'Spaghetti western showdown in a sandstorm, twangy guitar, whistling, galloping drums, tense and fun, builds up in sections, ' + STYLE),
     'm_grove': ('google/lyria-3-pro-preview', 'Rainy forest adventure battle music, pizzicato strings, woodblocks, soft thunder-like timpani, curious then heroic, ' + STYLE),
     'm_frost': ('google/lyria-3-pro-preview', 'Snowy mountain battle music, sparkling celesta and glockenspiel, sleigh bells, bouncy bass, playful and brisk, ' + STYLE),
+    'm_isles': ('google/lyria-3-pro-preview', 'Whimsical sky islands battle music, bouncy accordion melody over big taiko drums, windy flutes, playful and adventurous, with a breezy bridge and a heroic final section, ' + STYLE),
     'm_marsh': ('google/lyria-3-pro-preview', 'Spooky foggy swamp battle music, playful bassoon, muted trumpets, creepy-cute organ, sneaky groove, ' + STYLE),
     # variety and game moments (audio.js picks them)
     'battle2': ('google/lyria-3-pro-preview', 'Second arena battle theme, bouncy electro-funk, slap bass, retro synth arpeggios, handclaps, cheeky and energetic, ' + STYLE),

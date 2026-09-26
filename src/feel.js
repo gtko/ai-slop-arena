@@ -10,6 +10,7 @@ const WEAPONS = {
   frostbite: [0.035, 0.05, 0.15], frostbiteS: [0.12, 0.1, 0.4],
   volt: [0.045, 0.06, 0.18], voltS: [0.07, 0.3, 0.35],
   kappa: [0.04, 0.08, 0.2], kappaS: [0.08, 0.35, 0.4],
+  pipchomp: [0.08, 0.15, 0.25], pipchompS: [0.1, 0.12, 0.3], mochi: [0.07, 0.15, 0.3], mochiS: [0.12, 0.5, 0.5],
 };
 const DEFAULT = [0.03, 0.05, 0.18];
 export const weapon = (source, sup) => (source && WEAPONS[source.type.key + (sup ? 'S' : '')]) || DEFAULT;

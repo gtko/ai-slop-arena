@@ -169,7 +169,7 @@ export class ArenaEvents {
         const i = ci + di, j = cj + dj, c = A.center(i, j, new THREE.Vector3());
         if (Math.hypot(c.x - w.x, c.z - w.z) > 1.4) continue;
         if (A.get(i, j) === '#') g.breakWall(i, j);
-        else if (A.get(i, j) === 'C') g.damageCrate(i, j, 1e9, null);
+        else if (A.get(i, j) === 'C' || A.get(i, j) === 'E') g.damageCrate(i, j, 1e9, null);
       }
     }
   }
