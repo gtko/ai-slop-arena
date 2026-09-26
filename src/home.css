@@ -535,3 +535,21 @@ body.touch #touch .t-super b { top: 50%; margin-top: 12px; font-size: 9px; }
   body.touch #killfeed { top: calc(72px + env(safe-area-inset-top)); }
   #result .row-btns { margin: 0 -14px; padding: 16px 14px 12px; }
 }
+
+/* skins of the chosen brawler, under its name (main.js renderSkins) */
+.hero-skins { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.hero-skins small { font-size: 10px; font-weight: 900; letter-spacing: 1.2px; color: var(--muted); margin-inline-end: 4px; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+.hs { position: relative; width: 44px; height: 44px; padding: 0; border-radius: 12px; overflow: hidden; cursor: pointer; border: 2px solid rgba(255, 255, 255, 0.14);
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--c, #8f6bff) 55%, #fff) 0%, var(--c, #8f6bff) 60%, color-mix(in srgb, var(--c, #8f6bff) 45%, #000) 100%);
+  transition: transform 0.12s, border-color 0.12s; }
+.hs img { position: absolute; left: 50%; bottom: -4px; height: 50px; transform: translateX(-50%); }
+.hs:hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.4); }
+.hs.on { border-color: var(--yellow); box-shadow: 0 0 0 2px var(--ink), 0 0 12px rgba(255, 210, 63, 0.5); }
+.hs.locked img { filter: grayscale(0.2) brightness(0.55) !important; }
+.hs.locked i { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-size: 16px; }
+@media (max-height: 520px) and (orientation: landscape) {
+  .hero-skins small { display: none; }
+  .hs { width: 32px; height: 32px; border-radius: 9px; }
+  .hs img { height: 36px; }
+  .hs.locked i { font-size: 12px; }
+}
