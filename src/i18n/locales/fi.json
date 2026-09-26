@@ -635,5 +635,47 @@
   "shop.gemsSoon": "TULOSSA PIAN",
   "menu.locked2": "AVAA TÄMÄ TAPPELIJA",
   "menu.unlockFirst": "Avaa tämä tappelija, niin voit pelata sillä verkossa tai yksin",
-  "menu.tryDojo": "Kokeile sitä ilmaiseksi harjoituksessa"
+  "menu.tryDojo": "Kokeile sitä ilmaiseksi harjoituksessa",
+  "menu.duo": "DUO",
+  "menu.duoDesc": "4 kahden joukkuetta · elvytä parisi",
+  "menu.modeLbl": "Tila",
+  "hud.teamsLeft": "JOUKKUEITA JÄLJELLÄ",
+  "hud.revived": "ELVYTETTY!",
+  "hud.reviving": "Elvytetään… {n} %",
+  "hud.ghost": "Tyrmätty · {n} s aikaa elvyttää",
+  "hud.mateOut": "Poissa",
+  "hud.youGhost": "Tyrmätty! Parillasi on {n} s aikaa elvyttää sinut",
+  "hud.beingRevived": "Parisi elvyttää sinua… {n} %",
+  "hud.revivesLeft": {
+    "one": "{n} elvytys jäljellä",
+    "other": "{n} elvytystä jäljellä"
+  },
+  "result.wonDuo": "Sinä ja parisi olette viimeinen pystyssä oleva joukkue.",
+  "result.lostDuo": {
+    "one": "Joukkueesi putosi. {n} joukkue kesti teitä pidempään.",
+    "other": "Joukkueesi putosi. {n} joukkuetta kesti teitä pidempään."
+  },
+  "party.queue": "JONOON YHDESSÄ",
+  "party.tooMany": "Liian monta pelaajaa jonottamaan yhdessä: tässä tilassa enintään {n}.",
+  "party.name": {
+    "one": "{n} hengen ryhmä",
+    "other": "{n} hengen ryhmä"
+  },
+  "opt.act.ping": "Pingi (Duo)",
+  "bark.hunter.thanks": "Takaisin jahtiin. Kiitos!",
+  "bark.camper.thanks": "Huh. Takaisin pusikkooni.",
+  "bark.looter.thanks": "Olen sinulle kuution velkaa!",
+  "bark.vulture.thanks": "Kiitos. No niin, kuka on heikkona?",
+  "bark.coward.thanks": "Tulitko takaisin minun takiani?!",
+  "bark.showoff.thanks": "Vuosisadan paluu!",
+  "brawler.kappa.role": "Parantaja",
+  "brawler.kappa.desc": "Pomotteleva jokipeikko-sairaanhoitaja, joka heittää saippuakuplia seinien yli: vihollisia satuttava roiske parantaa häntä, ja duossa se parantaa hänen pariaan. Super: hyökyaalto, joka pyyhkäisee viholliset pois ja halkaisee kaasun.",
+  "gad.kappaA.name": "Jokisukellus",
+  "gad.kappaA.desc": "Sukella 5 m (8 m vedestä), koskematon sekunnin murto-osan ajan.",
+  "gad.kappaB.name": "Kulhoroiske",
+  "gad.kappaB.desc": "Tyhjennä päälaen kulhosi: lätäkkö parantaa sinua ja pariasi 400/s 3 s ajan, sitten kävelet hitaammin 4 s ajan.",
+  "star.hydrotherapy.name": "Vesiterapia",
+  "star.hydrotherapy.desc": "Parannuksesi ovat 30 % vahvempia.",
+  "star.undertow.name": "Pohjavirta",
+  "star.undertow.desc": "Hyökyaalto vetää vihollisia sinua kohti sen sijaan, että työntäisi ne pois."
 }

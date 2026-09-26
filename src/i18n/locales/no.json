@@ -635,5 +635,47 @@
   "shop.gemsSoon": "KOMMER SNART",
   "menu.locked2": "LÅS OPP DENNE BRAWLEREN",
   "menu.unlockFirst": "Lås opp denne brawleren for å spille den online eller solo",
-  "menu.tryDojo": "Prøv den gratis på trening"
+  "menu.tryDojo": "Prøv den gratis på trening",
+  "menu.duo": "DUO",
+  "menu.duoDesc": "4 lag à 2 · gjenoppliv partneren din",
+  "menu.modeLbl": "Modus",
+  "hud.teamsLeft": "LAG IGJEN",
+  "hud.revived": "GJENOPPLIVET!",
+  "hud.reviving": "Gjenoppliver… {n}%",
+  "hud.ghost": "Slått ut · {n} s til gjenoppliving",
+  "hud.mateOut": "Ute",
+  "hud.youGhost": "Slått ut! Partneren din har {n} s på å gjenopplive deg",
+  "hud.beingRevived": "Partneren din gjenoppliver deg… {n}%",
+  "hud.revivesLeft": {
+    "one": "{n} gjenoppliving igjen",
+    "other": "{n} gjenopplivinger igjen"
+  },
+  "result.wonDuo": "Du og partneren din er det siste laget som står.",
+  "result.lostDuo": {
+    "one": "Laget ditt er ute. {n} lag holdt ut lenger enn dere.",
+    "other": "Laget ditt er ute. {n} lag holdt ut lenger enn dere."
+  },
+  "party.queue": "KØ SAMMEN",
+  "party.tooMany": "For mange spillere til å stå i kø sammen: maks {n} i denne modusen.",
+  "party.name": {
+    "one": "gruppe på {n}",
+    "other": "gruppe på {n}"
+  },
+  "opt.act.ping": "Ping (Duo)",
+  "bark.hunter.thanks": "Tilbake på jakt. Takk!",
+  "bark.camper.thanks": "Puh. Tilbake til busken min.",
+  "bark.looter.thanks": "Jeg skylder deg en kube!",
+  "bark.vulture.thanks": "Takk. Så, hvem er svak?",
+  "bark.coward.thanks": "Kom du tilbake for meg?!",
+  "bark.showoff.thanks": "Århundrets comeback!",
+  "brawler.kappa.role": "Helbreder",
+  "brawler.kappa.desc": "En sjefete sykepleier og elvevette som lobber såpebobler over vegger: et plask som skader fiender helbreder henne, og i Duo helbreder det partneren hennes. Super: en flodbølge som feier bort fiender og deler gassen.",
+  "gad.kappaA.name": "Elvedykk",
+  "gad.kappaA.desc": "Dykk 5 m (8 m fra vann), urørlig et brøkdels sekund.",
+  "gad.kappaB.name": "Skålplask",
+  "gad.kappaB.desc": "Tøm skålen på hodet: en dam helbreder deg og partneren din 400/s i 3 s, så går du saktere i 4 s.",
+  "star.hydrotherapy.name": "Hydroterapi",
+  "star.hydrotherapy.desc": "Helbredelsene dine er 30 % sterkere.",
+  "star.undertow.name": "Understrøm",
+  "star.undertow.desc": "Flodbølgen drar fiender mot deg i stedet for å dytte dem unna."
 }

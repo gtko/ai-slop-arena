@@ -635,5 +635,47 @@
   "shop.gemsSoon": "KOMMER SNART",
   "menu.locked2": "LÅS UPP DEN HÄR BRAWLERN",
   "menu.unlockFirst": "Lås upp den här brawlern för att spela den online eller solo",
-  "menu.tryDojo": "Testa den gratis i träning"
+  "menu.tryDojo": "Testa den gratis i träning",
+  "menu.duo": "DUO",
+  "menu.duoDesc": "4 lag med 2 · återuppliva din partner",
+  "menu.modeLbl": "Läge",
+  "hud.teamsLeft": "LAG KVAR",
+  "hud.revived": "ÅTERUPPLIVAD!",
+  "hud.reviving": "Återupplivar… {n}%",
+  "hud.ghost": "Utslagen · {n} s att återuppliva",
+  "hud.mateOut": "Ute",
+  "hud.youGhost": "Utslagen! Din partner har {n} s på sig att återuppliva dig",
+  "hud.beingRevived": "Din partner återupplivar dig… {n}%",
+  "hud.revivesLeft": {
+    "one": "{n} återupplivning kvar",
+    "other": "{n} återupplivningar kvar"
+  },
+  "result.wonDuo": "Du och din partner är det sista laget som står kvar.",
+  "result.lostDuo": {
+    "one": "Ditt lag är ute. {n} lag höll längre än er.",
+    "other": "Ditt lag är ute. {n} lag höll längre än er."
+  },
+  "party.queue": "KÖA TILLSAMMANS",
+  "party.tooMany": "För många spelare för att köa tillsammans: högst {n} i det här läget.",
+  "party.name": {
+    "one": "grupp på {n}",
+    "other": "grupp på {n}"
+  },
+  "opt.act.ping": "Ping (Duo)",
+  "bark.hunter.thanks": "Tillbaka på jakt. Tack!",
+  "bark.camper.thanks": "Puh. Tillbaka till min buske.",
+  "bark.looter.thanks": "Jag är skyldig dig en kub!",
+  "bark.vulture.thanks": "Tack. Så, vem är svag nu?",
+  "bark.coward.thanks": "Kom du tillbaka för min skull?!",
+  "bark.showoff.thanks": "Århundradets comeback!",
+  "brawler.kappa.role": "Helare",
+  "brawler.kappa.desc": "En bossig sjuksköterska och flodvätte som lobbar såpbubblor över väggar: ett plask som skadar fiender helar henne, och i Duo helar det hennes partner. Super: en flodvåg som sveper bort fiender och delar gasen.",
+  "gad.kappaA.name": "Floddyk",
+  "gad.kappaA.desc": "Dyk 5 m (8 m från vatten), oåtkomlig i en bråkdels sekund.",
+  "gad.kappaB.name": "Skålplask",
+  "gad.kappaB.desc": "Töm skålen på huvudet: en pöl helar dig och din partner 400/s i 3 s, sedan går du långsammare i 4 s.",
+  "star.hydrotherapy.name": "Hydroterapi",
+  "star.hydrotherapy.desc": "Dina helningar är 30 % starkare.",
+  "star.undertow.name": "Underström",
+  "star.undertow.desc": "Flodvågen drar fiender mot dig i stället för att trycka bort dem."
 }

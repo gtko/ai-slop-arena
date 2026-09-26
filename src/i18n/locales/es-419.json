@@ -635,5 +635,47 @@
   "shop.gemsSoon": "PRÓXIMAMENTE",
   "menu.locked2": "DESBLOQUEA ESTE BRAWLER",
   "menu.unlockFirst": "Desbloquea este brawler para jugarlo en línea o en solo",
-  "menu.tryDojo": "Pruébalo gratis en el entrenamiento"
+  "menu.tryDojo": "Pruébalo gratis en el entrenamiento",
+  "menu.duo": "DÚO",
+  "menu.duoDesc": "4 equipos de 2 · revive a tu compañero",
+  "menu.modeLbl": "Modo",
+  "hud.teamsLeft": "EQUIPOS RESTANTES",
+  "hud.revived": "¡REVIVIDO!",
+  "hud.reviving": "Reviviendo… {n} %",
+  "hud.ghost": "Eliminado · {n} s para revivirlo",
+  "hud.mateOut": "Fuera",
+  "hud.youGhost": "¡Eliminado! Tu compañero tiene {n} s para revivirte",
+  "hud.beingRevived": "Tu compañero te está reviviendo… {n} %",
+  "hud.revivesLeft": {
+    "one": "Queda {n} reanimación",
+    "other": "Quedan {n} reanimaciones"
+  },
+  "result.wonDuo": "Tú y tu compañero son el último equipo en pie.",
+  "result.lostDuo": {
+    "one": "Tu equipo cayó. {n} equipo aguantó más que ustedes.",
+    "other": "Tu equipo cayó. {n} equipos aguantaron más que ustedes."
+  },
+  "party.queue": "JUGAR JUNTOS",
+  "party.tooMany": "Demasiados jugadores para jugar juntos: {n} como máximo en este modo.",
+  "party.name": {
+    "one": "grupo de {n}",
+    "other": "grupo de {n}"
+  },
+  "opt.act.ping": "Señal (Dúo)",
+  "bark.hunter.thanks": "De vuelta a la caza. ¡Gracias!",
+  "bark.camper.thanks": "Uf. De vuelta a mi arbusto.",
+  "bark.looter.thanks": "¡Te debo un cubo!",
+  "bark.vulture.thanks": "Gracias. Y ahora, ¿quién está débil?",
+  "bark.coward.thanks": "¡¿Volviste por mí?!",
+  "bark.showoff.thanks": "¡La remontada del siglo!",
+  "brawler.kappa.role": "Sanadora",
+  "brawler.kappa.desc": "Una enfermera kappa mandona, duende de río, que lanza burbujas de jabón por encima de los muros: una salpicadura que daña a los enemigos la cura a ella, y en Dúo también a su compañero. Súper: un maremoto que barre a los enemigos y abre el gas.",
+  "gad.kappaA.name": "Zambullida fluvial",
+  "gad.kappaA.desc": "Zambúllete 5 m (8 m desde el agua), intocable durante una fracción de segundo.",
+  "gad.kappaB.name": "Chapuzón de cuenco",
+  "gad.kappaB.desc": "Vacía el cuenco de tu cabeza: un charco te cura a ti y a tu compañero 400/s durante 3 s, luego caminas más lento durante 4 s.",
+  "star.hydrotherapy.name": "Hidroterapia",
+  "star.hydrotherapy.desc": "Tus curaciones son un 30 % más potentes.",
+  "star.undertow.name": "Contracorriente",
+  "star.undertow.desc": "El maremoto atrae a los enemigos hacia ti en lugar de alejarlos."
 }

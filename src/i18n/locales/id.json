@@ -617,5 +617,44 @@
   "shop.gemsSoon": "SEGERA HADIR",
   "menu.locked2": "BUKA BRAWLER INI",
   "menu.unlockFirst": "Buka brawler ini untuk memainkannya online atau solo",
-  "menu.tryDojo": "Coba gratis di Latihan"
+  "menu.tryDojo": "Coba gratis di Latihan",
+  "menu.duo": "DUO",
+  "menu.duoDesc": "4 tim berisi 2 · bangkitkan rekanmu",
+  "menu.modeLbl": "Mode",
+  "hud.teamsLeft": "TIM TERSISA",
+  "hud.revived": "BANGKIT!",
+  "hud.reviving": "Membangkitkan… {n}%",
+  "hud.ghost": "Tumbang · {n} dtk untuk dibangkitkan",
+  "hud.mateOut": "Gugur",
+  "hud.youGhost": "Kamu tumbang! Rekanmu punya {n} dtk untuk membangkitkanmu",
+  "hud.beingRevived": "Rekanmu sedang membangkitkanmu… {n}%",
+  "hud.revivesLeft": {
+    "other": "{n} kebangkitan tersisa"
+  },
+  "result.wonDuo": "Kamu dan rekanmu adalah tim terakhir yang bertahan.",
+  "result.lostDuo": {
+    "other": "Timmu tersingkir. {n} tim bertahan lebih lama darimu."
+  },
+  "party.queue": "ANTRE BARENG",
+  "party.tooMany": "Terlalu banyak pemain untuk antre bareng: maksimal {n} di mode ini.",
+  "party.name": {
+    "other": "party {n} orang"
+  },
+  "opt.act.ping": "Ping (Duo)",
+  "bark.hunter.thanks": "Kembali berburu. Makasih!",
+  "bark.camper.thanks": "Fiuh. Balik ke semakku.",
+  "bark.looter.thanks": "Aku utang satu kubus!",
+  "bark.vulture.thanks": "Makasih. Nah, siapa yang lemah?",
+  "bark.coward.thanks": "Kamu balik demi aku?!",
+  "bark.showoff.thanks": "Comeback abad ini!",
+  "brawler.kappa.role": "Penyembuh",
+  "brawler.kappa.desc": "Perawat kappa, jin sungai yang suka memerintah, melempar gelembung sabun melewati dinding: cipratan yang melukai musuh menyembuhkannya, dan di Duo juga menyembuhkan rekannya. Super: gelombang pasang yang menyapu musuh dan membelah gas.",
+  "gad.kappaA.name": "Selam Sungai",
+  "gad.kappaA.desc": "Menyelam 5 m (8 m dari air), tak tersentuh sekejap.",
+  "gad.kappaB.name": "Siraman Piring",
+  "gad.kappaB.desc": "Kosongkan piring di kepalamu: genangan menyembuhkan kamu dan rekanmu 400/dtk selama 3 dtk, lalu kamu berjalan lebih lambat selama 4 dtk.",
+  "star.hydrotherapy.name": "Hidroterapi",
+  "star.hydrotherapy.desc": "Penyembuhanmu 30% lebih kuat.",
+  "star.undertow.name": "Arus Balik",
+  "star.undertow.desc": "Gelombang Pasang menarik musuh ke arahmu, bukan mendorong mereka menjauh."
 }

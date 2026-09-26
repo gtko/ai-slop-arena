@@ -635,5 +635,47 @@
   "shop.gemsSoon": "HAMAROSAN",
   "menu.locked2": "NYISD MEG EZT A HARCOST",
   "menu.unlockFirst": "Nyisd meg ezt a harcost, hogy online vagy egyedül játszhass vele",
-  "menu.tryDojo": "Próbáld ki ingyen az edzésen"
+  "menu.tryDojo": "Próbáld ki ingyen az edzésen",
+  "menu.duo": "DUÓ",
+  "menu.duoDesc": "4 kétfős csapat · éleszd újra a társad",
+  "menu.modeLbl": "Mód",
+  "hud.teamsLeft": "CSAPAT MARADT",
+  "hud.revived": "ÚJRAÉLESZTVE!",
+  "hud.reviving": "Újraélesztés… {n}%",
+  "hud.ghost": "Kiütve · {n} s az újraélesztésig",
+  "hud.mateOut": "Kiesett",
+  "hud.youGhost": "Kiütöttek! A társad {n} s-on belül újraéleszthet",
+  "hud.beingRevived": "A társad újraéleszt… {n}%",
+  "hud.revivesLeft": {
+    "one": "{n} újraélesztés maradt",
+    "other": "{n} újraélesztés maradt"
+  },
+  "result.wonDuo": "Te és a társad vagytok az utolsó talpon maradt csapat.",
+  "result.lostDuo": {
+    "one": "A csapatod kiesett. {n} csapat tovább bírta nálatok.",
+    "other": "A csapatod kiesett. {n} csapat tovább bírta nálatok."
+  },
+  "party.queue": "SORBA EGYÜTT",
+  "party.tooMany": "Túl sok játékos a közös sorba álláshoz: ebben a módban legfeljebb {n}.",
+  "party.name": {
+    "one": "{n} fős csoport",
+    "other": "{n} fős csoport"
+  },
+  "opt.act.ping": "Pingelés (Duó)",
+  "bark.hunter.thanks": "Vissza a vadászatra. Kösz!",
+  "bark.camper.thanks": "Huh. Vissza a bokromba.",
+  "bark.looter.thanks": "Jövök neked egy kockával!",
+  "bark.vulture.thanks": "Kösz. Na, ki a gyenge?",
+  "bark.coward.thanks": "Visszajöttél értem?!",
+  "bark.showoff.thanks": "Az évszázad visszatérése!",
+  "brawler.kappa.role": "Gyógyító",
+  "brawler.kappa.desc": "Parancsolgató folyami manó-ápolónő, aki szappanbuborékokat dob át a falakon: az ellenséget sebző loccsanás őt gyógyítja, Duóban pedig a társát is. Szuper: szökőár, ami elsöpri az ellenséget és kettéválasztja a gázt.",
+  "gad.kappaA.name": "Folyami merülés",
+  "gad.kappaA.desc": "Merülj 5 m-t (vízből 8 m-t), egy szempillantásig érinthetetlen vagy.",
+  "gad.kappaB.name": "Tálloccsantás",
+  "gad.kappaB.desc": "Öntsd ki a fejeden lévő tálat: egy tócsa 3 s-ig 400/s-mal gyógyít téged és a társad, utána 4 s-ig lassabban jársz.",
+  "star.hydrotherapy.name": "Hidroterápia",
+  "star.hydrotherapy.desc": "A gyógyításaid 30%-kal erősebbek.",
+  "star.undertow.name": "Visszasodrás",
+  "star.undertow.desc": "A Szökőár magad felé húzza az ellenséget ahelyett, hogy ellökné."
 }

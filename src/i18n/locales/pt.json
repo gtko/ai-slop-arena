@@ -635,5 +635,47 @@
   "shop.gemsSoon": "EM BREVE",
   "menu.locked2": "DESBLOQUEIA ESTE LUTADOR",
   "menu.unlockFirst": "Desbloqueia este lutador para o jogares online ou a solo",
-  "menu.tryDojo": "Experimenta-o grátis no treino"
+  "menu.tryDojo": "Experimenta-o grátis no treino",
+  "menu.duo": "DUO",
+  "menu.duoDesc": "4 equipas de 2 · reanima o teu parceiro",
+  "menu.modeLbl": "Modo",
+  "hud.teamsLeft": "EQUIPAS VIVAS",
+  "hud.revived": "REANIMADO!",
+  "hud.reviving": "A reanimar… {n}%",
+  "hud.ghost": "Eliminado · {n} s para o reanimar",
+  "hud.mateOut": "Fora",
+  "hud.youGhost": "Eliminado! O teu parceiro tem {n} s para te reanimar",
+  "hud.beingRevived": "O teu parceiro está a reanimar-te… {n}%",
+  "hud.revivesLeft": {
+    "one": "Resta {n} reanimação",
+    "other": "Restam {n} reanimações"
+  },
+  "result.wonDuo": "Tu e o teu parceiro são a última equipa de pé.",
+  "result.lostDuo": {
+    "one": "A tua equipa foi eliminada. {n} equipa aguentou mais do que vocês.",
+    "other": "A tua equipa foi eliminada. {n} equipas aguentaram mais do que vocês."
+  },
+  "party.queue": "JOGAR JUNTOS",
+  "party.tooMany": "Demasiados jogadores para jogar juntos: {n} no máximo neste modo.",
+  "party.name": {
+    "one": "grupo de {n}",
+    "other": "grupo de {n}"
+  },
+  "opt.act.ping": "Sinal (Duo)",
+  "bark.hunter.thanks": "De volta à caçada. Obrigado!",
+  "bark.camper.thanks": "Ufa. De volta ao meu arbusto.",
+  "bark.looter.thanks": "Fico a dever-te um cubo!",
+  "bark.vulture.thanks": "Obrigado. Então, quem está fraco?",
+  "bark.coward.thanks": "Voltaste para me buscar?!",
+  "bark.showoff.thanks": "A reviravolta do século!",
+  "brawler.kappa.role": "Curandeira",
+  "brawler.kappa.desc": "Uma enfermeira kappa mandona, duende dos rios, que lança bolas de sabão por cima dos muros: um salpico que atinge inimigos cura-a a ela e, em Duo, também ao parceiro. Super: um maremoto que varre os inimigos e abre caminho no gás.",
+  "gad.kappaA.name": "Mergulho no rio",
+  "gad.kappaA.desc": "Mergulha 5 m (8 m a partir da água), intocável durante uma fração de segundo.",
+  "gad.kappaB.name": "Salpico da tigela",
+  "gad.kappaB.desc": "Esvazia a tigela da tua cabeça: uma poça cura-te a ti e ao teu parceiro 400/s durante 3 s, depois andas mais devagar durante 4 s.",
+  "star.hydrotherapy.name": "Hidroterapia",
+  "star.hydrotherapy.desc": "As tuas curas são 30% mais fortes.",
+  "star.undertow.name": "Contracorrente",
+  "star.undertow.desc": "O maremoto puxa os inimigos na tua direção em vez de os afastar."
 }

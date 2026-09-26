@@ -635,5 +635,47 @@
   "shop.gemsSoon": "DEMNÄCHST",
   "menu.locked2": "BRAWLER FREISCHALTEN",
   "menu.unlockFirst": "Schalte diesen Brawler frei, um ihn online oder solo zu spielen",
-  "menu.tryDojo": "Im Training kostenlos ausprobieren"
+  "menu.tryDojo": "Im Training kostenlos ausprobieren",
+  "menu.duo": "DUO",
+  "menu.duoDesc": "4 Teams à 2 · belebe deinen Partner wieder",
+  "menu.modeLbl": "Modus",
+  "hud.teamsLeft": "TEAMS ÜBRIG",
+  "hud.revived": "WIEDERBELEBT!",
+  "hud.reviving": "Wiederbelebung… {n} %",
+  "hud.ghost": "Ausgeknockt · {n} s zum Wiederbeleben",
+  "hud.mateOut": "Raus",
+  "hud.youGhost": "Ausgeknockt! Dein Partner hat {n} s, um dich wiederzubeleben",
+  "hud.beingRevived": "Dein Partner belebt dich wieder… {n} %",
+  "hud.revivesLeft": {
+    "one": "Noch {n} Wiederbelebung",
+    "other": "Noch {n} Wiederbelebungen"
+  },
+  "result.wonDuo": "Du und dein Partner seid das letzte Team, das noch steht.",
+  "result.lostDuo": {
+    "one": "Dein Team ist raus. {n} Team hat länger durchgehalten.",
+    "other": "Dein Team ist raus. {n} Teams haben länger durchgehalten."
+  },
+  "party.queue": "ZUSAMMEN SPIELEN",
+  "party.tooMany": "Zu viele Spieler, um zusammen zu spielen: höchstens {n} in diesem Modus.",
+  "party.name": {
+    "one": "Gruppe mit {n}",
+    "other": "Gruppe mit {n}"
+  },
+  "opt.act.ping": "Ping (Duo)",
+  "bark.hunter.thanks": "Zurück auf der Jagd. Danke!",
+  "bark.camper.thanks": "Puh. Zurück in meinen Busch.",
+  "bark.looter.thanks": "Ich schulde dir einen Würfel!",
+  "bark.vulture.thanks": "Danke. So, wer ist geschwächt?",
+  "bark.coward.thanks": "Du bist für mich zurückgekommen?!",
+  "bark.showoff.thanks": "Das Comeback des Jahrhunderts!",
+  "brawler.kappa.role": "Heilerin",
+  "brawler.kappa.desc": "Eine herrische Kappa-Krankenschwester, ein Flusskobold, die Seifenblasen über Mauern wirft: Ein Spritzer, der Gegner trifft, heilt sie, und im Duo heilt er auch ihren Partner. Super: eine Flutwelle, die Gegner wegspült und das Gas teilt.",
+  "gad.kappaA.name": "Flusstaucher",
+  "gad.kappaA.desc": "Tauche 5 m weit (8 m aus dem Wasser), für einen Sekundenbruchteil unberührbar.",
+  "gad.kappaB.name": "Schalenspritzer",
+  "gad.kappaB.desc": "Leere die Schale auf deinem Kopf: Eine Pfütze heilt dich und deinen Partner 3 s lang um 400/s, danach gehst du 4 s lang langsamer.",
+  "star.hydrotherapy.name": "Hydrotherapie",
+  "star.hydrotherapy.desc": "Deine Heilungen sind 30 % stärker.",
+  "star.undertow.name": "Sog",
+  "star.undertow.desc": "Die Flutwelle zieht Gegner zu dir heran, statt sie wegzustoßen."
 }

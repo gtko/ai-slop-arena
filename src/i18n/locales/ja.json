@@ -617,5 +617,44 @@
   "shop.gemsSoon": "近日公開",
   "menu.locked2": "このブロウラーを解放",
   "menu.unlockFirst": "オンラインやソロで使うには、このブロウラーを解放しよう",
-  "menu.tryDojo": "トレーニングなら無料で試せます"
+  "menu.tryDojo": "トレーニングなら無料で試せます",
+  "menu.duo": "デュオ",
+  "menu.duoDesc": "2人×4チーム · 相棒を復活させよう",
+  "menu.modeLbl": "モード",
+  "hud.teamsLeft": "残りチーム",
+  "hud.revived": "復活！",
+  "hud.reviving": "復活中… {n}%",
+  "hud.ghost": "ダウン · 復活猶予{n}秒",
+  "hud.mateOut": "脱落",
+  "hud.youGhost": "やられた！あと{n}秒以内なら相棒が復活できる",
+  "hud.beingRevived": "相棒が復活中… {n}%",
+  "hud.revivesLeft": {
+    "other": "復活あと{n}回"
+  },
+  "result.wonDuo": "あなたと相棒が最後まで生き残った！",
+  "result.lostDuo": {
+    "other": "チーム敗退！{n}チームが生き残った。"
+  },
+  "party.queue": "一緒にマッチング",
+  "party.tooMany": "一緒にマッチングするには人数が多すぎます：このモードは最大{n}人。",
+  "party.name": {
+    "other": "{n}人パーティー"
+  },
+  "opt.act.ping": "ピン (デュオ)",
+  "bark.hunter.thanks": "狩りに戻るぞ。助かった！",
+  "bark.camper.thanks": "ふう。茂みに戻ろっと。",
+  "bark.looter.thanks": "キューブひとつ借りね！",
+  "bark.vulture.thanks": "ありがと。で、弱ってるのは誰？",
+  "bark.coward.thanks": "ぼくを助けに戻ってきたの！？",
+  "bark.showoff.thanks": "世紀の大逆転！",
+  "brawler.kappa.role": "ヒーラー",
+  "brawler.kappa.desc": "仕切り屋の河童ナース。壁越しにシャボン玉を投げ、敵に当たったしぶきで自分が回復し、デュオでは相棒も回復する。スーパー：敵を押し流し、ガスを割る大波。",
+  "gad.kappaA.name": "リバーダイブ",
+  "gad.kappaA.desc": "5m（水中からは8m）飛び込み、一瞬無敵になる。",
+  "gad.kappaB.name": "お皿スプラッシュ",
+  "gad.kappaB.desc": "頭のお皿を空にする：水たまりが3秒間、自分と相棒を毎秒400回復。その後4秒間移動が遅くなる。",
+  "star.hydrotherapy.name": "ハイドロセラピー",
+  "star.hydrotherapy.desc": "回復量が30%上がる。",
+  "star.undertow.name": "引き波",
+  "star.undertow.desc": "大波が敵を押し流す代わりに、自分のほうへ引き寄せる。"
 }

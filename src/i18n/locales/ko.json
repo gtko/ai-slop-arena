@@ -617,5 +617,44 @@
   "shop.gemsSoon": "출시 예정",
   "menu.locked2": "이 브롤러 잠금 해제",
   "menu.unlockFirst": "온라인이나 솔로로 플레이하려면 이 브롤러를 잠금 해제하세요",
-  "menu.tryDojo": "훈련에서 무료로 체험해 보세요"
+  "menu.tryDojo": "훈련에서 무료로 체험해 보세요",
+  "menu.duo": "듀오",
+  "menu.duoDesc": "2인 4팀 · 파트너를 부활시키세요",
+  "menu.modeLbl": "모드",
+  "hud.teamsLeft": "남은 팀",
+  "hud.revived": "부활!",
+  "hud.reviving": "부활 중… {n}%",
+  "hud.ghost": "쓰러짐 · 부활 가능 {n}초",
+  "hud.mateOut": "탈락",
+  "hud.youGhost": "쓰러졌어요! 파트너가 {n}초 안에 부활시킬 수 있어요",
+  "hud.beingRevived": "파트너가 부활시키는 중… {n}%",
+  "hud.revivesLeft": {
+    "other": "남은 부활 {n}회"
+  },
+  "result.wonDuo": "당신과 파트너가 최후의 팀이에요!",
+  "result.lostDuo": {
+    "other": "팀이 탈락했어요. {n}팀이 더 오래 살아남았어요."
+  },
+  "party.queue": "함께 매칭",
+  "party.tooMany": "함께 매칭하기엔 인원이 너무 많아요: 이 모드는 최대 {n}명이에요.",
+  "party.name": {
+    "other": "{n}인 파티"
+  },
+  "opt.act.ping": "핑 (듀오)",
+  "bark.hunter.thanks": "다시 사냥이다. 고마워!",
+  "bark.camper.thanks": "휴. 내 수풀로 돌아가야지.",
+  "bark.looter.thanks": "큐브 하나 빚졌어!",
+  "bark.vulture.thanks": "고마워. 자, 누가 약해졌지?",
+  "bark.coward.thanks": "나 구하러 돌아온 거야?!",
+  "bark.showoff.thanks": "세기의 역전극!",
+  "brawler.kappa.role": "힐러",
+  "brawler.kappa.desc": "잔소리 많은 캇파 간호사. 벽 너머로 비눗방울을 던져요. 적에게 맞은 물보라는 자신을 회복시키고, 듀오에서는 파트너도 회복시켜요. 궁극기: 적을 쓸어 버리고 독가스를 가르는 해일.",
+  "gad.kappaA.name": "강물 다이브",
+  "gad.kappaA.desc": "5m 다이브해요(물속에서는 8m). 잠깐 무적이 돼요.",
+  "gad.kappaB.name": "접시 물벼락",
+  "gad.kappaB.desc": "머리 접시를 비워요: 웅덩이가 3초 동안 나와 파트너를 초당 400 회복시키고, 이후 4초 동안 느려져요.",
+  "star.hydrotherapy.name": "수치료",
+  "star.hydrotherapy.desc": "회복량이 30% 늘어나요.",
+  "star.undertow.name": "역류",
+  "star.undertow.desc": "해일이 적을 밀어내는 대신 나에게 끌어당겨요."
 }

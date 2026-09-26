@@ -635,5 +635,47 @@
   "shop.gemsSoon": "KOMMER SNART",
   "menu.locked2": "LÅS DENNE BRAWLER OP",
   "menu.unlockFirst": "Lås denne brawler op for at spille den online eller solo",
-  "menu.tryDojo": "Prøv den gratis i træning"
+  "menu.tryDojo": "Prøv den gratis i træning",
+  "menu.duo": "DUO",
+  "menu.duoDesc": "4 hold à 2 · genopliv din makker",
+  "menu.modeLbl": "Tilstand",
+  "hud.teamsLeft": "HOLD TILBAGE",
+  "hud.revived": "GENOPLIVET!",
+  "hud.reviving": "Genopliver… {n}%",
+  "hud.ghost": "Slået ud · {n} s til genoplivning",
+  "hud.mateOut": "Ude",
+  "hud.youGhost": "Slået ud! Din makker har {n} s til at genoplive dig",
+  "hud.beingRevived": "Din makker genopliver dig… {n}%",
+  "hud.revivesLeft": {
+    "one": "{n} genoplivning tilbage",
+    "other": "{n} genoplivninger tilbage"
+  },
+  "result.wonDuo": "Du og din makker er det sidste hold tilbage.",
+  "result.lostDuo": {
+    "one": "Dit hold er ude. {n} hold holdt længere end jer.",
+    "other": "Dit hold er ude. {n} hold holdt længere end jer."
+  },
+  "party.queue": "KØ SAMMEN",
+  "party.tooMany": "For mange spillere til at stå i kø sammen: højst {n} i denne tilstand.",
+  "party.name": {
+    "one": "gruppe på {n}",
+    "other": "gruppe på {n}"
+  },
+  "opt.act.ping": "Ping (Duo)",
+  "bark.hunter.thanks": "Tilbage på jagt. Tak!",
+  "bark.camper.thanks": "Pyha. Tilbage til min busk.",
+  "bark.looter.thanks": "Jeg skylder dig en terning!",
+  "bark.vulture.thanks": "Tak. Nå, hvem er svag?",
+  "bark.coward.thanks": "Kom du tilbage efter mig?!",
+  "bark.showoff.thanks": "Århundredets comeback!",
+  "brawler.kappa.role": "Helbreder",
+  "brawler.kappa.desc": "En bossy sygeplejerske og flodånd, der lobber sæbebobler over mure: et plask, der skader fjender, helbreder hende, og i Duo helbreder det hendes makker. Super: en flodbølge, der fejer fjender væk og deler gassen.",
+  "gad.kappaA.name": "Floddyk",
+  "gad.kappaA.desc": "Dyk 5 m (8 m fra vand), urørlig i et splitsekund.",
+  "gad.kappaB.name": "Skålplask",
+  "gad.kappaB.desc": "Tøm skålen på dit hoved: en pyt helbreder dig og din makker 400/s i 3 s, derefter går du langsommere i 4 s.",
+  "star.hydrotherapy.name": "Hydroterapi",
+  "star.hydrotherapy.desc": "Dine helbredelser er 30 % stærkere.",
+  "star.undertow.name": "Understrøm",
+  "star.undertow.desc": "Flodbølgen trækker fjender hen mod dig i stedet for at skubbe dem væk."
 }

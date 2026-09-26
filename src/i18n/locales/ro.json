@@ -653,5 +653,50 @@
   "shop.gemsSoon": "ÎN CURÂND",
   "menu.locked2": "DEBLOCHEAZĂ LUPTĂTORUL",
   "menu.unlockFirst": "Deblochează acest luptător ca să-l joci online sau solo",
-  "menu.tryDojo": "Încearcă-l gratuit la antrenament"
+  "menu.tryDojo": "Încearcă-l gratuit la antrenament",
+  "menu.duo": "DUO",
+  "menu.duoDesc": "4 echipe de câte 2 · reînvie-ți partenerul",
+  "menu.modeLbl": "Mod",
+  "hud.teamsLeft": "ECHIPE RĂMASE",
+  "hud.revived": "REÎNVIAT!",
+  "hud.reviving": "Reînviere… {n}%",
+  "hud.ghost": "Eliminat · {n} s pentru reînviere",
+  "hud.mateOut": "Eliminat",
+  "hud.youGhost": "Eliminat! Partenerul tău are {n} s să te reînvie",
+  "hud.beingRevived": "Partenerul tău te reînvie… {n}%",
+  "hud.revivesLeft": {
+    "one": "{n} reînviere rămasă",
+    "few": "{n} reînvieri rămase",
+    "other": "{n} de reînvieri rămase"
+  },
+  "result.wonDuo": "Tu și partenerul tău sunteți ultima echipă în picioare.",
+  "result.lostDuo": {
+    "one": "Echipa ta a ieșit. {n} echipă a rezistat mai mult.",
+    "few": "Echipa ta a ieșit. {n} echipe au rezistat mai mult.",
+    "other": "Echipa ta a ieșit. {n} de echipe au rezistat mai mult."
+  },
+  "party.queue": "ÎMPREUNĂ LA COADĂ",
+  "party.tooMany": "Prea mulți jucători pentru a intra împreună la coadă: cel mult {n} în acest mod.",
+  "party.name": {
+    "one": "grup de {n}",
+    "few": "grup de {n}",
+    "other": "grup de {n}"
+  },
+  "opt.act.ping": "Ping (Duo)",
+  "bark.hunter.thanks": "Înapoi la vânătoare. Mersi!",
+  "bark.camper.thanks": "Pfiu. Înapoi în tufișul meu.",
+  "bark.looter.thanks": "Îți datorez un cub!",
+  "bark.vulture.thanks": "Mersi. Acum, cine e slăbit?",
+  "bark.coward.thanks": "Te-ai întors după mine?!",
+  "bark.showoff.thanks": "Revenirea secolului!",
+  "brawler.kappa.role": "Vindecător",
+  "brawler.kappa.desc": "O asistentă autoritară, spiriduș de râu, care aruncă bule de săpun peste ziduri: o stropitură care rănește inamicii o vindecă, iar în Duo îi vindecă și partenerul. Super: un val mareic care mătură inamicii și desparte gazul.",
+  "gad.kappaA.name": "Plonjon în râu",
+  "gad.kappaA.desc": "Plonjează 5 m (8 m din apă), de neatins pentru o fracțiune de secundă.",
+  "gad.kappaB.name": "Stropitură din bol",
+  "gad.kappaB.desc": "Golește bolul din creștet: o baltă te vindecă pe tine și pe partenerul tău cu 400/s timp de 3 s, apoi mergi mai încet timp de 4 s.",
+  "star.hydrotherapy.name": "Hidroterapie",
+  "star.hydrotherapy.desc": "Vindecările tale sunt cu 30% mai puternice.",
+  "star.undertow.name": "Contracurent",
+  "star.undertow.desc": "Valul Mareic trage inamicii spre tine în loc să-i împingă departe."
 }

@@ -175,7 +175,7 @@
   "result.won": "Ostatni zadymiarz na placu boju.",
   "result.lost": {
     "one": "Zostałeś znokautowany. Na placu boju pozostał {n} zadymiarz.",
-    "few": "Zostałeś znokautowany. Na placu boju pozostało {n} zadymiarzy.",
+    "few": "Zostałeś znokautowany. Na placu boju pozostali {n} zadymiarze.",
     "many": "Zostałeś znokautowany. Na placu boju pozostało {n} zadymiarzy.",
     "other": "Zostałeś znokautowany. Na placu boju pozostało {n} zadymiarza."
   },
@@ -671,5 +671,53 @@
   "shop.gemsSoon": "WKRÓTCE",
   "menu.locked2": "ODBLOKUJ TEGO ZADYMIARZA",
   "menu.unlockFirst": "Odblokuj tego zadymiarza, by grać nim online lub solo",
-  "menu.tryDojo": "Wypróbuj go za darmo na treningu"
+  "menu.tryDojo": "Wypróbuj go za darmo na treningu",
+  "menu.duo": "DUET",
+  "menu.duoDesc": "4 drużyny po 2 · wskrzeszaj partnera",
+  "menu.modeLbl": "Tryb",
+  "hud.teamsLeft": "POZOSTAŁE DRUŻYNY",
+  "hud.revived": "WSKRZESZONY!",
+  "hud.reviving": "Wskrzeszanie… {n}%",
+  "hud.ghost": "Znokautowany · {n} s na wskrzeszenie",
+  "hud.mateOut": "Poza grą",
+  "hud.youGhost": "Znokautowany! Partner ma {n} s, by cię wskrzesić",
+  "hud.beingRevived": "Partner cię wskrzesza… {n}%",
+  "hud.revivesLeft": {
+    "one": "Zostało {n} wskrzeszenie",
+    "few": "Zostały {n} wskrzeszenia",
+    "many": "Zostało {n} wskrzeszeń",
+    "other": "Zostało {n} wskrzeszenia"
+  },
+  "result.wonDuo": "Ty i twój partner jesteście ostatnią drużyną na placu boju.",
+  "result.lostDuo": {
+    "one": "Twoja drużyna odpadła. {n} drużyna wytrzymała dłużej.",
+    "few": "Twoja drużyna odpadła. {n} drużyny wytrzymały dłużej.",
+    "many": "Twoja drużyna odpadła. {n} drużyn wytrzymało dłużej.",
+    "other": "Twoja drużyna odpadła. {n} drużyny wytrzymało dłużej."
+  },
+  "party.queue": "GRAJMY RAZEM",
+  "party.tooMany": "Za dużo graczy, by grać razem: maksymalnie {n} w tym trybie.",
+  "party.name": {
+    "one": "grupa: {n}",
+    "few": "grupa: {n}",
+    "many": "grupa: {n}",
+    "other": "grupa: {n}"
+  },
+  "opt.act.ping": "Sygnał (Duet)",
+  "bark.hunter.thanks": "Wracam do polowania. Dzięki!",
+  "bark.camper.thanks": "Uff. Wracam do krzaka.",
+  "bark.looter.thanks": "Wiszę ci kostkę!",
+  "bark.vulture.thanks": "Dzięki. No to kto tu jest słaby?",
+  "bark.coward.thanks": "Wróciłeś po mnie?!",
+  "bark.showoff.thanks": "Powrót stulecia!",
+  "brawler.kappa.role": "Uzdrowicielka",
+  "brawler.kappa.desc": "Apodyktyczna pielęgniarka kappa, rzeczny chochlik, która rzuca bańki mydlane nad murami: chlapnięcie, które rani wrogów, leczy ją, a w Duecie także jej partnera. Super: fala przypływu, która zmiata wrogów i rozgarnia gaz.",
+  "gad.kappaA.name": "Rzeczny nurek",
+  "gad.kappaA.desc": "Zanurkuj na 5 m (8 m z wody), nietykalny przez ułamek sekundy.",
+  "gad.kappaB.name": "Chlust z miseczki",
+  "gad.kappaB.desc": "Opróżnij miseczkę na głowie: kałuża leczy ciebie i partnera o 400/s przez 3 s, a potem przez 4 s chodzisz wolniej.",
+  "star.hydrotherapy.name": "Hydroterapia",
+  "star.hydrotherapy.desc": "Twoje leczenie jest o 30% silniejsze.",
+  "star.undertow.name": "Prąd wsteczny",
+  "star.undertow.desc": "Fala przypływu przyciąga wrogów do ciebie, zamiast ich odpychać."
 }

@@ -617,5 +617,44 @@
   "shop.gemsSoon": "SẮP RA MẮT",
   "menu.locked2": "MỞ KHÓA ĐẤU SĨ NÀY",
   "menu.unlockFirst": "Mở khóa đấu sĩ này để chơi online hoặc chơi đơn",
-  "menu.tryDojo": "Chơi thử miễn phí ở chế độ Luyện tập"
+  "menu.tryDojo": "Chơi thử miễn phí ở chế độ Luyện tập",
+  "menu.duo": "CHƠI ĐÔI",
+  "menu.duoDesc": "4 đội 2 người · hồi sinh đồng đội",
+  "menu.modeLbl": "Chế độ",
+  "hud.teamsLeft": "ĐỘI CÒN LẠI",
+  "hud.revived": "ĐÃ HỒI SINH!",
+  "hud.reviving": "Đang hồi sinh… {n}%",
+  "hud.ghost": "Bị hạ gục · còn {n} giây để hồi sinh",
+  "hud.mateOut": "Bị loại",
+  "hud.youGhost": "Bị hạ gục! Đồng đội còn {n} giây để hồi sinh bạn",
+  "hud.beingRevived": "Đồng đội đang hồi sinh bạn… {n}%",
+  "hud.revivesLeft": {
+    "other": "Còn {n} lượt hồi sinh"
+  },
+  "result.wonDuo": "Bạn và đồng đội là đội cuối cùng trụ lại.",
+  "result.lostDuo": {
+    "other": "Đội bạn đã bị loại. {n} đội trụ lâu hơn bạn."
+  },
+  "party.queue": "GHÉP TRẬN CÙNG",
+  "party.tooMany": "Quá nhiều người để ghép trận cùng nhau: tối đa {n} người ở chế độ này.",
+  "party.name": {
+    "other": "nhóm {n} người"
+  },
+  "opt.act.ping": "Đánh dấu (Đôi)",
+  "bark.hunter.thanks": "Quay lại săn đây. Cảm ơn!",
+  "bark.camper.thanks": "Phù. Về bụi cây của tôi thôi.",
+  "bark.looter.thanks": "Tôi nợ bạn một khối!",
+  "bark.vulture.thanks": "Cảm ơn. Giờ thì, ai đang yếu nào?",
+  "bark.coward.thanks": "Bạn quay lại cứu tôi á?!",
+  "bark.showoff.thanks": "Màn lội ngược dòng thế kỷ!",
+  "brawler.kappa.role": "Hồi máu",
+  "brawler.kappa.desc": "Cô y tá kappa, thủy quái sông hách dịch, ném bong bóng xà phòng qua tường: nước bắn trúng kẻ địch sẽ hồi máu cho cô, và ở chế độ Đôi còn hồi máu cho đồng đội. Siêu chiêu: một con sóng thần cuốn phăng kẻ địch và rẽ đôi khí độc.",
+  "gad.kappaA.name": "Lặn Sông",
+  "gad.kappaA.desc": "Lặn 5 m (8 m nếu từ dưới nước), bất khả xâm phạm trong chớp mắt.",
+  "gad.kappaB.name": "Tạt Nước Đĩa",
+  "gad.kappaB.desc": "Đổ cạn đĩa trên đầu: vũng nước hồi cho bạn và đồng đội 400/giây trong 3 giây, sau đó bạn đi chậm hơn trong 4 giây.",
+  "star.hydrotherapy.name": "Thủy Liệu Pháp",
+  "star.hydrotherapy.desc": "Hồi máu mạnh hơn 30%.",
+  "star.undertow.name": "Dòng Xoáy Ngầm",
+  "star.undertow.desc": "Sóng thần kéo kẻ địch về phía bạn thay vì đẩy ra xa."
 }

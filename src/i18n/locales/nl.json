@@ -635,5 +635,47 @@
   "shop.gemsSoon": "BINNENKORT",
   "menu.locked2": "ONTGRENDEL DEZE BRAWLER",
   "menu.unlockFirst": "Ontgrendel deze brawler om hem online of solo te spelen",
-  "menu.tryDojo": "Probeer hem gratis in de training"
+  "menu.tryDojo": "Probeer hem gratis in de training",
+  "menu.duo": "DUO",
+  "menu.duoDesc": "4 teams van 2 · breng je partner terug",
+  "menu.modeLbl": "Modus",
+  "hud.teamsLeft": "TEAMS OVER",
+  "hud.revived": "GERED!",
+  "hud.reviving": "Reanimeren… {n}%",
+  "hud.ghost": "Uitgeschakeld · {n} s om te reanimeren",
+  "hud.mateOut": "Uit",
+  "hud.youGhost": "Uitgeschakeld! Je partner heeft {n} s om je te reanimeren",
+  "hud.beingRevived": "Je partner reanimeert je… {n}%",
+  "hud.revivesLeft": {
+    "one": "Nog {n} reanimatie",
+    "other": "Nog {n} reanimaties"
+  },
+  "result.wonDuo": "Jij en je partner zijn het laatste team dat overeind staat.",
+  "result.lostDuo": {
+    "one": "Je team ligt eruit. {n} team hield het langer vol.",
+    "other": "Je team ligt eruit. {n} teams hielden het langer vol."
+  },
+  "party.queue": "SAMEN SPELEN",
+  "party.tooMany": "Te veel spelers om samen te spelen: maximaal {n} in deze modus.",
+  "party.name": {
+    "one": "groep van {n}",
+    "other": "groep van {n}"
+  },
+  "opt.act.ping": "Ping (Duo)",
+  "bark.hunter.thanks": "Weer op jacht. Bedankt!",
+  "bark.camper.thanks": "Pfoe. Terug naar mijn struik.",
+  "bark.looter.thanks": "Ik ben je een kubus schuldig!",
+  "bark.vulture.thanks": "Bedankt. Zo, wie is er zwak?",
+  "bark.coward.thanks": "Kwam je voor mij terug?!",
+  "bark.showoff.thanks": "De comeback van de eeuw!",
+  "brawler.kappa.role": "Heler",
+  "brawler.kappa.desc": "Een bazige kappa-verpleegster, een riviergeest, die zeepbellen over muren gooit: een spetter die vijanden raakt geneest haar, en in Duo ook haar partner. Super: een vloedgolf die vijanden wegspoelt en het gas opzij duwt.",
+  "gad.kappaA.name": "Rivierduik",
+  "gad.kappaA.desc": "Duik 5 m (8 m vanuit water), een fractie van een seconde onaantastbaar.",
+  "gad.kappaB.name": "Komplons",
+  "gad.kappaB.desc": "Leeg het schaaltje op je hoofd: een plas geneest jou en je partner 3 s lang met 400/s, daarna loop je 4 s lang trager.",
+  "star.hydrotherapy.name": "Hydrotherapie",
+  "star.hydrotherapy.desc": "Je genezing is 30% sterker.",
+  "star.undertow.name": "Onderstroom",
+  "star.undertow.desc": "De vloedgolf trekt vijanden naar je toe in plaats van ze weg te duwen."
 }

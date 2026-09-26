@@ -617,5 +617,44 @@
   "shop.gemsSoon": "即將推出",
   "menu.locked2": "解鎖此英雄",
   "menu.unlockFirst": "解鎖此英雄後即可線上或單人遊玩",
-  "menu.tryDojo": "可在訓練中免費試玩"
+  "menu.tryDojo": "可在訓練中免費試玩",
+  "menu.duo": "雙人",
+  "menu.duoDesc": "4 支 2 人隊伍 · 復活你的隊友",
+  "menu.modeLbl": "模式",
+  "hud.teamsLeft": "剩餘隊伍",
+  "hud.revived": "已復活！",
+  "hud.reviving": "復活中… {n}%",
+  "hud.ghost": "已倒下 · {n} 秒內可復活",
+  "hud.mateOut": "出局",
+  "hud.youGhost": "你倒下了！隊友還有 {n} 秒可以復活你",
+  "hud.beingRevived": "隊友正在復活你… {n}%",
+  "hud.revivesLeft": {
+    "other": "剩餘 {n} 次復活"
+  },
+  "result.wonDuo": "你和隊友是最後存活的隊伍！",
+  "result.lostDuo": {
+    "other": "你的隊伍出局了。有 {n} 支隊伍比你們撐得更久。"
+  },
+  "party.queue": "一起配對",
+  "party.tooMany": "人數太多，無法一起配對：此模式最多 {n} 人。",
+  "party.name": {
+    "other": "{n} 人小隊"
+  },
+  "opt.act.ping": "標記 (雙人)",
+  "bark.hunter.thanks": "繼續狩獵。謝了！",
+  "bark.camper.thanks": "呼。回我的草叢去。",
+  "bark.looter.thanks": "欠你一個方塊！",
+  "bark.vulture.thanks": "謝啦。那麼，誰快不行了？",
+  "bark.coward.thanks": "你居然回來救我？！",
+  "bark.showoff.thanks": "世紀大逆轉！",
+  "brawler.kappa.role": "治療",
+  "brawler.kappa.desc": "愛發號施令的河童護士，隔牆拋出肥皂泡：濺到敵人的水花能治療她，雙人模式下還能治療隊友。超級技能：一道巨浪，沖走敵人並分開毒霧。",
+  "gad.kappaA.name": "河流潛躍",
+  "gad.kappaA.desc": "潛躍 5 公尺（從水中出發 8 公尺），瞬間無敵。",
+  "gad.kappaB.name": "頭盤潑水",
+  "gad.kappaB.desc": "倒空頭頂的碟子：水窪 3 秒內每秒為你和隊友回復 400，之後 4 秒內移速降低。",
+  "star.hydrotherapy.name": "水療",
+  "star.hydrotherapy.desc": "治療效果提高 30%。",
+  "star.undertow.name": "暗流",
+  "star.undertow.desc": "巨浪不再推開敵人，而是把他們拉向你。"
 }

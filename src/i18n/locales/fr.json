@@ -635,5 +635,47 @@
   "shop.gemsSoon": "BIENTÔT",
   "menu.locked2": "DÉBLOQUE CE BRAWLER",
   "menu.unlockFirst": "Débloque ce brawler pour le jouer en ligne ou en solo",
-  "menu.tryDojo": "Essaie-le gratuitement à l'entraînement"
+  "menu.tryDojo": "Essaie-le gratuitement à l'entraînement",
+  "menu.duo": "DUO",
+  "menu.duoDesc": "4 équipes de 2 · réanime ton coéquipier",
+  "menu.modeLbl": "Mode",
+  "hud.teamsLeft": "ÉQUIPES RESTANTES",
+  "hud.revived": "RÉANIMÉ !",
+  "hud.reviving": "Réanimation… {n} %",
+  "hud.ghost": "K.O. · {n} s pour le réanimer",
+  "hud.mateOut": "K.O.",
+  "hud.youGhost": "K.O. ! Ton coéquipier a {n} s pour te réanimer",
+  "hud.beingRevived": "Ton coéquipier te réanime… {n} %",
+  "hud.revivesLeft": {
+    "one": "{n} réanimation restante",
+    "other": "{n} réanimations restantes"
+  },
+  "result.wonDuo": "Ton coéquipier et toi êtes la dernière équipe debout.",
+  "result.lostDuo": {
+    "one": "Ton équipe est éliminée. {n} équipe a tenu plus longtemps.",
+    "other": "Ton équipe est éliminée. {n} équipes ont tenu plus longtemps."
+  },
+  "party.queue": "JOUER ENSEMBLE",
+  "party.tooMany": "Trop de joueurs pour jouer ensemble : {n} au maximum dans ce mode.",
+  "party.name": {
+    "one": "groupe de {n}",
+    "other": "groupe de {n}"
+  },
+  "opt.act.ping": "Signal (Duo)",
+  "bark.hunter.thanks": "Je reprends la chasse. Merci !",
+  "bark.camper.thanks": "Ouf. Je retourne dans mon buisson.",
+  "bark.looter.thanks": "Je te dois un cube !",
+  "bark.vulture.thanks": "Merci. Bon, qui est affaibli ?",
+  "bark.coward.thanks": "T'es revenu me chercher ?!",
+  "bark.showoff.thanks": "Le retour du siècle !",
+  "brawler.kappa.role": "Soigneuse",
+  "brawler.kappa.desc": "Une infirmière kappa autoritaire, lutin des rivières, qui lance des bulles de savon par-dessus les murs : une éclaboussure qui touche des ennemis la soigne, et en Duo elle soigne aussi son coéquipier. Super : un raz-de-marée qui balaie les ennemis et écarte le gaz.",
+  "gad.kappaA.name": "Plongeon fluvial",
+  "gad.kappaA.desc": "Plonge de 5 m (8 m depuis l'eau), intouchable une fraction de seconde.",
+  "gad.kappaB.name": "Bol renversé",
+  "gad.kappaB.desc": "Vide la coupelle de ta tête : une flaque vous soigne, toi et ton coéquipier, de 400/s pendant 3 s, puis tu marches plus lentement pendant 4 s.",
+  "star.hydrotherapy.name": "Hydrothérapie",
+  "star.hydrotherapy.desc": "Tes soins sont 30 % plus puissants.",
+  "star.undertow.name": "Ressac",
+  "star.undertow.desc": "Le raz-de-marée attire les ennemis vers toi au lieu de les repousser."
 }
