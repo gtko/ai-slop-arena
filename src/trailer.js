@@ -131,7 +131,7 @@ export async function recordDayNight() {
 
 export async function recordMapStills() {
   const d = dev();
-  const shots = { oasis: [1, 0.35], dunes: [1, -0.4], grove: [1, 0.5], frost: [1, -0.3], marsh: [1, 0.2] };
+  const shots = { oasis: [1, 0.35], dunes: [1, -0.4], grove: [1, 0.5], frost: [1, -0.3], marsh: [1, 0.2], isles: [1, 0.3] };
   const only = arguments[0];
   for (const [map, [tod, a]] of Object.entries(shots)) {
     if (only && !only.includes(map)) continue;

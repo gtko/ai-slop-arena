@@ -18,6 +18,10 @@ const BRAWLERS = [
     desc: 'Un orbe dont l\'éclair rebondit sur 2 ennemis. Super : un orage qui fait tomber la foudre.' },
   { key: 'kappa', name: 'Nurse Kappa', role: 'Soigneuse', color: '#94d82d', hp: 3600, range: 11,
     desc: 'Infirmière kappa : ses bulles passent par-dessus les murs, la soignent quand elles touchent et soignent son partenaire en Duo. Super : un raz-de-marée qui balaie les ennemis et écarte le gaz.' },
+  { key: 'pipchomp', name: 'Pip & Chomp', role: 'Assassin', color: '#2f9e44', hp: 4200, range: 4.5,
+    desc: 'Un petit champignon timide sur une plante carnivore : Chomp bondit et mord, Pip s'excuse. Super : un piège Venus, un buisson qui mord, enracine et révèle.' },
+  { key: 'mochi', name: 'Mochi', role: 'Tank', color: '#e64980', hp: 6800, range: 3.5,
+    desc: 'Un phoque sumo en mochi à la fraise : ses coups de ventre repoussent (idéalement dans le vide). Super : Mochi Pound, un saut qui écrase, étourdit et aplatit les murs.' },
 ];
 const MAPS = [
   { key: 'oasis', name: 'Oasis', tag: 'Grand soleil' },
@@ -25,6 +29,7 @@ const MAPS = [
   { key: 'grove', name: 'Rainy Grove', tag: 'Pluie & orage' },
   { key: 'frost', name: 'Frost Peak', tag: 'Neige · glace glissante' },
   { key: 'marsh', name: 'Misty Marsh', tag: 'Brouillard · vision réduite' },
+  { key: 'isles', name: 'Windmill Isles', tag: 'Îles volantes · chutes dans le vide' },
 ];
 const $ = s => document.querySelector(s);
 const portrait = k => `${BASE}assets/ui/${k}.png`;
