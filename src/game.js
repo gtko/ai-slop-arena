@@ -500,7 +500,7 @@ export class Game {
     if (best) { A.center(best[0], best[1], spot); S.pos.set(spot.x, 0, spot.z); S.net.set(spot.x, spot.z); }
     S.teamColors();
     this.camFocus.copy(S.pos);
-    this.feel.zoom = this.menuZoom ?? 0.36;
+    this.feel.zoom = this.menuZoom ?? 0.47;
   }
 
   // Training dojo: the other brawlers stand in a loose row a few metres ahead, as dummies.
@@ -1253,7 +1253,7 @@ export class Game {
       const alive = this.brawlers.reduce((n, b) => n + (b.alive ? 1 : 0), 0);
       zoom = alive === 2 ? 1.1 : alive === 3 ? 1.06 : 1;
     }
-    if (this.star && this.mode === 'attract') zoom = this.menuZoom ?? 0.36; // close on the showcased brawler
+    if (this.star && this.mode === 'attract') zoom = this.menuZoom ?? 0.47; // close on the showcased brawler
     this.bushIdleT = P && P.alive && P.inBush && P.moveIntent.lengthSq() < 0.02 ? this.bushIdleT + dt : 0;
     if (this.bushIdleT > 1.5) zoom *= 0.94;
     F.update(dt, zoom);
