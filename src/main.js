@@ -857,7 +857,19 @@ game.onFeat = (kind, n) => {
   else if (kind === 'crate') achievements.crate();
   else achievements.cubes(n);
 };
+// Result stat card: your damage, KOs, cubes and gadgets, and who dealt the most damage (MVP).
+function showStats() {
+  const P = game.player, el = $('#resStats');
+  if (!P) { el.innerHTML = ''; return; }
+  const mvp = game.brawlers.reduce((a, b) => (b.stats.dmg > a.stats.dmg ? b : a), P);
+  const tile = (icon, v, label) => `<div><span>${icon}</span><b>${v}</b><small>${label}</small></div>`;
+  el.innerHTML = tile('💥', Math.round(P.stats.dmg), t('result.dmg')) + tile('💀', P.stats.kos, t('result.kos'))
+    + tile('💎', P.stats.cubes, t('result.cubes')) + tile(GADGET_ICONS[P.type.key + P.gadget], P.stats.gadgets, t('result.gadgets'))
+    + `<p class="mvp${mvp === P ? ' me' : ''}">👑 ${t('result.mvp', { name: mvp === P ? t('hud.you') : mvp.name, n: Math.round(mvp.stats.dmg) })}</p>`;
+}
+
 game.onResult = (rank, won) => {
+  showStats();
   achievements.result(rank, won, { night: lighting.night >= 0.5 });
   if (played && !played.ended) {
     played.ended = true;

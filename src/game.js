@@ -285,6 +285,7 @@ export class Game {
   // camera trauma and the rising hit-confirm sound. What you cannot see gives you no juice either.
   damageFx(target, amount, source, sup = false) {
     const seen = this.fxVisible(target), [stop, dealt, taken] = weapon(source, sup);
+    if (source && source !== target) source.stats.dmg += amount;
     target.hurt(seen ? stop : 0);
     target.revealT = Math.max(target.revealT, 0.8);
     if (seen) {
@@ -339,6 +340,7 @@ export class Game {
     b.burst.length = 0;
     b.die(); // death fall, then a puff
     if (killer && killer !== b) {
+      killer.stats.kos++;
       killer.cheer();
       if (this.fxVisible(killer)) sfx(`bark_${killer.type.key}_cheer`, this.volumeAt(killer.pos.x, killer.pos.z) * 0.8);
     }
@@ -434,6 +436,7 @@ export class Game {
 
   pickItem(it, b) {
     b.cubes++;
+    b.stats.cubes++;
     b.refreshDmg();
     b.maxHp += 300; // v0.12: +300 (was +400), the cube leader snowballs less
     b.hp += 300;
@@ -712,6 +715,7 @@ export class Game {
         case 'imm': if (b && b.visibleToPlayer) this.hud.floater(this.camera, b.pos.x, 3.1, b.pos.z, t('hud.immune'), 'immune'); break;
         case 'gad':
           if (b && b !== this.player && b.alive) GADGETS[b.type.key + b.gadget]?.fx(this, b, e.dx, e.dz);
+          if (b) b.stats.gadgets++;
           break;
         case 'flare': flareFx(this, e.x, e.z); break;
         case 'dropWarn': this.dropWarn(e.i, e.j); break;
@@ -898,6 +902,7 @@ export class Game {
     const G = GADGETS[b.type.key + b.gadget];
     G.effect(this, b, dx, dz, point);
     G.fx(this, b, dx, dz);
+    b.stats.gadgets++;
     if (b.netDriven && b.guard && G.dist) b.guard.knock = Math.max(b.guard.knock, G.dist + 1.5); // a remote player dashes itself
     this.ev({ e: 'gad', id: b.id, dx: r2(dx), dz: r2(dz) });
     if (this.onGadget) this.onGadget(b);
