@@ -27,7 +27,9 @@ const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.f
 // Who plays where: humans first, bots fill up to 8. The host builds this and sends it to
 // every client so all browsers create the same brawlers on the same spawns.
 // level (0..1, see skill.js): the bots' skill is a mix around it, some weaker, some sharper.
-export function makeRoster(humans = [], { level = 0.45 } = {}) {
+// duo: 4 teams of 2 (team 0..3). Humans with the same `party` share a team, other humans are
+// paired together, bots fill the rest.
+export function makeRoster(humans = [], { level = 0.45, duo = false } = {}) {
   const spawns = shuffle([0, 1, 2, 3, 4, 5, 6, 7]);
   const names = shuffle(NAMES.slice());
   const roster = humans.slice(0, 8).map((h, k) => ({ id: h.id, name: h.name, type: h.type, lo: h.lo, cos: validCos(h.cos) ? h.cos : undefined, human: true, spawn: spawns[k], plat: h.plat }));
@@ -39,6 +41,15 @@ export function makeRoster(humans = [], { level = 0.45 } = {}) {
     const cos = `${Math.random() < 0.4 ? 1 + Math.floor(Math.random() * 2) : 0}.${Math.random() < 0.25 ? 1 + Math.floor(Math.random() * 5) : 0}.${Math.random() < 0.3 ? 1 + Math.floor(Math.random() * 5) : 0}.0.0.${5 + Math.floor(Math.random() * 20)}`;
     const per = PERSONAS[Math.floor(Math.random() * PERSONAS.length)]; // a character (ai.js): hunter, camper...
     roster.push({ id: 'bot' + k, name: names[k], type: TYPE_KEYS[Math.floor(Math.random() * TYPE_KEYS.length)], lo, cos, per, human: false, spawn: spawns[k], skill });
+  }
+  if (duo) {
+    const groups = new Map();
+    humans.slice(0, 8).forEach((h, k) => { const key = h.party ? 'p:' + h.party : roster[k].id; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(roster[k]); });
+    const units = [];
+    for (const g of groups.values()) for (let k = 0; k < g.length; k += 2) units.push(g.slice(k, k + 2)); // a party is 2 at most
+    units.sort((a, b) => b.length - a.length); // parties first (a whole team each), then solo humans
+    const order = [...units.flat(), ...roster.filter(r => !r.human)], teams = shuffle([0, 1, 2, 3]);
+    order.forEach((r, k) => { r.team = teams[k >> 1]; r.spawn = r.team; });
   }
   return roster;
 }
@@ -147,7 +158,11 @@ export class Game {
     this.dojo = dojo;
     this.dojoLog = [];
     const M = this.mutator = real && !dojo && validMutator(mutator) ? mutator : null;
-    this.poison = new Poison(this, dojo ? { startAt: 1e9 } : real ? (M === 'gasBreath' ? { startAt: 16, interval: 4.5 } : {}) : { startAt: 18, interval: 6 });
+    roster = roster || makeRoster([]);
+    // Duo Showdown (v0.14): 4 teams of 2, from the roster's teams. The gas waits a little longer
+    // (35 s, then a ring every 8 s) so partners can regroup.
+    this.duo = real && !dojo && roster.some(r => Number.isInteger(r.team));
+    this.poison = new Poison(this, dojo ? { startAt: 1e9 } : real ? (M === 'gasBreath' ? { startAt: 16, interval: 4.5 } : this.duo ? { startAt: 35, interval: 8 } : {}) : { startAt: 18, interval: 6 });
     this.visionRadius = MAPS[this.mapKey].vision || 0;
     // How far anyone sees (fog maps use their fog wall instead); the sandstorm cuts it shorter.
     this.sightRange = this.visionRadius ? 0 : MAPS[this.mapKey].weather === 'sandstorm' ? 11 : 14;
@@ -156,8 +171,11 @@ export class Game {
     this.nightOverride(M === 'nightHunt');
     this.gadgetLockout = M === 'gadgetFrenzy' ? 2 : GADGET_LOCKOUT;
     this.rainT = 12;
-    roster = roster || makeRoster([]);
     this.player = null;
+    this.corners = null;
+    for (const G of this.ghosts || []) this.removeGhost(G);
+    this.ghosts = [];                 // Buddy Revive: KO'd partners waiting to be brought back
+    this.revives = [2, 2, 2, 2];      // revives left per team
     for (const r of roster) {
       const isPlayer = r.id === localId;
       // loadout: r.lo ('B2' = gadget B, star power 2), or inside the type ('volt:B2', solo)
@@ -170,7 +188,9 @@ export class Game {
       if (!r.human && PERSONAS.includes(r.per)) b.persona = r.per;
       b.setHuman(!!r.human);
       if (r.skill !== undefined) b.skill = r.skill;
-      b.pos.copy(this.arena.spawns[r.spawn % this.arena.spawns.length]);
+      b.team = this.duo ? r.team & 3 : -1;
+      if (this.duo) this.teamSpawn(b);
+      else b.pos.copy(this.arena.spawns[r.spawn % this.arena.spawns.length]);
       b.net.set(b.pos.x, b.pos.z);
       b.facing = Math.atan2(-b.pos.x, -b.pos.z);
       this.brawlers.push(b);
@@ -180,6 +200,7 @@ export class Game {
       // Positions of everything we do not simulate come from the network.
       if (net && !isPlayer && (net.role === 'client' || r.human)) b.netDriven = true;
     }
+    if (this.duo) for (const b of this.brawlers) b.teamColors(); // partners in their own colour
     this.mode = real ? 'play' : 'attract';
     this.fixSeen = 0;
     this.state = 'playing';
@@ -208,6 +229,120 @@ export class Game {
 
   // Solo and host run the rules; a client only mirrors what the host tells it.
   get authority() { return !this.net || this.net.role === 'host'; }
+
+  /* ------------------------------ Duo (v0.14) ------------------------------ */
+
+  // Partners: no friendly fire, their shots fly through each other.
+  ally(a, b) { return !!(this.duo && a && b && a !== b && a.team === b.team); }
+  // Can `owner`'s attack hurt o? (owner null: the gas, arena events)
+  hits(owner, o) { return o !== owner && this.hittable(o) && !this.ally(owner, o); }
+  mateOf(b) { return this.duo && b ? this.brawlers.find(o => o !== b && o.team === b.team) || null : null; }
+  // Teams with someone still standing, other than `except`.
+  teamsUp(except = -1) { return new Set(this.brawlers.filter(o => o.alive && o.team !== except).map(o => o.team)).size; }
+
+  // A team starts in one of the 4 corner spawns, the partners side by side.
+  teamSpawn(b) {
+    const A = this.arena;
+    const C = this.corners || (this.corners = [...A.spawns].sort((p, q) => (q.x * q.x + q.z * q.z) - (p.x * p.x + p.z * p.z)).slice(0, 4));
+    const c = C[b.team % C.length], first = !this.brawlers.some(o => o.team === b.team);
+    const l = Math.hypot(c.x, c.z) || 1, dx = -c.x / l, dz = -c.z / l; // toward the middle
+    b.pos.set(c.x + dx * 0.6 + dz * (first ? -0.9 : 0.9), 0, c.z + dz * 0.6 - dx * (first ? -0.9 : 0.9));
+    A.collideCircle(b.pos, b.radius);
+  }
+
+  // Your partner sees for you (bushes included): what either of you sees shows on your screen.
+  teamSees(viewer, b) {
+    if (this.canSee(viewer, b)) return true;
+    const m = this.mateOf(viewer);
+    return !!(m && m.alive && m !== b && this.canSee(m, b));
+  }
+
+  // Buddy Revive: a KO'd partner leaves a ghost for 15 s where it fell. The partner standing within
+  // 2.5 m for 3 s in all (the count pauses while the reviver is being hit) brings it back at 40%
+  // health with no cubes. The gas reaching the ghost ends it. 2 revives per team per match.
+  addGhost(b) {
+    const x = b.pos.x, z = b.pos.z, mine = !this.player || b === this.player || this.ally(b, this.player);
+    const col = new THREE.Color(mine ? 0x7ff0ff : 0xff9a8a), grp = new THREE.Group();
+    const mat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.4, depthWrite: false });
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.7, 4, 12), mat);
+    body.position.y = 1.5;
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.06, 8, 28), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 2, 0.6) }));
+    halo.rotation.x = Math.PI / 2;
+    halo.position.y = 2.45;
+    const rim = new THREE.Mesh(new THREE.RingGeometry(2.3, 2.5, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.25, depthWrite: false }));
+    const fill = new THREE.Mesh(new THREE.RingGeometry(2.25, 2.55, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.6, 3, 1.4), transparent: true, opacity: 0.9, depthWrite: false }));
+    rim.position.y = fill.position.y = 0.07;
+    fill.geometry.setDrawRange(0, 0);
+    grp.add(body, halo, rim, fill);
+    grp.position.set(x, 0, z);
+    this.fx.add(grp);
+    this.ghosts.push({ b, x, z, t: 15, p: 0, sent: 0, grp, body, halo, fill, mats: [mat, halo.material, rim.material, fill.material] });
+  }
+
+  removeGhost(G) {
+    this.fx.remove(G.grp);
+    G.grp.traverse(o => { if (o.isMesh) o.geometry.dispose(); });
+    for (const m of G.mats) m.dispose();
+    const k = this.ghosts ? this.ghosts.indexOf(G) : -1;
+    if (k >= 0) this.ghosts.splice(k, 1);
+  }
+
+  ghostOf(b) { return this.ghosts.find(G => G.b === b) || null; }
+
+  updateGhosts(dt) {
+    const P = this.player;
+    for (let k = this.ghosts.length - 1; k >= 0; k--) {
+      const G = this.ghosts[k], mate = this.mateOf(G.b);
+      G.t -= dt;
+      if (this.ended) { this.removeGhost(G); continue; }
+      if (this.authority) {
+        if (G.t <= 0 || !mate || !mate.alive || this.poison.isPoisonedAt(G.x, G.z)) {
+          this.ev({ e: 'gone', id: G.b.id });
+          this.removeGhost(G);
+          continue;
+        }
+        if (Math.hypot(mate.pos.x - G.x, mate.pos.z - G.z) < 2.5 && this.time - mate.lastHurt > 0.5) G.p += dt;
+        if (G.p >= 3) { this.revive(G); continue; }
+        if (G.p - G.sent >= 0.25) { G.sent = G.p; this.ev({ e: 'rv', id: G.b.id, p: r2(G.p) }); }
+      }
+      // what shows: the ghost bobs, its halo spins, the ring fills; enemies only see it in their sight
+      const mine = !P || G.b === P || this.ally(G.b, P);
+      const d = P ? Math.hypot(P.pos.x - G.x, P.pos.z - G.z) : 0;
+      G.grp.visible = mine || (P.alive && d < (this.sightRange || this.visionRadius || 14) && this.inSight(P.pos, G));
+      G.body.position.y = 1.5 + Math.sin(this.time * 2.6) * 0.12;
+      G.halo.rotation.z += dt * 2;
+      G.mats[0].opacity = G.t < 4 ? 0.2 + 0.2 * (Math.sin(this.time * 14) > 0 ? 1 : 0) : 0.4; // flickers in its last seconds
+      G.fill.geometry.setDrawRange(0, 6 * Math.floor(Math.min(1, G.p / 3) * 48));
+    }
+  }
+
+  revive(G) {
+    const b = G.b;
+    this.removeGhost(G);
+    this.revives[b.team] = Math.max(0, this.revives[b.team] - 1);
+    this.ev({ e: 'revive', id: b.id });
+    b.revive(G.x, G.z);
+    b.rank = 0;
+    this.effects.ring(G.x, G.z, 2.4, new THREE.Color(0.6, 3, 1.4), 0.6);
+    this.effects.sparkBurst(G.x, 1.2, G.z, new THREE.Color(0.8, 3, 1.6), 30, 7, 0.6);
+    const P = this.player;
+    if (this.fxVisible(b)) {
+      sfx('revive', b === P || this.ally(b, P) ? 1 : this.volumeAt(G.x, G.z));
+      this.hud.floater(this.camera, G.x, 3.4, G.z, t('hud.revived'), 'power');
+    }
+    if (b === P) { this.state = 'playing'; this.resultT = -1; this.camTarget = b; this.aim.visible = true; }
+    if (b.persona) this.later.push([this.time + 0.6, () => this.bark(b, 'thanks')]);
+  }
+
+  // Duo: after a knock-out. The whole team out: its placement for both, the partner's ghost goes.
+  duoKo(b, ghost) {
+    const mate = this.mateOf(b), P = this.player;
+    if (b.rank && mate) { mate.rank = b.rank; const G = this.ghostOf(mate); if (G) this.removeGhost(G); }
+    if (ghost) this.addGhost(b);
+    if (P && b.rank && (b === P || this.ally(b, P))) { this.state = 'over'; this.resultT = 1.6; }
+    if (b === P && !b.rank && mate && mate.alive) this.camTarget = mate; // watch your partner
+  }
+
   ev(e) { if (this.net && this.net.role === 'host') this.outbox.push(e); }
 
   /* ------------------------------ helpers ------------------------------ */
@@ -244,8 +379,8 @@ export class Game {
 
   // Whose eyes the screen shows: you, or on fog maps whoever the camera follows once you are out.
   get sightViewer() {
-    const P = this.player;
-    return P && P.alive ? P : (this.visionRadius ? this.camTarget : null);
+    const P = this.player, m = this.mateOf(P);
+    return P && P.alive ? P : m && m.alive ? m : (this.visionRadius ? this.camTarget : null);
   }
 
   // Where the fog wall is centred: you, or whoever the camera follows once you are out.
@@ -291,6 +426,7 @@ export class Game {
   damage(target, amount, source, fromSuper = false) {
     if (!target.alive || !this.authority) return;
     if (this.shielded && source && source !== target) return;
+    if (this.ally(source, target)) return; // Duo: no friendly fire
     if (target.ghostT > 0 && source !== target) return; // Tail Roll
     if (this.mode === 'attract' && target === this.star && amount >= target.hp) amount = Math.max(0, target.hp - 1); // the menu's star
     if (this.dojo) { // dummies never fall: one that would, fills back up
@@ -353,19 +489,24 @@ export class Game {
 
   kill(b, killer, bySuper = false) {
     if (!b.alive) return;
-    b.rank = this.brawlers.filter(o => o.alive && o !== b).length + 1;
+    let ghost = false;
+    if (this.duo) { // placement per team (1..4), known once both partners are out
+      const mate = this.mateOf(b), up = !!(mate && mate.alive);
+      ghost = up && this.revives[b.team] > 0 && !this.ended;
+      b.rank = up ? 0 : this.teamsUp(b.team) + 1;
+    } else b.rank = this.brawlers.filter(o => o.alive && o !== b).length + 1;
     const bounty = b === this.crown && killer && killer !== b; // knocking out the crown pays 2 extra cubes
     const n = Math.max(1, b.cubes) + (bounty ? 2 : 0), x = b.pos.x, z = b.pos.z;
     if (bounty && killer === this.player) this.hud.floater(this.camera, x, 3.4, z, t('hud.bounty'), 'power');
-    this.killFx(b, killer, bySuper);
+    this.killFx(b, killer, bySuper, ghost);
     if (!this.authority) return;
     for (let k = 0; k < n; k++) this.dropCube(x, z, k, n);
-    this.ev({ e: 'kill', id: b.id, by: killer ? killer.id : null, rank: b.rank, sup: bySuper ? 1 : 0 });
+    this.ev({ e: 'kill', id: b.id, by: killer ? killer.id : null, rank: b.rank, sup: bySuper ? 1 : 0, gh: ghost ? 1 : 0 });
     if (killer && killer !== b) this.brains.get(killer)?.onKo(b);
     this.checkEnd();
   }
 
-  killFx(b, killer, bySuper = false) {
+  killFx(b, killer, bySuper = false, ghost = false) {
     const seen = this.fxVisible(b);
     b.alive = false;
     b.hp = 0;
@@ -398,26 +539,35 @@ export class Game {
     if (this.player) this.hud.killFeed(killer && killer !== b ? killer : null, b, this.player, bySuper);
     if (this.camTarget === b && killer && killer.alive) this.camTarget = killer;
     if (killer && killer === this.player && b !== killer && this.onFeat) { this.onFeat('ko'); if (bySuper) this.onFeat('superko'); }
-    if (b === this.player) { this.state = 'over'; this.resultT = 1.6; }
+    if (this.duo) this.duoKo(b, ghost);
+    else if (b === this.player) { this.state = 'over'; this.resultT = 1.6; }
   }
 
-  // Last one standing wins. Online, the match also ends once no human is left alive.
+  // Last one (Duo: last team) standing wins. Online, the match also ends once no human is left in it.
   checkEnd() {
     if (this.ended) return;
     const alive = this.brawlers.filter(o => o.alive);
-    if (alive.length === 1) {
+    if (this.duo ? alive.length && this.teamsUp() === 1 : alive.length === 1) {
       this.ended = true;
       const w = alive[0];
-      w.rank = 1;
-      w.win();
+      this.winners(w);
       if (this.mode === 'play') { this.feel.finalKo(!this.net); if (this.player) sfx('sting_finalko'); } // slow motion offline only: online the rules keep real time
       this.ev({ e: 'win', id: w.id });
       if (w.persona) { w.barkUntil = 0; this.bark(w, 'win'); }
-      if (w === this.player) { this.state = 'over'; this.resultT = 1.2; }
+      if (w === this.player || this.ally(w, this.player)) { this.state = 'over'; this.resultT = 1.2; }
       if (this.net) this.endT = 5;
-    } else if (this.net && !alive.some(o => o.human)) {
+    } else if (this.net && !this.brawlers.some(o => o.human && (o.alive || this.mateOf(o)?.alive))) { // Duo: a human whose partner stands still plays
       this.ended = true;
       this.endT = 3;
+    }
+  }
+
+  // The winner (and in Duo its partner, even knocked out): first place, the standing ones dance.
+  winners(w) {
+    for (const o of this.brawlers) {
+      if (o !== w && !this.ally(o, w)) continue;
+      o.rank = 1;
+      if (o.alive) o.win();
     }
   }
 
@@ -713,7 +863,8 @@ export class Game {
           // players spectate and get everything.
           for (const v of this.brawlers) {
             if (!v.human || v === this.player) continue;
-            const seen = v.alive ? alive.filter(b => b === v || this.canSee(v, b)) : alive;
+            const eye = v.alive ? v : this.duo && this.mateOf(v)?.alive ? this.mateOf(v) : null;
+            const seen = eye ? alive.filter(b => b === eye || this.ally(eye, b) || this.teamSees(eye, b)) : alive;
             const g = v.guard;
             N.sendTo(v.id, { t: 'snap', pt, b: seen.map(row), me: v.alive ? [r2(v.net.x), r2(v.net.y), g ? g.fix : 0] : undefined });
           }
@@ -780,12 +931,15 @@ export class Game {
         case 'kill':
           if (!b) break;
           b.rank = e.rank;
-          if (b.alive) this.killFx(b, this.byId.get(e.by), !!e.sup);
+          if (b.alive) this.killFx(b, this.byId.get(e.by), !!e.sup, !!e.gh);
           break;
         case 'win':
           this.ended = true;
-          if (b) { b.rank = 1; b.win(); if (!this.feel.orbitWant) sfx('sting_finalko'); this.feel.finalKo(false); if (b === this.player) { this.state = 'over'; this.resultT = 1.2; } }
+          if (b) { this.winners(b); if (!this.feel.orbitWant) sfx('sting_finalko'); this.feel.finalKo(false); if (b === this.player || this.ally(b, this.player)) { this.state = 'over'; this.resultT = 1.2; } }
           break;
+        case 'rv': { const G = this.ghostOf(b); if (G && Number.isFinite(e.p)) G.p = e.p; break; }
+        case 'gone': { const G = this.ghostOf(b); if (G) this.removeGhost(G); break; }
+        case 'revive': { const G = this.ghostOf(b); if (G) this.revive(G); break; }
         case 'knock': if (b === this.player) b.knock.set(e.x, 0, e.z); break;
         case 'imm': if (b && b.visibleToPlayer) this.hud.floater(this.camera, b.pos.x, 3.1, b.pos.z, t('hud.immune'), 'immune'); break;
         case 'gad':
@@ -854,6 +1008,7 @@ export class Game {
     this.combat.update(dt);
     this.poison.update(dt, t);
     if (this.authority) this.poisonDamage(dt);
+    if (this.duo) this.updateGhosts(dt);
     this.updateItems(dt, t);
     this.updateCrown(t);
     this.updateDrops(dt);
@@ -1058,7 +1213,7 @@ export class Game {
   chargeContact(b) {
     if (b.chargeHit) return;
     for (const o of this.brawlers) {
-      if (o === b || !this.hittable(o) || Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z) > b.radius + o.radius + 0.35) continue;
+      if (!this.hits(b, o) || Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z) > b.radius + o.radius + 0.35) continue;
       b.chargeHit = o;
       this.damage(o, 400 * b.dmgMul, b);
       if (o.alive && o.ccImmuneT <= 0) o.rootT = Math.max(o.rootT, 0.6);
@@ -1084,7 +1239,7 @@ export class Game {
   nearestFoe(p) {
     let best = null, bd = Infinity;
     for (const b of this.brawlers) {
-      if (b === p || !b.alive || !this.canSee(p, b)) continue;
+      if (b === p || !b.alive || this.ally(p, b) || !this.canSee(p, b)) continue;
       const d = Math.hypot(b.pos.x - p.pos.x, b.pos.z - p.pos.z);
       if (d < bd) { bd = d; best = b; }
     }
@@ -1143,7 +1298,7 @@ export class Game {
     const viewer = this.sightViewer;
     for (const b of this.brawlers) {
       if (!b.alive) { b.visibleToPlayer = false; continue; }
-      const v = !b.netHidden && (!viewer || b === viewer || this.canSee(viewer, b));
+      const v = !b.netHidden && (!viewer || b === viewer || this.ally(viewer, b) || (this.duo ? this.teamSees(viewer, b) : this.canSee(viewer, b)));
       if (v !== b.visibleToPlayer) b.setVisible(v);
       b.visibleToPlayer = v;
     }

@@ -259,5 +259,99 @@ await test('Weekly Chaos mutators change the rules on the server', () => {
   assert.equal(MUTATORS.length, 5);
 });
 
+/* ------------------------------ Duo Showdown (v0.14) ------------------------------ */
+
+function duoMatch(map, humans) {
+  const out = { all: [], to: {}, ended: false };
+  const m = new ServerMatch({
+    map, roster: makeRoster(humans.map(h => (typeof h === 'string' ? { id: h, name: h, type: 'volt' } : { name: h.id, type: 'volt', ...h })), { duo: true }),
+    send: msg => out.all.push(msg), sendTo: (id, msg) => (out.to[id] ||= []).push(msg), onEnd: () => { out.ended = true; },
+  });
+  return { m, out, g: m.game };
+}
+
+await test('duo roster: 4 teams of 2, a party shares a team, solo players are paired', () => {
+  const r = makeRoster([{ id: 'a', party: 'P1' }, { id: 'b' }, { id: 'c', party: 'P1' }, { id: 'd' }], { duo: true });
+  const team = id => r.find(x => x.id === id).team;
+  for (let t = 0; t < 4; t++) assert.equal(r.filter(x => x.team === t).length, 2, `team ${t}`);
+  assert.equal(team('a'), team('c'), 'the party is split');
+  assert.equal(team('b'), team('d'), 'the two solo players are not paired');
+  assert.notEqual(team('a'), team('b'));
+  assert.ok(r.every(x => x.party === undefined || x.human), 'bots have no party');
+  assert.ok(makeRoster([{ id: 'a' }]).every(x => x.team === undefined), 'solo Showdown has teams');
+});
+
+await test('duo: partners start together, cannot hurt each other, and the gas waits 35 s', () => {
+  const { g } = duoMatch('oasis', ['alice']);
+  const a = g.byId.get('alice'), mate = g.mateOf(a), foe = g.brawlers.find(o => !g.ally(o, a) && o !== a);
+  assert.ok(g.duo && mate, 'no partner');
+  assert.ok(Math.hypot(a.pos.x - mate.pos.x, a.pos.z - mate.pos.z) < 3, 'partners start apart');
+  assert.equal(g.poison.startAt, 35);
+  assert.equal(g.poison.interval, 8);
+  g.time = 10;
+  const hp = mate.hp;
+  g.damage(mate, 500, a);
+  assert.equal(mate.hp, hp, 'friendly fire');
+  assert.ok(!g.hits(a, mate) && g.hits(a, foe), 'hits() ignores the teams');
+  g.damage(foe, 500, a);
+  assert.ok(foe.hp < foe.maxHp, 'enemies must take damage');
+});
+
+await test('duo: Buddy Revive brings a partner back at 40% health, twice per team', () => {
+  const { m, out, g } = duoMatch('grove', ['alice']);
+  const a = g.byId.get('alice'), mate = g.mateOf(a);
+  a.maxHp = a.hp = 1e7; mate.maxHp = mate.hp = 1e7; // nobody else may end it meanwhile
+  g.brains.clear(); // bots stand still: the test moves them
+  g.time = 10;
+  const foes = g.brawlers.filter(o => o !== a && o !== mate);
+  // (no brains: the other teams stand at their own corners)
+  for (let k = 0; k < 2; k++) {
+    a.hp = 100;
+    g.damage(a, 500, foes[0]);
+    assert.ok(!a.alive && g.ghostOf(a), `revive ${k + 1}: no ghost`);
+    assert.equal(a.rank, 0, 'placed while the partner still stands');
+    mate.pos.set(a.pos.x, 0, a.pos.z);
+    for (let i = 0; i < 70 && !a.alive; i++) m.advance(0.05);
+    assert.ok(a.alive, `revive ${k + 1} did not happen`);
+    assert.equal(a.cubes, 0);
+    assert.equal(a.hp, Math.round(a.type.hp * 0.4));
+  }
+  assert.equal(g.revives[a.team], 0);
+  assert.ok(events(out).filter(e => e.e === 'revive' && e.id === 'alice').length === 2, 'no revive event');
+  a.hp = 100;
+  g.damage(a, 500, foes[0]);
+  assert.ok(!a.alive && !g.ghostOf(a), 'a third ghost');
+});
+
+await test('duo: being hit pauses the revive, the gas ends the ghost', () => {
+  const { m, out, g } = duoMatch('oasis', ['alice']);
+  const a = g.byId.get('alice'), mate = g.mateOf(a);
+  mate.maxHp = mate.hp = 1e7;
+  g.brains.clear();
+  g.time = 10;
+  const foe = g.brawlers.find(o => o !== a && o !== mate);
+  g.damage(a, 1e6, foe);
+  mate.pos.set(a.pos.x + 1, 0, a.pos.z);
+  for (let i = 0; i < 40; i++) { g.damage(mate, 10, foe); m.advance(0.05); } // hit all along: no progress
+  assert.ok(!a.alive && g.ghostOf(a).p === 0, 'progress while being hit');
+  g.poison.timer = 1000; // the gas everywhere
+  for (let i = 0; i < 25; i++) m.advance(0.05);
+  assert.ok(!g.ghostOf(a), 'the gas did not end the ghost');
+  assert.ok(events(out).some(e => e.e === 'gone' && e.id === 'alice'));
+});
+
+await test('duo: a match ends with one team standing, placements 1-4 per team', () => {
+  const { m, out, g } = duoMatch('dunes', ['alice', 'bob']);
+  g.net = null; g.onLeft('alice'); g.onLeft('bob'); // all bots, played to the last team (no 'no human left' stop)
+  for (let i = 0; i < 20 * 600 && !g.ended; i++) m.advance(0.05);
+  assert.ok(g.ended, 'no end');
+  const ranks = new Map();
+  for (const b of g.brawlers) {
+    assert.ok(b.rank >= 1 && b.rank <= 4, `${b.id} rank ${b.rank}`);
+    if (ranks.has(b.team)) assert.equal(ranks.get(b.team), b.rank, 'partners placed differently');
+    ranks.set(b.team, b.rank);
+  }
+});
+
 if (failed) { console.error(`\n${failed} test(s) failed`); process.exit(1); }
 console.log('\nall server tests passed');

@@ -98,8 +98,10 @@ const lerpAngle = (a, b, t) => {
 // Seconds of immunity to crowd control once a freeze ends, so two novas can't chain-lock anyone.
 export const CC_IMMUNE = 1.5;
 const GROUND = { oasis: 'sand', dunes: 'sand', grove: 'grass', frost: 'snow', marsh: 'mud' };
-const RING = { me: new THREE.Color(0.3, 1.6, 2.0), foe: new THREE.Color(1.8, 0.25, 0.2), meCb: new THREE.Color(0.35, 0.9, 2.4), foeCb: new THREE.Color(2.2, 1.0, 0.05) };
-const LINE = { me: new THREE.Color(0x19b6ff), foe: new THREE.Color(0x5c0d14), meCb: new THREE.Color(0x3a8dff), foeCb: new THREE.Color(0x8a4400) };
+const RING = { me: new THREE.Color(0.3, 1.6, 2.0), foe: new THREE.Color(1.8, 0.25, 0.2), meCb: new THREE.Color(0.35, 0.9, 2.4), foeCb: new THREE.Color(2.2, 1.0, 0.05),
+  mate: new THREE.Color(0.4, 2.2, 0.8), mateCb: new THREE.Color(1.4, 1.4, 2.6) };
+const LINE = { me: new THREE.Color(0x19b6ff), foe: new THREE.Color(0x5c0d14), meCb: new THREE.Color(0x3a8dff), foeCb: new THREE.Color(0x8a4400),
+  mate: new THREE.Color(0x2fd36b), mateCb: new THREE.Color(0xb7a6ff) };
 // A per-brawler copy of a shared outline material (same shader, own colour).
 function teamOutline(base) {
   const m = base.clone();
@@ -241,11 +243,13 @@ export class Brawler {
   }
 
   // Readability: your brawler has a bright outline and ring, enemies a dark red one (the colour-blind
-  // option makes it blue against orange). Outline materials shared between brawlers get a copy.
+  // option makes it blue against orange); in Duo your partner is green (lavender). Outline materials
+  // shared between brawlers get a copy.
   teamColors() {
     const cb = this.g.colorblind, me = this.isPlayer || this.g.star === this; // the menu's star wears your colours
-    this.ring.material.color.copy(me ? (cb ? RING.meCb : RING.me) : (cb ? RING.foeCb : RING.foe));
-    const line = me ? (cb ? LINE.meCb : LINE.me) : (cb ? LINE.foeCb : LINE.foe);
+    const k = me ? 'me' : this.g.ally?.(this, this.g.player) ? 'mate' : 'foe';
+    this.ring.material.color.copy(RING[cb ? k + 'Cb' : k]);
+    const line = LINE[cb ? k + 'Cb' : k];
     this.model.root.traverse(o => {
       if (!o.userData.outline || !o.material) return;
       if (o.material.userData.shared) o.material = teamOutline(o.material);
@@ -531,6 +535,21 @@ export class Brawler {
       return;
     }
     this.vanish();
+  }
+
+  // Duo: brought back by the partner (Buddy Revive) where it fell, at 40% health, no cubes.
+  revive(x, z) {
+    this.alive = true;
+    this.dieT = 0; this.launch = null; this.hitstopT = 0; this.won = false;
+    this.pos.set(x, 0, z); this.net.set(x, z); this.vel.set(0, 0, 0); this.knock.set(0, 0, 0);
+    this.cubes = 0; this.maxHp = this.type.hp; this.hp = Math.round(this.maxHp * 0.4); this.refreshDmg();
+    this.ammo = this.type.ammo; this.freezeT = 0; this.slowT = 0; this.rootT = 0; this.burst.length = 0;
+    this.ccImmuneT = 1.5; this.lastHurt = this.g.time;
+    this.spawnT = 0; // pops back in
+    this.setVisible(true);
+    const A = this.model.anim;
+    if (A) { A.held = false; A.loop = null; A.setLoop('Idle'); }
+    if (this.model.blink) this.model.blink.value = 0;
   }
 
   vanish() {

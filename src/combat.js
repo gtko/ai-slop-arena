@@ -247,7 +247,7 @@ export class Combat {
         }
         if (dead) break;
         for (const o of g.brawlers) {
-          if (o === B.owner || !g.hittable(o)) continue;
+          if (!g.hits(B.owner, o)) continue;
           const dx = o.pos.x - B.x, dz = o.pos.z - B.z, rr = o.radius + B.r;
           if (dx * dx + dz * dz < rr * rr) {
             g.damage(o, B.dmg * B.owner.dmgMul, B.owner, B.breakWalls);
@@ -331,7 +331,7 @@ export class Combat {
   explode(B) {
     const g = this.g, A = g.arena, { tx: x, tz: z, radius: R } = B;
     for (const o of g.brawlers) {
-      if (!o.alive || o === B.owner) continue;
+      if (!o.alive || !g.hits(B.owner, o)) continue;
       if (Math.hypot(o.pos.x - x, o.pos.z - z) < R + o.radius * 0.6) {
         g.damage(o, B.dmg * B.owner.dmgMul, B.owner, B.sup);
         const d = Math.hypot(o.pos.x - x, o.pos.z - z) + 0.01;
@@ -414,7 +414,7 @@ export class Combat {
       if (!gone && g.authority && Z.delay <= 0 && (Z.tick -= dt) <= 0) {
         Z.tick = 0.25;
         for (const o of g.brawlers) {
-          if (o === Z.owner || !g.hittable(o) || o.pos.y > 0.3 || Math.hypot(o.pos.x - Z.x, o.pos.z - Z.z) > Z.r + o.radius * 0.5) continue;
+          if (!g.hits(Z.owner, o) || o.pos.y > 0.3 || Math.hypot(o.pos.x - Z.x, o.pos.z - Z.z) > Z.r + o.radius * 0.5) continue;
           if (Z.once) {
             g.damage(o, Z.dmg * (Z.owner ? Z.owner.dmgMul : 1), Z.owner);
             g.effects.sparkBurst(Z.x, 0.4, Z.z, Z.col, 20, 6, 0.4, 0.14);
@@ -434,7 +434,7 @@ export class Combat {
     const g = this.g, perma = hasStar(b, 'permafrost'), R = perma ? 6.25 : 5, x = b.pos.x, z = b.pos.z;
     if (g.authority) {
       for (const o of g.brawlers) {
-        if (o === b || !g.hittable(o) || Math.hypot(o.pos.x - x, o.pos.z - z) > R) continue;
+        if (!g.hits(b, o) || Math.hypot(o.pos.x - x, o.pos.z - z) > R) continue;
         g.damage(o, 900 * b.dmgMul, b, true);
         if (!o.alive) continue;
         if (o.ccImmuneT > 0) {
@@ -461,7 +461,7 @@ export class Combat {
     for (let k = 0; k < B.chain; k++) {
       let best = null, bd = 5.5;
       for (const o of g.brawlers) {
-        if (hit.has(o) || !g.hittable(o)) continue;
+        if (hit.has(o) || !g.hits(B.owner, o)) continue;
         const d = Math.hypot(o.pos.x - from.pos.x, o.pos.z - from.pos.z);
         if (d < bd && g.arena.los(from.pos.x, from.pos.z, o.pos.x, o.pos.z)) { bd = d; best = o; }
       }
@@ -500,7 +500,7 @@ export class Combat {
       this.strikes.splice(i, 1);
       if (g.authority) {
         for (const o of g.brawlers) {
-          if (o === S.owner || !g.hittable(o) || Math.hypot(o.pos.x - S.x, o.pos.z - S.z) > 1.8) continue;
+          if (!g.hits(S.owner, o) || Math.hypot(o.pos.x - S.x, o.pos.z - S.z) > 1.8) continue;
           g.damage(o, S.dmg * S.owner.dmgMul, S.owner, true);
         }
         const ti = A.toTile(S.x), tj = A.toTile(S.z);
