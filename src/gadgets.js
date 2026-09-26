@@ -163,7 +163,7 @@ GADGETS.mochiA = {
   // Belly Slide: a 5 m slide; enemies in the way take 200 and are pushed aside
   dist: 5.5,
   move(g, b, dx, dz) { dash(b, dx, dz, 5, 0.4); },
-  effect(g, b) { b.slideT = 0.45; b.slideHit = new Set(); },
+  effect(g, b, dx, dz) { b.slideT = 0.45; b.slideHit = new Set(); b.slideDir = [dx, dz]; },
   fx(g, b) { g.effects.dust(b.pos.x, b.pos.z, 10, 0xffd6e0, 1.3); },
 };
 GADGETS.mochiB = {

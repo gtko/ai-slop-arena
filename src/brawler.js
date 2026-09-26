@@ -48,13 +48,13 @@ export const TYPES = {
   pipchomp: {
     key: 'pipchomp', name: 'Pip & Chomp', role: 'Assassin',
     desc: 'A shy mushroom kid riding a hungry venus-flytrap. Chomp lunges 4 m and bites; Pip says sorry. Super: plants a Venus Trap, a bush that bites, roots and reveals the first enemy who walks in.',
-    hp: 4200, speed: 6.8, ammo: 3, reload: 1.6, range: 4.5, superCost: 2200, projSpeed: 20,
+    hp: 4200, speed: 6.8, ammo: 3, reload: 1.6, range: 4.5, superCost: 2200, projSpeed: 20, superReach: 8,
     palette: { main: 0x2f9e44, dark: 0x1e5c2c, accent: 0xd6336c, hair: 0xb197fc, skin: 0xf5e6d0 },
   },
   mochi: {
     key: 'mochi', name: 'Mochi', role: 'Tank',
     desc: 'A gentle strawberry-mochi sumo seal. Its belly bump sends 3 jelly waves that push enemies back (off a cliff, ideally). Super: Mochi Pound, a leap that crushes and stuns everyone where it lands and flattens walls.',
-    hp: 6800, speed: 5.6, ammo: 4, reload: 1.4, range: 3.5, superCost: 2400, projSpeed: 20, radius: 0.72, cubeHp: 250,
+    hp: 6800, speed: 5.6, ammo: 4, reload: 1.4, range: 3.5, superCost: 2400, projSpeed: 20, radius: 0.72, cubeHp: 250, superReach: 9,
     palette: { main: 0xffc2d4, dark: 0xe64980, accent: 0xffffff, hair: 0xffffff, skin: 0xffc2d4 },
   },
 };
@@ -576,7 +576,7 @@ export class Brawler {
   // Duo: brought back by the partner (Buddy Revive) where it fell, at 40% health, no cubes.
   revive(x, z) {
     this.alive = true;
-    this.dieT = 0; this.launch = null; this.hitstopT = 0; this.won = false;
+    this.dieT = 0; this.launch = null; this.hitstopT = 0; this.won = false; this.fell = false; this.pushBy = null;
     this.pos.set(x, 0, z); this.net.set(x, z); this.vel.set(0, 0, 0); this.knock.set(0, 0, 0);
     this.cubes = 0; this.maxHp = this.type.hp; this.hp = Math.round(this.maxHp * 0.4); this.refreshDmg();
     this.ammo = this.type.ammo; this.freezeT = 0; this.slowT = 0; this.rootT = 0; this.burst.length = 0;

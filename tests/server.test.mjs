@@ -638,5 +638,22 @@ await test('Mochi star powers: Heavyweight halves pushes, Second Helping heals o
   assert.ok(b.me.hp >= 1000 + 250 + 800 - 1, `Second Helping: ${b.me.hp}`);
 });
 
+await test('an online player crossing the void on a jump pad does not fall (the host waits for the landing)', () => {
+  const m = new ServerMatch({ map: 'isles', roster: makeRoster([{ id: 'alice', name: 'a', type: 'volt' }]), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
+  const g = m.game;
+  while (g.time < 6) m.advance(0.05);
+  g.brains.clear();
+  const a = g.byId.get('alice'), p = g.kit.pads[0];
+  a.maxHp = a.hp = 1e6;
+  const send = (x, z) => m.input({ from: 'alice', x, z, ax: 1, az: 0, px: x, pz: z, f: 0, s: 0, g: 0 });
+  // walk onto the pad (teleport-free: the host saw us there), then fly the arc the client would
+  a.pos.set(p.x, 0, p.z); a.net.set(p.x, p.z);
+  send(p.x, p.z); m.advance(0.05);
+  for (let k = 1; k <= 16; k++) { const f = k / 16; send(p.x + p.dx * p.dist * f, p.z + p.dz * p.dist * f); m.advance(0.05); }
+  for (let k = 0; k < 6; k++) m.advance(0.05);
+  assert.ok(a.alive, 'the host killed a player in the air over the void');
+  assert.notEqual(g.arena.charAt(a.net.x, a.net.y), 'V', 'landed on the void');
+});
+
 if (failed) { console.error(`\n${failed} test(s) failed`); process.exit(1); }
 console.log('\nall server tests passed');

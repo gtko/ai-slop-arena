@@ -268,8 +268,15 @@ export class Game {
   // Buddy Revive: a KO'd partner leaves a ghost for 15 s where it fell. The partner standing within
   // 2.5 m for 3 s in all (the count pauses while the reviver is being hit) brings it back at 40%
   // health with no cubes. The gas reaching the ghost ends it. 2 revives per team per match.
+  // The nearest ground to a spot (a ring-out's cubes and ghost wait there, not over the void).
+  groundNear(x, z) {
+    const A = this.arena, [i, j] = A.nearestWalkable(A.toTile(x), A.toTile(z));
+    return A.center(i, j, new THREE.Vector3());
+  }
+
   addGhost(b) {
-    const x = b.pos.x, z = b.pos.z, mine = !this.player || b === this.player || this.ally(b, this.player);
+    const s = b.fell ? this.groundNear(b.pos.x, b.pos.z) : b.pos;
+    const x = s.x, z = s.z, mine = !this.player || b === this.player || this.ally(b, this.player);
     const col = mine ? new THREE.Color(0.7, 2.4, 2.8) : new THREE.Color(2.4, 0.9, 0.8), grp = new THREE.Group(); // bright: it glows through fog and bloom
     const mat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.5, depthWrite: false });
     const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.7, 4, 12), mat);
@@ -478,7 +485,8 @@ export class Game {
   }
 
   tryAttack(b, dx, dz, point, isSuper) {
-    if (!b.alive || this.state === 'idle' || b.freezeT > 0) return false;
+    if (!b.alive || this.state === 'idle' || b.freezeT > 0 || b.stickyT > 0) return false; // Sticky Mochi: no attacks
+    if ((b.dash && b.dash.air) || (b.netDriven && b.guard && this.time < (b.guard.airUntil || 0) - 0.3)) return false; // nor in the air
     const l = Math.hypot(dx, dz);
     if (l < 1e-4) { dx = Math.sin(b.facing); dz = Math.cos(b.facing); } else { dx /= l; dz /= l; }
     if (isSuper) {
@@ -489,7 +497,6 @@ export class Game {
       b.ammo -= 1;
       b.fireCd = b.type.key === 'gunslinger' ? 0.55 : 0.4;
     }
-    if (isSuper && b.stickyT > 0) return false;
     // Chomp's lunge bends up to 15° toward an enemy you can see within 4.5 m (authority: the
     // attack event carries the bent direction to everyone)
     if (!isSuper && b.type.key === 'pipchomp' && this.authority) {
@@ -619,7 +626,7 @@ export class Game {
       b.rank = up ? 0 : this.teamsUp(b.team) + 1;
     } else b.rank = this.brawlers.filter(o => o.alive && o !== b).length + 1;
     const bounty = b === this.crown && killer && killer !== b; // knocking out the crown pays 2 extra cubes
-    const n = Math.max(1, b.cubes) + (bounty ? 2 : 0), x = b.pos.x, z = b.pos.z;
+    const n = Math.max(1, b.cubes) + (bounty ? 2 : 0), g0 = b.fell ? this.groundNear(b.pos.x, b.pos.z) : b.pos, x = g0.x, z = g0.z;
     if (bounty && killer === this.player) this.hud.floater(this.camera, x, 3.4, z, t('hud.bounty'), 'power');
     this.killFx(b, killer, bySuper, ghost);
     if (!this.authority) return;
@@ -929,7 +936,7 @@ export class Game {
     let ax = num(m.ax, 0), az = num(m.az, 1);
     const al = Math.hypot(ax, az) || 1;
     ax /= al; az /= al;
-    const reach = b.type.range + 2;
+    const reach = Math.max(b.type.range, b.type.superReach || 0) + 2; // supers aimed further than the attack (Pound 9 m, trap 8 m)
     let px = num(m.px, b.pos.x), pz = num(m.pz, b.pos.z);
     const pd = Math.hypot(px - b.pos.x, pz - b.pos.z);
     if (pd > reach) { px = b.pos.x + (px - b.pos.x) / pd * reach; pz = b.pos.z + (pz - b.pos.z) / pd * reach; }
@@ -1374,7 +1381,7 @@ export class Game {
 
   // Mochi's Belly Slide: each enemy bumped on the way takes 200 and is pushed aside.
   slideContact(b) {
-    const dx = b.dash ? b.dash.vx : 0, dz = b.dash ? b.dash.vz : 0, l = Math.hypot(dx, dz) || 1;
+    const [dx, dz] = b.slideDir || [b.dash ? b.dash.vx : 0, b.dash ? b.dash.vz : 1], l = Math.hypot(dx, dz) || 1;
     for (const o of this.brawlers) {
       if (b.slideHit?.has(o) || !this.hits(b, o) || Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z) > b.radius + o.radius + 0.3) continue;
       (b.slideHit ||= new Set()).add(o);

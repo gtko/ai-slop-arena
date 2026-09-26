@@ -51,7 +51,8 @@ export class MapKit {
   get active() { return this.pads.length || this.shrooms.length || this.bridges.size || this.plan.length || this.map.sky; }
   get crumbles() { return this.plan.length > 0; }
   // seconds before the next island starts to fall (HUD); Infinity once everything planned has fallen
-  get nextIn() { const s = this.plan[this.step]; return s ? s.at - this.g.time : Infinity; }
+  // (the poison timer: the match clock the host keeps in sync on every client)
+  get nextIn() { const s = this.plan[this.step]; return s ? s.at - this.g.poison.timer : Infinity; }
 
   /* ------------------------------ layout ------------------------------ */
 
@@ -245,6 +246,7 @@ export class MapKit {
     const g = this.g, A = this.A;
     for (const b of g.brawlers) {
       if (!b.alive || b.pos.y > 0.05 || (b.dash && b.dash.air)) continue;
+      if (b.netDriven && b.guard && g.time < (b.guard.airUntil || 0)) continue; // a remote player in the air (pad, Pound, hop)
       const x = b.netDriven ? b.net.x : b.pos.x, z = b.netDriven ? b.net.y : b.pos.z;
       if (A.charAt(x, z) !== 'V') continue;
       const P = b.pushBy && g.time - b.pushBy.t < PUSH_CREDIT && b.pushBy.by !== b ? b.pushBy.by : null;
@@ -281,8 +283,8 @@ export class MapKit {
       if (!b.alive) continue;
       const x = b.netDriven ? b.net.x : b.pos.x, z = b.netDriven ? b.net.y : b.pos.z;
       for (const o of g.brawlers) if (g.hits(b, o) && Math.hypot(o.pos.x - x, o.pos.z - z) < 2) g.damage(o, PAD_HIT, b);
-      g.ev({ e: 'kit', k: 'land', x: r2(x), z: r2(z) });
-      this.landFx(x, z);
+      g.ev({ e: 'kit', k: 'land', id: b.id, x: r2(x), z: r2(z) });
+      if (g.fxVisible(b)) this.landFx(x, z); // a landing in a bush shows nothing
     }
   }
   landFx(x, z) {
@@ -305,8 +307,8 @@ export class MapKit {
       if (!b) continue;
       s.ready = false; s.at = g.time + SHROOM_REGROW;
       b.shroom = { left: SHROOM_HEAL, rate: SHROOM_HEAL / SHROOM_TIME };
-      g.ev({ e: 'kit', k: 'shroom', i: s.i, j: s.j, on: 0 });
-      this.shroomFx(s, false);
+      g.ev({ e: 'kit', k: 'shroom', i: s.i, j: s.j, on: 0, id: b.id });
+      this.shroomFx(s, false, g.fxVisible(b));
     }
     if (g.authority) for (const b of g.brawlers) {
       if (!b.shroom) continue;
@@ -317,11 +319,11 @@ export class MapKit {
       if (b.shroom.left <= 0) b.shroom = null;
     }
   }
-  shroomFx(s, on) {
+  shroomFx(s, on, seen = true) {
     const g = this.g, c = this.A.center(s.i, s.j, new THREE.Vector3());
     s.ready = on;
     if (s.mesh) s.mesh.visible = on;
-    if (!on) { g.effects.sparkBurst(c.x, 1, c.z, new THREE.Color(0.8, 3, 1.4), 16, 4, 0.5); sfx('mushroom', g.volumeAt(c.x, c.z)); }
+    if (!on && seen) { g.effects.sparkBurst(c.x, 1, c.z, new THREE.Color(0.8, 3, 1.4), 16, 4, 0.5); sfx('mushroom', g.volumeAt(c.x, c.z)); }
     else g.effects.ring(c.x, c.z, 0.9, new THREE.Color(0.8, 3, 1.4), 0.4);
   }
 
@@ -441,7 +443,7 @@ export class MapKit {
       if (ch === '=') { this.breakBridge(i, j); continue; }
       if (ch === '#') A.destroyWall(i, j);
       const cr = A.crateAt(i, j);
-      if (cr) { A.group.remove(cr.group); A.crates.delete(key); }
+      if (cr) { A.group.remove(cr.group); A.crates.delete(key); A.disposeCrate?.(cr); }
       A.hideBush?.(i, j);
       for (const T of this.traps.filter(T => T.i === i && T.j === j)) this.removeTrap(T);
       for (const p of this.pads) if (p.i === i && p.j === j && p.disc) p.disc.parent.visible = false;
@@ -454,6 +456,10 @@ export class MapKit {
     }
     A.rev++;
     A.rebuildGround?.();
+    for (let k = g.items.length - 1; k >= 0; k--) { // cubes on the fallen ground fall with it
+      const it = g.items[k];
+      if (A.charAt(it.tx, it.tz) === 'V') { g.fx.remove(it.mesh); g.items.splice(k, 1); }
+    }
     this.drawCracks();
     if (tiles.length) { g.shakeAt(g.camFocus.x, g.camFocus.z, 0.5); sfx('crumble', 0.9); }
   }
@@ -510,6 +516,7 @@ export class MapKit {
     this.group.remove(T.grp);
     T.grp.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
     if (A.grid[T.j][T.i] === 'B') { A.grid[T.j][T.i] = T.was === 'B' ? '.' : T.was; A.rev++; }
+    for (const w of A.iceWalls || []) if (w.i === T.i && w.j === T.j && w.was === 'B') w.was = T.was === 'B' ? '.' : T.was; // iced over meanwhile
     if (snapped) {
       this.g.effects.ring(T.x, T.z, 1.2, new THREE.Color(3.2, 0.8, 1.6), 0.5);
       this.g.effects.sparkBurst(T.x, 1, T.z, new THREE.Color(0.6, 2.6, 0.6), 18, 5, 0.5, 0.14);
@@ -549,11 +556,11 @@ export class MapKit {
     switch (e.k) {
       case 'trap': { const b = this.g.byId.get(e.id); if (b) { for (const T of this.traps.filter(T => T.owner === b)) this.removeTrap(T); this.addTrap(b, e.i, e.j); } break; }
       case 'trapGo': { const T = this.traps.find(T => T.i === e.i && T.j === e.j); if (T) this.removeTrap(T, !!e.snap); break; }
-      case 'land': this.landFx(e.x, e.z); break;
-      case 'shroom': { const s = this.shrooms.find(o => o.i === e.i && o.j === e.j); if (s) this.shroomFx(s, !!e.on); break; }
+      case 'land': { const b = this.g.byId.get(e.id); if (!b || this.g.fxVisible(b)) this.landFx(e.x, e.z); break; }
+      case 'shroom': { const s = this.shrooms.find(o => o.i === e.i && o.j === e.j), b = this.g.byId.get(e.id); if (s) this.shroomFx(s, !!e.on, !b || this.g.fxVisible(b)); break; }
       case 'bridge': this.breakBridge(e.i, e.j); break;
       case 'doom': if (Array.isArray(e.t)) this.doom(e.t); break;
-      case 'crumble': if (Array.isArray(e.t)) this.crumble(e.t); break;
+      case 'crumble': if (Array.isArray(e.t)) { this.step++; this.crumble(e.t); } break;
       case 'gas': if (Number.isFinite(e.at)) { this.step = this.plan.length; Object.assign(this.g.poison, { startAt: e.at, interval: 4, maxLevel: 12 }); } break;
     }
   }

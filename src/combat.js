@@ -63,6 +63,7 @@ export class Combat {
     this.zones = [];   // ground hazards: lava puddles, zap traps (gadgets, star powers)
     this.windups = []; // area supers announce themselves on the ground before they hit
     this.waves = [];   // Nurse Kappa's Tidal Wave
+    this.marks = [];   // Mochi Pound landing marks
     this.free = new Map(); // geometry -> spare bullet meshes
     this.bulletGeo = new THREE.SphereGeometry(1, 12, 8);
     this.seedGeo = seedGeometry();
@@ -384,12 +385,15 @@ export class Combat {
   lungeBite(b, dx, dz, dist, dmg, heal = 0) {
     const g = this.g;
     if (!g.authority) return;
-    const sx = b.netDriven ? b.net.x : b.pos.x, sz = b.netDriven ? b.net.y : b.pos.z;
+    const sx = b.netDriven ? b.net.x : b.pos.x, sz = b.netDriven ? b.net.y : b.pos.z, A = g.arena;
+    let reach = dist; // as far as the lunge itself goes (walls stop it)
+    while (reach > 0.5 && !A.walkLine(sx, sz, sx + dx * reach, sz + dz * reach, 0.3)) reach -= 0.5;
     let best = null, bt = Infinity;
     for (const o of g.brawlers) {
       if (!g.hits(b, o)) continue;
       const rx = o.pos.x - sx, rz = o.pos.z - sz, along = rx * dx + rz * dz;
-      if (along < -0.6 || along > dist + 1.3 || Math.abs(rx * -dz + rz * dx) > 1.15) continue;
+      if (along < -0.6 || along > reach + 1.3 || Math.abs(rx * -dz + rz * dx) > 1.15) continue;
+      if (!A.los(sx, sz, o.pos.x, o.pos.z)) continue; // no bite through a wall
       if (along < bt) { bt = along; best = o; }
     }
     g.later.push([g.time + 0.12, () => {
@@ -441,17 +445,21 @@ export class Combat {
     const g = this.g;
     let tx = point.x - b.pos.x, tz = point.z - b.pos.z, d = Math.hypot(tx, tz);
     if (d > 9) { tx *= 9 / d; tz *= 9 / d; d = 9; }
+    // never onto the void (or a wall): back along the leap to the first place you can stand
+    const A = g.arena;
+    for (let k = 0; k < 18 && d > 0.5 && !A.walkable(A.toTile(b.pos.x + tx), A.toTile(b.pos.z + tz)); k++) { const s = (d - 0.5) / d; tx *= s; tz *= s; d -= 0.5; }
     const x = b.pos.x + tx, z = b.pos.z + tz, T = 1.1;
     if (!b.netDriven) b.dash = { vx: tx / T, vz: tz / T, t: T, air: true, T };
-    else if (b.guard) { b.guard.knock = Math.max(b.guard.knock, d + 2); b.guard.airUntil = g.time + T + 0.3; }
+    else if (b.guard) { b.guard.knock = Math.max(b.guard.knock, d + 2); b.guard.airUntil = g.time + T + 0.6; } // room for the round trip
     const mark = new THREE.Mesh(this.zoneGeo || (this.zoneGeo = new THREE.CircleGeometry(1, 32).rotateX(-Math.PI / 2)),
       new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 1.2, 1.8), transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending }));
     mark.position.set(x, 0.08, z); mark.scale.setScalar(4); mark.renderOrder = 1;
     g.fx.add(mark);
+    this.marks.push(mark);
     g.later.push([g.time + T, () => {
-      g.fx.remove(mark); mark.material.dispose();
+      g.fx.remove(mark); mark.material.dispose(); this.marks.splice(this.marks.indexOf(mark), 1);
       if (!b.alive) return;
-      const lx = b.netDriven ? b.net.x : b.pos.x, lz = b.netDriven ? b.net.y : b.pos.z;
+      const lx = b.netDriven ? x : b.pos.x, lz = b.netDriven ? z : b.pos.z; // a remote player lands where it aimed (its own dash starts later)
       g.effects.ring(lx, lz, 4, new THREE.Color(3.4, 1.6, 2.4), 0.5);
       g.effects.dust(lx, lz, 20, 0xffd6e0, 2.4);
       g.shakeAt(lx, lz, 0.8);
@@ -768,5 +776,7 @@ export class Combat {
     this.windups.length = 0;
     for (const W of this.waves) { this.g.fx.remove(W.mesh); W.mats.forEach(m => m.dispose()); }
     this.waves.length = 0;
+    for (const m of this.marks) { this.g.fx.remove(m); m.material.dispose(); }
+    this.marks.length = 0;
   }
 }

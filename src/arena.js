@@ -636,7 +636,13 @@ export class Arena {
     this.crates.delete(this.key(i, j));
     this.grid[j][i] = '.';
     this.rev++;
+    this.disposeCrate(c);
     return c; // (truthy: the crate, so callers can tell a barrel)
+  }
+  // Barrels own their geometry and materials; crates share theirs (except the hit-flash material).
+  disposeCrate(c) {
+    if (c.barrel) c.group.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+    else if (c.mat) c.mat.dispose();
   }
 
   /* ------------------------------ per frame ---------------------------- */
@@ -688,6 +694,7 @@ export class Arena {
       pool.add(f.x, f.y, f.z, 1.0, 0.5, 0.18, 22 * amt * (f.flicker || 1), 10);
     }
     for (const c of this.crates.values()) {
+      if (c.barrel) continue; // no power cube inside
       const p = c.group.position;
       pool.add(p.x, 2.6, p.z, 0.3, 1.0, 0.45, 0.8 + 2.5 * night, 5);
     }
