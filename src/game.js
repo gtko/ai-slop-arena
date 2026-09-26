@@ -108,7 +108,8 @@ export class Game {
 
   // opts: { mapKey, roster, localId, net }. No localId = attract mode (bots only, menu backdrop).
   // headless: the authoritative server (worker/ -> src/server/sim.js), a real match with no local player.
-  newMatch({ mapKey = 'oasis', roster = null, localId = null, net = null, headless = false } = {}) {
+  // dojo: training (M05) - no gas, no drops, the bots are dummies in front of you that never fall.
+  newMatch({ mapKey = 'oasis', roster = null, localId = null, net = null, headless = false, dojo = false } = {}) {
     for (const b of this.brawlers) b.dispose();
     this.brawlers = [];
     this.brains.clear();
@@ -131,7 +132,9 @@ export class Game {
     this.weather = this.lighting.weather = new Weather(this, MAPS[this.mapKey].weather);
     this.weather.setDensity(this.weatherDensity ?? 1);
     const real = !!localId || headless;
-    this.poison = new Poison(this, real ? {} : { startAt: 18, interval: 6 });
+    this.dojo = dojo;
+    this.dojoLog = [];
+    this.poison = new Poison(this, dojo ? { startAt: 1e9 } : real ? {} : { startAt: 18, interval: 6 });
     this.visionRadius = MAPS[this.mapKey].vision || 0;
     // How far anyone sees (fog maps use their fog wall instead); the sandstorm cuts it shorter.
     this.sightRange = this.visionRadius ? 0 : MAPS[this.mapKey].weather === 'sandstorm' ? 11 : 14;
@@ -166,7 +169,8 @@ export class Game {
     this.feel.reset();
     // supply drops (authority schedules, everyone sees): ~40-50 s and ~85-95 s into the match
     for (const D of this.dropping || []) this.fx.remove(D.beam, D.ring);
-    this.drops = this.mode === 'play' ? [40 + Math.random() * 10, 85 + Math.random() * 10] : [];
+    if (dojo) this.setupDojo();
+    this.drops = this.mode === 'play' && !dojo ? [40 + Math.random() * 10, 85 + Math.random() * 10] : [];
     this.dropping = [];
     this.gadgetSeq = 0;
     this.hud.setup(this.brawlers, this.player);
@@ -258,6 +262,11 @@ export class Game {
     if (!target.alive || !this.authority) return;
     if (this.shielded && source && source !== target) return;
     if (target.ghostT > 0 && source !== target) return; // Tail Roll
+    if (this.dojo) { // dummies never fall: one that would, fills back up
+      if (target === this.player) return;
+      if (source === this.player) this.dojoLog.push([this.time, Math.round(amount)]);
+      if (amount >= target.hp) target.hp += target.maxHp;
+    }
     if (target.armorT > 0) amount *= 0.65;               // Bark Skin
     amount = Math.round(amount);
     target.hp -= amount;
@@ -438,6 +447,43 @@ export class Game {
       if (this.onFeat) this.onFeat('cubes', b.cubes);
     }
   }
+
+  // Training dojo: the other brawlers stand in a loose row a few metres ahead, as dummies.
+  setupDojo() {
+    this.brains.clear();
+    const P = this.player, A = this.arena, spot = new THREE.Vector3();
+    // the most open spot near the middle for you, the dummies around it
+    let best = null, bs = -1;
+    for (let j = 7; j < 18; j++) for (let i = 7; i < 18; i++) {
+      let open = 0;
+      for (let dj = -3; dj <= 3; dj++) for (let di = -3; di <= 3; di++) if (A.walkable(i + di, j + dj) && A.get(i + di, j + dj) !== 'W') open++;
+      if (open > bs) { bs = open; best = [i, j]; }
+    }
+    A.center(best[0], best[1], spot);
+    P.pos.set(spot.x, 0, spot.z + 3);
+    let k = 0;
+    for (const b of this.brawlers) {
+      if (b === P) continue;
+      const a = (k++ - 3) * 0.45, r = 6.5;
+      b.pos.set(spot.x + Math.sin(a) * r, 0, spot.z + 3 - Math.cos(a) * r);
+      A.collideCircle(b.pos, b.radius);
+      b.face(P.pos.x - b.pos.x, P.pos.z - b.pos.z);
+    }
+  }
+
+  updateDojo() {
+    const P = this.player;
+    if (P) { P.gadgetCharges = 3; P.hp = P.maxHp; }
+    for (const b of this.brawlers) {
+      if (b === P) continue;
+      b.moveIntent.set(0, 0, 0);
+      if (this.time - b.lastHurt > 2) b.hp = b.maxHp; // dummies heal up after 2 s
+    }
+    while (this.dojoLog.length && this.time - this.dojoLog[0][0] > 5) this.dojoLog.shift();
+  }
+
+  // Your damage per second over the last 5 s (training dojo).
+  get dojoDps() { return Math.round(this.dojoLog.reduce((s, [, a]) => s + a, 0) / 5); }
 
   // Supply drop: 5 s of warning (a beacon and a siren where it will land), then a gold crate falls
   // from the sky with 3 power cubes inside. Whoever stands under it gets bumped.
@@ -725,6 +771,7 @@ export class Game {
     this.updateItems(dt, t);
     this.updateCrown(t);
     this.updateDrops(dt);
+    if (this.dojo) this.updateDojo();
     this.updateVisibility();
     this.updateFoliage(dt);
     if (P && P.alive) this.updateAim();

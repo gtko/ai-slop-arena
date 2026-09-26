@@ -369,6 +369,21 @@ function matchLeft(reason) {
 
 /* ---- solo ---- */
 
+// Training dojo (v0.12): your brawler and loadout against dummies, no gas, unlimited gadgets.
+function dojo() {
+  initAudio();
+  sfx('click');
+  $('#menu').classList.add('hidden');
+  $('#result').classList.add('hidden');
+  hud.show(true);
+  playMusic('menu');
+  finalMusic = true; // no final-showdown theme in the dojo
+  matchLeft('restart');
+  game.newMatch({ mapKey: 'oasis', roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen) }], { level: 0.3 }), localId: 'me', dojo: true });
+  track('dojo_opened', { brawler: chosen, loadout: loadout(chosen) });
+  canvas.focus();
+}
+
 function play() {
   initAudio();
   sfx('click');
@@ -399,6 +414,7 @@ function toMenu() {
   attract();
 }
 $('#play').addEventListener('click', play);
+$('#dojo').addEventListener('click', dojo);
 $('#again').addEventListener('click', play);
 $('#toMenu').addEventListener('click', toMenu);
 

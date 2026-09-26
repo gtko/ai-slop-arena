@@ -38,7 +38,9 @@ export class Hud {
     this.lowEl.id = 'lowhp';
     this.hurtEl = document.createElement('div');
     this.hurtEl.id = 'hurt';
-    this.root.append(this.feed, this.banner, this.lowEl, this.hurtEl);
+    this.dpsEl = document.createElement('div');
+    this.dpsEl.id = 'dps';
+    this.root.append(this.feed, this.banner, this.lowEl, this.hurtEl, this.dpsEl);
   }
 
   show(on) { this.root.classList.toggle('hidden', !on); }
@@ -99,6 +101,9 @@ export class Hud {
       if (regen !== o.regen) { o.el.classList.toggle('regen', regen); o.regen = regen; } // healing: the bar glows
     }
 
+    this.dpsEl.style.display = game.dojo ? '' : 'none';
+    if (game.dojo) { const v = game.dojoDps; if (v !== this.lastDps) { this.dpsEl.innerHTML = `<b>${v}</b><small>${t('hud.dps')}</small><p>${t('hud.dojoHint')}</p>`; this.lastDps = v; } }
+
     const alive = game.brawlers.filter(b => b.alive).length;
     if (alive !== this.lastAlive) {
       if (this.play && !game.ended && alive < this.lastAlive) {
@@ -111,6 +116,7 @@ export class Hud {
     const P = game.poison;
     if (P) {
       const n = P.nextIn;
+      this.poisonPill.style.display = game.dojo ? 'none' : '';
       this.poisonPill.classList.toggle('warn', n < 6 && n > 0);
       this.poisonEl.textContent = n === Infinity ? t('hud.max') : `${Math.floor(Math.max(0, n) / 60)}:${String(Math.ceil(Math.max(0, n)) % 60).padStart(2, '0')}`;
       this.poisonPill.querySelector('small').textContent = P.level === 0 ? t('hud.gasIn') : t('hud.gasGrows');
