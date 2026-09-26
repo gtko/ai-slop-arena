@@ -611,5 +611,15 @@
   "menu.hp": "Живот",
   "menu.range": "Обхват",
   "menu.speed": "Скорост",
-  "menu.solo": "СОЛО"
+  "menu.solo": "СОЛО",
+  "menu.pickMap": "ИЗБЕРИ КАРТА",
+  "meta.profile": "Профил",
+  "meta.dup": "Вече го имаш",
+  "shop.equip": "ЕКИПИРАЙ",
+  "shop.missing": "Още {n}",
+  "shop.today": "В днешния магазин",
+  "col.equipped": "ЕКИПИРАНО",
+  "col.new": "НОВО",
+  "quest.rerolled": "Смяната е ползвана · следваща след {time}",
+  "result.trophies": "Трофеи"
 }

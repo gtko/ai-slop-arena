@@ -647,5 +647,15 @@
   "menu.hp": "ОЗ",
   "menu.range": "Дальність",
   "menu.speed": "Швидкість",
-  "menu.solo": "СОЛО"
+  "menu.solo": "СОЛО",
+  "menu.pickMap": "ОБЕРИ КАРТУ",
+  "meta.profile": "Профіль",
+  "meta.dup": "Уже є",
+  "shop.equip": "ВДЯГНУТИ",
+  "shop.missing": "Ще {n}",
+  "shop.today": "У крамниці сьогодні",
+  "col.equipped": "ВДЯГНУТО",
+  "col.new": "НОВЕ",
+  "quest.rerolled": "Заміну використано · наступна через {time}",
+  "result.trophies": "Кубки"
 }

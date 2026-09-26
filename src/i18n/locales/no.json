@@ -611,5 +611,15 @@
   "menu.hp": "HP",
   "menu.range": "Rekkevidde",
   "menu.speed": "Fart",
-  "menu.solo": "SOLO"
+  "menu.solo": "SOLO",
+  "menu.pickMap": "VELG ET KART",
+  "meta.profile": "Profil",
+  "meta.dup": "Eier allerede",
+  "shop.equip": "UTRUST",
+  "shop.missing": "{n} til",
+  "shop.today": "I dagens butikk",
+  "col.equipped": "UTRUSTET",
+  "col.new": "NY",
+  "quest.rerolled": "Bytte brukt · neste om {time}",
+  "result.trophies": "Trofeer"
 }

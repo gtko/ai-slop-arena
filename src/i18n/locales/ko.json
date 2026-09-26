@@ -593,5 +593,15 @@
   "menu.hp": "HP",
   "menu.range": "사거리",
   "menu.speed": "속도",
-  "menu.solo": "솔로"
+  "menu.solo": "솔로",
+  "menu.pickMap": "맵 선택",
+  "meta.profile": "프로필",
+  "meta.dup": "이미 보유",
+  "shop.equip": "장착",
+  "shop.missing": "{n} 부족",
+  "shop.today": "오늘의 상점",
+  "col.equipped": "장착 중",
+  "col.new": "NEW",
+  "quest.rerolled": "교체 완료 · {time} 후 가능",
+  "result.trophies": "트로피"
 }

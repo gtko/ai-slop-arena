@@ -647,5 +647,15 @@
   "menu.hp": "HP",
   "menu.range": "Dosah",
   "menu.speed": "Rychlost",
-  "menu.solo": "SÓLO"
+  "menu.solo": "SÓLO",
+  "menu.pickMap": "VYBER MAPU",
+  "meta.profile": "Profil",
+  "meta.dup": "Už vlastníš",
+  "shop.equip": "VYBAVIT",
+  "shop.missing": "Chybí {n}",
+  "shop.today": "V dnešním obchodě",
+  "col.equipped": "VYBAVENO",
+  "col.new": "NOVÉ",
+  "quest.rerolled": "Výměna použita · další za {time}",
+  "result.trophies": "Trofeje"
 }

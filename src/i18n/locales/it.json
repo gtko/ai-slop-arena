@@ -611,5 +611,15 @@
   "menu.hp": "PS",
   "menu.range": "Gittata",
   "menu.speed": "Velocità",
-  "menu.solo": "SOLO"
+  "menu.solo": "SOLO",
+  "menu.pickMap": "SCEGLI UNA MAPPA",
+  "meta.profile": "Profilo",
+  "meta.dup": "Già posseduto",
+  "shop.equip": "EQUIPAGGIA",
+  "shop.missing": "Ne mancano {n}",
+  "shop.today": "Nel negozio di oggi",
+  "col.equipped": "EQUIPAGGIATO",
+  "col.new": "NUOVO",
+  "quest.rerolled": "Cambio usato · prossimo tra {time}",
+  "result.trophies": "Trofei"
 }

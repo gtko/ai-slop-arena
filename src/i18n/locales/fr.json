@@ -589,7 +589,7 @@
   "event.lightning": "PARATONNERRE !",
   "event.blizzard": "BLIZZARD !",
   "event.fogbank": "NAPPE DE BROUILLARD !",
-  "chaos.name": "CHAOS DE LA SEMAINE",
+  "chaos.name": "CHAOS HEBDO",
   "chaos.on": "ON",
   "chaos.off": "OFF",
   "col.chaos": "Gagne une partie du Chaos de la semaine",
@@ -611,5 +611,15 @@
   "menu.hp": "PV",
   "menu.range": "Portée",
   "menu.speed": "Vitesse",
-  "menu.solo": "SOLO"
+  "menu.solo": "SOLO",
+  "menu.pickMap": "CHOISIS UNE CARTE",
+  "meta.profile": "Profil",
+  "meta.dup": "Déjà possédé",
+  "shop.equip": "ÉQUIPER",
+  "shop.missing": "Encore {n}",
+  "shop.today": "En boutique aujourd’hui",
+  "col.equipped": "ÉQUIPÉ",
+  "col.new": "NOUVEAU",
+  "quest.rerolled": "Échange utilisé · prochain dans {time}",
+  "result.trophies": "Trophées"
 }

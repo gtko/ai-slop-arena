@@ -271,3 +271,194 @@ body:has(#menu:not(.hidden)) #fpsBadge { top: calc(var(--nav) + 8px); }
   #meta .col-tab { padding: 4px 9px; font-size: 11px; }
   #meta .col-brawlers button { width: 42px; height: 42px; }
 }
+
+/* ======================= acceptance-test polish (5 testers' findings) ======================= */
+:root { color-scheme: dark; --g: 32px; } /* dark native scrollbars; one gutter both sides */
+* { scrollbar-color: rgba(255, 255, 255, 0.18) transparent; scrollbar-width: thin; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.18); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* the live figurine is the showcase now (game.js: the menu match stars your brawler) */
+.hero-stage { display: none; }
+#menu.home { background:
+  linear-gradient(90deg, rgba(10, 8, 22, 0.88) 0%, rgba(10, 8, 22, 0.55) 22%, transparent 38%, transparent 64%, rgba(10, 8, 22, 0.85) 82%),
+  linear-gradient(0deg, rgba(10, 8, 22, 0.85) 0%, transparent 30%), radial-gradient(ellipse 45% 50% at 50% 55%, transparent 40%, rgba(10, 8, 22, 0.35) 100%); }
+.hero-info { left: var(--g); width: clamp(300px, 27vw, 400px); }
+.roster { left: var(--g); }
+.play-panel { right: var(--g); }
+.hero-role, .hero-stats small, .hero-mastery b, .hero-mastery small { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+.hero-mastery small { font-size: 11px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+.hero-stats div { grid-template-columns: minmax(70px, auto) 1fr 42px; }
+
+/* loadout: full names (two lines at most), locked options keep their name */
+#loadout .lo-opt { align-items: center; min-height: 40px; }
+#loadout .lo-name { white-space: normal; line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex: 1; }
+#loadout .lo-group em { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#loadout .lo-opt.locked { opacity: 0.72; }
+#loadout .lo-opt.locked .lo-ico { filter: grayscale(1); }
+#loadout .lo-lock { flex: none; font-style: normal; font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 8px; background: rgba(0, 0, 0, 0.45); color: var(--yellow); }
+@media (max-width: 1150px) { #loadout { grid-template-columns: 1fr; } }
+
+/* roster: unpicked tiles read as available, not locked */
+.rt { filter: saturate(0.85) brightness(0.92); }
+
+/* top navigation: labels as long as there is room; below that, icons with names for screen readers */
+.tn-tabs button:focus-visible { outline: 2px solid var(--yellow) !important; outline-offset: -6px; }
+@media (max-width: 1600px) { .tn-who { display: flex; } }
+@media (max-width: 1450px) {
+  .tn-tabs button span { display: inline; }
+  .tn-tabs button { padding: 0 11px; font-size: 14px; }
+  .tn-tabs button i { font-size: 16px; }
+}
+@media (max-width: 1250px) { .tn-who { display: none; } }
+@media (max-width: 1100px) {
+  .tn-tabs button span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tn-tabs button { padding: 0 14px; }
+  .tn-tabs button i { font-size: 20px; }
+}
+.tn-ring { background: conic-gradient(var(--violet) var(--f), rgba(255, 255, 255, 0.25) 0); }
+
+/* the big button: its own font, a real hover */
+.pp-play { font-family: 'Nunito', system-ui, sans-serif; }
+.pp-play:hover { filter: brightness(1.06); transform: translateY(-2px); box-shadow: 0 8px 0 var(--ink), 0 0 40px rgba(255, 190, 40, 0.55); }
+.pp-map:hover, .pp-map.open { border-color: var(--yellow); filter: brightness(1.12); }
+.pp-map.open i { color: var(--yellow); }
+
+/* map picker: opens beside its button, never over the roster */
+.pp-mapwrap { position: relative; }
+.pp-mapwrap .pp-map { width: 100%; }
+.pp-maps { right: calc(100% + 14px); top: -8px; bottom: auto; width: 540px; max-width: calc(100vw - 100% - 2 * var(--g) - 380px); display: block; }
+.pp-maps.hidden { display: none; }
+.pp-maps::after { content: ""; position: absolute; right: -8px; top: 30px; border: 8px solid transparent; border-right: 0; border-left-color: rgba(14, 11, 30, 0.95); }
+.pp-maps h4 { margin: 0 0 8px; font-family: var(--display); font-weight: 400; font-size: 16px; letter-spacing: 0.6px; color: #fff; }
+.pp-maps .maps { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@media (max-width: 1400px) { .pp-maps { width: 380px; } .pp-maps .maps { grid-template-columns: repeat(2, 1fr); } }
+
+/* Weekly Chaos: a real switch */
+.play-panel .chaos-chip { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; }
+.play-panel .chaos-chip .cc-l { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.play-panel .chaos-chip em { position: relative; width: 38px; height: 22px; padding: 0; margin: 0; border-radius: 11px; background: rgba(255, 255, 255, 0.15); font-size: 0; transition: background 0.15s; }
+.play-panel .chaos-chip em::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 0.18s cubic-bezier(.3, 1.4, .5, 1); }
+.play-panel .chaos-chip.on em { background: #ff4bd8; }
+.play-panel .chaos-chip.on em::after { transform: translateX(16px); }
+
+/* the result screen: its own panel, the match HUD hidden behind it, the buttons always in reach */
+body:has(#result:not(.hidden)) #hud { visibility: hidden; }
+#result.overlay { background: rgba(8, 6, 18, 0.72); backdrop-filter: blur(6px); }
+#result .row-btns { position: sticky; bottom: 0; padding: 12px 0 14px; background: linear-gradient(transparent, rgba(8, 6, 18, 0.95) 35%); z-index: 2; }
+.rp-big { display: flex; justify-content: center; gap: 10px; }
+.rp-tile { display: flex; flex-direction: column; align-items: center; min-width: 150px; padding: 8px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); }
+.rp-tile small { font-size: 10px; font-weight: 900; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+.rp-tile b { font-family: var(--display); font-weight: 400; font-size: 28px; line-height: 1.1; }
+.rp-tile em { font-style: normal; font-size: 12px; font-weight: 800; color: var(--muted); }
+.rp-tile.rp-tr b { color: var(--yellow); }
+.rp-tile.rp-tr.down b { color: #ff9a9a; }
+.rp-tile .coin-n { color: #ffe27a; }
+
+/* level-up ceremony fits every screen */
+#levelUp.overlay { justify-content: safe center; align-items: safe center; overflow-y: auto; }
+.lu-card { border: 1px solid rgba(255, 255, 255, 0.14); }
+.lu-card.lu-coins b { font-size: 20px; }
+
+/* quest notes: a reroll flips the note */
+.q-note.flip { animation: qFlip 0.45s ease-out; }
+@keyframes qFlip { 0% { transform: rotate(var(--r)) rotateY(90deg); } 100% { transform: rotate(var(--r)) rotateY(0); } }
+
+/* ---------------- pages ---------------- */
+#meta .meta-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 16px; }
+#meta .meta-head h2 { flex: none; }
+.meta-sub { flex: 1; font-size: 13px; font-weight: 800; color: var(--muted); }
+#meta .meta-foot { text-align: left; }
+/* one visual language with the home: thin borders, dark panels */
+#meta .sh-item, #meta .rd-stop, #meta .rd-b { border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: none; }
+#meta .sh-item { background: linear-gradient(rgba(143, 107, 255, 0.16), rgba(20, 16, 38, 0.9)); }
+#meta .sh-item.featured { background: linear-gradient(rgba(255, 210, 63, 0.2), rgba(20, 16, 38, 0.9)); border-color: rgba(255, 210, 63, 0.4); }
+#meta .sh-buy { border-width: 2px; box-shadow: 0 3px 0 var(--ink); }
+.sh-buy.short { background: rgba(255, 255, 255, 0.08); color: var(--text); opacity: 1; display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.sh-buy.short .coin-n { color: #ffe27a; }
+.sh-buy.short small { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 11px; color: #ff9a9a; }
+.sh-buy.sh-wear { background: linear-gradient(#8f6bff, #6a3fe6); color: #fff; }
+.sh-was { font-weight: 900; font-size: 13px; color: var(--muted); }
+/* trophy road: taller, arrows */
+.rd-wrap { display: flex; align-items: center; gap: 8px; }
+.rd-arrow { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.06); color: #fff; font-size: 22px; cursor: pointer; }
+.rd-arrow:hover { background: rgba(255, 255, 255, 0.14); }
+.rd-track { flex: 1; min-width: 0; position: relative; padding: 18px 4px 22px; }
+#meta .rd-stop { width: 140px; min-height: 190px; justify-content: space-between; }
+#meta .rd-ico { height: 76px; }
+#meta .rd-ico img { height: 76px; }
+#meta .rd-ico .emo { font-size: 46px; }
+#meta .rd-stop small { font-size: 12px; }
+/* collection: a preview on the side, counts on the tabs, equipped / new flags */
+.col-wrap { display: grid; grid-template-columns: 1fr 280px; gap: 18px; align-items: start; }
+.col-preview { position: sticky; top: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 14px; border-radius: 18px; text-align: center;
+  background: radial-gradient(circle at 50% 30%, rgba(143, 107, 255, 0.25), rgba(20, 16, 38, 0.9) 70%); border: 1px solid rgba(255, 255, 255, 0.12); min-height: 300px; }
+.cp-ico { height: 180px; display: flex; align-items: center; justify-content: center; }
+.cp-ico img { height: 180px; }
+.cp-ico .emo { font-size: 96px; }
+.cp-ico .pf { width: 120px; height: 120px; }
+.cp-ico .title-chip { font-size: 22px; }
+.col-preview b { font-family: var(--display); font-weight: 400; font-size: 22px; }
+.col-preview small { font-size: 12px; font-weight: 800; color: var(--muted); }
+.col-preview em { font-style: normal; font-size: 13px; font-weight: 900; color: var(--yellow); }
+.col-tab small { margin-left: 6px; font-size: 11px; opacity: 0.7; }
+#meta .col-item { position: relative; }
+#meta .col-item.static { cursor: default; }
+#meta .col-item.static:hover { transform: none; }
+#meta .col-item.locked { opacity: 1; }
+#meta .col-item.locked .col-ico { opacity: 0.4; filter: grayscale(0.6); }
+#meta .col-item.locked b { color: var(--muted); }
+#meta .col-item small { font-size: 12px; color: #d9d3f0; }
+.col-flag { position: absolute; top: 6px; right: 6px; font-style: normal; font-size: 9.5px; font-weight: 900; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 6px; background: var(--yellow); color: var(--ink); }
+.col-flag.new { background: var(--red); color: #fff; }
+.title-chip { display: inline-block; padding: 4px 10px; border-radius: 8px; background: rgba(255, 210, 63, 0.15); border: 1px solid rgba(255, 210, 63, 0.5); color: var(--yellow); font-weight: 900; font-size: 14px; }
+@media (max-width: 900px) { .col-wrap { grid-template-columns: 1fr; } .col-preview { display: none; } }
+
+/* ---------------- display font for every script ---------------- */
+/* Lilita One only covers Latin: Cyrillic/Arabic fall back to Rubik, Greek/Vietnamese to Manrope,
+   Thai to Kanit, Japanese to M PLUS Rounded, Chinese/Korean to Noto Sans (all heavy, see play.html). */
+:root { --display: 'Lilita One', 'Rubik', 'Manrope', 'Kanit', 'M PLUS Rounded 1c', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans KR', 'Nunito', system-ui, sans-serif; }
+:lang(th) *, :lang(ar) *, :lang(ja) *, :lang(ko) *, :lang(zh-CN) *, :lang(zh-TW) * { letter-spacing: 0 !important; }
+:lang(th) .hero-stats small, :lang(th) .lo-group em, :lang(th) .pp-map small { font-size: 12px; line-height: 1.3; }
+
+/* ---------------- right-to-left: the shell keeps its layout, the text reads RTL ---------------- */
+[dir=rtl] #menu.home { direction: ltr; }
+[dir=rtl] #menu.home .hero-info, [dir=rtl] #menu.home .play-panel, [dir=rtl] #menu.home .tn-tabs span { direction: rtl; }
+
+/* ---------------- phones and touch ---------------- */
+#sound { left: calc(12px + env(safe-area-inset-left)); }
+body.in-dojo #top .pill:first-child { display: none; }
+body.touch #emoteWheel button small { display: none; }
+.opt-tabs { overflow-x: auto; scrollbar-width: none; }
+@media (max-height: 520px) and (orientation: landscape) {
+  .tn-icon { width: 40px; height: 40px; font-size: 16px; }
+  .pp-alt button { padding: 10px 4px; }
+  #meta .col-tab { min-height: 36px; padding: 6px 10px; }
+  .opt-choice .arr { width: 36px; height: 36px; }
+  .play-panel .chaos-chip { font-size: 10.5px; }
+  .rt b { font-size: 10px; }
+  #loadout { grid-template-columns: 1fr 1fr; }
+  #loadout .lo-opt { min-height: 34px; font-size: 11px; }
+  #loadout .lo-group em { font-size: 10px; }
+  #loadout .lo-lock { font-size: 9px; padding: 0 4px; }
+  .pp-maps { width: 330px; max-width: calc(100vw - 100% - 40px); top: -60px; }
+  .pp-maps .maps { grid-template-columns: repeat(2, 1fr); }
+  .pp-maps h4 { font-size: 13px; margin-bottom: 5px; }
+  body.touch #killfeed { top: calc(56px + env(safe-area-inset-top)); }
+  body.touch #myhp { width: min(230px, 30vw); }
+  #emoteWheel::before { left: -115px; top: -115px; width: 230px; height: 230px; }
+  #emoteWheel button { width: 50px; height: 50px; left: -25px; top: -25px; font-size: 26px; }
+  .lu-fig { height: 64px; }
+  .lu-box h2 { font-size: 34px; margin: 0; }
+  .lu-chest { font-size: 40px; }
+  .lu-card { width: 104px; padding: 6px; }
+  .lu-card > span, .lu-card img { height: 40px; }
+  .rp-tile { min-width: 110px; padding: 4px 10px; }
+  .rp-tile b { font-size: 20px; }
+  .col-wrap { grid-template-columns: 1fr; }
+  .col-preview { display: none; }
+  #meta .rd-stop { width: 112px; min-height: 150px; }
+  #meta .rd-ico, #meta .rd-ico img { height: 52px; }
+  .rd-arrow { width: 34px; height: 34px; }
+}

@@ -647,5 +647,15 @@
   "menu.hp": "ОЗ",
   "menu.range": "Дальность",
   "menu.speed": "Скорость",
-  "menu.solo": "СОЛО"
+  "menu.solo": "СОЛО",
+  "menu.pickMap": "ВЫБЕРИ КАРТУ",
+  "meta.profile": "Профиль",
+  "meta.dup": "Уже есть",
+  "shop.equip": "НАДЕТЬ",
+  "shop.missing": "Ещё {n}",
+  "shop.today": "В магазине сегодня",
+  "col.equipped": "НАДЕТО",
+  "col.new": "НОВОЕ",
+  "quest.rerolled": "Замена использована · следующая через {time}",
+  "result.trophies": "Кубки"
 }

@@ -628,5 +628,15 @@
   "menu.hp": "Vida",
   "menu.range": "Alcance",
   "menu.speed": "Velocidade",
-  "menu.solo": "SOLO"
+  "menu.solo": "SOLO",
+  "menu.pickMap": "ESCOLHA UM MAPA",
+  "meta.profile": "Perfil",
+  "meta.dup": "Já adquirido",
+  "shop.equip": "EQUIPAR",
+  "shop.missing": "Faltam {n}",
+  "shop.today": "Na loja de hoje",
+  "col.equipped": "EQUIPADO",
+  "col.new": "NOVO",
+  "quest.rerolled": "Troca usada · próxima em {time}",
+  "result.trophies": "Troféus"
 }

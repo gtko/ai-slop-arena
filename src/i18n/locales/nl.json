@@ -611,5 +611,15 @@
   "menu.hp": "HP",
   "menu.range": "Bereik",
   "menu.speed": "Snelheid",
-  "menu.solo": "SOLO"
+  "menu.solo": "SOLO",
+  "menu.pickMap": "KIES EEN MAP",
+  "meta.profile": "Profiel",
+  "meta.dup": "Al in bezit",
+  "shop.equip": "UITRUSTEN",
+  "shop.missing": "Nog {n}",
+  "shop.today": "In de winkel van vandaag",
+  "col.equipped": "UITGERUST",
+  "col.new": "NIEUW",
+  "quest.rerolled": "Wissel gebruikt · volgende over {time}",
+  "result.trophies": "Trofeeën"
 }

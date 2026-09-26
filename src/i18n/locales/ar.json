@@ -680,8 +680,18 @@
   "menu.online": "عبر الإنترنت",
   "menu.mode": "مواجهة",
   "menu.modeDesc": "8 مقاتلين · آخر من يبقى يفوز",
-  "menu.hp": "HP",
+  "menu.hp": "الصحة",
   "menu.range": "المدى",
   "menu.speed": "السرعة",
-  "menu.solo": "فردي"
+  "menu.solo": "فردي",
+  "menu.pickMap": "اختر خريطة",
+  "meta.profile": "الملف",
+  "meta.dup": "مملوك مسبقًا",
+  "shop.equip": "جهّز",
+  "shop.missing": "ينقص {n}",
+  "shop.today": "في متجر اليوم",
+  "col.equipped": "مُجهَّز",
+  "col.new": "جديد",
+  "quest.rerolled": "تم التبديل · التالي خلال {time}",
+  "result.trophies": "الكؤوس"
 }

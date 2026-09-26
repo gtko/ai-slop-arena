@@ -611,5 +611,15 @@
   "menu.hp": "Can",
   "menu.range": "Menzil",
   "menu.speed": "Hız",
-  "menu.solo": "TEKLİ"
+  "menu.solo": "TEKLİ",
+  "menu.pickMap": "HARİTA SEÇ",
+  "meta.profile": "Profil",
+  "meta.dup": "Zaten sende",
+  "shop.equip": "KUŞAN",
+  "shop.missing": "{n} eksik",
+  "shop.today": "Bugünkü mağazada",
+  "col.equipped": "KUŞANILDI",
+  "col.new": "YENİ",
+  "quest.rerolled": "Değişim kullanıldı · sonraki {time} sonra",
+  "result.trophies": "Kupalar"
 }

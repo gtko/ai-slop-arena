@@ -647,5 +647,15 @@
   "menu.hp": "PŻ",
   "menu.range": "Zasięg",
   "menu.speed": "Szybkość",
-  "menu.solo": "SOLO"
+  "menu.solo": "SOLO",
+  "menu.pickMap": "WYBIERZ MAPĘ",
+  "meta.profile": "Profil",
+  "meta.dup": "Już posiadane",
+  "shop.equip": "WYPOSAŻ",
+  "shop.missing": "Brakuje {n}",
+  "shop.today": "W dzisiejszym sklepie",
+  "col.equipped": "WYPOSAŻONO",
+  "col.new": "NOWE",
+  "quest.rerolled": "Wymiana zużyta · następna za {time}",
+  "result.trophies": "Trofea"
 }

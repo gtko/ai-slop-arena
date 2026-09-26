@@ -593,5 +593,15 @@
   "menu.hp": "HP",
   "menu.range": "射程",
   "menu.speed": "速度",
-  "menu.solo": "单人"
+  "menu.solo": "单人",
+  "menu.pickMap": "选择地图",
+  "meta.profile": "个人资料",
+  "meta.dup": "已拥有",
+  "shop.equip": "装备",
+  "shop.missing": "还差 {n}",
+  "shop.today": "今日商店在售",
+  "col.equipped": "已装备",
+  "col.new": "新",
+  "quest.rerolled": "已更换 · {time} 后可再换",
+  "result.trophies": "奖杯"
 }

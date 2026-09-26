@@ -590,8 +590,18 @@
   "menu.online": "ออนไลน์",
   "menu.mode": "ศึกดวล",
   "menu.modeDesc": "8 นักสู้ · คนสุดท้ายที่รอดชนะ",
-  "menu.hp": "HP",
+  "menu.hp": "พลังชีวิต",
   "menu.range": "ระยะ",
   "menu.speed": "ความเร็ว",
-  "menu.solo": "เดี่ยว"
+  "menu.solo": "เดี่ยว",
+  "menu.pickMap": "เลือกแผนที่",
+  "meta.profile": "โปรไฟล์",
+  "meta.dup": "มีแล้ว",
+  "shop.equip": "สวมใส่",
+  "shop.missing": "ขาดอีก {n}",
+  "shop.today": "ในร้านค้าวันนี้",
+  "col.equipped": "สวมใส่อยู่",
+  "col.new": "ใหม่",
+  "quest.rerolled": "ใช้สิทธิ์เปลี่ยนแล้ว · ครั้งต่อไปในอีก {time}",
+  "result.trophies": "ถ้วยรางวัล"
 }

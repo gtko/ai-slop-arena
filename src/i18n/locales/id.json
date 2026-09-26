@@ -593,5 +593,15 @@
   "menu.hp": "HP",
   "menu.range": "Jarak",
   "menu.speed": "Kecepatan",
-  "menu.solo": "SOLO"
+  "menu.solo": "SOLO",
+  "menu.pickMap": "PILIH PETA",
+  "meta.profile": "Profil",
+  "meta.dup": "Sudah dimiliki",
+  "shop.equip": "PAKAI",
+  "shop.missing": "Kurang {n}",
+  "shop.today": "Di toko hari ini",
+  "col.equipped": "DIPAKAI",
+  "col.new": "BARU",
+  "quest.rerolled": "Ganti terpakai · berikutnya {time} lagi",
+  "result.trophies": "Trofi"
 }
