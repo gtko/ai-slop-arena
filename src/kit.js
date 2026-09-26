@@ -388,6 +388,11 @@ export class MapKit {
     }
     if (g.time >= S.at) {
       this.step++;
+      if (this.step >= this.plan.length) { // the last ground left: now the gas closes in, fast (poison.js)
+        const P = g.poison;
+        P.startAt = P.timer + 6; P.interval = 4; P.maxLevel = 12; // right to the middle: the windmill hides no one forever
+        g.ev({ e: 'kit', k: 'gas', at: r2(P.startAt) });
+      }
       const tiles = S.tiles.filter(([i, j]) => this.A.get(i, j) !== 'V');
       g.ev({ e: 'kit', k: 'crumble', t: tiles });
       this.crumble(tiles);
@@ -549,6 +554,7 @@ export class MapKit {
       case 'bridge': this.breakBridge(e.i, e.j); break;
       case 'doom': if (Array.isArray(e.t)) this.doom(e.t); break;
       case 'crumble': if (Array.isArray(e.t)) this.crumble(e.t); break;
+      case 'gas': if (Number.isFinite(e.at)) { this.step = this.plan.length; Object.assign(this.g.poison, { startAt: e.at, interval: 4, maxLevel: 12 }); } break;
     }
   }
 

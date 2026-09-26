@@ -233,7 +233,7 @@ export class Hud {
       this.lastAlive = alive;
     }
     const P = game.poison, K = game.kit;
-    if (K && K.crumbles && !game.dojo) {
+    if (K && K.crumbles && K.nextIn !== Infinity && !game.dojo) { // then the gas, once the islands are gone
       const n = K.nextIn;
       this.poisonPill.style.display = '';
       this.poisonPill.classList.toggle('warn', n < 6 && n > 0);

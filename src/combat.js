@@ -168,7 +168,7 @@ export class Combat {
     } else if (T === 'pipchomp') {
       if (sup) { if (this.g.authority) this.g.kit.plantTrap(b, point); sfx('trap_plant', vol); return; }
       this.lungeMove(b, dx, dz, 4);
-      this.lungeBite(b, dx, dz, 4, 800);
+      this.lungeBite(b, dx, dz, 4, 950);
       sfx('lunge', vol);
     } else if (T === 'mochi') {
       if (sup) { this.pound(b, point); sfx('pound_leap', vol); return; }

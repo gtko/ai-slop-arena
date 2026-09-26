@@ -48,7 +48,7 @@ export const TYPES = {
   pipchomp: {
     key: 'pipchomp', name: 'Pip & Chomp', role: 'Assassin',
     desc: 'A shy mushroom kid riding a hungry venus-flytrap. Chomp lunges 4 m and bites; Pip says sorry. Super: plants a Venus Trap, a bush that bites, roots and reveals the first enemy who walks in.',
-    hp: 3800, speed: 6.8, ammo: 3, reload: 1.8, range: 4.5, superCost: 2200, projSpeed: 20,
+    hp: 4200, speed: 6.8, ammo: 3, reload: 1.6, range: 4.5, superCost: 2200, projSpeed: 20,
     palette: { main: 0x2f9e44, dark: 0x1e5c2c, accent: 0xd6336c, hair: 0xb197fc, skin: 0xf5e6d0 },
   },
   mochi: {
