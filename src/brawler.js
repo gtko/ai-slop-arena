@@ -3,6 +3,7 @@ import { radialTexture, shared } from './materials.js';
 import { buildModel as buildSculpted, OUTLINES } from './models.js';
 import { hasFigurine, buildFigurine } from './figurines.js';
 import { sfx } from './audio.js';
+import { GADGET_CHARGES, hasStar } from './gadgets.js';
 
 export const TYPES = {
   blaster: {
@@ -158,6 +159,16 @@ export class Brawler {
     this.slowT = 0;     // Frostbite shards
     this.freezeT = 0;   // Frost nova: can't move or attack
     this.ccImmuneT = 0; // after a freeze: immune to the next one for a moment (no freeze chains)
+    // Kit 2.0 (gadgets.js): loadout, charges, and the states gadgets put a brawler in
+    this.gadget = 'A'; this.star = 1;
+    this.stats = { dmg: 0, kos: 0, cubes: 0, gadgets: 0 }; // match stats (result screen)
+    this.gadgetCharges = GADGET_CHARGES; this.gadgetCd = 0;
+    this.rootT = 0;     // rooted: can't move, can still shoot
+    this.armorT = 0;    // Bark Skin: -35% damage taken
+    this.ghostT = 0;    // Tail Roll: untouchable
+    this.slowSelfT = 0; // Bark Skin: -20% speed
+    this.overclockT = 0; this.chargeT = 0; this.hopLandT = 0;
+    this.dash = null; this.blink = null; this.fuseNext = false;
     this.spawnT = 0;
     this.visibleToPlayer = true;
     this.rank = 0;
@@ -260,7 +271,10 @@ export class Brawler {
       return;
     }
     const T = this.type, A = this.g.arena;
-    if (this.ammo < T.ammo) this.ammo = Math.min(T.ammo, this.ammo + dt / T.reload);
+    if (this.ammo < T.ammo) this.ammo = Math.min(T.ammo, this.ammo + dt / T.reload * (this.overclockT > 0 ? 1.3 : 1));
+    this.gadgetCd -= dt; this.rootT -= dt; this.armorT -= dt; this.ghostT -= dt; this.slowSelfT -= dt; this.overclockT -= dt;
+    if (this.chargeT > 0) { this.chargeT -= dt; if (this.g.authority) this.g.chargeContact(this); }
+    if (this.hopLandT > 0 && (this.hopLandT -= dt) <= 0 && this.g.authority) this.g.hopLanded(this);
     this.fireCd -= dt;
     this.revealT -= dt;
     this.aimHold -= dt;
@@ -275,12 +289,13 @@ export class Brawler {
         sfx('immune', this.g.volumeAt(this.pos.x, this.pos.z));
       }
     }
-    const statusMul = this.freezeT > 0 ? 0 : this.slowT > 0 ? 0.55 : 1;
+    const statusMul = (this.freezeT > 0 || this.rootT > 0 ? 0 : this.slowT > 0 ? this.slowMul || 0.55 : 1) * (this.slowSelfT > 0 ? 0.8 : 1);
 
     // Brawl-style regen: 13%/s after 3s without dealing or taking damage.
-    this.regen = t - this.lastHurt > 3 && t - this.lastAttack > 3 && !this.inPoison;
+    const calm = hasStar(this, 'sapRegen') ? 2 : 3; // star power: regen kicks in sooner
+    this.regen = t - this.lastHurt > calm && t - this.lastAttack > calm && !this.inPoison;
     if (this.regen && this.hp < this.maxHp) {
-      this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.13 * dt);
+      this.hp = Math.min(this.maxHp, this.hp + this.maxHp * (hasStar(this, 'axoRegen') ? 0.18 : 0.13) * dt);
     }
 
     // On ice the brawler keeps its momentum: low acceleration = sliding.
@@ -290,6 +305,19 @@ export class Brawler {
       const k = 1 - Math.exp(-14 * dt), nx = this.pos.x + (this.net.x - this.pos.x) * k, nz = this.pos.z + (this.net.y - this.pos.z) * k;
       if (Math.hypot(this.net.x - this.pos.x, this.net.y - this.pos.z) > 6) { this.pos.x = this.net.x; this.pos.z = this.net.y; }
       else { this.vel.set((nx - this.pos.x) / Math.max(dt, 1e-3), 0, (nz - this.pos.z) / Math.max(dt, 1e-3)); this.pos.x = nx; this.pos.z = nz; }
+    } else if ((this.dash || this.blink) && (this.freezeT > 0 || this.rootT > 0) && !this.dash?.air) { // frozen or rooted: stopped
+      this.dash = null; this.blink = null; this.vel.set(0, 0, 0);
+    } else if (this.blink) { // Blink: a short charge, then there
+      if ((this.blink.t -= dt) <= 0) { this.pos.x = this.blink.x; this.pos.z = this.blink.z; this.vel.set(0, 0, 0); this.blink = null; }
+    } else if (this.dash) { // gadget dash, slide or hop: fixed velocity; on foot walls stop it, in the air it flies over
+      const D = this.dash;
+      const h = Math.min(dt, D.t);
+      this.pos.x += D.vx * h; this.pos.z += D.vz * h;
+      this.vel.set(D.vx, 0, D.vz);
+      D.t -= dt;
+      if (D.air) this.pos.y = Math.max(0, 4 * 1.3 * (1 - D.t / D.T) * (D.t / D.T));
+      if (D.t <= 1e-6) { this.dash = null; this.pos.y = 0; }
+      if (!D.air || !this.dash) A.collideCircle(this.pos, this.radius);
     } else {
       const k = 1 - Math.exp(-(this.onIce ? 2.4 : 16) * dt);
       this.vel.x += (this.moveIntent.x * T.speed * statusMul - this.vel.x) * k;
@@ -334,7 +362,8 @@ export class Brawler {
       this.squash += this.squashV * h;
     }
     const sq = this.squash;
-    m.root.scale.set(pop * (1 + 0.1 * sq), this.spawnT * pop * (1 - 0.14 * sq), pop * (1 + 0.1 * sq));
+    const grow = 1 + Math.min(0.15, this.cubes * 0.015); // power cubes make you visibly bigger (the hitbox stays)
+    m.root.scale.set(grow * pop * (1 + 0.1 * sq), grow * this.spawnT * pop * (1 - 0.14 * sq), grow * pop * (1 + 0.1 * sq));
     this.hitstopT -= dt;
 
     if (this.flash > 0) {

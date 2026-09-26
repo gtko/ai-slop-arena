@@ -132,9 +132,12 @@ export class Input {
     return this.hitAction('super') || this.rmbReleased || this.padHit(PAD.RB) || this.padReleased(PAD.LT) || (!!this.touch && this.touch.superFired);
   }
 
+  // Gadget: E (rebindable), LB on a gamepad, the small touch button.
+  get gadgetFired() { return this.hitAction('gadget') || this.padHit(PAD.LB) || (!!this.touch && this.touch.gadgetFired); }
+
   endFrame() {
     this.pressed.clear();
     this.rmbReleased = false;
-    if (this.touch) this.touch.superFired = false;
+    if (this.touch) { this.touch.superFired = false; this.touch.gadgetFired = false; }
   }
 }

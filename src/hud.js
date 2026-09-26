@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { t } from './i18n/index.js';
 import { sfx } from './audio.js';
+import { GADGET_LOCKOUT, GADGET_ICONS } from './gadgets.js';
 
 const $ = s => document.querySelector(s);
 const _v = new THREE.Vector3();
@@ -18,6 +19,10 @@ export class Hud {
     this.superArc = $('#superArc');
     this.superEl = $('#super');
     this.cubeEl = $('#cubeCount');
+    this.gadgetEl = $('#gadget');
+    this.gadgetArc = $('#gadgetArc');
+    this.gadgetIcon = $('#gadgetIcon');
+    this.gadgetPips = [...document.querySelectorAll('#gadget u')];
     this.vignette = $('#vignette');
     const mh = this.myhp = $('#myhp');
     this.mh = { fill: mh.querySelector('.mh-fill'), lag: mh.querySelector('.mh-lag'), num: mh.querySelector('.mh-num'), ammo: [...mh.querySelectorAll('.mh-ammo b')], lagV: 1, hp: -1, cls: '' };
@@ -33,7 +38,9 @@ export class Hud {
     this.lowEl.id = 'lowhp';
     this.hurtEl = document.createElement('div');
     this.hurtEl.id = 'hurt';
-    this.root.append(this.feed, this.banner, this.lowEl, this.hurtEl);
+    this.dpsEl = document.createElement('div');
+    this.dpsEl.id = 'dps';
+    this.root.append(this.feed, this.banner, this.lowEl, this.hurtEl, this.dpsEl);
   }
 
   show(on) { this.root.classList.toggle('hidden', !on); }
@@ -84,7 +91,8 @@ export class Hud {
         o.lastHp = hp;
       }
       o.lag.style.width = (o.lagV * 100).toFixed(1) + '%';
-      if (b.cubes !== o.lastCubes) { o.cubes.textContent = b.cubes ? ` ◆${b.cubes}` : ''; o.lastCubes = b.cubes; }
+      const crown = b === game.crown;
+      if (b.cubes !== o.lastCubes || crown !== o.crown) { o.cubes.textContent = (b.cubes ? ` ◆${b.cubes}` : '') + (crown ? ' 👑' : ''); o.lastCubes = b.cubes; o.crown = crown; }
       for (let k = 0; k < o.ammo.length; k++) {
         o.ammo[k].style.width = (Math.min(1, Math.max(0, b.ammo - k)) * 100).toFixed(0) + '%';
       }
@@ -92,6 +100,9 @@ export class Hud {
       const regen = b.regen && b.hp < b.maxHp;
       if (regen !== o.regen) { o.el.classList.toggle('regen', regen); o.regen = regen; } // healing: the bar glows
     }
+
+    this.dpsEl.style.display = game.dojo ? '' : 'none';
+    if (game.dojo) { const v = game.dojoDps; if (v !== this.lastDps) { this.dpsEl.innerHTML = `<b>${v}</b><small>${t('hud.dps')}</small><p>${t('hud.dojoHint')}</p>`; this.lastDps = v; } }
 
     const alive = game.brawlers.filter(b => b.alive).length;
     if (alive !== this.lastAlive) {
@@ -105,6 +116,7 @@ export class Hud {
     const P = game.poison;
     if (P) {
       const n = P.nextIn;
+      this.poisonPill.style.display = game.dojo ? 'none' : '';
       this.poisonPill.classList.toggle('warn', n < 6 && n > 0);
       this.poisonEl.textContent = n === Infinity ? t('hud.max') : `${Math.floor(Math.max(0, n) / 60)}:${String(Math.ceil(Math.max(0, n)) % 60).padStart(2, '0')}`;
       this.poisonPill.querySelector('small').textContent = P.level === 0 ? t('hud.gasIn') : t('hud.gasGrows');
@@ -114,6 +126,14 @@ export class Hud {
       const c = 2 * Math.PI * 44;
       this.superArc.style.strokeDasharray = `${c * p.superCharge} ${c}`;
       this.superEl.classList.toggle('ready', p.superCharge >= 1);
+      // gadget: its icon, 3 charge pips, the lockout ring filling back up
+      const ic = GADGET_ICONS[p.type.key + p.gadget] || '✦';
+      if (this.gadgetIcon.textContent !== ic) this.gadgetIcon.textContent = ic;
+      const cd = Math.max(0, p.gadgetCd) / GADGET_LOCKOUT, c2 = 2 * Math.PI * 44;
+      this.gadgetArc.style.strokeDasharray = `${c2 * (1 - cd)} ${c2}`;
+      this.gadgetEl.classList.toggle('ready', p.alive && p.gadgetCharges > 0 && cd <= 0);
+      this.gadgetEl.classList.toggle('empty', p.gadgetCharges <= 0);
+      for (let k = 0; k < 3; k++) this.gadgetPips[k].classList.toggle('on', k < p.gadgetCharges);
       this.cubeEl.textContent = p.cubes;
       this.vignette.style.opacity = p.alive && p.inPoison ? '1' : '0';
       // big health bar, bottom centre
@@ -187,6 +207,22 @@ export class Hud {
     while (this.feed.children.length > FEED_MAX) this.feed.lastChild.remove();
     setTimeout(() => row.classList.add('out'), FEED_LIFE);
     setTimeout(() => row.remove(), FEED_LIFE + 500);
+  }
+
+  // Your super: your portrait slashes across the screen for half a second.
+  superCutIn(key) {
+    const el = document.createElement('div');
+    el.className = 'cutin';
+    el.innerHTML = `<i></i><img src="${BASE}assets/ui/${key}.png" alt="" />`;
+    el.addEventListener('animationend', e => { if (e.target === el) el.remove(); });
+    setTimeout(() => el.remove(), 1500);
+    this.root.appendChild(el);
+  }
+
+  gadgetUsed() {
+    this.gadgetEl.classList.remove('bump');
+    void this.gadgetEl.offsetWidth;
+    this.gadgetEl.classList.add('bump');
   }
 
   // Red edges for a blink when you take a hit, stronger for heavier hits.

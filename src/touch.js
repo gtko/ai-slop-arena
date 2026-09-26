@@ -22,6 +22,7 @@ export class TouchControls {
       fireUntil: 0,                  // attack "held" until then (a release is a short press)
       autoAim: false,                // tap: aim at the nearest enemy
       superFired: false,
+      gadgetFired: false,
       superReady: false,
     };
     this.T = T;
@@ -32,11 +33,14 @@ export class TouchControls {
       <div class="t-stick t-move hidden"><i></i></div>
       <div class="t-btn t-attack"><i></i></div>
       <div class="t-btn t-super"><i></i><b>SUPER</b></div>
+      <div class="t-btn t-gadget"><i></i><span class="t-pips"><u></u><u></u><u></u></span></div>
       <button class="t-pause" aria-label="Pause"><span></span><span></span></button>`;
     document.querySelector('#hud').appendChild(root);
     this.moveStick = root.querySelector('.t-move');
     this.attackBtn = root.querySelector('.t-attack');
     this.superBtn = root.querySelector('.t-super');
+    this.gadgetBtn = root.querySelector('.t-gadget');
+    this.gadgetBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); this.touched(); this.T.gadgetFired = true; });
     root.querySelector('.t-pause').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (onPause) onPause(); });
 
     this.bindMove(root.querySelector('.t-left'));
@@ -132,6 +136,9 @@ export class TouchControls {
     this.T.superReady = ready;
     this.superBtn.classList.toggle('ready', ready);
     this.superBtn.style.setProperty('--charge', player ? Math.min(1, player.superCharge) : 0);
+    const n = player ? player.gadgetCharges : 0, busy = !player || !player.alive || n <= 0 || player.gadgetCd > 0;
+    this.gadgetBtn.classList.toggle('off', busy);
+    this.gadgetBtn.querySelectorAll('u').forEach((u, k) => u.classList.toggle('on', k < n));
   }
 }
 const _v = new THREE.Vector2();

@@ -19,7 +19,7 @@ const vol = (ch, label) => ({
   get: () => Math.round(audio[ch] * 100), set: v => { initAudio(); setVolume(ch, v / 100); },
 });
 
-const ACTIONS = ['up', 'down', 'left', 'right', 'super', 'tod', 'mute', 'panel', 'pause'];
+const ACTIONS = ['up', 'down', 'left', 'right', 'super', 'gadget', 'tod', 'mute', 'panel', 'pause'];
 
 const TIER_NAME = tier => t(`opt.${tier}`);
 // "ANGLE (AMD, AMD Radeon RX 7800 XT (0x0000747E) Direct3D11 ...)" -> "AMD Radeon RX 7800 XT"

@@ -2,7 +2,7 @@
 // Run with `npm test`. Plain Node, no framework: exits 1 on the first failure.
 import assert from 'node:assert/strict';
 
-const { ServerMatch, makeRoster } = await import(new URL('../worker/build/sim.js', import.meta.url));
+const { ServerMatch, makeRoster, validBrawler, validLoadout } = await import(new URL('../worker/build/sim.js', import.meta.url));
 let failed = 0;
 async function test(name, fn) {
   try { await fn(); console.log(`ok   ${name}`); } catch (e) { failed++; console.error(`FAIL ${name}\n     ${e.message}`); }
@@ -79,6 +79,7 @@ await test('a frost nova cannot freeze someone who just thawed', () => {
   while (g.time < 6) m.advance(0.05); // past the spawn shield
   g.brains.clear();
   const a = g.byId.get('alice'), f = g.brawlers.find(b => b !== a);
+  f.star = 1; // no Permafrost
   f.pos.set(a.pos.x + 1, f.pos.y, a.pos.z);
   a.hp = a.maxHp = 1e6;
   g.combat.nova(f);
@@ -88,6 +89,53 @@ await test('a frost nova cannot freeze someone who just thawed', () => {
   f.pos.set(a.pos.x + 1, f.pos.y, a.pos.z);
   g.combat.nova(f);
   assert.ok(a.freezeT <= 0, 'frozen again while immune');
+});
+
+await test('brawler names and loadouts from the network are checked', () => {
+  for (const bad of ['constructor', 'constructor:B2', '__proto__', 'toString', 'volt:C3', 'Volt', '', null, 42]) assert.ok(!validBrawler(bad), `accepted ${bad}`);
+  for (const ok of ['volt', 'volt:B2', 'blaster:A1']) assert.ok(validBrawler(ok), `refused ${ok}`);
+  assert.ok(validLoadout('B2') && !validLoadout('C1') && !validLoadout('b2') && !validLoadout(undefined));
+  const m = new ServerMatch({ map: 'oasis', roster: makeRoster([{ id: 'alice', name: 'a', type: 'constructor', lo: 'B2' }, { id: 'bob', name: 'b', type: 'frostbite', lo: 'B2' }]), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
+  assert.equal(m.game.byId.get('alice').type.key, 'blaster', 'an unknown brawler did not fall back to Blaster');
+  const bob = m.game.byId.get('bob');
+  assert.ok(bob.gadget === 'B' && bob.star === 2, 'the separate loadout field was not applied');
+});
+
+await test('every gadget works, with 3 charges and a 5 s lockout', () => {
+  for (const type of ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt']) for (const gad of ['A', 'B']) {
+    const m = new ServerMatch({ map: 'oasis', roster: makeRoster([{ id: 'alice', name: 'a', type: `${type}:${gad}1` }]), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
+    const g = m.game;
+    while (g.time < 6) m.advance(0.05);
+    g.brains.clear();
+    const a = g.byId.get('alice');
+    a.netDriven = false; // the host plays it here, like a bot
+    assert.equal(a.gadget, gad, `${type}: loadout not parsed`);
+    assert.ok(g.useGadget(a, 1, 0, a.pos), `${type}${gad}: could not use the gadget`);
+    assert.ok(!g.useGadget(a, 1, 0, a.pos), `${type}${gad}: no lockout`);
+    for (let k = 0; k < 2; k++) { for (let s = 0; s < 14; s++) m.advance(0.05); a.gadgetCd = 0; assert.ok(g.useGadget(a, 0, 1, a.pos), `${type}${gad}: charge ${k + 2}`); m.advance(0.5); }
+    a.gadgetCd = 0;
+    assert.ok(!g.useGadget(a, 1, 0, a.pos), `${type}${gad}: a 4th charge`);
+    m.advance(3);
+  }
+});
+
+await test('Bark Skin takes less damage, Root Charge roots', () => {
+  const m = new ServerMatch({ map: 'oasis', roster: makeRoster([{ id: 'alice', name: 'a', type: 'blaster:B1' }]), send() {}, sendTo() {}, onEnd() {}, onCheat() {} });
+  const g = m.game;
+  while (g.time < 6) m.advance(0.05);
+  g.brains.clear();
+  const a = g.byId.get('alice'), o = g.brawlers.find(b => b !== a);
+  a.netDriven = false;
+  const hp = a.hp; g.damage(a, 1000, o);
+  const plain = hp - a.hp;
+  g.useGadget(a, 1, 0, a.pos);
+  const hp2 = a.hp; g.damage(a, 1000, o);
+  assert.ok(hp2 - a.hp < plain * 0.7, 'Bark Skin did not reduce the damage');
+  a.gadget = 'A'; a.gadgetCd = 0; o.ccImmuneT = 0;
+  o.pos.set(a.pos.x + 1.6, 0, a.pos.z);
+  g.useGadget(a, 1, 0, a.pos);
+  for (let k = 0; k < 6; k++) m.advance(0.05);
+  assert.ok(o.rootT > 0 || o.hp < o.maxHp, 'Root Charge missed a brawler right in front');
 });
 
 await test('nobody is hurt during the opening seconds (spawn shield + calm bots)', () => {

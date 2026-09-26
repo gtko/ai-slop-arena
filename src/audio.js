@@ -24,7 +24,8 @@ const SFX = ['shot', 'shotgun', 'throw', 'boom', 'boom_big', 'hit', 'hurt', 'bre
   'super', 'ready', 'death', 'gas', 'victory', 'defeat', 'click', 'thunder', 'thunder2', 'join',
   // v0.11 sound pass (ElevenLabs): per-brawler shots, hit confirm, KO, match stings, footsteps, voice barks
   'shot_ray', 'shot_ice', 'shot_zap', 'hit_confirm', 'ko', 'sting_three', 'sting_duel', 'sting_finalko', 'heartbeat', 'immune',
-  'step_sand', 'step_grass', 'step_snow', 'step_stone', 'step_mud',
+  'step_sand', 'step_grass', 'step_snow', 'step_stone', 'step_mud', 'supply_siren', 'supply_land',
+  'gad_dash', 'gad_bark', 'gad_flare', 'gad_icewall', 'gad_blink', 'gad_overclock', 'gad_hop', 'gad_fuse',
   ...['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt'].flatMap(k => [`bark_${k}_super`, `bark_${k}_cheer`])];
 const LOOPS = {
   amb_day: 'music/amb_day', amb_night: 'music/amb_night',

@@ -44,6 +44,7 @@ const serverBuild = {
     alias: [
       { find: /^\.\/audio\.js$/, replacement: resolve(__dirname, 'src/server/audio.js') },
       { find: /^\.\/i18n\/index\.js$/, replacement: resolve(__dirname, 'src/server/i18n.js') },
+      { find: /^meshoptimizer$/, replacement: resolve(__dirname, 'src/server/meshopt.js') },
     ],
   },
   publicDir: false,

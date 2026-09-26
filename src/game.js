@@ -11,6 +11,7 @@ import { MAPS, MAP_KEYS } from './maps.js';
 import { Weather } from './weather.js';
 import { t } from './i18n/index.js';
 import { Feel, weapon } from './feel.js';
+import { GADGETS, GADGET_CHARGES, GADGET_LOCKOUT, parseLoadout, validLoadout, flareFx, gadgetFx } from './gadgets.js';
 
 const NAMES = ['Bolt', 'Nova', 'Rex', 'Juno', 'Pix', 'Kai', 'Moxie', 'Zed', 'Luna', 'Taro', 'Fizz', 'Oona', 'Brick', 'Echo'];
 const TYPE_KEYS = Object.keys(TYPES);
@@ -25,11 +26,12 @@ const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.f
 export function makeRoster(humans = [], { level = 0.45 } = {}) {
   const spawns = shuffle([0, 1, 2, 3, 4, 5, 6, 7]);
   const names = shuffle(NAMES.slice());
-  const roster = humans.slice(0, 8).map((h, k) => ({ id: h.id, name: h.name, type: h.type, human: true, spawn: spawns[k], plat: h.plat }));
+  const roster = humans.slice(0, 8).map((h, k) => ({ id: h.id, name: h.name, type: h.type, lo: h.lo, human: true, spawn: spawns[k], plat: h.plat }));
   const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
   for (let k = roster.length; k < 8; k++) {
     const skill = Math.round(Math.min(0.97, Math.max(0.05, 0.12 + level * 0.8 + gauss() * 0.2)) * 100) / 100;
-    roster.push({ id: 'bot' + k, name: names[k], type: TYPE_KEYS[Math.floor(Math.random() * TYPE_KEYS.length)], human: false, spawn: spawns[k], skill });
+    const lo = `${Math.random() < 0.5 ? 'A' : 'B'}${Math.random() < 0.5 ? 1 : 2}`; // bots pick a random loadout
+    roster.push({ id: 'bot' + k, name: names[k], type: TYPE_KEYS[Math.floor(Math.random() * TYPE_KEYS.length)], lo, human: false, spawn: spawns[k], skill });
   }
   return roster;
 }
@@ -38,6 +40,22 @@ const r2 = v => Math.round(v * 100) / 100;
 // Spawn shield: nobody can hurt anybody during the first seconds of a match (bots also stay calm
 // for 7-11 s, see ai.js), so nobody gets jumped at spawn. Crates still break.
 export const SPAWN_SHIELD = 5;
+
+// A small gold crown (bounty crown): a band and five points.
+function crownMesh(parent) {
+  const g = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ color: 0xffc933, metalness: 0.8, roughness: 0.3, emissive: 0x6b4a00, emissiveIntensity: 0.6 });
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.38, 0.22, 16, 1, true), mat);
+  band.material.side = THREE.DoubleSide;
+  g.add(band);
+  for (let k = 0; k < 5; k++) {
+    const a = k / 5 * Math.PI * 2, p = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.28, 6), mat);
+    p.position.set(Math.cos(a) * 0.4, 0.24, Math.sin(a) * 0.4);
+    g.add(p);
+  }
+  g.visible = false;
+  parent.add(g);
+  return g;
+}
 
 export class Game {
   constructor({ scene, camera, lighting, lights, hud, input }) {
@@ -62,6 +80,8 @@ export class Game {
     lighting.fogShift = Math.max(0, this.camOffset.length() - 22); // keep the air around the player clear
     this.feel = new Feel();   // hit freeze, camera trauma, zoom punches (cosmetic)
     this.bushIdleT = 0;
+    this.gadgetSeq = 0;
+    this.gadgetDir = new THREE.Vector3(0, 0, 1);
     this.heartT = 0;          // low health: heartbeat timer
     this.aimPoint = new THREE.Vector3();
     this.aimDir = new THREE.Vector3(0, 0, -1);
@@ -88,7 +108,8 @@ export class Game {
 
   // opts: { mapKey, roster, localId, net }. No localId = attract mode (bots only, menu backdrop).
   // headless: the authoritative server (worker/ -> src/server/sim.js), a real match with no local player.
-  newMatch({ mapKey = 'oasis', roster = null, localId = null, net = null, headless = false } = {}) {
+  // dojo: training (M05) - no gas, no drops, the bots are dummies in front of you that never fall.
+  newMatch({ mapKey = 'oasis', roster = null, localId = null, net = null, headless = false, dojo = false } = {}) {
     for (const b of this.brawlers) b.dispose();
     this.brawlers = [];
     this.brains.clear();
@@ -111,7 +132,9 @@ export class Game {
     this.weather = this.lighting.weather = new Weather(this, MAPS[this.mapKey].weather);
     this.weather.setDensity(this.weatherDensity ?? 1);
     const real = !!localId || headless;
-    this.poison = new Poison(this, real ? {} : { startAt: 18, interval: 6 });
+    this.dojo = dojo;
+    this.dojoLog = [];
+    this.poison = new Poison(this, dojo ? { startAt: 1e9 } : real ? {} : { startAt: 18, interval: 6 });
     this.visionRadius = MAPS[this.mapKey].vision || 0;
     // How far anyone sees (fog maps use their fog wall instead); the sandstorm cuts it shorter.
     this.sightRange = this.visionRadius ? 0 : MAPS[this.mapKey].weather === 'sandstorm' ? 11 : 14;
@@ -119,8 +142,11 @@ export class Game {
     this.player = null;
     for (const r of roster) {
       const isPlayer = r.id === localId;
-      const b = new Brawler(this, r.type, { name: isPlayer ? t('hud.you') : r.name, isPlayer });
+      // loadout: r.lo ('B2' = gadget B, star power 2), or inside the type ('volt:B2', solo)
+      const L = parseLoadout(validLoadout(r.lo) ? `${String(r.type).split(':')[0]}:${r.lo}` : r.type);
+      const b = new Brawler(this, Object.hasOwn(TYPES, L.type) ? L.type : 'blaster', { name: isPlayer ? t('hud.you') : r.name, isPlayer });
       b.id = r.id;
+      b.gadget = L.gadget; b.star = L.star;
       b.setHuman(!!r.human);
       if (r.skill !== undefined) b.skill = r.skill;
       b.pos.copy(this.arena.spawns[r.spawn % this.arena.spawns.length]);
@@ -142,6 +168,12 @@ export class Game {
     this.camTarget = this.player || this.brawlers[0];
     this.camFocus.copy(this.camTarget.pos);
     this.feel.reset();
+    // supply drops (authority schedules, everyone sees): ~40-50 s and ~85-95 s into the match
+    for (const D of this.dropping || []) this.fx.remove(D.beam, D.ring);
+    if (dojo) this.setupDojo();
+    this.drops = this.mode === 'play' && !dojo ? [40 + Math.random() * 10, 85 + Math.random() * 10] : [];
+    this.dropping = [];
+    this.gadgetSeq = 0;
     this.hud.setup(this.brawlers, this.player);
     this.aim.visible = this.aimTarget.visible = !!this.player;
   }
@@ -208,7 +240,7 @@ export class Game {
     }
     b.lastAttack = this.time;
     b.revealT = 1.2;
-    if (isSuper && b === this.player) { this.feel.punchTo(0.92, 0.3); duckMusic(); } // own super: a quick punch-in
+    if (isSuper && b === this.player) { this.feel.punchTo(0.92, 0.3); duckMusic(); this.hud.superCutIn(b.type.key); } // own super: punch-in + portrait
     b.face(dx, dz);
     b.attacked(isSuper);
     this.combat.attack(b, dx, dz, point, isSuper);
@@ -230,6 +262,13 @@ export class Game {
   damage(target, amount, source, fromSuper = false) {
     if (!target.alive || !this.authority) return;
     if (this.shielded && source && source !== target) return;
+    if (target.ghostT > 0 && source !== target) return; // Tail Roll
+    if (this.dojo) { // dummies never fall: one that would, fills back up
+      if (target === this.player) return;
+      if (source === this.player) this.dojoLog.push([this.time, Math.round(amount)]);
+      if (amount >= target.hp) target.hp = amount + target.maxHp * 0.999; // lands at (almost) full health
+    }
+    if (target.armorT > 0) amount *= 0.65;               // Bark Skin
     amount = Math.round(amount);
     target.hp -= amount;
     target.lastHurt = this.time;
@@ -247,6 +286,7 @@ export class Game {
   // camera trauma and the rising hit-confirm sound. What you cannot see gives you no juice either.
   damageFx(target, amount, source, sup = false) {
     const seen = this.fxVisible(target), [stop, dealt, taken] = weapon(source, sup);
+    if (source && source !== target) source.stats.dmg += amount;
     target.hurt(seen ? stop : 0);
     target.revealT = Math.max(target.revealT, 0.8);
     if (seen) {
@@ -284,7 +324,9 @@ export class Game {
   kill(b, killer, bySuper = false) {
     if (!b.alive) return;
     b.rank = this.brawlers.filter(o => o.alive && o !== b).length + 1;
-    const n = Math.max(1, b.cubes), x = b.pos.x, z = b.pos.z;
+    const bounty = b === this.crown && killer && killer !== b; // knocking out the crown pays 2 extra cubes
+    const n = Math.max(1, b.cubes) + (bounty ? 2 : 0), x = b.pos.x, z = b.pos.z;
+    if (bounty && killer === this.player) this.hud.floater(this.camera, x, 3.4, z, t('hud.bounty'), 'power');
     this.killFx(b, killer, bySuper);
     if (!this.authority) return;
     for (let k = 0; k < n; k++) this.dropCube(x, z, k, n);
@@ -299,6 +341,7 @@ export class Game {
     b.burst.length = 0;
     b.die(); // death fall, then a puff
     if (killer && killer !== b) {
+      killer.stats.kos++;
       killer.cheer();
       if (this.fxVisible(killer)) sfx(`bark_${killer.type.key}_cheer`, this.volumeAt(killer.pos.x, killer.pos.z) * 0.8);
     }
@@ -358,14 +401,16 @@ export class Game {
   }
 
   damageCrate(i, j, dmg, by = null) {
+    const supply = this.arena.crateAt(i, j)?.supply;
     if (!this.authority || !this.arena.hitCrate(i, j, dmg)) return;
     this.crateFx(i, j, by);
-    this.dropCube(_v.x, _v.z, 0, 1);
+    const n = supply ? 3 : 1;
+    for (let k = 0; k < n; k++) this.dropCube(_v.x, _v.z, k, n);
     this.ev({ e: 'crate', i, j, by: by ? by.id : null });
   }
 
   crateFx(i, j, by = null) {
-    if (by && by === this.player && this.onFeat) this.onFeat('crate');
+    if (by && by === this.player && this.onFeat && !this.dojo) this.onFeat('crate');
     const c = this.arena.center(i, j, _v);
     this.effects.debrisBurst(c.x, 0.3, c.z, WOOD, 16, 0.38, 6);
     this.effects.dust(c.x, c.z, 8, 0xc9a070, 1.2);
@@ -392,9 +437,10 @@ export class Game {
 
   pickItem(it, b) {
     b.cubes++;
+    b.stats.cubes++;
     b.refreshDmg();
-    b.maxHp += 400;
-    b.hp += 400;
+    b.maxHp += 300; // v0.12: +300 (was +400), the cube leader snowballs less
+    b.hp += 300;
     this.fx.remove(it.mesh);
     this.items.splice(this.items.indexOf(it), 1);
     this.effects.sparkBurst(it.x, 1, it.z, GREEN, 14, 5, 0.5);
@@ -402,8 +448,119 @@ export class Game {
     if (b.isPlayer) {
       sfx('pickup');
       this.hud.floater(this.camera, b.pos.x, 3.4, b.pos.z, t('hud.power'), 'power');
-      if (this.onFeat) this.onFeat('cubes', b.cubes);
+      if (this.onFeat && !this.dojo) this.onFeat('cubes', b.cubes);
     }
+  }
+
+  // Training dojo: the other brawlers stand in a loose row a few metres ahead, as dummies.
+  setupDojo() {
+    this.brains.clear();
+    const P = this.player, A = this.arena, spot = new THREE.Vector3();
+    // the most open spot near the middle for you, the dummies around it
+    let best = null, bs = -1;
+    for (let j = 7; j < 18; j++) for (let i = 7; i < 18; i++) {
+      let open = 0;
+      for (let dj = -3; dj <= 3; dj++) for (let di = -3; di <= 3; di++) if (A.walkable(i + di, j + dj) && A.get(i + di, j + dj) !== 'W') open++;
+      if (open > bs) { bs = open; best = [i, j]; }
+    }
+    A.center(best[0], best[1], spot);
+    P.pos.set(spot.x, 0, spot.z + 3);
+    let k = 0;
+    for (const b of this.brawlers) {
+      if (b === P) continue;
+      const a = (k++ - 3) * 0.45, r = 6.5;
+      b.pos.set(spot.x + Math.sin(a) * r, 0, spot.z + 3 - Math.cos(a) * r);
+      A.collideCircle(b.pos, b.radius);
+      b.face(P.pos.x - b.pos.x, P.pos.z - b.pos.z);
+    }
+  }
+
+  updateDojo() {
+    const P = this.player;
+    if (P) { P.gadgetCharges = 3; P.hp = P.maxHp; }
+    for (const b of this.brawlers) {
+      if (b === P) continue;
+      b.moveIntent.set(0, 0, 0);
+      if (this.time - b.lastHurt > 2) b.hp = b.maxHp; // dummies heal up after 2 s
+    }
+    while (this.dojoLog.length && this.time - this.dojoLog[0][0] > 5) this.dojoLog.shift();
+  }
+
+  // Your damage per second over the last 5 s (training dojo).
+  get dojoDps() { return Math.round(this.dojoLog.reduce((s, [, a]) => s + a, 0) / 5); }
+
+  // Supply drop: 5 s of warning (a beacon and a siren where it will land), then a gold crate falls
+  // from the sky with 3 power cubes inside. Whoever stands under it gets bumped.
+  updateDrops(dt) {
+    if (this.authority && this.drops.length && this.time > this.drops[0] - 5 && !this.ended) {
+      this.drops.shift();
+      const A = this.arena, lvl = this.poison.level;
+      for (let tries = 0; tries < 30; tries++) {
+        const [i, j] = A.randomOpenTile(lvl + 3);
+        if (A.get(i, j) !== '.' || A.ring(i, j) <= lvl + 2) continue;
+        const c = A.center(i, j, new THREE.Vector3());
+        if (this.brawlers.some(o => o.alive && Math.hypot(o.pos.x - c.x, o.pos.z - c.z) < 2)) continue;
+        this.dropWarn(i, j);
+        this.ev({ e: 'dropWarn', i, j });
+        break;
+      }
+    }
+    for (let k = this.dropping.length - 1; k >= 0; k--) {
+      const D = this.dropping[k];
+      D.t -= dt;
+      D.beam.material.opacity = 0.25 + 0.2 * Math.sin(this.time * 12);
+      D.ring.scale.setScalar(1.6 + 0.3 * Math.sin(this.time * 6));
+      if (D.t > 0.7) continue;
+      if (!D.crate) { // falling for the last 0.7 s
+        this.fx.remove(D.beam, D.ring);
+        D.crate = this.arena.makeCrate(D.i, D.j, true, false); // solid only once it lands
+      }
+      const k01 = Math.max(0, D.t) / 0.7;
+      D.crate.position.y = 16 * k01 * k01;
+      if (D.t > 0) continue;
+      D.crate.position.y = 0;
+      this.dropping.splice(k, 1);
+      const c = this.arena.center(D.i, D.j, new THREE.Vector3());
+      if (this.arena.crateAt(D.i, D.j)) { this.arena.grid[D.j][D.i] = 'C'; this.arena.rev++; }
+      this.effects.dust(c.x, c.z, 16, 0xc9a070, 2);
+      this.effects.ring(c.x, c.z, 2.2, new THREE.Color(3, 2.4, 0.6), 0.5);
+      this.shakeAt(c.x, c.z, 0.35);
+      sfx('supply_land', this.volumeAt(c.x, c.z));
+      if (this.authority) for (const o of this.brawlers) {
+        const dx = o.pos.x - c.x, dz = o.pos.z - c.z, d = Math.hypot(dx, dz);
+        if (!this.hittable(o) || d > 1.6) continue;
+        this.damage(o, 300, null);
+        this.applyKnock(o, (dx || 1) / (d || 1) * 9, dz / (d || 1) * 9);
+      }
+    }
+  }
+
+  dropWarn(i, j) {
+    const c = this.arena.center(i, j, new THREE.Vector3()), col = new THREE.Color(3, 2.4, 0.6);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.9, 30, 16, 1, true),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+    beam.position.set(c.x, 15, c.z);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 32).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.7, depthWrite: false }));
+    ring.position.set(c.x, 0.08, c.z);
+    this.fx.add(beam, ring);
+    this.dropping.push({ i, j, t: 5, beam, ring, crate: null });
+    sfx('supply_siren', Math.max(0.35, this.volumeAt(c.x, c.z)));
+  }
+
+  // Bounty crown: whoever carries the most power cubes (5 or more, no tie) wears it. Knocking them
+  // out drops 2 extra cubes. It only shows when you can see its wearer: no reveal through walls.
+  updateCrown(t) {
+    let best = null, n = 4, tie = false;
+    for (const b of this.brawlers) {
+      if (!b.alive) continue;
+      if (b.cubes > n) { best = b; n = b.cubes; tie = false; } else if (b.cubes === n && best) tie = true;
+    }
+    this.crown = tie ? null : best;
+    if (!this.crownMesh) this.crownMesh = crownMesh(this.fx);
+    const c = this.crownMesh, W = this.crown;
+    c.visible = !!W && this.fxVisible(W) && W.root.visible;
+    if (c.visible) { c.position.set(W.pos.x, W.pos.y + 3.55 + Math.sin(t * 3) * 0.06, W.pos.z); c.rotation.y = t * 1.4; }
   }
 
   /* ------------------------------ network ------------------------------ */
@@ -427,7 +584,9 @@ export class Game {
     let px = num(m.px, b.pos.x), pz = num(m.pz, b.pos.z);
     const pd = Math.hypot(px - b.pos.x, pz - b.pos.z);
     if (pd > reach) { px = b.pos.x + (px - b.pos.x) / pd * reach; pz = b.pos.z + (pz - b.pos.z) / pd * reach; }
-    b.remoteIn = { ax, az, px, pz, f: m.f ? 1 : 0, s: Math.max(0, Math.min(1e6, Math.floor(num(m.s, 0)))) };
+    const gx = num(m.gx, 0), gz = num(m.gz, 0), gl = Math.hypot(gx, gz);
+    b.remoteIn = { ax, az, px, pz, f: m.f ? 1 : 0, s: Math.max(0, Math.min(1e6, Math.floor(num(m.s, 0)))),
+      g: Math.max(0, Math.min(1e6, Math.floor(num(m.g, 0)))), gx: gl > 1e-6 ? gx / gl : ax, gz: gl > 1e-6 ? gz / gl : az };
     if (b.alive) this.checkMove(b, num(m.x, b.net.x), num(m.z, b.net.y), now);
   }
 
@@ -438,8 +597,9 @@ export class Game {
     const allowed = b.type.speed * 1.35 * dt + 0.4 + g.knock;
     g.knock = Math.max(0, g.knock - 4 * dt);
     const d = Math.hypot(x - b.net.x, z - b.net.y);
+    const air = now < (g.airUntil || 0); // Lava Hop: over a wall is fine, not a landing inside one
     const ok = d <= allowed && (b.freezeT <= 0 || d < 0.3)
-      && Math.abs(x) < HALF && Math.abs(z) < HALF && !this.arena.blocksMoveAt(x, z);
+      && Math.abs(x) < HALF && Math.abs(z) < HALF && (air || !this.arena.blocksMoveAt(x, z));
     if (ok) { b.net.set(x, z); return; }
     g.fix++;                    // the next snapshot tells that player to snap back
     g.strikes++;
@@ -451,6 +611,7 @@ export class Game {
     const b = this.byId.get(id);
     if (!b || !this.authority || b.human || !b.alive) return;
     b.setHuman(true); b.netDriven = true; b.guard = null; b.remoteIn = null;
+    b.gadgetSeen = 0; b.superSeen = 0; // a rejoining client counts from 0 again
     b.net.set(b.pos.x, b.pos.z);
     this.brains.delete(b);
   }
@@ -474,7 +635,7 @@ export class Game {
         this.netT = 1 / 15;
         const alive = this.brawlers.filter(b => b.alive), pt = r2(this.poison.timer);
         const row = b => [b.id, r2(b.pos.x), r2(b.pos.z), r2(b.facing), Math.round(b.hp), b.maxHp,
-          r2(b.ammo), r2(b.superCharge), b.cubes, (b.revealT > 0 ? 2 : 0) | (b.slowT > 0 ? 4 : 0) | (b.freezeT > 0 ? 8 : 0)];
+          r2(b.ammo), r2(b.superCharge), b.cubes, (b.revealT > 0 ? 2 : 0) | (b.slowT > 0 ? 4 : 0) | (b.freezeT > 0 ? 8 : 0) | (b.rootT > 0 ? 16 : 0)];
         if (N.sendTo) {
           // One snapshot per player with only what that player can see: brawlers hidden in a bush
           // or behind the fog are simply not sent, so no client can reveal them. Knocked-out
@@ -491,7 +652,8 @@ export class Game {
       this.netT = 1 / 20;
       const p = this.player, i = this.localIn || {};
       N.send({ t: 'in', x: r2(p.pos.x), z: r2(p.pos.z), ax: r2(this.aimDir.x), az: r2(this.aimDir.z),
-        px: r2(this.aimPoint.x), pz: r2(this.aimPoint.z), f: i.f ? 1 : 0, s: this.superSeq });
+        px: r2(this.aimPoint.x), pz: r2(this.aimPoint.z), f: i.f ? 1 : 0, s: this.superSeq, g: this.gadgetSeq,
+        gx: r2(this.gadgetDir.x), gz: r2(this.gadgetDir.z) });
     }
   }
 
@@ -509,6 +671,7 @@ export class Game {
       // status effects are decided by the host; our own brawler needs them too (we move it locally)
       b.slowT = flags & 4 ? 0.2 : Math.min(b.slowT, 0);
       b.freezeT = flags & 8 ? 0.2 : Math.min(b.freezeT, 1e-4); // a tiny rest so update() still sees the thaw (immunity fx)
+      b.rootT = flags & 16 ? 0.2 : Math.min(b.rootT, 0);
       if (b !== this.player) {
         b.net.set(x, z); b.netFacing = f;
         if (b.netHidden) { b.pos.x = x; b.pos.z = z; } // back in sight: appear where it is, don't glide there through the wall
@@ -534,7 +697,7 @@ export class Game {
         case 'atk':
           if (!b || !b.alive) break;
           b.face(e.dx, e.dz); b.attacked(!!e.s); b.revealT = 1.2; b.lastAttack = this.time;
-          if (e.s && b === this.player) { this.feel.punchTo(0.92, 0.3); duckMusic(); }
+          if (e.s && b === this.player) { this.feel.punchTo(0.92, 0.3); duckMusic(); this.hud.superCutIn(b.type.key); }
           this.combat.attack(b, e.dx, e.dz, _v.set(e.px, 0, e.pz), !!e.s);
           break;
         case 'dmg':
@@ -553,6 +716,19 @@ export class Game {
           break;
         case 'knock': if (b === this.player) b.knock.set(e.x, 0, e.z); break;
         case 'imm': if (b && b.visibleToPlayer) this.hud.floater(this.camera, b.pos.x, 3.1, b.pos.z, t('hud.immune'), 'immune'); break;
+        case 'gad':
+          if (b && b !== this.player && b.alive) gadgetFx(this, b, e.dx, e.dz);
+          if (b) b.stats.gadgets++;
+          if (b && b === this.player && Number.isFinite(e.c)) b.gadgetCharges = e.c; // the host's count
+          break;
+        case 'gadNo':
+          if (b && b === this.player) { b.gadgetCharges = e.c; b.gadgetCd = e.cd; }
+          break;
+        case 'flare': flareFx(this, e.x, e.z); break;
+        case 'dropWarn': this.dropWarn(e.i, e.j); break;
+        case 'zoneOff': this.combat.zones.filter(Z => Z.once && Math.hypot(Z.x - e.x, Z.z - e.z) < 0.1).forEach(Z => { Z.t = 0; }); break;
+        case 'ice': this.arena.iceWall(e.t, 3); break;
+        case 'zone': this.combat.zone({ ...e.z, owner: this.byId.get(e.z.owner), col: new THREE.Color(...e.z.col) }); break;
         case 'zap': this.effects.arc(e.pts, new THREE.Color(3.2, 4.2, 5.2)); break;
         case 'wall': this.breakWall(e.i, e.j, true); break;
         case 'crate': if (this.arena.hitCrate(e.i, e.j, 1e9)) this.crateFx(e.i, e.j, this.byId.get(e.by)); break;
@@ -604,6 +780,9 @@ export class Game {
     this.poison.update(dt, t);
     if (this.authority) this.poisonDamage(dt);
     this.updateItems(dt, t);
+    this.updateCrown(t);
+    this.updateDrops(dt);
+    if (this.dojo) this.updateDojo();
     this.updateVisibility();
     this.updateFoliage(dt);
     if (P && P.alive) this.updateAim();
@@ -632,6 +811,13 @@ export class Game {
       _v.set(I.px, 0, I.pz);
       if (I.f) this.tryAttack(b, I.ax, I.az, _v, false);
       if (I.s > (b.superSeen || 0)) { b.superSeen = I.s; this.tryAttack(b, I.ax, I.az, _v, true); }
+      if (I.g > (b.gadgetSeen || 0)) {
+        b.gadgetSeen = I.g;
+        const G = GADGETS[b.type.key + b.gadget];
+        if (G && G.dist && b.guard) b.guard.knock = Math.max(b.guard.knock, G.dist + 1.5); // the client already dashed
+        if (this.spendGadget(b)) this.gadgetEffect(b, I.gx ?? I.ax, I.gz ?? I.az, _v);
+        else this.ev({ e: 'gadNo', id: b.id, c: b.gadgetCharges, cd: r2(Math.max(0, b.gadgetCd)) }); // refused: resync the client
+      }
     }
   }
 
@@ -679,6 +865,12 @@ export class Game {
     }
     const ready = p.superCharge >= 1;
     const superPressed = ready && I.superFired;
+    if (I.gadgetFired) {
+      // mobility gadgets go where you walk (if you walk), the others where you aim
+      const G = GADGETS[p.type.key + p.gadget], mv = p.moveIntent;
+      const d = G && G.dist && mv.lengthSq() > 0.05 ? _v.set(mv.x, 0, mv.z).normalize() : this.aimDir;
+      this.useGadget(p, d.x, d.z, this.aimPoint);
+    }
     if (!this.authority) {
       // client: the host fires for us and echoes the attack back as an event
       this.localIn = { f: I.attackHeld };
@@ -688,6 +880,78 @@ export class Game {
       if (superPressed) this.tryAttack(p, this.aimDir.x, this.aimDir.z, this.aimPoint, true);
     }
     this.superAiming = ready && I.superAimHeld;
+  }
+
+  /* ------------------------------ gadgets (gadgets.js) ------------------------------ */
+
+  canGadget(b) {
+    const G = GADGETS[b.type.key + b.gadget];
+    return b.alive && this.state !== 'idle' && b.freezeT <= 0 && b.gadgetCharges > 0 && !this.shielded
+      && b.gadgetCd <= (b.netDriven ? 0.35 : 0) // remote press: its lockout started a little earlier
+      && !(G && G.dist && b.rootT > 0) && !b.dash && !b.blink; // rooted: no mobility gadget
+  }
+
+  spendGadget(b) {
+    if (!this.canGadget(b)) return false;
+    b.gadgetCharges--;
+    b.gadgetCd = GADGET_LOCKOUT;
+    b.revealT = Math.max(b.revealT, 1.2); // using a gadget gives you away, like firing
+    return true;
+  }
+
+  // On the machine that controls b (you; bots on the host): the movement part now, then the rules
+  // part here if we are the authority, else the host runs it when our input arrives.
+  useGadget(b, dx, dz, point) {
+    if (!this.spendGadget(b)) return false;
+    const l = Math.hypot(dx, dz) || 1;
+    dx /= l; dz /= l;
+    const G = GADGETS[b.type.key + b.gadget];
+    G.move?.(this, b, dx, dz);
+    if (this.authority) this.gadgetEffect(b, dx, dz, point);
+    else { this.gadgetSeq++; this.gadgetDir.set(dx, 0, dz); gadgetFx(this, b, dx, dz); }
+    if (b === this.player) this.hud.gadgetUsed();
+    return true;
+  }
+
+  // Authority: what the gadget does to the match, its look for everyone, and room for the dash.
+  gadgetEffect(b, dx, dz, point) {
+    const G = GADGETS[b.type.key + b.gadget];
+    G.effect(this, b, dx, dz, point);
+    gadgetFx(this, b, dx, dz);
+    b.stats.gadgets++;
+    if (b.netDriven && b.guard && G.dist) b.guard.knock = Math.max(b.guard.knock, G.dist + 1.5); // a remote player dashes itself
+    if (b.netDriven && b.guard && G.air) b.guard.airUntil = this.time + 0.9;
+    this.ev({ e: 'gad', id: b.id, dx: r2(dx), dz: r2(dz), c: b.gadgetCharges });
+    if (this.onGadget) this.onGadget(b);
+  }
+
+  // Tail Roll: untouchable (no hit, freeze, slow, push or root) for its split second.
+  hittable(o) { return o.alive && !(o.ghostT > 0); }
+
+  // Root Charge: while charging, the first enemy touched takes 400 and is rooted 0.6 s.
+  chargeContact(b) {
+    if (b.chargeHit) return;
+    for (const o of this.brawlers) {
+      if (o === b || !this.hittable(o) || Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z) > b.radius + o.radius + 0.35) continue;
+      b.chargeHit = o;
+      this.damage(o, 400 * b.dmgMul, b);
+      if (o.alive && o.ccImmuneT <= 0) o.rootT = Math.max(o.rootT, 0.6);
+      this.effects.ring(o.pos.x, o.pos.z, 1, new THREE.Color(1.6, 1.1, 0.5), 0.5);
+      return;
+    }
+  }
+
+  // Lava Hop: the landing spot burns for 2 s.
+  hopLanded(b) {
+    const p = b.netDriven ? { x: b.net.x, z: b.net.y } : b.pos; // a remote player lands where it says it is
+    this.combat.zone({ x: p.x, z: p.z, r: 2, dps: 300, t: 2, owner: b, col: new THREE.Color(3.4, 1.2, 0.2) }, true);
+    this.shakeAt(p.x, p.z, 0.25);
+  }
+
+  // Ice Wall tiles (authority picks them, clients copy): never on top of a brawler.
+  iceWall(tiles) {
+    const A = this.arena, c = new THREE.Vector3();
+    return A.iceWall(tiles, 3, (i, j) => { A.center(i, j, c); return !this.brawlers.some(o => o.alive && Math.abs(o.pos.x - c.x) < 1.35 && Math.abs(o.pos.z - c.z) < 1.35); });
   }
 
   // Closest enemy the player can see (touch auto-aim), preferring ones in range.
