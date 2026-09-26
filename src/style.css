@@ -682,3 +682,16 @@ button.lj-tile:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--in
 .floater.heal { color: var(--green); font-size: 22px; }
 #banner.event { color: #b18cff; font-size: 58px; }
 .floater.heal { color: #7dffa8; font-size: 20px; }
+
+/* v0.15: hidden in a bush (your own brawler) */
+.ov-eye { display: none; position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -2px); pointer-events: none; }
+.ov-eye b { position: relative; display: block; width: 26px; height: 16px; border-radius: 50%; background: #e9fff0; border: 2.5px solid var(--ink); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
+.ov-eye b::before { content: ''; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--ink); }
+.ov-eye.hid, .ov-eye.seen { display: flex; flex-direction: column; align-items: center; }
+.ov-eye.hid b { background: #7dffa8; }
+.ov-eye.hid b::after { content: ''; position: absolute; left: -5px; right: -5px; top: 50%; height: 3px; margin-top: -1.5px; background: var(--ink); transform: rotate(-28deg); border-radius: 2px; }
+.ov-eye.seen b { background: #ffd23f; animation: eyeBlink 0.45s ease-in-out infinite alternate; }
+.ov-eye small { font-family: var(--display); font-size: 12px; color: #ffd23f; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; line-height: 1; margin-top: 1px; }
+@keyframes eyeBlink { to { transform: scale(1.15); } }
+#bushEdge { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.15s;
+  box-shadow: inset 0 0 90px 18px rgba(47, 180, 80, 0.45); }

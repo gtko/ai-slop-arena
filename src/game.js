@@ -1491,6 +1491,14 @@ export class Game {
     const want = P && P.alive && P.inBush ? 1 : 0;
     shared.revealAmt.value += (want - shared.revealAmt.value) * (1 - Math.exp(-8 * dt));
     if (P) shared.reveal.value.set(P.pos.x, P.pos.z, 3.4);
+    // Hidden in a bush: your brawler goes see-through and the screen edges turn leafy green. Only
+    // what you do yourself shows you (a shot, a gadget, an emote, a hit: revealT); an enemy close
+    // enough to spot you is never shown, it would give that enemy away.
+    if (P) {
+      const hid = P.alive && P.inBush && P.revealT <= 0 && this.mode === 'play' && !this.dojo;
+      P.hiddenLook(hid, dt);
+      this.hud.bushEdge?.(P.hideK || 0);
+    }
   }
 
   /* ------------------------------ aim indicator ------------------------------ */

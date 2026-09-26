@@ -588,6 +588,28 @@ export class Brawler {
     if (this.model.blink) this.model.blink.value = 0;
   }
 
+  // Your own brawler while hidden in a bush: 50% see-through with a cool tint; back to solid with a
+  // little pop the moment you give yourself away.
+  hiddenLook(on, dt) {
+    const was = this.hideK || 0;
+    const k = this.hideK = was + ((on ? 1 : 0) - was) * (1 - Math.exp(-10 * dt));
+    if (Math.abs(k - was) < 1e-3 && (k < 0.001 || k > 0.999)) return;
+    if (was > 0.6 && k < was && !on && !this.popped) { this.squashV -= 4; this.popped = true; } // revealed: a pop
+    if (on) this.popped = false;
+    if (!this.lookMats) {
+      this.lookMats = [...this.model.mats];
+      this.lookLines = [];
+      this.model.root.traverse(o => { if (o.userData.outline) this.lookLines.push(o); });
+    }
+    const see = k > 0.01;
+    for (const m of this.lookMats) {
+      if (m.transparent !== see) { m.transparent = see; m.needsUpdate = true; }
+      m.opacity = 1 - 0.5 * k;
+      m.depthWrite = !see || k < 0.5;
+    }
+    for (const o of this.lookLines) o.visible = k < 0.3; // the outline hull would show through as a solid blob
+  }
+
   vanish() {
     this.setVisible(false);
     this.g.effects.poof(this.pos.x, this.pos.z, this.type.palette.main);
