@@ -432,7 +432,7 @@ await test('Kappa: in Duo the splash heals her partner, Bowl Splash heals over t
 await test('Kappa: the Tidal Wave hits, pushes (or pulls) and parts the gas', () => {
   for (const star of [1, 2]) {
     const { m, g, k } = kappaMatch('A' + star);
-    const foe = g.brawlers.find(o => o !== k), c = openRow(g);
+    const foe = g.brawlers.find(o => o !== k && o.type.key !== 'mochi'), c = openRow(g); // (Heavyweight halves pushes)
     for (const o of g.brawlers) if (o !== k && o !== foe) place(o, -40, -40);
     place(k, c.x, c.z); place(foe, c.x + 4, c.z);
     foe.ccImmuneT = 0;
@@ -443,7 +443,7 @@ await test('Kappa: the Tidal Wave hits, pushes (or pulls) and parts the gas', ()
     for (let i = 0; i < 20; i++) m.advance(0.05);
     assert.ok(hp - foe.hp >= 900 * k.dmgMul - 1, `the wave did ${hp - foe.hp}`);
     if (star === 1) assert.ok(foe.pos.x > x0 + 1.5, `not pushed: ${foe.pos.x - x0}`);
-    else assert.ok(foe.pos.x < x0 - 0.5, `not pulled: ${foe.pos.x - x0}`);
+    else assert.ok(foe.pos.x < x0 - 1, `not pulled: ${foe.pos.x - x0}`);
     for (let i = 0; i < 30; i++) m.advance(0.05);
     assert.ok(!g.poison.inLane(c.x + 5, c.z), 'the lane never closes');
   }
@@ -566,7 +566,7 @@ function duel(type, lo = 'A1') {
   while (g.time < 6) m.advance(0.05);
   g.brains.clear();
   for (const b of g.brawlers) { b.netDriven = false; b.moveIntent.set(0, 0, 0); }
-  const me = g.byId.get('me'), foe = g.brawlers.find(o => o !== me), c = openRow(g);
+  const me = g.byId.get('me'), foe = g.brawlers.find(o => o !== me && o.type.key !== 'mochi'), c = openRow(g);
   for (const o of g.brawlers) if (o !== me && o !== foe) place(o, -40, -40);
   place(me, c.x, c.z);
   foe.maxHp = foe.hp = 20000; foe.ccImmuneT = 0;
