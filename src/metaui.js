@@ -59,14 +59,17 @@ export class MetaUI {
     Object.assign(this, { brawlers, portrait, chosen, mastery, onWear });
     this.view = null;
     this.tab = 'skin';
-    this.bar = $('#profileBar');
     this.panel = $('#meta');
     this.body = $('#metaBody');
     $('#metaClose').addEventListener('click', () => { sfx('click'); this.close(); });
     this.panel.addEventListener('click', e => { if (e.target === this.panel) this.close(); });
-    for (const [id, view] of [['#questsBtn', 'quests'], ['#roadBtn', 'road'], ['#shopBtn', 'shop'], ['#wardBtn', 'collection'], ['#pbMe', 'collection']]) {
-      $(id).addEventListener('click', () => { sfx('click'); this.open(view); });
-    }
+    // the top navigation: PLAY closes the page, the other tabs open theirs
+    document.querySelectorAll('#tnTabs [data-page]').forEach(b => b.addEventListener('click', () => {
+      sfx('click');
+      if (b.dataset.page === 'play') this.close(); else this.open(b.dataset.page);
+    }));
+    $('#pbMe').addEventListener('click', () => { sfx('click'); this.open('collection'); });
+    $('#homeQuests').addEventListener('click', () => { sfx('click'); this.open('quests'); });
     this.renderBar();
   }
 
@@ -75,8 +78,12 @@ export class MetaUI {
   renderBar() {
     const L = Pr.levelInfo(), W = Pr.wearing(), B = board(this.brawlers);
     const ready = B.daily.filter(q => !q.done).length + (B.weekly.done ? 0 : 1);
-    $('#pbMe').innerHTML = `${framed(W.frame, iconHtml(W.icon, this.portrait))}
-      <span class="pb-lv"><b>${t('meta.level', { n: L.level })}</b><i><u style="width:${(L.frac * 100).toFixed(0)}%"></u></i><small>${esc(titleText(W.title))}</small></span>`;
+    $('#pbMe').innerHTML = `<span class="tn-ring" style="--f:${(L.frac * 360).toFixed(0)}deg">${framed(W.frame, iconHtml(W.icon, this.portrait))}<b>${L.level}</b></span>
+      <span class="tn-who"><b>${t('meta.level', { n: L.level })}</b><small>${esc(titleText(W.title))}</small></span>`;
+    // home: the day's quests at a glance
+    const row = q => `<li class="${q.done ? 'done' : ''}"><i>${QUEST_ICONS[q.kind]}</i><span>${esc(t('quest.' + q.kind, { n: q.target, brawler: q.brawler ? q.brawler[0].toUpperCase() + q.brawler.slice(1) : '' }))}</span>
+      <em><u style="width:${(q.n / q.target * 100).toFixed(0)}%"></u></em><b>${q.done ? '✓' : `${q.n}/${q.target}`}</b></li>`;
+    $('#homeQuests').innerHTML = `<h3>${t('meta.quests')}<small>${B.daily.filter(q => q.done).length}/3</small></h3><ul>${B.daily.map(row).join('')}</ul>`;
     $('#pbCoins').innerHTML = coin(Pr.coins());
     $('#pbTrophies').innerHTML = `🏆 ${Pr.totalTrophies()}`;
     $('#questsBtn em').textContent = ready || '';
@@ -93,13 +100,16 @@ export class MetaUI {
     this.view = view;
     this.panel.classList.remove('hidden');
     this.panel.dataset.view = view;
+    this.tabs(view);
     this.render();
   }
+  tabs(view) { document.querySelectorAll('#tnTabs [data-page]').forEach(b => b.classList.toggle('on', b.dataset.page === view)); }
   close() {
     if (!this.isOpen) return false;
     if (this.view === 'collection') Pr.markSeen();
     this.panel.classList.add('hidden');
     this.view = null;
+    this.tabs('play');
     this.renderBar();
     return true;
   }

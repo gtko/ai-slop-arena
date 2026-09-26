@@ -302,7 +302,7 @@ export class Menus {
   /* ------------------------------ navigation ------------------------------ */
 
   activeOverlay() {
-    for (const id of ['#options', '#pause', '#result', '#lobby', '#menu']) {
+    for (const id of ['#options', '#pause', '#result', '#lobby', '#meta', '#menu']) {
       const o = $(id);
       if (o && !o.classList.contains('hidden')) return o;
     }
@@ -364,6 +364,7 @@ export class Menus {
     if (this.optionsOpen) { this.closeOptions(); return true; }
     if (this.paused) { this.closePause(); return true; }
     const root = this.activeOverlay();
+    if (root && (root.id === 'meta' || root.id === 'menu') && this.ctx.closePage && this.ctx.closePage()) return true; // a page, the map picker
     if (root && root.id === 'lobby') { $('#lobbyBack').click(); return true; }
     if (root && root.id === 'result' && this.ctx.isOnline()) { $('#result').classList.add('hidden'); return true; }
     return false;
@@ -400,6 +401,7 @@ export class Menus {
     if (I.padHit(PAD.START)) {
       if (this.paused || this.optionsOpen) this.back();
       else if (!root && this.ctx.isInMatch()) this.openPause();
+      else if (root && root.id === 'meta') this.back();
       else if (root && root.id === 'menu') $('#play').click();
       return;
     }

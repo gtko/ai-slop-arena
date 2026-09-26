@@ -224,20 +224,7 @@ body.cb #myhp .mh-fill { background: linear-gradient(#7ec4ff, #2a78e0); }
 .menu-card h1 { font-family: var(--display); font-weight: 400; font-size: 84px; line-height: 0.85; margin: 0; color: var(--yellow); -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; text-shadow: 0 7px 0 var(--ink); letter-spacing: 1px; }
 .menu-card h1 span { display: block; color: #fff; font-size: 58px; margin-top: 6px; }
 .tag { color: var(--muted); font-weight: 800; margin: 14px 0 18px; }
-#cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 /* loadout of the chosen brawler: mastery, gadget A/B, star power 1/2 (mastery.js) */
-#loadout { display: grid; grid-template-columns: auto 1fr 1fr; gap: 6px 12px; align-items: center; margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: rgba(30, 26, 48, 0.9); border: 3px solid var(--ink); }
-#loadout .lo-mastery { display: flex; flex-direction: column; gap: 4px; min-width: 110px; }
-#loadout .lo-mastery b, .res-mastery b { font-family: var(--display); font-weight: 400; font-size: 16px; color: var(--yellow); }
-#loadout i, .res-mastery i { display: block; height: 8px; border-radius: 4px; background: rgba(0,0,0,0.45); overflow: hidden; }
-#loadout i u, .res-mastery i u { display: block; height: 100%; background: linear-gradient(90deg, #ffd23f, #ff9f1c); }
-#loadout .lo-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-#loadout .lo-group em { font-style: normal; font-size: 11px; font-weight: 900; letter-spacing: 1px; color: var(--muted); width: 100%; }
-#loadout .lo-opt { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 10px; border: 2px solid var(--ink); background: rgba(255,255,255,0.06); color: var(--text); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
-#loadout .lo-opt.on { background: rgba(255, 210, 63, 0.22); border-color: var(--yellow); }
-#loadout .lo-opt.locked { opacity: 0.45; cursor: default; }
-#loadout .lo-ico { font-size: 17px; }
-#loadout .lo-desc { grid-column: 1 / -1; margin: 2px 0 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
 .res-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-width: 420px; margin: 4px auto 6px; }
 .res-stats:empty { display: none; }
 .res-stats > div { display: flex; flex-direction: column; align-items: center; padding: 6px 4px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 2px solid var(--ink); }
@@ -253,18 +240,6 @@ body.cb #myhp .mh-fill { background: linear-gradient(#7ec4ff, #2a78e0); }
 .res-mastery small { color: var(--muted); font-weight: 800; font-size: 12px; }
 .res-mastery.up b { animation: masteryPop 0.9s cubic-bezier(.2, .9, .3, 1.4); display: inline-block; font-size: 22px; transform-origin: left center; }
 @keyframes masteryPop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.15); opacity: 1; } }
-.card { text-align: left; background: rgba(30, 26, 48, 0.9); color: var(--text); border: 3px solid var(--ink); border-radius: 14px; padding: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; box-shadow: 0 4px 0 rgba(0,0,0,0.45); transition: transform 0.12s, background 0.12s; font: inherit; }
-.card:hover { transform: translateY(-2px); }
-.card.on { background: rgba(58, 48, 96, 0.95); outline: 3px solid var(--yellow); }
-.card b { font-family: var(--display); font-weight: 400; font-size: 20px; }
-.card em { font-style: normal; color: var(--yellow); font-weight: 800; font-size: 12px; }
-.card p { margin: 4px 0; font-size: 12px; color: var(--muted); line-height: 1.35; }
-.card .stat { font-size: 11px; font-weight: 800; color: #d6d0ee; }
-.portrait { position: relative; height: 118px; margin: -4px -4px 6px; border-radius: 10px; overflow: hidden; border: 3px solid var(--ink);
-  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--c) 55%, #fff) 0%, var(--c) 60%, color-mix(in srgb, var(--c) 60%, #000) 100%);
-  box-shadow: inset 0 -8px 0 rgba(0,0,0,0.22); }
-.portrait img { position: absolute; left: 50%; bottom: -6px; height: 128px; transform: translateX(-50%); filter: drop-shadow(0 4px 0 rgba(0,0,0,0.35)); transition: transform 0.15s; }
-.card:hover .portrait img, .card.on .portrait img { transform: translateX(-50%) scale(1.07); }
 .big { margin-top: 18px; font-family: var(--display); font-size: 30px; padding: 12px 44px; color: var(--ink); background: linear-gradient(#ffe36b, #ffbf1f); border: 3px solid var(--ink); border-radius: 14px; box-shadow: 0 6px 0 var(--ink); cursor: pointer; transition: transform 0.08s, box-shadow 0.08s; }
 .big:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); }
 .ghost { margin-top: 18px; font-family: var(--display); font-size: 22px; padding: 12px 26px; color: var(--text); background: rgba(40, 34, 62, 0.9); border: 3px solid var(--ink); border-radius: 14px; box-shadow: 0 6px 0 var(--ink); cursor: pointer; }
@@ -276,7 +251,6 @@ body.cb #myhp .mh-fill { background: linear-gradient(#7ec4ff, #2a78e0); }
 .row-btns { display: flex; gap: 12px; justify-content: center; }
 
 @media (max-width: 900px) {
-  #cards { grid-template-columns: 1fr; }
   .menu-card h1 { font-size: 60px; }
   .menu-card h1 span { font-size: 46px; }
   .panel { width: 220px; }
@@ -369,14 +343,7 @@ button:focus-visible, .map:focus-visible, .card:focus-visible { outline: 4px sol
 
 /* 5 brawlers, illustrated maps */
 .menu-card { width: min(780px, 100%); }
-#cards { grid-template-columns: repeat(5, 1fr); gap: 8px; }
-.card { padding: 8px; }
-.card .portrait { height: 96px; }
-.card .portrait img { height: 104px; }
-.card b { font-size: 17px; }
-.card p { font-size: 11px; line-height: 1.3; }
 .map { height: 80px; background-size: cover; background-position: center; }
-@media (max-width: 900px) { #cards { grid-template-columns: repeat(3, 1fr); } }
 
 /* ------------------------------ boot loader ------------------------------ */
 #loader { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
@@ -558,36 +525,11 @@ body.touch .overlay { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
   /* main menu: title + buttons | brawlers + loadout + maps. If it still does not fit, it scrolls
      instead of cutting the title off (a centred flex box overflows at both ends). */
-  #menu { align-items: safe center; overflow-y: auto; }
-  #menu .menu-card { width: 100%; max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: minmax(190px, 0.75fr) 2fr;
-    grid-template-areas: "title cards" "btns cards" "btns loadout" "btns maplbl" "btns maps"; grid-template-rows: auto 1fr auto auto auto; column-gap: 18px; row-gap: 4px; }
-  #loadout { grid-area: loadout; margin-top: 2px; padding: 5px 8px; gap: 3px 10px; border-width: 2px; border-radius: 10px; }
-  #loadout .lo-mastery { min-width: 78px; gap: 3px; }
-  #loadout .lo-mastery b { font-size: 13px; }
-  #loadout i { height: 6px; }
-  #loadout .lo-group { gap: 4px; flex-wrap: wrap; }
-  #loadout .lo-group em { font-size: 9px; letter-spacing: 0.5px; }
-  #loadout .lo-opt { padding: 2px 7px; gap: 4px; font-size: 11px; border-radius: 8px; white-space: nowrap; }
-  #loadout .lo-ico { font-size: 13px; }
-  #loadout .lo-desc { margin: 0; font-size: 10.5px; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #menu .menu-card h1 { grid-area: title; margin-top: 36px; font-size: 42px; /* below the sound button */ -webkit-text-stroke: 4px var(--ink); text-shadow: 0 4px 0 var(--ink); }
-  #menu .menu-card h1 span { font-size: 30px; margin-top: 2px; }
-  #menu .tag, #menu .hint { display: none; }
-  #cards { grid-area: cards; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; align-self: end; }
-  .card { padding: 4px 5px 5px; gap: 0; border-radius: 12px; box-shadow: 0 3px 0 rgba(0,0,0,0.45); }
-  .card p, .card .stat { display: none; }
-  .portrait { height: 64px; margin: 0 0 3px; border-width: 2px; }
-  .portrait img { height: 72px; bottom: -4px; }
-  .card b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .card em { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #menu .lbl-row { grid-area: maplbl; }
-  #maps { grid-area: maps; }
   .maps { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
   .map { height: 42px; border-width: 2px; border-radius: 10px; }
   .map em { display: none; }
   .map b { font-size: 11px; }
   .map i { font-size: 12px; top: 2px; }
-  #menu .row-btns { grid-area: btns; flex-direction: column; align-items: stretch; gap: 8px; justify-content: center; }
 
   /* online lobby: room view in two columns (join view: see the lobby panel block) */
   #lobbyRoom:not(.hidden) { display: grid; grid-template-columns: 1.1fr 1fr; grid-template-areas: "head brawlerlbl" "players brawlers" "players maplbl" "players maps" "players start";

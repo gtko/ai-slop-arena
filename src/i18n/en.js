@@ -109,15 +109,10 @@ export default {
   'common.close': 'Close',
 
   // main menu
-  'menu.tag': 'Showdown · 8 brawlers · 5 maps with live weather · last one standing wins',
   'menu.map': 'Map',
-  'menu.solo': 'SOLO',
-  'menu.multi': 'MULTIPLAYER',
   'menu.options': 'OPTIONS',
   'menu.achievements': 'ACHIEVEMENTS',
   'menu.quit': 'QUIT',
-  'menu.hint': 'Keyboard + mouse or gamepad · <kbd>Esc</kbd> / Start pauses · <kbd>T</kbd> time of day',
-  'card.stat': 'HP {hp} · Range {range}',
 
   // brawlers (names are proper names and stay as they are)
   'brawler.blaster.role': 'Shotgun',
@@ -599,4 +594,12 @@ export default {
   'mut.superRush.desc': "Supers charge twice as fast.",
   'mut.gadgetFrenzy': "Gadget Frenzy",
   'mut.gadgetFrenzy.desc': "6 gadget charges, and only 2 seconds between them.",
+  'nav.play': "PLAY",
+  'menu.vsBots': "Solo against bots",
+  'menu.online': "ONLINE",
+  'menu.mode': "SHOWDOWN",
+  'menu.modeDesc': "8 brawlers · last one standing wins",
+  'menu.hp': "HP",
+  'menu.range': "Range",
+  'menu.speed': "Speed",
 };
