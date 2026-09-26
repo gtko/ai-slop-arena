@@ -590,7 +590,18 @@
   "menu.online": "ONLINE",
   "menu.mode": "ĐẤU SINH TỒN",
   "menu.modeDesc": "8 đấu sĩ · người trụ lại cuối cùng thắng",
-  "menu.hp": "HP",
+  "menu.hp": "Máu",
   "menu.range": "Tầm",
-  "menu.speed": "Tốc độ"
+  "menu.speed": "Tốc độ",
+  "menu.solo": "CHƠI ĐƠN",
+  "menu.pickMap": "CHỌN BẢN ĐỒ",
+  "meta.profile": "Hồ sơ",
+  "meta.dup": "Đã có",
+  "shop.equip": "TRANG BỊ",
+  "shop.missing": "Thiếu {n}",
+  "shop.today": "Trong cửa hàng hôm nay",
+  "col.equipped": "ĐANG DÙNG",
+  "col.new": "MỚI",
+  "quest.rerolled": "Đã đổi · lượt tiếp sau {time}",
+  "result.trophies": "Cúp"
 }

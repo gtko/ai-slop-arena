@@ -11,7 +11,7 @@ import { Hud } from './hud.js';
 import { Input } from './input.js';
 import { TYPES } from './brawler.js';
 import { GADGET_ICONS, STARS, parseLoadout } from './gadgets.js';
-import { brawlerString, loadout, setLoadout, progress, award, GADGET_B_AT, STAR_2_AT } from './mastery.js';
+import { brawlerString, loadout, setLoadout, progress, award, GADGET_B_AT, STAR_2_AT, LEVELS } from './mastery.js';
 import { makeRoster, randomMap } from './game.js';
 import { MAPS } from './maps.js';
 import { Net, randomCode, serverError } from './net.js';
@@ -38,7 +38,7 @@ import { preloadFigurines, setFigurineDetail } from './figurines.js';
 import { preloadProps, PROPS } from './props.js';
 import { enableCartoonShading, cartoonGradePass } from './cartoon.js';
 import { PAD } from './input.js';
-import { MetaUI, skinFilter, framed, titleText } from './metaui.js';
+import { MetaUI, skinFilter, framed, titleText, num } from './metaui.js';
 import { awardMatch, leagueBotLevel, cosFor, unlock, owns } from './profile.js';
 import { parseCos, FRAMES } from './cosmetics.js';
 import { EmoteWheel } from './emotewheel.js';
@@ -50,6 +50,10 @@ import './meta.css';
 import './home.css';
 
 installTelemetry(); // crash reports first: the rest of the start-up can fail
+{ // heavy display fonts for Chinese, Japanese, Korean: only in those languages (see home.css --display)
+  const cjk = { ja: 'M+PLUS+Rounded+1c:wght@800', 'zh-CN': 'Noto+Sans+SC:wght@900', 'zh-TW': 'Noto+Sans+TC:wght@900', ko: 'Noto+Sans+KR:wght@900' }[document.documentElement.lang];
+  if (cjk) document.head.insertAdjacentHTML('beforeend', `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${cjk}&display=swap">`);
+}
 translateDom();
 
 const $ = s => document.querySelector(s);
@@ -301,17 +305,19 @@ for (const T of Object.values(TYPES)) {
 function renderHero() {
   const T = TYPES[chosen], P = progress(chosen), C = parseCos(cosFor(chosen));
   $('.hero').style.setProperty('--c', hexOf(chosen));
-  const art = $('#heroArt');
-  art.src = portrait(chosen);
-  art.style.filter = `${skinFilter(chosen, C.skin)} drop-shadow(0 10px 0 rgba(0, 0, 0, 0.3))`;
-  art.classList.remove('hero-in'); void art.offsetWidth; art.classList.add('hero-in');
   $('#heroName').textContent = T.name;
   $('#heroRole').textContent = t(`brawler.${chosen}.role`);
   $('#heroDesc').textContent = t(`brawler.${chosen}.desc`);
-  $('#heroMastery').innerHTML = `<b>${t('menu.mastery', { n: P.level })}</b><i><u style="width:${(P.frac * 100).toFixed(0)}%"></u></i>`;
+  const next = LEVELS[P.level];
+  $('#heroMastery').innerHTML = `<b>${t('menu.mastery', { n: P.level })}</b><i><u style="width:${(P.frac * 100).toFixed(0)}%"></u></i>${next ? `<small><bdi dir="ltr">${P.p} / ${next}</bdi></small>` : ''}`;
   const bar = (label, v, max) => `<div><small>${label}</small><i><u style="width:${Math.min(100, v / max * 100).toFixed(0)}%"></u></i><b>${v}</b></div>`;
   $('#heroStats').innerHTML = bar(t('menu.hp'), T.hp, 5000) + bar(t('menu.range'), T.range, 16) + bar(t('menu.speed'), T.speed, 7);
-  cards.querySelectorAll('.rt').forEach(c => { c.querySelector('i').textContent = progress(c.dataset.key).level; });
+  cards.querySelectorAll('.rt').forEach(c => {
+    const k = c.dataset.key, lv = progress(k).level;
+    c.querySelector('i').textContent = lv;
+    c.querySelector('i').title = t('menu.mastery', { n: lv });
+    c.querySelector('img').style.filter = skinFilter(k, parseCos(cosFor(k)).skin);
+  });
 }
 
 // Loadout of the chosen brawler: its mastery, gadget A / B and star power 1 / 2 (mastery.js gates).
@@ -320,7 +326,7 @@ const STAR_ICONS = ['⭐', '🌟'];
 function renderLoadout() {
   const root = $('#loadout'), key = chosen, lo = loadout(key), P = progress(key);
   const opt = (kind, v, icon, name, lock) => `<button class="lo-opt${lo.includes(v) ? ' on' : ''}${lock ? ' locked' : ''}" data-${kind}="${v}"${lock ? ' disabled' : ''}
-    title="${lock ? t('menu.locked', { n: lock }) : name}"><span class="lo-ico">${lock ? '🔒' : icon}</span><span class="lo-name">${lock ? t('menu.locked', { n: lock }) : name}</span></button>`;
+    title="${name}${lock ? ' · ' + t('menu.locked', { n: lock }) : ''}"><span class="lo-ico">${icon}</span><span class="lo-name">${name}</span>${lock ? `<em class="lo-lock">🔒 ${lock}</em>` : ''}</button>`;
   const lvl = P.level;
   root.innerHTML = `<div class="lo-group"><em>${t('menu.gadget')}</em>
       ${opt('g', 'A', GADGET_ICONS[key + 'A'], t(`gad.${key}A.name`), 0)}${opt('g', 'B', GADGET_ICONS[key + 'B'], t(`gad.${key}B.name`), lvl < GADGET_B_AT ? GADGET_B_AT : 0)}</div>
@@ -342,6 +348,7 @@ function pickBrawler(key) {
   document.querySelectorAll('[data-key]').forEach(x => x.classList.toggle('on', x.dataset.key === key));
   renderLoadout();
   renderHero();
+  showcaseAgain();
   if (net.connected) net.send({ t: 'pick', brawler: key, lo: loadout(key), cos: cosFor(key) });
   if ($('#ljAvatar')) showAvatar();
 }
@@ -351,6 +358,7 @@ renderLoadout();
 // Progression pages (v0.13): quests, Trophy Road, shop, collection, under the top navigation.
 const meta = new MetaUI({ brawlers: Object.keys(TYPES), portrait, chosen: () => chosen, onWear: () => {
   renderHero();
+  showcaseAgain();
   if (net.connected) net.send({ t: 'pick', brawler: chosen, lo: loadout(chosen), cos: cosFor(chosen) });
 } });
 renderHero();
@@ -371,7 +379,10 @@ let chaosOn = false;
 try { chaosOn = localStorage.getItem('iaslop-chaos') === '1'; } catch { /* private mode */ }
 function chaosChip(btn, on, enabled = true) {
   const m = weeklyMutator();
-  btn.innerHTML = `🌀 ${t('chaos.name')}: <b>${MUT_ICONS[m]} ${t('mut.' + m)}</b> <em>${on ? t('chaos.on') : t('chaos.off')}</em>`;
+  btn.innerHTML = `<span class="cc-l"><small>🌀 ${t('chaos.name')}</small><b>${MUT_ICONS[m]} ${t('mut.' + m)}</b></span><em>${on ? t('chaos.on') : t('chaos.off')}</em>`;
+  btn.setAttribute('aria-label', `${t('chaos.name')}: ${t('mut.' + m)}`);
+  btn.setAttribute('role', 'switch');
+  btn.setAttribute('aria-checked', on);
   btn.classList.toggle('on', on);
   btn.disabled = !enabled;
   btn.title = t('mut.' + m + '.desc');
@@ -406,13 +417,23 @@ function showMapPick() {
   const key = chosenMap, M = MAPS[key];
   const b = $('#mapPick');
   b.style.backgroundImage = key === 'random' ? '' : `linear-gradient(90deg, rgba(10,8,22,0.85) 30%, rgba(10,8,22,0.2)), url(${ASSET_BASE}ui/map_${key}.jpg)`;
-  b.innerHTML = `<small>${t('menu.map')}</small><b>${key === 'random' ? '🎲' : MAP_ICON[M.weather]} ${t(`map.${key}`)}</b><em>${t(`map.${key}.tag`)}</em><i>▾</i>`;
+  b.innerHTML = `<small>${t('menu.map')}</small><b>${key === 'random' ? '🎲' : MAP_ICON[M.weather]} ${t(`map.${key}`)}</b><em>${t(`map.${key}.tag`)}</em><i aria-hidden="true">◂</i>`;
 }
-buildMaps($('#maps'), key => { chosenMap = key; syncMaps($('#maps'), key); showMapPick(); $('#maps').classList.add('hidden'); });
+function mapPopover(open) {
+  $('#mapsPop').classList.toggle('hidden', !open);
+  $('#mapPick').setAttribute('aria-expanded', open);
+  $('#mapPick').classList.toggle('open', open);
+  if (open) ($('#maps .map.on') || $('#maps .map'))?.focus({ preventScroll: true });
+}
+buildMaps($('#maps'), key => {
+  chosenMap = key; syncMaps($('#maps'), key); showMapPick(); mapPopover(false); $('#mapPick').focus({ preventScroll: true });
+  if (key !== 'random') showcaseAgain(); // the backdrop shows the map you picked
+});
 syncMaps($('#maps'), chosenMap);
 showMapPick();
-$('#mapPick').addEventListener('click', e => { sfx('click'); e.stopPropagation(); $('#maps').classList.toggle('hidden'); });
-addEventListener('pointerdown', e => { if (!e.target.closest('#maps, #mapPick')) $('#maps').classList.add('hidden'); });
+$('#mapPick').addEventListener('click', e => { sfx('click'); e.stopPropagation(); mapPopover($('#mapsPop').classList.contains('hidden')); });
+addEventListener('pointerdown', e => { if (!e.target.closest('#mapsPop, #mapPick')) mapPopover(false); });
+$('#tnTabs').addEventListener('click', () => mapPopover(false)); // a page (even opened with the keyboard) closes the picker
 const resolveMap = key => (key === 'random' || !MAPS[key] ? randomMap() : key);
 
 // The match being played, for the statistics (telemetry.js): how it started, KOs so far.
@@ -438,12 +459,13 @@ function matchLeft(reason) {
 // Leaving the home screen (a match, the lobby, the options): no page or map picker left open.
 function leaveHome() {
   meta.close();
-  $('#maps').classList.add('hidden');
+  mapPopover(false);
 }
 // Esc / B / the Android back button on the home screen: the map picker, then the open page.
 menus.ctx.closePage = () => {
-  if (!$('#maps').classList.contains('hidden')) { $('#maps').classList.add('hidden'); return true; }
-  return meta.close();
+  if (meta.close()) return true;
+  if (!$('#mapsPop').classList.contains('hidden')) { mapPopover(false); $('#mapPick').focus({ preventScroll: true }); return true; }
+  return false;
 };
 
 function dojo() {
@@ -457,12 +479,14 @@ function dojo() {
   finalMusic = true; // no final-showdown theme in the dojo
   matchLeft('restart');
   game.newMatch({ mapKey: 'oasis', roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen), cos: cosFor(chosen) }], { level: 0.3 }), localId: 'me', dojo: true });
+  document.body.classList.add('in-dojo');
   track('dojo_opened', { brawler: chosen, loadout: loadout(chosen) });
   canvas.focus();
 }
 
 function play() {
   leaveHome();
+  document.body.classList.remove('in-dojo');
   initAudio();
   sfx('click');
   $('#menu').classList.add('hidden');
@@ -482,8 +506,25 @@ function play() {
   canvas.focus();
 }
 let finalMusic = false; // the final showdown theme already started this match
-function attract() { achievements.end(); game.newMatch({ mapKey: randomMap() }); }
+// The menu's live match (attract mode) stars your brawler, with your looks, on the map you picked;
+// the camera stays close on it (game.js updateCamera). It restarts when you pick another brawler or map.
+function showcaseRoster() {
+  const roster = makeRoster([]), others = Object.keys(TYPES).filter(k => k !== chosen);
+  Object.assign(roster[0], { type: brawlerString(chosen), lo: loadout(chosen), cos: cosFor(chosen), per: undefined });
+  for (const r of roster.slice(1)) if (typeOf(r.type) === chosen) r.type = others[Math.floor(Math.random() * others.length)]; // one of a kind
+  return roster;
+}
+const showcaseMap = () => (chosenMap !== 'random' && MAPS[chosenMap] ? chosenMap : randomMap());
+function attract(mapKey = showcaseMap()) {
+  achievements.end();
+  game.showcaseRoster = showcaseRoster;
+  game.showcaseMap = showcaseMap;
+  game.newMatch({ mapKey, roster: showcaseRoster() });
+}
+// On the home screen only: a new pick restarts the backdrop (not while a match or the lobby runs).
+const showcaseAgain = () => { if (game.mode === 'attract' && !$('#menu').classList.contains('hidden')) attract(); };
 function toMenu() {
+  document.body.classList.remove('in-dojo');
   matchLeft('menu');
   if (!net.connected) presence(t('presence.menu'));
   $('#result').classList.add('hidden');
@@ -965,7 +1006,7 @@ function showStats() {
   }
   // yours first, then the others; 5 at most
   list.sort((x, y) => (y.b === P) - (x.b === P));
-  el.innerHTML = tile('💥', Math.round(P.stats.dmg), t('result.dmg')) + tile('💀', P.stats.kos, t('result.kos'))
+  el.innerHTML = tile('💥', num(Math.round(P.stats.dmg)), t('result.dmg')) + tile('💀', P.stats.kos, t('result.kos'))
     + tile('💎', P.stats.cubes, t('result.cubes')) + tile(GADGET_ICONS[P.type.key + P.gadget], P.stats.gadgets, t('result.gadgets'))
     + `<div class="awards">${list.slice(0, 5).map(a => `<span class="award${a.b === P ? ' me' : ''}">${a.html}</span>`).join('')}</div>`;
   el.querySelectorAll('.award b').forEach((n, i) => { n.textContent = who(list[i].b); });
@@ -1041,12 +1082,31 @@ addEventListener('keydown', e => {
   if (input.captureKey || (e.target && e.target.tagName === 'INPUT' && e.target.type === 'text')) return;
   const B = settings.binds;
   if (e.code === B.tod) nextTimeOfDay();
-  if (e.code === B.panel) { if (!settings.debugPanel) setSetting('debugPanel', true); else togglePanel(); }
+  if (e.code === B.panel && game.mode === 'play' && !$('#hud').classList.contains('hidden')) { if (!settings.debugPanel) setSetting('debugPanel', true); else togglePanel(); }
   if (e.code === B.mute) { toggleMute(); syncSound(); }
   if (e.code === 'Escape') soundOpen(false);
 });
 
 /* ------------------------------ loop ------------------------------ */
+
+// Menu showcase framing: shift the picture so the star stands in the middle of the free space
+// (between the brawler info and the play panel, under the navigation), not at the screen centre.
+let viewKey = '', viewFrames = 0;
+function frameShowcase() {
+  const on = game.star && game.mode === 'attract' && !$('#menu').classList.contains('hidden');
+  if (on && viewKey !== 'off' && viewKey.startsWith(`${innerWidth}x${innerHeight}:`) && ++viewFrames % 30) return;
+  let key = 'off', dx = 0, dy = 0;
+  if (on) {
+    const L = $('.hero-info').getBoundingClientRect(), R = $('.play-panel').getBoundingClientRect(), nav = $('.topnav').getBoundingClientRect();
+    dx = Math.round((L.right + R.left) / 2 - innerWidth / 2);
+    dy = Math.round(nav.bottom / 2);
+    key = `${innerWidth}x${innerHeight}:${dx}:${dy}`;
+  }
+  if (key === viewKey) return;
+  viewKey = key;
+  if (on) camera.setViewOffset(innerWidth, innerHeight, -dx, -dy, innerWidth, innerHeight);
+  else camera.clearViewOffset();
+}
 
 const timer = new THREE.Timer();
 timer.connect(document); // pause-safe: no giant delta after the tab was hidden
@@ -1119,7 +1179,7 @@ function frame(ts) {
   if (FRAME_MS && ts - lastFrame < FRAME_MS - 2) return;
   lastFrame = ts;
   timer.update(ts);
-  const dt = Math.min(timer.getDelta(), 0.05);
+  const dt = Math.max(0, Math.min(timer.getDelta(), 0.05)); // never negative: a stale timestamp must not run time backwards
   renderer.info.reset();
   input.poll();
   menus.update(dt);
@@ -1128,6 +1188,7 @@ function frame(ts) {
   if (inMatch) wheel.update(); else if (wheel.open) wheel.close();
   if (input.padHit(PAD.Y)) nextTimeOfDay();
   if (input.padHit(PAD.BACK)) setSetting('debugPanel', !settings.debugPanel);
+  frameShowcase();
   game.update(dt);
   if (touch) touch.update(game.player);
   autoQuality.update(document.visibilityState === 'visible' && $('#loader').classList.contains('done'));

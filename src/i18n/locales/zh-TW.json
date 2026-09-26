@@ -592,5 +592,16 @@
   "menu.modeDesc": "8 名英雄 · 最後存活者獲勝",
   "menu.hp": "HP",
   "menu.range": "射程",
-  "menu.speed": "速度"
+  "menu.speed": "速度",
+  "menu.solo": "單人",
+  "menu.pickMap": "選擇地圖",
+  "meta.profile": "個人資料",
+  "meta.dup": "已擁有",
+  "shop.equip": "裝備",
+  "shop.missing": "還差 {n}",
+  "shop.today": "今日商店販售",
+  "col.equipped": "已裝備",
+  "col.new": "新",
+  "quest.rerolled": "已更換 · {time} 後可再換",
+  "result.trophies": "獎盃"
 }

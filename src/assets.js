@@ -38,5 +38,6 @@ export function tex(name, rx = 1, ry = rx) {
   if (!t) return null;
   const c = t.clone();
   c.repeat.set(rx, ry);
+  c.userData.perMatch = true; // a copy for one arena: freed with it (arena.js / water.js dispose)
   return c;
 }

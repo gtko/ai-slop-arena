@@ -7,7 +7,7 @@
   <title>AI SLOP ARENA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;700;800;900&family=Rubik:wght@800&family=Manrope:wght@800&family=Kanit:wght@700&display=swap" rel="stylesheet" />
 </head>
 <body>
   <canvas id="c" tabindex="0"></canvas>
@@ -124,7 +124,6 @@
 
     <!-- your brawler, on show -->
     <section class="hero">
-      <div class="hero-stage"><img id="heroArt" class="hero-art" alt="" /></div>
       <div class="hero-info">
         <em id="heroRole" class="hero-role"></em>
         <h1 id="heroName" class="hero-name"></h1>
@@ -141,12 +140,14 @@
       <div id="homeQuests" class="home-quests"></div>
       <div class="pp-box">
         <div class="pp-mode"><small data-i18n="menu.mode">SHOWDOWN</small><span data-i18n="menu.modeDesc">8 brawlers · last one standing</span></div>
-        <button id="mapPick" class="pp-map"></button>
-        <div id="maps" class="maps pp-maps hidden"></div>
+        <div class="pp-mapwrap">
+          <button id="mapPick" class="pp-map" aria-haspopup="true" aria-expanded="false"></button>
+          <div class="pp-maps hidden" id="mapsPop"><h4 data-i18n="menu.pickMap">Choose a map</h4><div id="maps" class="maps"></div></div>
+        </div>
         <button id="chaosBtn" class="chaos-chip"></button>
-        <button id="play" class="pp-play"><b data-i18n="nav.play">PLAY</b><small data-i18n="menu.vsBots">Solo against bots</small></button>
+        <button id="multi" class="pp-play"><b data-i18n="menu.online">ONLINE</b><small data-i18n="lobby.ranked">RANKED · CROSS-PLATFORM</small></button>
         <div class="pp-alt">
-          <button id="multi"><i>🌐</i><span data-i18n="menu.online">ONLINE</span></button>
+          <button id="play" title="Solo against bots" data-i18n-title="menu.vsBots"><i>🤖</i><span data-i18n="menu.solo">SOLO</span></button>
           <button id="dojo"><i>🥋</i><span data-i18n="menu.dojo">TRAINING</span></button>
         </div>
       </div>
@@ -301,11 +302,11 @@
     <div class="menu-card result">
       <h2 id="resTitle">#1</h2>
       <p id="resSub"></p>
+      <div id="resProgress" class="res-progress"></div>
+      <div id="resMastery" class="res-mastery"></div>
       <p id="resRank" class="res-rank hidden"></p>
       <div id="resPodium" class="podium"></div>
       <div id="resStats" class="res-stats"></div>
-      <div id="resMastery" class="res-mastery"></div>
-      <div id="resProgress" class="res-progress"></div>
       <div id="survey" class="survey hidden">
         <div id="svStep1"><b data-i18n="survey.title">Having fun?</b><div id="svFaces" class="sv-faces"></div>
           <button id="svLater" class="link" data-i18n="survey.later">Not now</button></div>
@@ -324,7 +325,7 @@
   <!-- progression menus (v0.13): quests, Trophy Road, shop, collection (metaui.js) -->
   <div id="meta" class="overlay meta hidden">
     <div class="meta-card">
-      <header class="meta-head"><h2 id="metaTitle"></h2><span id="metaCoins" class="tn-chip"></span><button id="metaClose" class="lobby-back" aria-label="Close">✕</button></header>
+      <header class="meta-head"><h2 id="metaTitle"></h2><span id="metaSub" class="meta-sub"></span><span id="metaCoins" class="tn-chip"></span><button id="metaClose" class="lobby-back" aria-label="Close">✕</button></header>
       <div id="metaBody" class="meta-body"></div>
     </div>
   </div>

@@ -610,5 +610,16 @@
   "menu.modeDesc": "8 brawlers · den sista som står kvar vinner",
   "menu.hp": "HP",
   "menu.range": "Räckvidd",
-  "menu.speed": "Fart"
+  "menu.speed": "Fart",
+  "menu.solo": "SOLO",
+  "menu.pickMap": "VÄLJ EN BANA",
+  "meta.profile": "Profil",
+  "meta.dup": "Redan ägd",
+  "shop.equip": "UTRUSTA",
+  "shop.missing": "{n} till",
+  "shop.today": "I dagens butik",
+  "col.equipped": "UTRUSTAD",
+  "col.new": "NY",
+  "quest.rerolled": "Byte använt · nästa om {time}",
+  "result.trophies": "Troféer"
 }

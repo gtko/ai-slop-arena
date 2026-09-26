@@ -610,5 +610,16 @@
   "menu.modeDesc": "8 brawlers · gana el último en pie",
   "menu.hp": "PV",
   "menu.range": "Alcance",
-  "menu.speed": "Velocidad"
+  "menu.speed": "Velocidad",
+  "menu.solo": "SOLO",
+  "menu.pickMap": "ELIGE UN MAPA",
+  "meta.profile": "Perfil",
+  "meta.dup": "Ya lo tienes",
+  "shop.equip": "EQUIPAR",
+  "shop.missing": "Faltan {n}",
+  "shop.today": "En la tienda de hoy",
+  "col.equipped": "EQUIPADO",
+  "col.new": "NUEVO",
+  "quest.rerolled": "Cambio usado · otro en {time}",
+  "result.trophies": "Trofeos"
 }

@@ -26,7 +26,7 @@ export class Input {
 
     addEventListener('keydown', e => {
       if (this.captureKey) return;
-      if (e.code === 'Tab' || e.code === 'Space') e.preventDefault();
+      if (e.code === 'Space' || (e.code === 'Tab' && !document.querySelector('#hud.hidden'))) e.preventDefault(); // Tab moves focus in the menus
       if (!e.repeat) this.pressed.add(e.code);
       this.keys.add(e.code);
       this.usingPad = this.usingTouch = false;

@@ -592,5 +592,16 @@
   "menu.modeDesc": "ブロウラー8人 · 最後まで残った者の勝ち",
   "menu.hp": "HP",
   "menu.range": "射程",
-  "menu.speed": "速さ"
+  "menu.speed": "速さ",
+  "menu.solo": "ソロ",
+  "menu.pickMap": "マップを選択",
+  "meta.profile": "プロフィール",
+  "meta.dup": "所持済み",
+  "shop.equip": "装備する",
+  "shop.missing": "あと {n}",
+  "shop.today": "本日のショップ",
+  "col.equipped": "装備中",
+  "col.new": "NEW",
+  "quest.rerolled": "交換済み · 次まで {time}",
+  "result.trophies": "トロフィー"
 }

@@ -501,7 +501,7 @@
   "cos.skin.default": "Классика",
   "cos.skin.candy": "Конфетка",
   "cos.skin.shadow": "Тень",
-  "cos.skin.gold": "Золотой",
+  "cos.skin.gold": "Золото",
   "cos.trail.none": "Без следа",
   "cos.trail.sparkle": "Искорки",
   "cos.trail.bubbles": "Пузыри",
@@ -646,5 +646,16 @@
   "menu.modeDesc": "8 бойцов · побеждает последний выживший",
   "menu.hp": "ОЗ",
   "menu.range": "Дальность",
-  "menu.speed": "Скорость"
+  "menu.speed": "Скорость",
+  "menu.solo": "СОЛО",
+  "menu.pickMap": "ВЫБЕРИ КАРТУ",
+  "meta.profile": "Профиль",
+  "meta.dup": "Уже есть",
+  "shop.equip": "НАДЕТЬ",
+  "shop.missing": "Ещё {n}",
+  "shop.today": "В магазине сегодня",
+  "col.equipped": "НАДЕТО",
+  "col.new": "НОВОЕ",
+  "quest.rerolled": "Замена использована · следующая через {time}",
+  "result.trophies": "Кубки"
 }

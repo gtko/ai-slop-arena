@@ -610,5 +610,16 @@
   "menu.modeDesc": "8 harcos · az utolsó talpon maradt nyer",
   "menu.hp": "ÉP",
   "menu.range": "Hatótáv",
-  "menu.speed": "Sebesség"
+  "menu.speed": "Sebesség",
+  "menu.solo": "EGYJÁTÉKOS",
+  "menu.pickMap": "VÁLASSZ PÁLYÁT",
+  "meta.profile": "Profil",
+  "meta.dup": "Már megvan",
+  "shop.equip": "FELSZEREL",
+  "shop.missing": "Még {n}",
+  "shop.today": "A mai boltban",
+  "col.equipped": "FELSZERELVE",
+  "col.new": "ÚJ",
+  "quest.rerolled": "Csere felhasználva · következő: {time}",
+  "result.trophies": "Trófeák"
 }

@@ -107,6 +107,7 @@ export class BotBrain {
     this.crate = null;
     this.stuck = 0;
     this.last = bot.pos.clone();
+    this.dodgeT = 0; this.dodgeX = 0; this.dodgeZ = 0; // no sidestep yet
   }
 
   // A spot within 8 m the threat cannot see, not in the gas, closest first, bushes preferred.
@@ -145,12 +146,14 @@ export class BotBrain {
   decide() {
     const g = this.g, b = this.b, T = b.type, A = g.arena, P = g.poison;
     let best = null, bestS = Infinity;
+    // the menu's star (game.js showcase): strolls around its open spot and poses, never fights
+    if (b === g.star) { this.showcase(); return; }
     const provoked = b.lastHurt > 0 && g.time - b.lastHurt < 4;
     const calm = g.time < this.graceUntil && !provoked;
     const H = this.habits;
     const sight = 13 + this.skill * 9 + H.sight; // sharper bots notice targets from further away
     for (const o of g.brawlers) {
-      if (calm || o === b || !o.alive) continue;
+      if (calm || o === b || !o.alive || o === g.star) continue; // bots leave the menu's star alone
       const d = o.pos.distanceTo(b.pos);
       // A target that just ducked behind a wall is remembered for a moment (not one hiding in a bush).
       const seen = g.canSee(b, o);
@@ -290,7 +293,7 @@ export class BotBrain {
   // and walk out of lava puddles and zap traps.
   dodge(dt, move) {
     const g = this.g, b = this.b;
-    this.dodgeT = (this.dodgeT || 0) - dt;
+    this.dodgeT -= dt;
     if (this.dodgeT > 0) { move.x += this.dodgeX * 1.6; move.z += this.dodgeZ * 1.6; return; }
     for (const B of g.combat.bullets) {
       if (B.owner === b || B.dodgeSeen?.has(b)) continue;
@@ -314,6 +317,22 @@ export class BotBrain {
       if (W.t > 0.4 + this.skill * 0.9) continue;
       const dx = b.pos.x - W.x, dz = b.pos.z - W.z, d = Math.hypot(dx, dz);
       if (d < 2.4 && d > 1e-3) { move.x += dx / d * 2; move.z += dz / d * 2; }
+    }
+  }
+
+  // Showcase: a few steps between open tiles within 3 of home, a pause (idle poses) between them.
+  showcase() {
+    const A = this.g.arena, b = this.b;
+    this.target = null; this.crate = null; this.mode = 'wander';
+    this.home ||= b.pos.clone();
+    if (this.hasGoal && this.path.length) return;
+    this.restT = (this.restT ?? 1) - 0.3;
+    if (this.restT > 0) return;
+    this.restT = 2 + Math.random() * 3;
+    const ci = A.toTile(this.home.x), cj = A.toTile(this.home.z);
+    for (let k = 0; k < 20; k++) {
+      const i = ci + Math.round((Math.random() * 2 - 1) * 3), j = cj + Math.round((Math.random() * 2 - 1) * 3);
+      if (A.get(i, j) === '.' && A.walkable(i, j)) { this.setGoal(A.center(i, j), true); return; }
     }
   }
 

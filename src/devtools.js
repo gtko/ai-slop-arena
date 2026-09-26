@@ -13,7 +13,7 @@ export function installDevtools(A) {
   let ts = performance.now();
   const player = () => A.game.brawlers.find(b => b.isPlayer);
   const dev = {
-    run(n = 1) { for (let i = 0; i < n; i++) { ts += 1000 / 60; A.frame(ts); } },
+    run(n = 1) { ts = Math.max(ts, performance.now()); for (let i = 0; i < n; i++) { ts += 1000 / 60; A.frame(ts); } },
     setup(type = 'blaster', mapIndex = 1) {
       document.querySelector(`#cards [data-key="${type}"]`)?.click();
       [...document.querySelectorAll('#maps > *')][mapIndex]?.click();

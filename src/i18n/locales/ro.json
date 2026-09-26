@@ -628,5 +628,16 @@
   "menu.modeDesc": "8 luptători · câștigă ultimul rămas în picioare",
   "menu.hp": "HP",
   "menu.range": "Rază",
-  "menu.speed": "Viteză"
+  "menu.speed": "Viteză",
+  "menu.solo": "SOLO",
+  "menu.pickMap": "ALEGE O HARTĂ",
+  "meta.profile": "Profil",
+  "meta.dup": "Deja deținut",
+  "shop.equip": "ECHIPEAZĂ",
+  "shop.missing": "Încă {n}",
+  "shop.today": "În magazinul de azi",
+  "col.equipped": "ECHIPAT",
+  "col.new": "NOU",
+  "quest.rerolled": "Schimbare folosită · următoarea în {time}",
+  "result.trophies": "Trofee"
 }
