@@ -186,10 +186,16 @@ export class MapKit {
       c.width = c.height = 256;
       const x = c.getContext('2d');
       if (x) {
-        const gr = x.createLinearGradient(0, 0, 0, 256);
-        gr.addColorStop(0, '#9ed6ff'); gr.addColorStop(1, '#5aa8e8');
-        x.fillStyle = gr; x.fillRect(0, 0, 256, 256);
-        for (let k = 0; k < 40; k++) { x.fillStyle = `rgba(255,255,255,${0.25 + Math.random() * 0.35})`; x.beginPath(); x.arc(Math.random() * 256, Math.random() * 256, 8 + Math.random() * 26, 0, 7); x.fill(); }
+        x.fillStyle = '#7cc0f4'; x.fillRect(0, 0, 256, 256);
+        // soft clouds, drawn 9 times around so the texture tiles without a seam
+        for (let k = 0; k < 26; k++) {
+          const cx = Math.random() * 256, cy = Math.random() * 256, r = 10 + Math.random() * 24, a = 0.18 + Math.random() * 0.3;
+          for (const ox of [-256, 0, 256]) for (const oy of [-256, 0, 256]) {
+            const gr = x.createRadialGradient(cx + ox, cy + oy, 0, cx + ox, cy + oy, r);
+            gr.addColorStop(0, `rgba(255,255,255,${a})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
+            x.fillStyle = gr; x.beginPath(); x.arc(cx + ox, cy + oy, r, 0, 7); x.fill();
+          }
+        }
       }
       const tex = new THREE.CanvasTexture(c);
       tex.colorSpace = THREE.SRGBColorSpace;

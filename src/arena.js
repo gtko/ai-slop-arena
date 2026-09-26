@@ -182,7 +182,7 @@ export class Arena {
   /* ------------------------------ building ----------------------------- */
 
   buildGround() {
-    const M = this.map, key = M.ground + M.checker;
+    const M = this.map, key = M.ground + M.checker + (M.groundTones || []).join(); // cartoon grounds differ by their tones
     const cartoon = M.ground === 'cartoon';
     if (!groundMaps.has(key)) groundMaps.set(key, cartoon ? cartoonGround(...(M.groundTones || [])) : groundTexture(image(M.ground) || image('sand'), M.checker));
     const map = groundMaps.get(key).clone();
