@@ -6,7 +6,7 @@ import { botLevel } from './skill.js';
 // room (it is the host); the leader only picks the map and starts. The Steam build's friend
 // lobbies use steamnet.js instead (a player hosts).
 
-export const PROTOCOL = 3; // must match worker/index.js; older clients are told to update
+export const PROTOCOL = 4; // must match worker/index.js; older clients are told to update
 
 // Server refusals come with a code we translate; bans keep the server's text (it has the date).
 export function serverError(msg) {

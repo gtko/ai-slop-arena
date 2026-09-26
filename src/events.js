@@ -7,12 +7,12 @@ import { t } from './i18n/index.js';
 //   oasis  geysers    vents that erupt under your feet (hurt + launch)
 //   dunes  meteors    a meteor shower, aimed near brawlers, that also smashes walls and crates
 //   grove  lightning  a lightning rod that strikes whoever stands closest
-//   peak   blizzard   you see less far and move slower
+//   frost  blizzard   you see less far and move slower
 //   marsh  fogbank    the fog closes in, and healing mushrooms sprout
 // Everything that hurts is telegraphed on the ground first. The authority (solo, host, server)
 // decides and sends 'arena' events; everyone draws them. Bots step out of the telegraphs (ai.js).
 
-export const EVENT_OF = { oasis: 'geysers', dunes: 'meteors', grove: 'lightning', peak: 'blizzard', marsh: 'fogbank' };
+export const EVENT_OF = { oasis: 'geysers', dunes: 'meteors', grove: 'lightning', frost: 'blizzard', marsh: 'fogbank' };
 export const EVENT_ICONS = { geysers: '⛲', meteors: '☄️', lightning: '⚡', blizzard: '🌨️', fogbank: '🍄' };
 const LENGTH = { geysers: 14, meteors: 12, lightning: 14, blizzard: 14, fogbank: 16 };
 // telegraphs: radius, damage, warning time, knock-back

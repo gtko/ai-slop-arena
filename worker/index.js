@@ -18,7 +18,7 @@ import { rate, tierOf, pickGroup, botLevelFor, START_MMR } from './ranking.js';
 // Steam friend lobbies (src/steamnet.js) stay peer-to-peer: a player hosts, with the same checks.
 // Errors of the Worker and of every Durable Object go to Sentry (SENTRY_DSN in wrangler.jsonc).
 
-const PROTOCOL = 3;          // clients send ?v=3; older builds are told to update
+const PROTOCOL = 4;          // clients send ?v=4 (v0.13: arena events, emotes); older builds are told to update
 const MAX_PLAYERS = 8;
 const CODE = /^[A-Z0-9]{4,6}$/;
 const QUEUE_BOTS_AFTER = 60 * 1000;     // matchmaking: after 1 minute, whoever is queued plays and bots fill up

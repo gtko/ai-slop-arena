@@ -15,7 +15,9 @@ export const MAP_KEYS = Object.keys(MAPS);
 export { makeRoster, randomMap };
 export { validBrawler, validLoadout } from '../gadgets.js';
 export { validCos, COS_DEFAULT } from '../cosmetics.js';
-export { weeklyMutator } from '../mutators.js';
+export { weeklyMutator, MUTATORS } from '../mutators.js';
+export { EVENT_OF } from '../events.js';
+export { PERSONAS } from '../ai.js';
 
 export class ServerMatch {
   // send(msg): to every player; sendTo(id, msg): one player; onEnd(): match over; onCheat(id, kind)

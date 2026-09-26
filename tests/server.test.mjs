@@ -2,15 +2,15 @@
 // Run with `npm test`. Plain Node, no framework: exits 1 on the first failure.
 import assert from 'node:assert/strict';
 
-const { ServerMatch, makeRoster, validBrawler, validLoadout } = await import(new URL('../worker/build/sim.js', import.meta.url));
+const { ServerMatch, makeRoster, validBrawler, validLoadout, validCos, EVENT_OF, PERSONAS, MUTATORS } = await import(new URL('../worker/build/sim.js', import.meta.url));
 let failed = 0;
 async function test(name, fn) {
   try { await fn(); console.log(`ok   ${name}`); } catch (e) { failed++; console.error(`FAIL ${name}\n     ${e.message}`); }
 }
-function match(map, humans) {
+function match(map, humans, mut = null) {
   const out = { all: [], to: {}, ended: false, cheats: [] };
   const m = new ServerMatch({
-    map, roster: makeRoster(humans.map(id => ({ id, name: id, type: 'volt' }))),
+    map, mut, roster: makeRoster(humans.map(id => ({ id, name: id, type: 'volt' }))),
     send: msg => out.all.push(msg), sendTo: (id, msg) => (out.to[id] ||= []).push(msg),
     onEnd: () => { out.ended = true; }, onCheat: (id, kind, n) => out.cheats.push([id, kind, n]),
   });
@@ -172,6 +172,84 @@ await test('sharper bots beat clumsy ones (adaptive difficulty has teeth)', () =
   }
   assert.ok(sharp >= 10, `sharp bots won only ${sharp}/16`);
 }));
+
+/* ------------------------------ v0.13 LEVEL UP ------------------------------ */
+
+const events = out => out.all.filter(msg => msg.t === 'ev').flatMap(msg => msg.list);
+
+await test('every map runs its arena event, and every hit is telegraphed first', () => {
+  for (const map of ['oasis', 'dunes', 'grove', 'frost', 'marsh']) {
+    const { m, out, g } = match(map, ['alice']);
+    g.events.at = 8;
+    const sight = g.sightRange;
+    let during = null;
+    while (g.time < 30) { m.advance(0.05); if (g.events.on && during === null) during = g.sightRange; }
+    const E = events(out).filter(e => e.e === 'arena');
+    const start = E.find(e => e.k === 'start');
+    assert.ok(start, `no event on ${map}`);
+    assert.equal(start.kind, EVENT_OF[map]);
+    assert.ok(E.some(e => e.k === 'end'), `the ${map} event never ended`);
+    const warned = new Set(E.filter(e => e.k === 'warn').map(e => e.id));
+    const hits = E.filter(e => e.k === 'hit');
+    for (const h of hits) assert.ok(warned.has(h.id), `a hit on ${map} came without a telegraph`);
+    if (['oasis', 'dunes', 'grove'].includes(map)) assert.ok(hits.length >= 3, `only ${hits.length} hits on ${map}`);
+    if (map === 'frost') { assert.equal(during, 7, 'the blizzard does not cut sight'); assert.equal(g.sightRange, sight, 'sight not given back'); }
+    if (map === 'marsh') assert.equal(start.props.filter(p => p.p === 'shroom').length, 4, 'no mushrooms');
+  }
+});
+
+await test('the arena event never starts in the training dojo', () => {
+  const { g } = match('oasis', ['alice']);
+  assert.ok(g.events.at < 70, 'a real match has its event');
+  g.newMatch({ mapKey: 'oasis', roster: makeRoster([{ id: 'alice', name: 'a', type: 'volt' }]), localId: 'alice', headless: true, dojo: true });
+  assert.equal(g.events.at, Infinity);
+});
+
+await test('emotes: sent with the input, one every 2.5 s, and they reveal you', () => {
+  const { m, out, g } = match('oasis', ['alice']);
+  const a = g.byId.get('alice');
+  while (g.time < 6) m.advance(0.05);
+  const at = { from: 'alice', x: a.net.x, z: a.net.y, ax: 1, az: 0, px: a.pos.x, pz: a.pos.z, f: 0, s: 0, g: 0 };
+  m.input({ ...at, em: 1, ei: 3 });
+  m.advance(0.05);
+  assert.ok(a.revealT > 1.3, 'an emote must reveal its sender');
+  m.input({ ...at, em: 2, ei: 4 }); // too soon
+  m.advance(0.05);
+  m.input({ ...at, em: 3, ei: 99 }); // not an emote
+  for (let k = 0; k < 60; k++) m.advance(0.05);
+  const emo = events(out).filter(e => e.e === 'emo' && e.id === 'alice');
+  assert.deepEqual(emo.map(e => e.i), [3]);
+  m.input({ ...at, em: 4, ei: 0 });
+  m.advance(0.05);
+  assert.equal(events(out).filter(e => e.e === 'emo' && e.id === 'alice').length, 2);
+});
+
+await test('looks and personas from the network are checked', () => {
+  assert.ok(validCos('1.2.3.4.5.6'));
+  for (const bad of ['', 'x', '1.2.3', '100.0.0.0.0.0', '1.2.3.4.5.6.7', null, 5]) assert.equal(validCos(bad), false, String(bad));
+  const r = makeRoster([{ id: 'a', name: 'a', type: 'volt', cos: '<b>' }, { id: 'b', name: 'b', type: 'volt', cos: '2.1.0.3.4.7' }]);
+  assert.equal(r[0].cos, undefined);
+  assert.equal(r[1].cos, '2.1.0.3.4.7');
+  for (const bot of r.filter(x => !x.human)) { assert.ok(PERSONAS.includes(bot.per)); assert.ok(validCos(bot.cos)); }
+  const { g } = match('oasis', ['alice']);
+  assert.equal(g.byId.get('alice').persona, undefined, 'a human has no persona');
+});
+
+await test('Weekly Chaos mutators change the rules on the server', () => {
+  const run = (mut, secs) => { const x = match('oasis', ['alice'], mut); while (x.g.time < secs) x.m.advance(0.05); return x; };
+  assert.equal(run('x', 0).g.mutator, null, 'unknown mutator accepted');
+  assert.ok(run('gadgetFrenzy', 0).g.brawlers.every(b => b.gadgetCharges === 6));
+  assert.equal(run('gadgetFrenzy', 0).g.gadgetLockout, 2);
+  assert.equal(run('gasBreath', 0).g.poison.interval, 4.5);
+  assert.equal(run('nightHunt', 0).g.sightRange, 9);
+  const rain = run('cubeRain', 20), dry = run(null, 20);
+  const cubes = x => events(x.out).filter(e => e.e === 'item').length;
+  assert.ok(cubes(rain) >= cubes(dry) + 4, 'no cube rain');
+  const { g } = run('superRush', 6), b = g.brawlers[1], o = g.brawlers[2];
+  b.superCharge = 0; g.damage(o, 100, b);
+  assert.ok(Math.abs(b.superCharge - 200 / b.type.superCost) < 1e-9, 'supers do not charge twice as fast');
+  assert.equal(MUTATORS.length, 5);
+});
 
 if (failed) { console.error(`\n${failed} test(s) failed`); process.exit(1); }
 console.log('\nall server tests passed');
