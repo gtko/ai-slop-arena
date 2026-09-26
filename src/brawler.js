@@ -284,7 +284,11 @@ export class Brawler {
           this.dieT -= dt;
           this.model.anim.update(dt);
           const L = this.launch;
-          if (L && (L.vy > 0 || this.pos.y > 0)) { // knocked off its feet, lands a little further
+          if (L && L.fall) { // a ring-out: down into the void
+            L.vy -= 26 * dt;
+            this.pos.y += L.vy * dt;
+            this.blob.visible = false;
+          } else if (L && (L.vy > 0 || this.pos.y > 0)) { // knocked off its feet, lands a little further
             const nx = this.pos.x + L.vx * dt, nz = this.pos.z + L.vz * dt;
             if (!this.g.arena.blocksMoveAt(nx, nz)) { this.pos.x = nx; this.pos.z = nz; } // stops against walls
             L.vy -= 22 * dt;
@@ -352,7 +356,7 @@ export class Brawler {
       this.pos.x += (this.vel.x + this.knock.x) * dt;
       this.pos.z += (this.vel.z + this.knock.z) * dt;
       this.knock.multiplyScalar(Math.exp(-7 * dt));
-      A.collideCircle(this.pos, this.radius);
+      A.collideCircle(this.pos, this.radius, this.knock.lengthSq() > 2.25); // a hard push can send you over the edge (kit.js)
     }
     this.inBush = A.isBushAt(this.pos.x, this.pos.z);
 

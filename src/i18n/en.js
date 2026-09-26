@@ -660,5 +660,9 @@ export default {
   'star.hydrotherapy.name': "Hydrotherapy",
   'star.hydrotherapy.desc': "Your heals are 30% stronger.",
   'star.undertow.name': "Undertow",
+  'hud.islandIn': "ISLAND FALLS IN",
+  'hud.islandFalls': "AN ISLAND IS FALLING!",
+  'map.isles': "Windmill Isles",
+  'map.isles.tag': "Sky islands · ring-outs",
   'star.undertow.desc': "The Tidal Wave pulls enemies toward you instead of pushing them away.",
 };

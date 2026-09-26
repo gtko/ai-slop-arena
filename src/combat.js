@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { TILE } from './arena.js';
+import { TILE, isCrate } from './arena.js';
 import { sfx } from './audio.js';
 import { particle } from './effects.js';
 import { t } from './i18n/index.js';
@@ -263,7 +263,7 @@ export class Combat {
             this.splinter(B);
             g.effects.sparkBurst(B.x - B.dx * 0.3, BULLET_Y, B.z - B.dz * 0.3, WALL_SPARK, 5, 4, 0.25, 0.12);
           }
-        } else if (c === 'C') {
+        } else if (isCrate(c)) {
           dead = true;
           g.damageCrate(ti, tj, B.dmg * B.owner.dmgMul, B.owner);
           g.effects.hit(B.x, BULLET_Y, B.z, B.col);
@@ -276,7 +276,7 @@ export class Combat {
             g.damage(o, B.dmg * B.owner.dmgMul, B.owner, B.breakWalls);
             if (B.slow && g.authority && o.alive) { o.slowT = Math.max(o.slowT, B.slow); o.slowMul = hasStar(B.owner, 'deepFreeze') ? 0.45 : 0.55; }
             if (B.chain && g.authority) this.chainZap(o, B);
-            if (B.knock) g.applyKnock(o, B.dx * B.knock, B.dz * B.knock);
+            if (B.knock) g.applyKnock(o, B.dx * B.knock, B.dz * B.knock, B.owner);
             g.effects.hit(B.x, BULLET_Y, B.z, B.col, B.dx, B.dz);
             dead = true;
             break;
@@ -370,7 +370,7 @@ export class Combat {
     if (hit && K.alive) g.heal(K, 350 * k);
     if (mate && mate.alive && Math.hypot(mate.pos.x - x, mate.pos.z - z) < R + 0.8) g.heal(mate, 500 * k);
     const ch = A.get(A.toTile(x), A.toTile(z));
-    if (ch === 'C') g.damageCrate(A.toTile(x), A.toTile(z), B.dmg * K.dmgMul, K);
+    if (isCrate(ch)) g.damageCrate(A.toTile(x), A.toTile(z), B.dmg * K.dmgMul, K);
     g.effects.splash(x, z, 1.2);
     g.effects.ring(x, z, R, COL.bubble, 0.4);
     if (A.isWaterAt(x, z)) A.water.ripple(x, z, 1);
@@ -423,7 +423,7 @@ export class Combat {
         const pull = hasStar(W.b, 'undertow');
         let kx = W.dx, kz = W.dz;
         if (pull) { kx = W.b.pos.x - o.pos.x; kz = W.b.pos.z - o.pos.z; const l = Math.hypot(kx, kz) || 1; kx /= l; kz /= l; }
-        g.applyKnock(o, kx * 12, kz * 12);
+        g.applyKnock(o, kx * 12, kz * 12, W.b);
       }
       if (k >= 1) { g.fx.remove(W.mesh); W.mats.forEach(m => m.dispose()); this.waves.splice(i, 1); }
     }
@@ -437,19 +437,20 @@ export class Combat {
       if (Math.hypot(o.pos.x - x, o.pos.z - z) < R + o.radius * 0.6) {
         g.damage(o, B.dmg * B.owner.dmgMul, B.owner, B.sup);
         const d = Math.hypot(o.pos.x - x, o.pos.z - z) + 0.01;
-        g.applyKnock(o, (o.pos.x - x) / d * 4, (o.pos.z - z) / d * 4);
+        g.applyKnock(o, (o.pos.x - x) / d * 4, (o.pos.z - z) / d * 4, B.owner);
       }
     }
     const ti = A.toTile(x), tj = A.toTile(z), span = Math.ceil(R / TILE) + 1;
     const c = new THREE.Vector3();
     for (let dj = -span; dj <= span; dj++) for (let di = -span; di <= span; di++) {
       const i = ti + di, j = tj + dj, ch = A.get(i, j);
-      if (ch !== 'C' && ch !== '#') continue;
+      if (!isCrate(ch) && ch !== '#') continue;
       A.center(i, j, c);
       if (Math.hypot(c.x - x, c.z - z) > R + 0.9) continue;
-      if (ch === 'C') g.damageCrate(i, j, B.dmg * B.owner.dmgMul, B.owner);
+      if (isCrate(ch)) g.damageCrate(i, j, B.dmg * B.owner.dmgMul, B.owner);
       else if (B.sup) g.breakWall(i, j);
     }
+    g.kit.damageArea(x, z, R, B.dmg);
     const wet = A.isWaterAt(x, z);
     g.effects.explosion(x, z, R, B.sup, wet);
     if (!B.sup && !wet && hasStar(B.owner, 'magmaPuddle')) this.zone({ x, z, r: 1.5, dps: 200, t: 2, owner: B.owner, col: new THREE.Color(3.4, 1.2, 0.2) });
@@ -613,7 +614,8 @@ export class Combat {
         }
         const ti = A.toTile(S.x), tj = A.toTile(S.z);
         if (A.get(ti, tj) === '#') g.breakWall(ti, tj);
-        if (A.get(ti, tj) === 'C') g.damageCrate(ti, tj, 900, S.owner);
+        if (isCrate(A.get(ti, tj))) g.damageCrate(ti, tj, 900, S.owner);
+        g.kit.damageArea(S.x, S.z, 1.8, 900);
       }
       const fx = g.effects;
       fx.bolt(S.x, S.z, BOLT);

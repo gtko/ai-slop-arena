@@ -1,9 +1,12 @@
 // Map definitions. Each layout is the top-left quadrant incl. the centre row/column
 // (index 12); the arena mirrors it 4 ways. Spawns ('S') sit at the same spots on every map.
+// A map with `full` instead gives all 25 rows (Windmill Isles: not mirrored).
 //
 //  X boundary   # wall (breakable)   B bush     W water    C power-cube crate
 //  T lantern    K obstacle (cactus / boulder / stump, per theme)   I ice (walkable, slippery)
 //  S spawn      . floor
+//  v0.15 interactive kit (kit.js): V void (ring-outs)  = bridge  J jump pad  E explosive barrel
+//  H healing mushroom  M windmill (2 x 2)
 
 export const MAPS = {
   oasis: {
@@ -18,7 +21,7 @@ export const MAPS = {
       'XBB..WW......',
       'X...C....BB..',
       'X.##.....BB..',
-      'X..#..##.....',
+      'X..#..##..J..',
       'X...T.....BBB',
       'X.C...BB..BBB',
       'X.....BB..#..',
@@ -43,7 +46,7 @@ export const MAPS = {
       'X...BB..##...',
       'X.#.BB.......',
       'X.#....K...C.',
-      'X.....###....',
+      'X.....###.E..',
       'X.C.K......BB',
       'X......BB..BB',
       'X..##..BB....',
@@ -101,6 +104,46 @@ export const MAPS = {
     wall: 'icestone', wallCap: 0xf6f9ff, wallTint: [0.6, 0.12, 0.92], debris: 0xcfdcf0,
     bound: 'icestone', boundCap: 0xf0f5ff, boundTint: [0.62, 0.18, 0.7],
     bush: [0.36, 0.25, 0.95], trees: { pine: 1 }, water: 'none', obstacle: 'boulder',
+  },
+
+  // v0.15 WILD ISLES: floating islands, bridges and jump pads over the void; no gas, the islands
+  // crumble instead (kit.js). docs/brainstorm/iter3_kenji.md §2c.
+  isles: {
+    name: 'Windmill Isles', weather: 'clear', tag: 'Sky islands · ring-outs',
+    swatch: ['#8fd16a', '#6fb6ff'],
+    sky: true, crumble: true,
+    full: [
+      'VVVVVVVVVVVVVVVVVVVVVVVVV',
+      'V.S..BB.VVVVVVVVVVV.BB.SV',
+      'V..C.BB.VVVVVVVVVVV.BB..V',
+      'V.....#.=========..#..C.V',
+      'V.B..H#.VVVVVVVVVV.#....V',
+      'V.B.....VVVVVVVVVV.....EV',
+      'V..E..S.VVVVVVVVVV..S...V',
+      'VV..J..VVVVV=VVVVVV..J.VV',
+      'VVVVVVVVVVVV=VVVVVVVVVVVV',
+      'VVVVVVVVB...=...BVVVVVVVV',
+      'VVVVVVV..#.....#..VVVVVVV',
+      'V.S.==...C..MM.......VVVV',
+      'V....V..BB..MM..BB..==S.V',
+      'V.C..V.......H.....C..V.V',
+      'V....==..#...E...#....V.V',
+      'VVVVVVVVB.........BVV...V',
+      'VVVVVVVVVVVV=VVVVVVVVVVVV',
+      'VV..J.VVVVVV=VVVVV..J..VV',
+      'V.......VVVV=VVVVV.....EV',
+      'V.S..BB.VVVVVVVVVV.BB.S.V',
+      'V..C.BB.=========..BB...V',
+      'V.E....#VVVVVVVVVV#...C.V',
+      'V....H.#VVVVVVVVVV#..H..V',
+      'V.......VVVVVVVVVV......V',
+      'VVVVVVVVVVVVVVVVVVVVVVVVV',
+    ],
+    layout: [],
+    ground: 'cartoon', groundTones: ['#94d36c', '#86c862'], checker: '', outer: 'grass',
+    wall: 'mossbrick', wallCap: 0xb8c4a0, wallTint: [0.28, 0.08, 0.9], debris: 0x9aa088,
+    bound: 'stone', boundCap: 0x5c5a66, boundTint: [0.62, 0.06, 0.7],
+    bush: [0.28, 0.5, 0.62], trees: { round: 1 }, water: 'none', obstacle: 'stump',
   },
 
   marsh: {

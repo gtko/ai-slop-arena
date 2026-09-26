@@ -30,6 +30,8 @@ const SFX = ['shot', 'shotgun', 'throw', 'boom', 'boom_big', 'hit', 'hurt', 'bre
   'levelup', 'coin', 'stamp', 'emote', 'chest', 'buy', 'geyser_warn', 'geyser', 'meteor', 'rod_zap', 'blizzard', 'mushroom', 'chaos',
   // v0.14 BETTER TOGETHER: revives, pings
   'revive', 'ping', 'ghost', 'bubble', 'bubble_pop', 'wave', 'gad_dive', 'gad_bowl',
+  // v0.15 WILD ISLES: the map kit
+  'jumppad', 'barrel_boom', 'crumble', 'crumble_warn', 'fall',
   ...['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt', 'kappa'].flatMap(k => [`bark_${k}_super`, `bark_${k}_cheer`])];
 const LOOPS = {
   amb_day: 'music/amb_day', amb_night: 'music/amb_night',

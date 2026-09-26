@@ -186,6 +186,14 @@ export class BotBrain {
       return;
     }
 
+    // Windmill Isles: off an island about to fall, toward the middle (kit.js)
+    if (g.kit.doomed.size && g.kit.doomedAt(b.pos.x, b.pos.z)) {
+      this.mode = 'flee-gas';
+      if (!this.hasGoal || g.kit.doomedAt(this.goal.x, this.goal.z)) { const s = g.kit.safeSpot(b); if (s) this.setGoal(s, true); }
+      else this.setGoal(this.goal);
+      return;
+    }
+
     // Duo: a knocked-out partner comes first (unless the gas is on its ghost or about to be)
     const G = mate && !mate.alive ? g.ghostOf(mate) : null;
     if (G && A.ring(A.toTile(G.x), A.toTile(G.z)) > P.level + (P.nextIn < 3 ? 1 : 0)) {
@@ -244,6 +252,7 @@ export class BotBrain {
 
     let crate = null, cd = 30;
     for (const c of A.crates.values()) {
+      if (c.barrel) continue; // (nothing inside)
       const d = c.group.position.distanceTo(b.pos);
       if (d < cd) { cd = d; crate = c; }
     }

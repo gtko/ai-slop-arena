@@ -232,8 +232,14 @@ export class Hud {
       this.aliveEl.textContent = alive;
       this.lastAlive = alive;
     }
-    const P = game.poison;
-    if (P) {
+    const P = game.poison, K = game.kit;
+    if (K && K.crumbles && !game.dojo) {
+      const n = K.nextIn;
+      this.poisonPill.style.display = '';
+      this.poisonPill.classList.toggle('warn', n < 6 && n > 0);
+      this.poisonEl.textContent = n === Infinity ? t('hud.max') : `${Math.floor(Math.max(0, n) / 60)}:${String(Math.ceil(Math.max(0, n)) % 60).padStart(2, '0')}`;
+      this.poisonPill.querySelector('small').textContent = t('hud.islandIn');
+    } else if (P) {
       const n = P.nextIn;
       this.poisonPill.style.display = game.dojo ? 'none' : '';
       this.poisonPill.classList.toggle('warn', n < 6 && n > 0);

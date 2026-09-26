@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { Arena, HALF } from './arena.js';
+import { Arena, HALF, isCrate } from './arena.js';
+import { MapKit } from './kit.js';
 import { Brawler, TYPES } from './brawler.js';
 import { Combat } from './combat.js';
 import { Poison } from './poison.js';
@@ -156,6 +157,7 @@ export class Game {
     this.arena = new Arena(this.scene, MAPS[this.mapKey]);
     this.weather = this.lighting.weather = new Weather(this, MAPS[this.mapKey].weather);
     this.weather.setDensity(this.weatherDensity ?? 1);
+    this.kit = new MapKit(this); // jump pads, barrels, bridges, the void... (v0.15)
     const real = !!localId || headless;
     this.dojo = dojo;
     this.dojoLog = [];
@@ -164,7 +166,7 @@ export class Game {
     // Duo Showdown (v0.14): 4 teams of 2, from the roster's teams. The gas waits a little longer
     // (35 s, then a ring every 8 s) so partners can regroup.
     this.duo = real && !dojo && roster.some(r => Number.isInteger(r.team));
-    this.poison = new Poison(this, dojo ? { startAt: 1e9 } : real ? (M === 'gasBreath' ? { startAt: 16, interval: 4.5 } : this.duo ? { startAt: 35, interval: 8 } : {}) : { startAt: 18, interval: 6 });
+    this.poison = new Poison(this, dojo || (real && MAPS[this.mapKey].crumble) ? { startAt: 1e9 } : real ? (M === 'gasBreath' ? { startAt: 16, interval: 4.5 } : this.duo ? { startAt: 35, interval: 8 } : {}) : { startAt: 18, interval: 6 });
     this.visionRadius = MAPS[this.mapKey].vision || 0;
     // How far anyone sees (fog maps use their fog wall instead); the sandstorm cuts it shorter.
     this.sightRange = this.visionRadius ? 0 : MAPS[this.mapKey].weather === 'sandstorm' ? 11 : 14;
@@ -384,7 +386,7 @@ export class Game {
     for (const o of this.brawlers) if (o.alive && !this.ally(o, b) && o !== b && Math.hypot(o.pos.x - x, o.pos.z - z) < 2.5 && this.teamSees(b, o)) return 'attack';
     if (this.items.some(it => Math.hypot(it.x - x, it.z - z) < 2)) return 'loot';
     const A = this.arena, i = A.toTile(x), j = A.toTile(z);
-    if (A.get(i, j) === 'C') return 'loot';
+    if (A.get(i, j) === 'C') return 'loot'; // (not a barrel)
     const P = this.poison, closing = P.level > 0 || P.nextIn < 8; // the next ring of gas, once it is coming
     if (P.isPoisonedAt(x, z) || (closing && A.ring(i, j) <= P.level + 1)) return 'danger';
     return 'go';
@@ -497,8 +499,10 @@ export class Game {
     return true;
   }
 
-  applyKnock(o, x, z) {
+  // by: who pushed (a push into the void is their K.O., kit.js)
+  applyKnock(o, x, z, by = null) {
     if (!this.authority || this.shielded) return;
+    if (by && by !== o) o.pushBy = { by, t: this.time };
     if (o.netDriven) {
       this.ev({ e: 'knock', id: o.id, x: r2(x), z: r2(z) }); // remote players move themselves
       if (o.guard) o.guard.knock = Math.max(o.guard.knock, Math.hypot(x, z) * 0.6 + 1.5); // allow the push
@@ -603,7 +607,7 @@ export class Game {
     this.killFx(b, killer, bySuper, ghost);
     if (!this.authority) return;
     for (let k = 0; k < n; k++) this.dropCube(x, z, k, n);
-    this.ev({ e: 'kill', id: b.id, by: killer ? killer.id : null, rank: b.rank, sup: bySuper ? 1 : 0, gh: ghost ? 1 : 0 });
+    this.ev({ e: 'kill', id: b.id, by: killer ? killer.id : null, rank: b.rank, sup: bySuper ? 1 : 0, gh: ghost ? 1 : 0, f: b.fell ? 1 : 0 });
     if (killer && killer !== b) this.brains.get(killer)?.onKo(b);
     this.checkEnd();
   }
@@ -625,7 +629,8 @@ export class Game {
       b.hitstopT = 0.15;
       const kx = killer && killer !== b ? b.pos.x - killer.pos.x : Math.sin(b.facing), kz = killer && killer !== b ? b.pos.z - killer.pos.z : Math.cos(b.facing);
       const l = Math.hypot(kx, kz) || 1;
-      b.launch = { vx: kx / l * 3.2, vz: kz / l * 3.2, vy: 4.2 };
+      b.launch = b.fell ? { vx: 0, vz: 0, vy: -1, fall: true } : { vx: kx / l * 3.2, vz: kz / l * 3.2, vy: 4.2 };
+      if (b.fell) sfx('fall', this.volumeAt(b.pos.x, b.pos.z));
       this.shakeAt(b.pos.x, b.pos.z, 0.3);
       sfx('death', this.volumeAt(b.pos.x, b.pos.z));
     }
@@ -686,8 +691,9 @@ export class Game {
   }
 
   damageCrate(i, j, dmg, by = null) {
-    const supply = this.arena.crateAt(i, j)?.supply;
+    const C = this.arena.crateAt(i, j), supply = C?.supply;
     if (!this.authority || !this.arena.hitCrate(i, j, dmg)) return;
+    if (C.barrel) { this.ev({ e: 'crate', i, j, by: by ? by.id : null }); this.kit.barrelBoom(i, j, by); return; } // an explosive barrel
     this.crateFx(i, j, by);
     const n = supply ? 3 : 1;
     for (let k = 0; k < n; k++) this.dropCube(_v.x, _v.z, k, n);
@@ -922,8 +928,9 @@ export class Game {
     g.knock = Math.max(0, g.knock - 4 * dt);
     const d = Math.hypot(x - b.net.x, z - b.net.y);
     const air = now < (g.airUntil || 0); // Lava Hop: over a wall is fine, not a landing inside one
+    const pushed = g.knock > 0.5 && this.arena.charAt(x, z) === 'V'; // knocked over the edge: it falls (kit.js)
     const ok = d <= allowed && (b.freezeT <= 0 || d < 0.3)
-      && Math.abs(x) < HALF && Math.abs(z) < HALF && (air || !this.arena.blocksMoveAt(x, z));
+      && Math.abs(x) < HALF && Math.abs(z) < HALF && (air || pushed || !this.arena.blocksMoveAt(x, z));
     if (ok) { b.net.set(x, z); return; }
     g.fix++;                    // the next snapshot tells that player to snap back
     g.strikes++;
@@ -1036,6 +1043,7 @@ export class Game {
         case 'kill':
           if (!b) break;
           b.rank = e.rank;
+          if (e.f) b.fell = true;
           if (b.alive) this.killFx(b, this.byId.get(e.by), !!e.sup, !!e.gh);
           break;
         case 'win':
@@ -1067,7 +1075,12 @@ export class Game {
         case 'zone': this.combat.zone({ ...e.z, owner: this.byId.get(e.z.owner), col: new THREE.Color(...e.z.col) }); break;
         case 'zap': this.effects.arc(e.pts, new THREE.Color(3.2, 4.2, 5.2)); break;
         case 'wall': this.breakWall(e.i, e.j, true); break;
-        case 'crate': if (this.arena.hitCrate(e.i, e.j, 1e9)) this.crateFx(e.i, e.j, this.byId.get(e.by)); break;
+        case 'crate': {
+          const C = this.arena.hitCrate(e.i, e.j, 1e9);
+          if (C && C.barrel) this.kit.barrelBoom(e.i, e.j, null); else if (C) this.crateFx(e.i, e.j, this.byId.get(e.by));
+          break;
+        }
+        case 'kit': this.kit.onEvent(e); break;
         case 'item': this.spawnItem(e.id, e.x, e.z, e.tx, e.tz); break;
         case 'pick': {
           const it = this.items.find(o => o.id === e.item), by = this.byId.get(e.by);
@@ -1115,6 +1128,7 @@ export class Game {
     this.combat.update(dt);
     this.poison.update(dt, t);
     if (this.authority) this.poisonDamage(dt);
+    this.kit.update(dt);
     if (this.duo) this.updateGhosts(dt);
     this.updateItems(dt, t);
     this.updateCrown(t);
