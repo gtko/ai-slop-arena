@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Arena, HALF, isCrate } from './arena.js';
 import { MapKit } from './kit.js';
+import { Ambient } from './ambient/index.js';
 import { Brawler, TYPES } from './brawler.js';
 import { Combat } from './combat.js';
 import { Poison } from './poison.js';
@@ -160,6 +161,7 @@ export class Game {
     this.weather = this.lighting.weather = new Weather(this, MAPS[this.mapKey].weather);
     this.weather.setDensity(this.weatherDensity ?? 1);
     this.kit = new MapKit(this); // jump pads, barrels, bridges, the void... (v0.15)
+    this.ambient = headless ? null : new Ambient(this); // fauna and small living details (cosmetic)
     const real = !!localId || headless;
     this.dojo = dojo;
     this.dojoLog = [];
@@ -1141,6 +1143,7 @@ export class Game {
     this.effects.update(frozen ? 0 : dt);
     this.lowHealth(dt);
     if (this.arena) this.arena.update(dt, t);
+    if (this.ambient) this.ambient.update(frozen ? 0 : dt, t);
     this.updateCamera(dt);
     this.updateLights(frozen ? 0 : dt);
     this.hud.update(dt, this.camera, this);
