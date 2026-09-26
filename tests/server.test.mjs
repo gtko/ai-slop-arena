@@ -468,12 +468,32 @@ await test('Windmill Isles: 8 spawns on land, no gas, the islands crumble and th
   const { m, g } = kitMatch('isles');
   assert.equal(g.arena.spawns.length, 8);
   for (const s of g.arena.spawns) assert.notEqual(g.arena.charAt(s.x, s.z), 'V', 'a spawn over the void');
+  // nobody starts on the middle island (the last one standing): every spawn sits on an outer island
+  const A = g.arena, mid = new Set(), stack = [[12, 11]];
+  while (stack.length) {
+    const [i, j] = stack.pop();
+    if (mid.has(A.key(i, j)) || 'V=X'.includes(A.get(i, j))) continue;
+    mid.add(A.key(i, j));
+    stack.push([i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]);
+  }
+  assert.ok(mid.size > 30, 'no middle island');
+  for (const s of A.spawns) assert.ok(!mid.has(A.key(A.toTile(s.x), A.toTile(s.z))), 'a spawn on the middle island');
   assert.ok(g.kit.crumbles && g.poison.startAt > 1e8, 'gas instead of crumbling');
   g.brains.clear();
   const land = () => tiles(g, '.').length;
   const before = land();
   while (g.time < 62) m.advance(0.05);
   assert.ok(land() < before * 0.7, `the outer islands did not fall (${before} -> ${land()})`);
+  // once everything planned has fallen, the ground left is all one piece (no side cut off behind the windmill)
+  for (const S of g.kit.plan.slice(g.kit.step)) g.kit.crumble(S.tiles); // the bots may end the match first
+  const open = []; for (let j = 0; j < 25; j++) for (let i = 0; i < 25; i++) if (A.walkable(i, j)) open.push(A.key(i, j));
+  const reach = new Set(), todo = [open[0]];
+  while (todo.length) {
+    const k = todo.pop(); if (reach.has(k)) continue; reach.add(k);
+    const i = k % 25, j = Math.floor(k / 25);
+    for (const [a, b] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) if (A.walkable(a, b)) todo.push(A.key(a, b));
+  }
+  assert.ok(open.length >= 16 && reach.size === open.length, `the last ground is split (${reach.size} of ${open.length} tiles reachable)`);
 });
 
 await test('Windmill Isles: a bot match plays to the end', () => {
@@ -531,10 +551,11 @@ await test('explosive barrels: 900 around, a push, and the next barrel goes too'
   assert.notEqual(A2.get(d[0][0] + 1, d[0][1]), 'E', 'no chain reaction');
 });
 
-await test('jump pads send you to open ground toward the middle; Oasis has 4', () => {
-  const { m, g } = kitMatch('oasis');
-  assert.equal(g.kit.pads.length, 4);
+await test('jump pads send you to open ground toward the middle; only Windmill Isles has them', () => {
+  const { g } = kitMatch('oasis');
+  assert.equal(g.kit.pads.length, 0);
   const { m: mi, g: gi } = kitMatch('isles');
+  assert.equal(gi.kit.pads.length, 4);
   for (const p of gi.kit.pads) {
     const o = gi.brawlers[1];
     o.alive = true; stand(o, p.x, p.z); o.dash = null;

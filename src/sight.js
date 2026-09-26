@@ -25,6 +25,7 @@ const SightShader = {
     uDust: { value: new THREE.Color() },
     uDustAmt: { value: 0 },  // sandstorm: hidden ground drowns in dust instead of going dark
     uClearR: { value: 0 },   // how far you see (m); past it the view dims like a hidden area
+    uOutside: { value: 0 },  // what counts as seen past the arena's edges (1 on sky maps: open sky, nothing hides)
   },
   vertexShader: /* glsl */`
     varying vec2 vUv;
@@ -40,9 +41,10 @@ const SightShader = {
     uniform vec3 uDust;
     uniform float uDustAmt;
     uniform float uClearR;
+    uniform float uOutside;
     varying vec2 vUv;
     float vis( vec2 uv ) {
-      return ( uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0 ) ? 0.0 : texture2D( tVis, uv ).r;
+      return ( uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0 ) ? uOutside : texture2D( tVis, uv ).r;
     }
     void main() {
       vec4 col = texture2D( tDiffuse, vUv );
@@ -98,6 +100,7 @@ export class Sight {
     this.u.uDustAmt.value += (d * 0.92 - this.u.uDustAmt.value) * (1 - Math.exp(-2 * dt));
     if (dust) this.u.uDust.value.copy(dust);
     this.u.uClearR.value = range;
+    this.u.uOutside.value = arena && arena.map.sky ? 1 : 0;
     if (viewer) this.u.uCenter.value.set(viewer.pos.x, viewer.pos.z);
     if (viewer && arena) this.trace(arena, viewer.pos.x, viewer.pos.z);
   }

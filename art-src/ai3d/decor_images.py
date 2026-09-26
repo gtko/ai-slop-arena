@@ -26,6 +26,12 @@ PROPS = {
     'wall_moss': 'a single cube-shaped wall block of gray stone bricks with a flat top covered by a layer of green moss, slightly beveled edges',
     'wall_ice': 'a single cube-shaped wall block of pale blue ice stone with a flat top covered by a layer of snow, slightly beveled edges',
     'bush': 'a round fluffy bush made of many clustered puffy green leaf balls',
+    # Windmill Isles landmark: the tower and the sails apart, so the sails can turn in the game
+    'windmill': 'a chunky round countryside windmill tower WITHOUT sails, cream white stone walls with a few visible '
+                'rounded stones, slightly tapered, a big red conical roof, a small arched wooden door, one small round '
+                'window, a short thick wooden axle hub sticking out of the front just under the roof',
+    'windmill_sails': 'the four sails of a windmill, seen straight from the front: a big X cross of four chunky wooden '
+                      'lattice arms with cream white canvas on each, a round wooden hub in the middle, flat and symmetric',
 }
 
 

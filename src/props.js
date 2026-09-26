@@ -11,7 +11,7 @@ import { charMat, shared } from './materials.js';
 
 export const PROPS = [
   'tree_round', 'tree_pine', 'tree_pine_snow', 'tree_dead', 'cactus', 'rock_canyon', 'boulder', 'boulder_snow',
-  'stump', 'crate', 'wall_canyon', 'wall_moss', 'wall_ice', 'bush', 'lantern',
+  'stump', 'crate', 'wall_canyon', 'wall_moss', 'wall_ice', 'bush', 'lantern', 'windmill', 'windmill_sails',
 ];
 const SWAY = new Set(['tree_round', 'tree_pine', 'tree_pine_snow', 'tree_dead', 'bush', 'cactus']);
 const loaded = new Map(); // name -> { geo, size, mat, depth }
