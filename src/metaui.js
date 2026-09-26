@@ -144,7 +144,7 @@ export class MetaUI {
       return { icon: v.icon, name: esc(v.name) };
     };
     const stops = Pr.ROAD.map(([at, id], i) => {
-      const r = reward(id), got = i < R.reached;
+      const r = reward(id), got = i < Math.max(R.reached, Pr.roadClaimed());
       return `<div class="rd-stop${got ? ' got' : ''}${i === R.reached ? ' next' : ''}"><span class="rd-at">🏆 ${at}</span>
         <span class="rd-ico">${r.icon}</span><small>${r.name}</small>${got ? '<b class="rd-tick">✓</b>' : ''}</div>`;
     }).join('');
@@ -237,6 +237,7 @@ export class MetaUI {
   showResult(res, q, key) {
     const el = $('#resProgress'), A = res.after, B = res.before, up = A.level > B.level;
     const lg = res.league;
+    if (res.extra) res.rewards.push(...res.extra);
     const quests = q.moved.map(({ q: Q, done, weekly }) => `<span class="rp-q${done ? ' done' : ''}${weekly ? ' wk' : ''}">${QUEST_ICONS[Q.kind]} ${Q.n.toLocaleString()}/${Q.target.toLocaleString()}${done ? ' ✓' : ''}</span>`).join('');
     el.innerHTML = `<div class="rp-xp"><b>${t('meta.level', { n: A.level })}</b><i><u style="width:${up ? 0 : (B.frac * 100).toFixed(0)}%"></u></i><small>+${res.xp} XP</small></div>
       <div class="rp-row">${coin('+' + (res.coins + q.coins))}${lg ? `<span class="rp-tr${lg.delta < 0 ? ' down' : ''}">🏆 ${lg.delta >= 0 ? '+' : ''}${lg.delta} <small>${lg.trophies}</small></span>` : ''}${quests}</div>`;

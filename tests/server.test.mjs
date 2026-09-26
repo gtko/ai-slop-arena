@@ -237,7 +237,12 @@ await test('looks and personas from the network are checked', () => {
 });
 
 await test('Weekly Chaos mutators change the rules on the server', () => {
-  const run = (mut, secs) => { const x = match('oasis', ['alice'], mut); while (x.g.time < secs) x.m.advance(0.05); return x; };
+  const run = (mut, secs) => {
+    const x = match('oasis', ['alice'], mut), a = x.g.byId.get('alice');
+    a.maxHp = a.hp = 1e7; // an online match ends once no human is standing
+    while (x.g.time < secs) x.m.advance(0.05);
+    return x;
+  };
   assert.equal(run('x', 0).g.mutator, null, 'unknown mutator accepted');
   assert.ok(run('gadgetFrenzy', 0).g.brawlers.every(b => b.gadgetCharges === 6));
   assert.equal(run('gadgetFrenzy', 0).g.gadgetLockout, 2);

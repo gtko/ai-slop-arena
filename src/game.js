@@ -200,6 +200,7 @@ export class Game {
     this.emoteSeq = 0;
     this.hud.setup(this.brawlers, this.player);
     this.hud.setMutator(M);
+    this.later = []; // [time, fn]: bots' delayed emotes, forgotten with the match
     this.aim.visible = this.aimTarget.visible = !!this.player;
   }
 
@@ -661,7 +662,7 @@ export class Game {
     const b = this.byId.get(id);
     if (!b || !this.authority || b.human || !b.alive) return;
     b.setHuman(true); b.netDriven = true; b.guard = null; b.remoteIn = null;
-    b.gadgetSeen = 0; b.superSeen = 0; // a rejoining client counts from 0 again
+    b.gadgetSeen = 0; b.superSeen = 0; b.emoteSeen = 0; // a rejoining client counts from 0 again
     b.net.set(b.pos.x, b.pos.z);
     this.brains.delete(b);
   }
@@ -838,6 +839,7 @@ export class Game {
     this.updateDrops(dt);
     this.events.update(dt);
     this.cubeRain();
+    for (let k = this.later.length - 1; k >= 0; k--) if (this.time >= this.later[k][0]) this.later.splice(k, 1)[0][1]();
     if (this.dojo) this.updateDojo();
     this.updateVisibility();
     this.updateFoliage(dt);
@@ -883,7 +885,7 @@ export class Game {
   // An emote (authority): a sticker over the head for 2 s. It reveals you for a moment, even in a
   // bush: no taunting from hiding. One every 2.5 s.
   emote(b, i) {
-    if (!b || !b.alive || !Number.isInteger(i) || !EMOTES[i] || this.time < (b.emoteUntil || 0)) return false;
+    if (!b || !b.alive || !Number.isInteger(i) || !EMOTES[i] || this.time < (b.emoteUntil || 0) - (b.netDriven ? 0.4 : 0)) return false; // remote: network jitter
     b.emoteUntil = this.time + 2.5;
     b.revealT = Math.max(b.revealT, 1.5);
     this.ev({ e: 'emo', id: b.id, i });

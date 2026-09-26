@@ -56,6 +56,7 @@ export const ROAD = [
   [850, 'frame:9'], [1000, 'title:14'],
 ];
 // How far along the road you are: the next milestone and the share of the way to it.
+export const roadClaimed = () => P.road; // milestones already paid
 export function roadProgress(total = totalTrophies()) {
   const i = ROAD.findIndex(([at]) => total < at);
   if (i < 0) return { next: null, frac: 1, reached: ROAD.length };
@@ -97,10 +98,13 @@ export function awardMatch({ rank, kos = 0, won = false, key, vsBots = false, ma
   if (key && mastery >= GOLD_AT && !owns(`skin:${key}:3`)) rewards.push({ ...give(`skin:${key}:3`), mastery: true });
   let league = null;
   if (vsBots && key) {
-    const roadBefore = roadProgress().reached, d = trophyDelta(key, rank);
+    P.road = Math.max(P.road || 0, roadProgress().reached); // saves from before the high-water mark
+    const d = trophyDelta(key, rank);
     P.trophies[key] = Math.max(0, trophies(key) + d);
     const road = roadProgress();
-    for (let i = roadBefore; i < road.reached; i++) rewards.push({ ...give(ROAD[i][1]), road: ROAD[i][0] });
+    // trophies go down too: each milestone pays once (P.road: how many were paid)
+    for (let i = P.road; i < road.reached; i++) rewards.push({ ...give(ROAD[i][1]), road: ROAD[i][0] });
+    P.road = Math.max(P.road, road.reached);
     league = { delta: d, trophies: trophies(key), total: totalTrophies(), road };
   }
   save();

@@ -39,7 +39,7 @@ import { preloadProps, PROPS } from './props.js';
 import { enableCartoonShading, cartoonGradePass } from './cartoon.js';
 import { PAD } from './input.js';
 import { MetaUI, skinFilter, framed, titleText } from './metaui.js';
-import { awardMatch, leagueBotLevel, cosFor, unlock } from './profile.js';
+import { awardMatch, leagueBotLevel, cosFor, unlock, owns } from './profile.js';
 import { parseCos, FRAMES } from './cosmetics.js';
 import { EmoteWheel } from './emotewheel.js';
 import { weeklyMutator, MUT_ICONS } from './mutators.js';
@@ -926,7 +926,7 @@ function showStats() {
 }
 
 // Podium (v0.13): the top 3 on steps, with their looks, once the match has a winner.
-let podiumFor = null;
+let podiumFor = null, resultMatch = null;
 function showPodium() {
   const el = $('#resPodium');
   if (!game.ended || !game.player) { el.innerHTML = ''; $('.result').classList.remove('podium-on'); podiumFor = null; return; }
@@ -955,7 +955,9 @@ game.onResult = (rank, won) => {
   }
   // hidden level: the bots of the next solo / private match follow it (never shown)
   recordResult(rank, won);
-  if (won && game.mutator) unlock('title:10'); // "Agent of Chaos": win a Weekly Chaos match
+  resultMatch = game.matchNo;
+  // "Agent of Chaos": the first Weekly Chaos win
+  const chaosTitle = won && game.mutator && !owns('title:10') ? [unlock('title:10')] : [];
   // mastery of the brawler you played: points, and a little ceremony when it levels up
   const key = played && played.brawler && TYPES[played.brawler] ? played.brawler : null;
   if (key) {
@@ -966,7 +968,7 @@ game.onResult = (rank, won) => {
     const res = awardMatch({ rank, won, kos: played.kos, key, vsBots: played.mode === 'solo', mastery: m.after });
     const q = recordMatch({ rank, won, brawler: key, kos: played.kos, dmg: Math.round(st.dmg || 0), cubes: st.cubes || 0,
       gadgets: st.gadgets || 0, supers: st.supers || 0, crates: st.crates || 0, emotes: st.emotes || 0 }, Object.keys(TYPES));
-    meta.showResult(res, q, key);
+    meta.showResult({ ...res, extra: chaosTitle }, q, key);
     track('progress', { level: res.after.level, xp: res.xp, coins: res.coins + q.coins, trophies: res.league ? res.league.total : undefined,
       quests_done: q.moved.filter(x => x.done).length });
     for (const x of q.moved) if (x.done) track('quest_completed', { kind: x.q.kind, weekly: x.weekly });
@@ -1075,7 +1077,7 @@ function frame(ts) {
   renderer.info.reset();
   input.poll();
   menus.update(dt);
-  if (!$('#result').classList.contains('hidden') && game.ended && podiumFor !== game.matchNo) { showPodium(); showStats(); } // solo: the bots finished the match
+  if (!$('#result').classList.contains('hidden') && game.ended && game.player && game.matchNo === resultMatch && podiumFor !== game.matchNo) { showPodium(); showStats(); } // solo: the bots finished the match
   const inMatch = game.mode === 'play' && game.player && !menus.paused && !$('#hud').classList.contains('hidden') && $('#result').classList.contains('hidden');
   if (inMatch) wheel.update(); else if (wheel.open) wheel.close();
   if (input.padHit(PAD.Y)) nextTimeOfDay();

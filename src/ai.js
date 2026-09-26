@@ -321,14 +321,14 @@ export class BotBrain {
   onKo() {
     const g = this.g, b = this.b;
     if (Math.random() < 0.6) g.bark(b, 'ko');
-    if (this.habits.show || Math.random() < 0.15) setTimeout(() => g.emote(b, [0, 3, 4, 10][Math.floor(Math.random() * 4)]), 500);
+    if (this.habits.show || Math.random() < 0.15) g.later.push([g.time + 0.5, () => g.emote(b, [0, 3, 4, 10][Math.floor(Math.random() * 4)])]);
   }
 
   // Someone emoted where we can see: answer now and then (with a GG, a wave, a laugh...).
   heardEmote(from, i) {
     if (Math.random() > (this.habits.show ? 0.7 : 0.3)) return;
     const reply = [0, 1, 2, 3, 5, 10][Math.floor(Math.random() * 6)];
-    setTimeout(() => { if (this.b.alive && from.alive) this.g.emote(this.b, reply); }, 700 + Math.random() * 900);
+    this.g.later.push([this.g.time + 0.7 + Math.random() * 0.9, () => { if (this.b.alive && from.alive) this.g.emote(this.b, reply); }]);
   }
 
   // Super: per brawler, when it pays off (a cluster, a finisher, point-blank...).
