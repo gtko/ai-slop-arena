@@ -1032,6 +1032,33 @@ def v0130():
     img.convert('RGB').save(os.path.join(OUT, 'v0.13.0-arenas.png'), optimize=True)
 
 
+def v0131():
+    banner('v0.13.1', 'NEW HOME', 'A game client worthy of the name.',
+           [('🏠', 'New menu'), ('🎬', 'Live showcase'), ('🛒', 'Shop tabs'), ('💎', 'Two currencies')],
+           'v0.13.1-banner.png', ('frostbite', 'volt', 'gunslinger'))
+
+    feats = [('🧭', 'Top navigation', ['Play, Collection, Shop,', 'Quests, Trophy Road,', 'your wallet and profile']),
+             ('🎬', 'Live showcase', ['your brawler fights', 'behind the menu, on', 'the map you picked']),
+             ('🎨', 'Skins carousel', ['every skin of your', 'brawler, one click', 'to wear it']),
+             ('🛒', 'Shop with tabs', ['featured, brawlers,', 'skins, effects, emotes,', 'profile, gems']),
+             ('🪙', 'Slop Coins', ['earned by playing,', 'unlock brawlers', '(1500 each)']),
+             ('💎', 'Gems', ['for brawlers and looks,', 'payment coming soon,', 'no power for sale'])]
+    W, H = 1600, 840
+    img = background(W, H, glow=(0.5, 0.3))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'A NEW HOME', display(56), YELLOW, anchor='ma')
+    cw, chh, gx, gy = 470, 300, 30, 30
+    x0 = (W - (3 * cw + 2 * gx)) // 2
+    for i, (icon, head, lines) in enumerate(feats):
+        x, y = x0 + (i % 3) * (cw + gx), 140 + (i // 3) * (chh + gy)
+        card(img, (x, y, x + cw, y + chh), outline=(150, 120, 230), radius=26)
+        d.text((x + cw // 2, y + 22), icon, font=emoji(58), embedded_color=True, anchor='ma')
+        d.text((x + cw // 2, y + 108), head, font=display(34), fill=YELLOW, anchor='ma')
+        for li, line in enumerate(lines):
+            d.text((x + cw // 2, y + 164 + li * 36), line, font=body(23, 'Bold'), fill=TEXT, anchor='ma')
+    img.convert('RGB').save(os.path.join(OUT, 'v0.13.1-home.png'), optimize=True)
+
+
 if __name__ == '__main__':
     import sys
     os.makedirs(OUT, exist_ok=True)
@@ -1053,5 +1080,6 @@ if __name__ == '__main__':
     v0110()
     v0120()
     v0130()
+    v0131()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')

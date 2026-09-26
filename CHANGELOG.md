@@ -3,6 +3,15 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.13.1](docs/releases/v0.13.1.md): New home
+
+<a href="docs/releases/v0.13.1.md"><img src="docs/releases/img/v0.13.1-banner.png" alt="v0.13.1: new home" width="100%"></a>
+
+- 🏠 A game-client home screen: top navigation, your brawler fighting live behind the menu, a skins carousel.
+- 🛒 A shop with tabs: featured, brawlers, skins, effects, emotes, profile, gems.
+- 🪙 Slop Coins unlock brawlers, Gems unlock brawlers and looks; players of before keep all five brawlers.
+- 🧹 Two rounds of testing: a menu freeze and a texture leak fixed, many phone and language fixes.
+
 ## [v0.13.0](docs/releases/v0.13.0.md): Level up
 
 <a href="docs/releases/v0.13.0.md"><img src="docs/releases/img/v0.13.0-banner.png" alt="v0.13.0: level up" width="100%"></a>
