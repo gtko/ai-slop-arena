@@ -12,6 +12,7 @@ import { Weather } from './weather.js';
 import { t } from './i18n/index.js';
 import { Feel, weapon } from './feel.js';
 import { GADGETS, GADGET_CHARGES, GADGET_LOCKOUT, parseLoadout, validLoadout, flareFx, gadgetFx } from './gadgets.js';
+import { KOFX, validCos } from './cosmetics.js';
 
 const NAMES = ['Bolt', 'Nova', 'Rex', 'Juno', 'Pix', 'Kai', 'Moxie', 'Zed', 'Luna', 'Taro', 'Fizz', 'Oona', 'Brick', 'Echo'];
 const TYPE_KEYS = Object.keys(TYPES);
@@ -26,12 +27,14 @@ const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.f
 export function makeRoster(humans = [], { level = 0.45 } = {}) {
   const spawns = shuffle([0, 1, 2, 3, 4, 5, 6, 7]);
   const names = shuffle(NAMES.slice());
-  const roster = humans.slice(0, 8).map((h, k) => ({ id: h.id, name: h.name, type: h.type, lo: h.lo, human: true, spawn: spawns[k], plat: h.plat }));
+  const roster = humans.slice(0, 8).map((h, k) => ({ id: h.id, name: h.name, type: h.type, lo: h.lo, cos: validCos(h.cos) ? h.cos : undefined, human: true, spawn: spawns[k], plat: h.plat }));
   const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
   for (let k = roster.length; k < 8; k++) {
     const skill = Math.round(Math.min(0.97, Math.max(0.05, 0.12 + level * 0.8 + gauss() * 0.2)) * 100) / 100;
     const lo = `${Math.random() < 0.5 ? 'A' : 'B'}${Math.random() < 0.5 ? 1 : 2}`; // bots pick a random loadout
-    roster.push({ id: 'bot' + k, name: names[k], type: TYPE_KEYS[Math.floor(Math.random() * TYPE_KEYS.length)], lo, human: false, spawn: spawns[k], skill });
+    // and some wear a recolour or a trail: the arena looks as lively as the players' collections
+    const cos = `${Math.random() < 0.4 ? 1 + Math.floor(Math.random() * 2) : 0}.${Math.random() < 0.25 ? 1 + Math.floor(Math.random() * 5) : 0}.${Math.random() < 0.3 ? 1 + Math.floor(Math.random() * 5) : 0}.0.0.${5 + Math.floor(Math.random() * 20)}`;
+    roster.push({ id: 'bot' + k, name: names[k], type: TYPE_KEYS[Math.floor(Math.random() * TYPE_KEYS.length)], lo, cos, human: false, spawn: spawns[k], skill });
   }
   return roster;
 }
@@ -147,6 +150,7 @@ export class Game {
       const b = new Brawler(this, Object.hasOwn(TYPES, L.type) ? L.type : 'blaster', { name: isPlayer ? t('hud.you') : r.name, isPlayer });
       b.id = r.id;
       b.gadget = L.gadget; b.star = L.star;
+      if (validCos(r.cos)) b.setCos(r.cos);
       b.setHuman(!!r.human);
       if (r.skill !== undefined) b.skill = r.skill;
       b.pos.copy(this.arena.spawns[r.spawn % this.arena.spawns.length]);
@@ -346,6 +350,7 @@ export class Game {
       killer.cheer();
       if (this.fxVisible(killer)) sfx(`bark_${killer.type.key}_cheer`, this.volumeAt(killer.pos.x, killer.pos.z) * 0.8);
     }
+    if (seen && killer && killer !== b && killer.cos.ko) this.effects.koBurst(b.pos.x, b.pos.z, KOFX[killer.cos.ko]); // K.O. effect (cosmetic)
     if (seen) {
       // KO beat: the body holds for 150 ms, then flies off away from the killer
       b.hitstopT = 0.15;

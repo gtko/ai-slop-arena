@@ -236,3 +236,10 @@
 @media (max-width: 700px) and (orientation: portrait) {
   .notes, .shop { grid-template-columns: 1fr 1fr; }
 }
+
+/* lobby list and loading cards: frames and titles */
+.players li .pf.p-pf { width: 34px; height: 34px; border-width: 2px; border-radius: 9px; }
+.players li .pf.p-pf img { width: 120%; height: 120%; }
+.players li span[data-title]::after { content: attr(data-title); display: block; font-size: 10px; font-weight: 800; color: var(--muted); }
+.ml-card .ml-title { font-size: 10px; font-weight: 800; color: var(--yellow); min-height: 1.2em; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ml-card.ml-fr { border-radius: 16px; }

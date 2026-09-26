@@ -14,6 +14,7 @@ export const BRAWLER_KEYS = Object.keys(TYPES);
 export const MAP_KEYS = Object.keys(MAPS);
 export { makeRoster, randomMap };
 export { validBrawler, validLoadout } from '../gadgets.js';
+export { validCos, COS_DEFAULT } from '../cosmetics.js';
 
 export class ServerMatch {
   // send(msg): to every player; sendTo(id, msg): one player; onEnd(): match over; onCheat(id, kind)

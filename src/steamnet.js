@@ -1,5 +1,6 @@
 import { randomCode } from './net.js';
 import { validBrawler, validLoadout } from './gadgets.js';
+import { validCos, COS_DEFAULT } from './cosmetics.js';
 import { presence, serverOrigin } from './platform.js';
 import { t } from './i18n/index.js';
 
@@ -57,37 +58,37 @@ export class SteamNet {
 
   /* ------------------------------ joining ------------------------------ */
 
-  async create(name, brawler, lo = 'A1') {
+  async create(name, brawler, lo = 'A1', cos = COS_DEFAULT) {
     this.close();
     const code = randomCode();
     const info = await this.steam.createLobby({ code, max: MAX_PLAYERS }).catch(ipcError);
     this.enter(info);
-    this.roster = new Map([[this.id, { id: this.id, name: clean(name, 14) || 'Player', brawler: BRAWLERS.has(brawler) ? brawler : 'blaster', lo: validLoadout(lo) ? lo : 'A1', host: true, joined: Date.now() }]]);
+    this.roster = new Map([[this.id, { id: this.id, name: clean(name, 14) || 'Player', brawler: BRAWLERS.has(brawler) ? brawler : 'blaster', lo: validLoadout(lo) ? lo : 'A1', cos: validCos(cos) ? cos : COS_DEFAULT, host: true, joined: Date.now() }]]);
     this.inMatch = false;
     this.broadcastRoom();
     return this;
   }
 
   // Same signature as Net.connect: join by room code.
-  async connect(code, name, brawler, lo = 'A1') {
+  async connect(code, name, brawler, lo = 'A1', cos = COS_DEFAULT) {
     const id = await this.steam.findLobby(code);
     if (!id) throw new Error(t('err.notFound', { code }));
-    return this.joinLobby(id, name, brawler, lo);
+    return this.joinLobby(id, name, brawler, lo, cos);
   }
 
   // Join a lobby by id (invite, "Join game" in the friends list, or a room code lookup).
-  async joinLobby(lobbyId, name, brawler, lo = 'A1') {
+  async joinLobby(lobbyId, name, brawler, lo = 'A1', cos = COS_DEFAULT) {
     this.close();
     const info = await this.steam.joinLobby(lobbyId).catch(ipcError);
     this.enter(info);
     if (info.members.length > MAX_PLAYERS) { this.close(); throw new Error(t('err.full')); }
     if (this.isHost) { // the lobby was empty: we own it now
-      this.roster = new Map([[this.id, { id: this.id, name: clean(name, 14) || 'Player', brawler, lo, host: true, joined: Date.now() }]]);
+      this.roster = new Map([[this.id, { id: this.id, name: clean(name, 14) || 'Player', brawler, lo, cos, host: true, joined: Date.now() }]]);
       this.broadcastRoom();
       return this;
     }
     // Say hello until the host answers with the roster.
-    const hello = { t: 'hello', name, brawler, lo };
+    const hello = { t: 'hello', name, brawler, lo, cos };
     await new Promise((resolve, reject) => {
       let tries = 0;
       const again = () => {
@@ -169,7 +170,7 @@ export class SteamNet {
     const me = this.roster.get(this.id);
     switch (msg.t) {
       case 'pick':
-        if (me && BRAWLERS.has(msg.brawler)) { me.brawler = msg.brawler; if (validLoadout(msg.lo)) me.lo = msg.lo; this.broadcastRoom(); }
+        if (me && BRAWLERS.has(msg.brawler)) { me.brawler = msg.brawler; if (validLoadout(msg.lo)) me.lo = msg.lo; if (validCos(msg.cos)) me.cos = msg.cos; this.broadcastRoom(); }
         break;
       case 'map':
         if (/^[a-z]{2,12}$/.test(msg.map)) { this.map = msg.map; this.broadcastRoom(); }
@@ -194,7 +195,7 @@ export class SteamNet {
 
   broadcastRoom() {
     const players = [...this.roster.values()].sort((a, b) => a.joined - b.joined)
-      .map(({ id, name, brawler, lo, host }) => ({ id, name, brawler, lo, host }));
+      .map(({ id, name, brawler, lo, cos, host }) => ({ id, name, brawler, lo, cos, host }));
     const msg = { t: 'room', players, inMatch: this.inMatch, map: this.map };
     this.toOthers(msg);
     this.steam.setLobbyData('map', this.map);
@@ -232,13 +233,13 @@ export class SteamNet {
         if (!p && this.roster.size >= MAX_PLAYERS) return;
         if (this.blocked.has(from)) return;
         this.roster.set(from, {
-          id: from, name: clean(msg.name, 14) || 'Player', brawler: BRAWLERS.has(msg.brawler) ? msg.brawler : 'blaster', lo: validLoadout(msg.lo) ? msg.lo : 'A1',
+          id: from, name: clean(msg.name, 14) || 'Player', brawler: BRAWLERS.has(msg.brawler) ? msg.brawler : 'blaster', lo: validLoadout(msg.lo) ? msg.lo : 'A1', cos: validCos(msg.cos) ? msg.cos : COS_DEFAULT,
           host: false, joined: p ? p.joined : Date.now(),
         });
         this.broadcastRoom();
         break;
       case 'pick':
-        if (p && BRAWLERS.has(msg.brawler)) { p.brawler = msg.brawler; if (validLoadout(msg.lo)) p.lo = msg.lo; this.broadcastRoom(); }
+        if (p && BRAWLERS.has(msg.brawler)) { p.brawler = msg.brawler; if (validLoadout(msg.lo)) p.lo = msg.lo; if (validCos(msg.cos)) p.cos = msg.cos; this.broadcastRoom(); }
         break;
       case 'in':
         if (p) { msg.from = from; this.emit('in', msg); }

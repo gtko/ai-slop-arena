@@ -38,8 +38,9 @@ import { preloadFigurines, setFigurineDetail } from './figurines.js';
 import { preloadProps, PROPS } from './props.js';
 import { enableCartoonShading, cartoonGradePass } from './cartoon.js';
 import { PAD } from './input.js';
-import { MetaUI } from './metaui.js';
-import { awardMatch, leagueBotLevel } from './profile.js';
+import { MetaUI, skinFilter, framed, titleText } from './metaui.js';
+import { awardMatch, leagueBotLevel, cosFor } from './profile.js';
+import { parseCos, FRAMES } from './cosmetics.js';
 import { recordMatch } from './quests.js';
 import './style.css';
 import './meta.css';
@@ -309,7 +310,7 @@ function renderLoadout() {
     const cur = loadout(key);
     setLoadout(key, b.dataset.g ? b.dataset.g + cur[1] : cur[0] + b.dataset.s);
     renderLoadout();
-    if (net.connected) net.send({ t: 'pick', brawler: key, lo: loadout(key) });
+    if (net.connected) net.send({ t: 'pick', brawler: key, lo: loadout(key), cos: cosFor(key) });
   }));
 }
 
@@ -318,14 +319,14 @@ function pickBrawler(key) {
   try { localStorage.setItem('iaslop-brawler', key); } catch { /* private mode */ }
   document.querySelectorAll('[data-key]').forEach(x => x.classList.toggle('on', x.dataset.key === key));
   renderLoadout();
-  if (net.connected) net.send({ t: 'pick', brawler: key, lo: loadout(key) });
+  if (net.connected) net.send({ t: 'pick', brawler: key, lo: loadout(key), cos: cosFor(key) });
   if ($('#ljAvatar')) showAvatar();
 }
 
 renderLoadout();
 
 // Progression menus (v0.13): profile bar, quests, Trophy Road, shop, collection.
-const meta = new MetaUI({ brawlers: Object.keys(TYPES), portrait, chosen: () => chosen, onWear: () => {} });
+const meta = new MetaUI({ brawlers: Object.keys(TYPES), portrait, chosen: () => chosen, onWear: () => { if (net.connected) net.send({ t: 'pick', brawler: chosen, lo: loadout(chosen), cos: cosFor(chosen) }); } });
 
 function showMastery(m, key) {
   const el = $('#resMastery');
@@ -387,7 +388,7 @@ function dojo() {
   playMusic('menu');
   finalMusic = true; // no final-showdown theme in the dojo
   matchLeft('restart');
-  game.newMatch({ mapKey: 'oasis', roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen) }], { level: 0.3 }), localId: 'me', dojo: true });
+  game.newMatch({ mapKey: 'oasis', roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen), cos: cosFor(chosen) }], { level: 0.3 }), localId: 'me', dojo: true });
   track('dojo_opened', { brawler: chosen, loadout: loadout(chosen) });
   canvas.focus();
 }
@@ -403,7 +404,7 @@ function play() {
   finalMusic = false;
   matchLeft('restart');
   const level = leagueBotLevel(chosen, botLevel()); // Bot League: this brawler's trophies nudge the bots
-  game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen) }], { level }), localId: 'me' });
+  game.newMatch({ mapKey, roster: makeRoster([{ id: 'me', name: t('hud.you'), type: brawlerString(chosen), cos: cosFor(chosen) }], { level }), localId: 'me' });
   achievements.matchStart({ mapKey, brawler: chosen });
   matchStarted({ mode: 'solo', map: mapKey, map_random: chosenMap === 'random', brawler: chosen, loadout: loadout(chosen), bot_level: level, humans: 1 });
   presence(t('presence.solo', { map: t(`map.${mapKey}`) }));
@@ -478,12 +479,12 @@ async function joinRoom(code, lobbyId = null, web = false) {
   try { if (!steam) localStorage.setItem('iaslop-name', name); } catch { /* ignore */ }
   status(t('lobby.connecting'));
   try {
-    const lo = loadout(chosen);
-    if (lobbyId) { use(steamNet); await net.joinLobby(lobbyId, name, chosen, lo); }
-    else if (steamNet && !code && !web) { use(steamNet); await net.create(name, chosen, lo); }
-    else if (web) { use(webNet); await net.connect(code || randomCode(), name, chosen, lo); }
-    else if (steamNet && await steam.findLobby(code)) { use(steamNet); await net.connect(code, name, chosen, lo); }
-    else { use(webNet); await net.connect(code, name, chosen, lo); }
+    const lo = loadout(chosen), cos = cosFor(chosen);
+    if (lobbyId) { use(steamNet); await net.joinLobby(lobbyId, name, chosen, lo, cos); }
+    else if (steamNet && !code && !web) { use(steamNet); await net.create(name, chosen, lo, cos); }
+    else if (web) { use(webNet); await net.connect(code || randomCode(), name, chosen, lo, cos); }
+    else if (steamNet && await steam.findLobby(code)) { use(steamNet); await net.connect(code, name, chosen, lo, cos); }
+    else { use(webNet); await net.connect(code, name, chosen, lo, cos); }
     if (net === webNet) presence(t('presence.room'));
     track('room_joined', { kind: net === steamNet ? 'steam_lobby' : net.matchmade ? 'matchmaking' : 'room', created: !code && !lobbyId, friend: !!lobbyId });
     status('');
@@ -601,9 +602,11 @@ onNet('room', m => {
   for (const p of m.players) {
     const li = document.createElement('li');
     const me = p.id === net.id;
-    li.innerHTML = `<img src="${portrait(typeOf(p.brawler))}" alt=""><span class="${me ? 'you' : ''}"></span>${p.host ? `<span class="crown">${t('lobby.host')}</span>` : ''}`
+    const C = parseCos(p.cos), key = typeOf(p.brawler);
+    li.innerHTML = `${framed(C.frame, `<img src="${portrait(key)}" alt="" style="filter:${skinFilter(key, C.skin)}">`, 'p-pf')}<span class="${me ? 'you' : ''}"></span>${p.host ? `<span class="crown">${t('lobby.host')}</span>` : ''}`
       + (me ? '' : `<span class="p-act"><button class="p-rep" title="${t('mod.report')}">⚑</button>${canKick ? `<button class="p-kick" title="${t('mod.kick')}">✕</button>` : ''}</span>`);
     li.children[1].textContent = (PLAT_ICON[p.plat] ? PLAT_ICON[p.plat] + ' ' : '') + (me ? t('lobby.you', { name: p.name }) : p.name);
+    if (C.title) li.children[1].dataset.title = titleText(C.title);
     if (!me) {
       li.querySelector('.p-rep').addEventListener('click', () => openReport(p));
       const k = li.querySelector('.p-kick');
@@ -645,7 +648,10 @@ function showMatchLoad(mapKey, roster) {
     el.dataset.id = r.id;
     el.dataset.human = r.human ? '1' : '';
     el.style.setProperty('--c', '#' + T.palette.main.toString(16).padStart(6, '0'));
-    el.innerHTML = `<span class="ml-ok">✓</span><img src="${portrait(typeOf(r.type))}" alt=""><div class="ml-name"></div><div class="ml-sub"></div><div class="ml-bar"><i></i></div>`;
+    const C = parseCos(r.cos);
+    if (r.human && C.frame) el.classList.add('ml-fr', 'fr-' + FRAMES[C.frame]);
+    el.innerHTML = `<span class="ml-ok">✓</span><img src="${portrait(typeOf(r.type))}" alt="" style="filter:${skinFilter(typeOf(r.type), C.skin)}"><div class="ml-name"></div><div class="ml-title"></div><div class="ml-sub"></div><div class="ml-bar"><i></i></div>`;
+    el.querySelector('.ml-title').textContent = r.human ? titleText(C.title) : '';
     el.querySelector('.ml-name').textContent = r.id === net.id ? t('lobby.you', { name: r.name }) : r.name;
     el.querySelector('.ml-sub').textContent = r.human ? `${PLAT_ICON[r.plat] || '🌐'} ${T.name}` : `${t('load.bot')} · ${T.name}`;
     if (!r.human) el.querySelector('.ml-bar i').style.width = '100%';
@@ -775,7 +781,7 @@ $('#start').addEventListener('click', () => {
   sfx('click');
   // Server rooms: the server builds the roster and starts everyone (the leader included).
   if (net.serverAuthority) { net.send({ t: 'start' }); return; }
-  const roster = makeRoster(net.players.map(p => ({ id: p.id, name: p.name, type: p.brawler, lo: p.lo })), { level: botLevel() });
+  const roster = makeRoster(net.players.map(p => ({ id: p.id, name: p.name, type: p.brawler, lo: p.lo, cos: p.cos })), { level: botLevel() });
   const mapKey = resolveMap(lobbyMap);
   net.send({ t: 'start', map: mapKey, roster });
   startOnline(mapKey, roster, 'host');
