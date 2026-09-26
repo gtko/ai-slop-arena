@@ -610,5 +610,6 @@
   "menu.modeDesc": "8 brawlere · den sidste tilbage vinder",
   "menu.hp": "HP",
   "menu.range": "Rækkevidde",
-  "menu.speed": "Fart"
+  "menu.speed": "Fart",
+  "menu.solo": "SOLO"
 }

@@ -592,5 +592,6 @@
   "menu.modeDesc": "8 brawler · yang terakhir bertahan menang",
   "menu.hp": "HP",
   "menu.range": "Jarak",
-  "menu.speed": "Kecepatan"
+  "menu.speed": "Kecepatan",
+  "menu.solo": "SOLO"
 }

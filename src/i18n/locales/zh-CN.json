@@ -592,5 +592,6 @@
   "menu.modeDesc": "8 名英雄 · 最后存活者获胜",
   "menu.hp": "HP",
   "menu.range": "射程",
-  "menu.speed": "速度"
+  "menu.speed": "速度",
+  "menu.solo": "单人"
 }

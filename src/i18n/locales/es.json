@@ -610,5 +610,6 @@
   "menu.modeDesc": "8 brawlers · gana el último en pie",
   "menu.hp": "PV",
   "menu.range": "Alcance",
-  "menu.speed": "Velocidad"
+  "menu.speed": "Velocidad",
+  "menu.solo": "SOLO"
 }

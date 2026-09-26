@@ -682,5 +682,6 @@
   "menu.modeDesc": "8 مقاتلين · آخر من يبقى يفوز",
   "menu.hp": "HP",
   "menu.range": "المدى",
-  "menu.speed": "السرعة"
+  "menu.speed": "السرعة",
+  "menu.solo": "فردي"
 }

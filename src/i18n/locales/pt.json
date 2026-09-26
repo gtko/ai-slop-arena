@@ -610,5 +610,6 @@
   "menu.modeDesc": "8 lutadores · vence o último de pé",
   "menu.hp": "PV",
   "menu.range": "Alcance",
-  "menu.speed": "Velocidade"
+  "menu.speed": "Velocidade",
+  "menu.solo": "SOLO"
 }

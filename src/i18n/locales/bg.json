@@ -610,5 +610,6 @@
   "menu.modeDesc": "8 бойци · последният оцелял печели",
   "menu.hp": "Живот",
   "menu.range": "Обхват",
-  "menu.speed": "Скорост"
+  "menu.speed": "Скорост",
+  "menu.solo": "СОЛО"
 }

@@ -610,5 +610,6 @@
   "menu.modeDesc": "8 brawlers · le dernier debout gagne",
   "menu.hp": "PV",
   "menu.range": "Portée",
-  "menu.speed": "Vitesse"
+  "menu.speed": "Vitesse",
+  "menu.solo": "SOLO"
 }

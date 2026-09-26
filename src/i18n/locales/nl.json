@@ -610,5 +610,6 @@
   "menu.modeDesc": "8 brawlers · de laatste die overeind staat wint",
   "menu.hp": "HP",
   "menu.range": "Bereik",
-  "menu.speed": "Snelheid"
+  "menu.speed": "Snelheid",
+  "menu.solo": "SOLO"
 }

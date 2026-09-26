@@ -602,4 +602,5 @@ export default {
   'menu.hp': "HP",
   'menu.range': "Range",
   'menu.speed': "Speed",
+  'menu.solo': "SOLO",
 };

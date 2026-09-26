@@ -610,5 +610,6 @@
   "menu.modeDesc": "8 μαχητές · νικά ο τελευταίος όρθιος",
   "menu.hp": "HP",
   "menu.range": "Εμβέλεια",
-  "menu.speed": "Ταχύτητα"
+  "menu.speed": "Ταχύτητα",
+  "menu.solo": "ΣΟΛΟ"
 }

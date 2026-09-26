@@ -592,5 +592,6 @@
   "menu.modeDesc": "ブロウラー8人 · 最後まで残った者の勝ち",
   "menu.hp": "HP",
   "menu.range": "射程",
-  "menu.speed": "速さ"
+  "menu.speed": "速さ",
+  "menu.solo": "ソロ"
 }

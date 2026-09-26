@@ -646,5 +646,6 @@
   "menu.modeDesc": "8 zadymiarzy · wygrywa ostatni na placu",
   "menu.hp": "PŻ",
   "menu.range": "Zasięg",
-  "menu.speed": "Szybkość"
+  "menu.speed": "Szybkość",
+  "menu.solo": "SOLO"
 }

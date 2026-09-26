@@ -110,7 +110,7 @@ body:has(#menu:not(.hidden)) #fpsBadge { top: calc(var(--nav) + 8px); }
 .rt.on { filter: none; border-color: var(--yellow); box-shadow: 0 0 0 2px var(--ink), 0 0 18px rgba(255, 210, 63, 0.45); transform: translateY(-4px); }
 
 /* ------------------------------ play panel ------------------------------ */
-.play-panel { position: absolute; right: 24px; top: calc(var(--nav) + 20px); bottom: 24px; width: 340px; display: flex; flex-direction: column; justify-content: flex-end; gap: 14px; }
+.play-panel { position: absolute; z-index: 3; right: 24px; top: calc(var(--nav) + 20px); bottom: 24px; width: 340px; display: flex; flex-direction: column; justify-content: flex-end; gap: 14px; }
 .pp-box { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 18px; background: rgba(14, 11, 30, 0.82); border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(8px); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45); position: relative; }
 .pp-mode { display: flex; flex-direction: column; gap: 2px; }
@@ -140,8 +140,6 @@ body:has(#menu:not(.hidden)) #fpsBadge { top: calc(var(--nav) + 8px); }
 .pp-alt button:hover { background: rgba(255, 255, 255, 0.13); }
 .pp-alt button i { font-style: normal; font-size: 16px; }
 .pp-alt button span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-#multi { background: linear-gradient(#47b8f0, #2378c9); border-color: rgba(255, 255, 255, 0.25); }
-#multi:hover { filter: brightness(1.1); }
 
 /* the day's quests, above the play box */
 .home-quests { padding: 12px 14px; border-radius: 16px; background: rgba(14, 11, 30, 0.72); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(6px); cursor: pointer; transition: border-color 0.15s; }

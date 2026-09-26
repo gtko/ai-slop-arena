@@ -592,5 +592,6 @@
   "menu.modeDesc": "브롤러 8명 · 마지막까지 살아남으면 승리",
   "menu.hp": "HP",
   "menu.range": "사거리",
-  "menu.speed": "속도"
+  "menu.speed": "속도",
+  "menu.solo": "솔로"
 }

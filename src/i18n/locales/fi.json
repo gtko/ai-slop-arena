@@ -610,5 +610,6 @@
   "menu.modeDesc": "8 taistelijaa · viimeinen pystyssä voittaa",
   "menu.hp": "HP",
   "menu.range": "Kantama",
-  "menu.speed": "Nopeus"
+  "menu.speed": "Nopeus",
+  "menu.solo": "YKSIN"
 }

@@ -592,5 +592,6 @@
   "menu.modeDesc": "8 นักสู้ · คนสุดท้ายที่รอดชนะ",
   "menu.hp": "HP",
   "menu.range": "ระยะ",
-  "menu.speed": "ความเร็ว"
+  "menu.speed": "ความเร็ว",
+  "menu.solo": "เดี่ยว"
 }

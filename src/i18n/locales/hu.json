@@ -610,5 +610,6 @@
   "menu.modeDesc": "8 harcos · az utolsó talpon maradt nyer",
   "menu.hp": "ÉP",
   "menu.range": "Hatótáv",
-  "menu.speed": "Sebesség"
+  "menu.speed": "Sebesség",
+  "menu.solo": "EGYJÁTÉKOS"
 }
