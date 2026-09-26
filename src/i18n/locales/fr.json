@@ -41,7 +41,6 @@
   "result.kos": "K.O.",
   "result.cubes": "cubes",
   "result.gadgets": "gadgets",
-  "result.mvp": "MVP : {name}, {n} dégâts",
   "gad.blasterA.name": "Charge racine",
   "gad.blasterA.desc": "Charge de 4 m : le premier ennemi percuté subit 400 et est enraciné.",
   "gad.blasterB.name": "Écorce",

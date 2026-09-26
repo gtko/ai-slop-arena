@@ -41,7 +41,6 @@
   "result.kos": "K.O.",
   "result.cubes": "kockák",
   "result.gadgets": "kütyük",
-  "result.mvp": "MVP: {name}, {n} sebzés",
   "gad.blasterA.name": "Gyökérroham",
   "gad.blasterA.desc": "Roham 4 m-en: az első ellenfél, akinek nekiütközöl, 400-at sebződik és gyökeret ver.",
   "gad.blasterB.name": "Kéregbőr",

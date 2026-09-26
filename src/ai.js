@@ -64,6 +64,24 @@ const segDist = (p, a, b) => {
 };
 const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
 
+// Bot personas (v0.13, B02): every bot is a character with its own habits, an icon on its name
+// plate and a few lines in speech bubbles (bark.<persona>.<spot|ko|hurt|win> in the i18n files).
+//  sight: extra metres before it notices you   grace: extra calm seconds at the start
+//  retreat: health share under which it backs off   loot: how far it goes for cubes (x 24 m)
+//  lowHp: how much it prefers wounded targets   camp: waits in a bush and fights close only
+//  show: fires its super eagerly and emotes a lot
+export const PERSONAS = ['hunter', 'camper', 'looter', 'vulture', 'coward', 'showoff'];
+export const PERSONA_ICONS = { hunter: '🎯', camper: '⛺', looter: '💰', vulture: '🦅', coward: '🐔', showoff: '🕺' };
+const HABITS = {
+  hunter: { sight: 6, grace: -3, retreat: 0.22, loot: 0.6 },
+  camper: { sight: -2, camp: true },
+  looter: { loot: 1.8, retreat: 0.4 },
+  vulture: { lowHp: 10, sight: 2 },
+  coward: { retreat: 0.55, grace: 2 },
+  showoff: { show: true },
+  none: {},
+};
+
 export class BotBrain {
   constructor(game, bot) {
     this.g = game;
@@ -84,7 +102,8 @@ export class BotBrain {
     this.skill = bot.skill ?? 0.45 + Math.random() * 0.4;
     // Opening grace: for the first seconds of a match bots loot instead of hunting, so nobody gets
     // jumped at spawn. They still fight back if hit. Staggered so they do not all wake up at once.
-    this.graceUntil = 7 + Math.random() * 4;
+    this.habits = { sight: 0, grace: 0, retreat: 0.3, loot: 1, lowHp: 0, ...HABITS[bot.persona || 'none'] };
+    this.graceUntil = 7 + Math.random() * 4 + this.habits.grace;
     this.crate = null;
     this.stuck = 0;
     this.last = bot.pos.clone();
@@ -128,7 +147,8 @@ export class BotBrain {
     let best = null, bestS = Infinity;
     const provoked = b.lastHurt > 0 && g.time - b.lastHurt < 4;
     const calm = g.time < this.graceUntil && !provoked;
-    const sight = 13 + this.skill * 9; // sharper bots notice targets from further away
+    const H = this.habits;
+    const sight = 13 + this.skill * 9 + H.sight; // sharper bots notice targets from further away
     for (const o of g.brawlers) {
       if (calm || o === b || !o.alive) continue;
       const d = o.pos.distanceTo(b.pos);
@@ -137,10 +157,11 @@ export class BotBrain {
       if (seen && o === this.target) this.seenAt = g.time;
       const recall = o === this.target && g.time - (this.seenAt || 0) < 2.5 && !(o.inBush && o.revealT <= 0);
       if (d > sight || !(seen || recall)) continue;
-      const s = d + (o.hp / o.maxHp) * 4 - (o === this.target ? 2 : 0);
+      if (H.camp && !provoked && o !== this.target && d > T.range * 0.8) continue; // campers wait for you to come close
+      const s = d + (o.hp / o.maxHp) * (4 + H.lowHp) - (o === this.target ? 2 : 0);
       if (s < bestS) { bestS = s; best = o; }
     }
-    if (best !== this.target) { this.seen = 0; this.seenAt = g.time; } // memory starts with the new target
+    if (best !== this.target) { this.seen = 0; this.seenAt = g.time; if (best && best.isPlayer && Math.random() < 0.5) g.bark(b, 'spot'); } // memory starts with the new target
     this.target = best;
     this.crate = null;
 
@@ -158,7 +179,8 @@ export class BotBrain {
       // Bots 2.0: hurt and outmatched, back off to cover (out of the threat's sight, a bush if
       // possible) and stay there until healed (regen needs 3 s without fighting).
       if (this.healing && hpF > 0.7) this.healing = false;
-      if (this.skill > 0.3 && (this.healing || (hpF < 0.3 && best.hp > b.hp && d < T.range * 1.3))) { // clumsy bots never back off
+      if (this.skill > 0.3 && (this.healing || (hpF < H.retreat && best.hp > b.hp && d < T.range * 1.3))) { // clumsy bots never back off
+        if (!this.healing) g.bark(b, 'hurt');
         this.healing = true;
         this.mode = 'retreat';
         if (!this.hasGoal || !this.coverOk(best)) {
@@ -182,7 +204,7 @@ export class BotBrain {
     }
 
     // Loot: nearest power cube, then nearest crate.
-    let item = null, id = 24;
+    let item = null, id = 24 * H.loot;
     for (const it of g.items) {
       const d = Math.hypot(it.x - b.pos.x, it.z - b.pos.z);
       if (d < id) { id = d; item = it; }
@@ -204,6 +226,18 @@ export class BotBrain {
     }
 
     this.mode = 'wander';
+    // campers settle in the nearest safe bush and wait there
+    if (H.camp && !this.hasGoal) {
+      const ci = A.toTile(b.pos.x), cj = A.toTile(b.pos.z);
+      let bush = null, bd = 99;
+      for (let dj = -6; dj <= 6; dj++) for (let di = -6; di <= 6; di++) {
+        const i = ci + di, j = cj + dj;
+        if (A.get(i, j) !== 'B' || A.ring(i, j) <= P.level + 2) continue;
+        if (Math.hypot(di, dj) < bd) { bd = Math.hypot(di, dj); bush = [i, j]; }
+      }
+      if (bush && bd > 0.5) { this.setGoal(A.center(bush[0], bush[1]), true); return; }
+      if (bush) { this.path.length = 0; return; }
+    }
     if (!this.hasGoal || !this.path.length) {
       const [i, j] = A.randomOpenTile(Math.max(2, P.level + 2));
       this.setGoal(A.center(i, j), true);
@@ -277,9 +311,24 @@ export class BotBrain {
     }
   }
 
+  // A knock-out of ours: a line, and the show-off emotes.
+  onKo() {
+    const g = this.g, b = this.b;
+    if (Math.random() < 0.6) g.bark(b, 'ko');
+    if (this.habits.show || Math.random() < 0.15) setTimeout(() => g.emote(b, [0, 3, 4, 10][Math.floor(Math.random() * 4)]), 500);
+  }
+
+  // Someone emoted where we can see: answer now and then (with a GG, a wave, a laugh...).
+  heardEmote(from, i) {
+    if (Math.random() > (this.habits.show ? 0.7 : 0.3)) return;
+    const reply = [0, 1, 2, 3, 5, 10][Math.floor(Math.random() * 6)];
+    setTimeout(() => { if (this.b.alive && from.alive) this.g.emote(this.b, reply); }, 700 + Math.random() * 900);
+  }
+
   // Super: per brawler, when it pays off (a cluster, a finisher, point-blank...).
   superGood(tgt, d) {
     const g = this.g, T = this.b.type.key, low = tgt.hp < tgt.maxHp * 0.45;
+    if (this.habits.show && Math.random() < 0.5) return true;
     const near = (p, r) => g.brawlers.filter(o => o !== this.b && o.alive && Math.hypot(o.pos.x - p.x, o.pos.z - p.z) < r).length;
     if (T === 'frostbite') return near(this.b.pos, 4.5) >= 1;
     if (T === 'blaster') return d < 6;

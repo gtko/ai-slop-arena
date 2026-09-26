@@ -496,6 +496,14 @@ export class Brawler {
     this.model.anim?.hit();
   }
 
+  // Emote (v0.13): a matching clip; while moving, over the upper body only.
+  emoteAnim(id) {
+    const A = this.model.anim;
+    if (!A || !this.alive) return;
+    const clip = { sleep: 'Bored', angry: 'Fidget', shock: 'Fidget', cry: 'Fidget', skull: 'Fidget', lol: 'Cheer', cool: 'Cheer', clown: 'Cheer' }[id] || 'Wave';
+    if (clip === 'Cheer' || this.walkAmp > 0.3) A.fire('Cheer'); else A.once(clip);
+  }
+
   cheer() {
     this.cheerT = this.g.time + 1.4;
     if (this.alive) this.model.anim?.fire('Cheer'); // over the aim: it covers the held arms

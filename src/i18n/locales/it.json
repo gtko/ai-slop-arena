@@ -41,7 +41,6 @@
   "result.kos": "K.O.",
   "result.cubes": "cubi",
   "result.gadgets": "gadget",
-  "result.mvp": "MVP: {name}, {n} danni",
   "gad.blasterA.name": "Carica radice",
   "gad.blasterA.desc": "Carica di 4 m: il primo nemico che urti subisce 400 e resta radicato.",
   "gad.blasterB.name": "Corteccia",

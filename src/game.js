@@ -12,7 +12,8 @@ import { Weather } from './weather.js';
 import { t } from './i18n/index.js';
 import { Feel, weapon } from './feel.js';
 import { GADGETS, GADGET_CHARGES, GADGET_LOCKOUT, parseLoadout, validLoadout, flareFx, gadgetFx } from './gadgets.js';
-import { KOFX, validCos } from './cosmetics.js';
+import { KOFX, validCos, EMOTES, EMOTE_ICONS } from './cosmetics.js';
+import { PERSONAS, PERSONA_ICONS } from './ai.js';
 
 const NAMES = ['Bolt', 'Nova', 'Rex', 'Juno', 'Pix', 'Kai', 'Moxie', 'Zed', 'Luna', 'Taro', 'Fizz', 'Oona', 'Brick', 'Echo'];
 const TYPE_KEYS = Object.keys(TYPES);
@@ -34,7 +35,8 @@ export function makeRoster(humans = [], { level = 0.45 } = {}) {
     const lo = `${Math.random() < 0.5 ? 'A' : 'B'}${Math.random() < 0.5 ? 1 : 2}`; // bots pick a random loadout
     // and some wear a recolour or a trail: the arena looks as lively as the players' collections
     const cos = `${Math.random() < 0.4 ? 1 + Math.floor(Math.random() * 2) : 0}.${Math.random() < 0.25 ? 1 + Math.floor(Math.random() * 5) : 0}.${Math.random() < 0.3 ? 1 + Math.floor(Math.random() * 5) : 0}.0.0.${5 + Math.floor(Math.random() * 20)}`;
-    roster.push({ id: 'bot' + k, name: names[k], type: TYPE_KEYS[Math.floor(Math.random() * TYPE_KEYS.length)], lo, cos, human: false, spawn: spawns[k], skill });
+    const per = PERSONAS[Math.floor(Math.random() * PERSONAS.length)]; // a character (ai.js): hunter, camper...
+    roster.push({ id: 'bot' + k, name: names[k], type: TYPE_KEYS[Math.floor(Math.random() * TYPE_KEYS.length)], lo, cos, per, human: false, spawn: spawns[k], skill });
   }
   return roster;
 }
@@ -151,6 +153,7 @@ export class Game {
       b.id = r.id;
       b.gadget = L.gadget; b.star = L.star;
       if (validCos(r.cos)) b.setCos(r.cos);
+      if (!r.human && PERSONAS.includes(r.per)) b.persona = r.per;
       b.setHuman(!!r.human);
       if (r.skill !== undefined) b.skill = r.skill;
       b.pos.copy(this.arena.spawns[r.spawn % this.arena.spawns.length]);
@@ -178,6 +181,7 @@ export class Game {
     this.drops = this.mode === 'play' && !dojo ? [40 + Math.random() * 10, 85 + Math.random() * 10] : [];
     this.dropping = [];
     this.gadgetSeq = 0;
+    this.emoteSeq = 0;
     this.hud.setup(this.brawlers, this.player);
     this.aim.visible = this.aimTarget.visible = !!this.player;
   }
@@ -336,6 +340,7 @@ export class Game {
     if (!this.authority) return;
     for (let k = 0; k < n; k++) this.dropCube(x, z, k, n);
     this.ev({ e: 'kill', id: b.id, by: killer ? killer.id : null, rank: b.rank, sup: bySuper ? 1 : 0 });
+    if (killer && killer !== b) this.brains.get(killer)?.onKo(b);
     this.checkEnd();
   }
 
@@ -386,6 +391,7 @@ export class Game {
       w.win();
       if (this.mode === 'play') { this.feel.finalKo(!this.net); if (this.player) sfx('sting_finalko'); } // slow motion offline only: online the rules keep real time
       this.ev({ e: 'win', id: w.id });
+      if (w.persona) { w.barkUntil = 0; this.bark(w, 'win'); }
       if (w === this.player) { this.state = 'over'; this.resultT = 1.2; }
       if (this.net) this.endT = 5;
     } else if (this.net && !alive.some(o => o.human)) {
@@ -593,7 +599,8 @@ export class Game {
     if (pd > reach) { px = b.pos.x + (px - b.pos.x) / pd * reach; pz = b.pos.z + (pz - b.pos.z) / pd * reach; }
     const gx = num(m.gx, 0), gz = num(m.gz, 0), gl = Math.hypot(gx, gz);
     b.remoteIn = { ax, az, px, pz, f: m.f ? 1 : 0, s: Math.max(0, Math.min(1e6, Math.floor(num(m.s, 0)))),
-      g: Math.max(0, Math.min(1e6, Math.floor(num(m.g, 0)))), gx: gl > 1e-6 ? gx / gl : ax, gz: gl > 1e-6 ? gz / gl : az };
+      g: Math.max(0, Math.min(1e6, Math.floor(num(m.g, 0)))), gx: gl > 1e-6 ? gx / gl : ax, gz: gl > 1e-6 ? gz / gl : az,
+      em: Math.max(0, Math.min(1e6, Math.floor(num(m.em, 0)))), ei: Math.floor(num(m.ei, -1)) };
     if (b.alive) this.checkMove(b, num(m.x, b.net.x), num(m.z, b.net.y), now);
   }
 
@@ -660,7 +667,7 @@ export class Game {
       const p = this.player, i = this.localIn || {};
       N.send({ t: 'in', x: r2(p.pos.x), z: r2(p.pos.z), ax: r2(this.aimDir.x), az: r2(this.aimDir.z),
         px: r2(this.aimPoint.x), pz: r2(this.aimPoint.z), f: i.f ? 1 : 0, s: this.superSeq, g: this.gadgetSeq,
-        gx: r2(this.gadgetDir.x), gz: r2(this.gadgetDir.z) });
+        gx: r2(this.gadgetDir.x), gz: r2(this.gadgetDir.z), em: this.emoteSeq, ei: this.emoteIdx });
     }
   }
 
@@ -733,6 +740,8 @@ export class Game {
           if (b && b === this.player) { b.gadgetCharges = e.c; b.gadgetCd = e.cd; }
           break;
         case 'flare': flareFx(this, e.x, e.z); break;
+        case 'emo': if (b && b.alive && Number.isInteger(e.i) && EMOTES[e.i]) this.emoteFx(b, e.i); break;
+        case 'bark': if (b && b.alive && typeof e.k === 'string') this.barkFx(b, e.k); break;
         case 'dropWarn': this.dropWarn(e.i, e.j); break;
         case 'zoneOff': this.combat.zones.filter(Z => Z.once && Math.hypot(Z.x - e.x, Z.z - e.z) < 0.1).forEach(Z => { Z.t = 0; }); break;
         case 'ice': this.arena.iceWall(e.t, 3); break;
@@ -819,6 +828,7 @@ export class Game {
       _v.set(I.px, 0, I.pz);
       if (I.f) this.tryAttack(b, I.ax, I.az, _v, false);
       if (I.s > (b.superSeen || 0)) { b.superSeen = I.s; this.tryAttack(b, I.ax, I.az, _v, true); }
+      if (I.em > (b.emoteSeen || 0)) { b.emoteSeen = I.em; this.emote(b, I.ei); }
       if (I.g > (b.gadgetSeen || 0)) {
         b.gadgetSeen = I.g;
         const G = GADGETS[b.type.key + b.gadget];
@@ -827,6 +837,53 @@ export class Game {
         else this.ev({ e: 'gadNo', id: b.id, c: b.gadgetCharges, cd: r2(Math.max(0, b.gadgetCd)) }); // refused: resync the client
       }
     }
+  }
+
+  /* ------------------------------ emotes and bot barks (v0.13) ------------------------------ */
+
+  // An emote (authority): a sticker over the head for 2 s. It reveals you for a moment, even in a
+  // bush: no taunting from hiding. One every 2.5 s.
+  emote(b, i) {
+    if (!b || !b.alive || !Number.isInteger(i) || !EMOTES[i] || this.time < (b.emoteUntil || 0)) return false;
+    b.emoteUntil = this.time + 2.5;
+    b.revealT = Math.max(b.revealT, 1.5);
+    this.ev({ e: 'emo', id: b.id, i });
+    this.emoteFx(b, i);
+    // bots who see it may answer (ai.js)
+    if (this.mode === 'play') for (const [o, brain] of this.brains) if (o !== b && o.alive && this.canSee(o, b)) brain.heardEmote(b, i);
+    return true;
+  }
+
+  emoteFx(b, i) {
+    b.stats.emotes++;
+    b.emoteAnim(EMOTES[i]);
+    if (!this.fxVisible(b)) return;
+    this.hud.say(b, EMOTE_ICONS[i], 'emote', 2);
+    sfx('emote', this.volumeAt(b.pos.x, b.pos.z));
+  }
+
+  // Your emote: straight away offline / as host, through the input otherwise.
+  localEmote(i) {
+    const P = this.player;
+    if (!P || !P.alive || this.mode !== 'play' || this.ended) return;
+    if (this.authority) { this.emote(P, i); return; }
+    if (this.time < (P.emoteUntil || 0)) return;
+    P.emoteUntil = this.time + 2.5;
+    this.emoteSeq++;
+    this.emoteIdx = i;
+  }
+
+  // A bot's line (persona barks, ai.js): a speech bubble, if you can see it.
+  bark(b, k) {
+    if (!this.authority || this.time < (b.barkUntil || 0)) return;
+    b.barkUntil = this.time + 7 + Math.random() * 5;
+    this.ev({ e: 'bark', id: b.id, k });
+    this.barkFx(b, k);
+  }
+  barkFx(b, k) {
+    if (!b.persona || !this.fxVisible(b) || !this.player) return;
+    const line = t(`bark.${b.persona}.${k}`);
+    if (line !== `bark.${b.persona}.${k}`) this.hud.say(b, line, 'talk', 2.4);
   }
 
   controlPlayer() {

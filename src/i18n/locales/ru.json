@@ -41,7 +41,6 @@
   "result.kos": "нокауты",
   "result.cubes": "кубы",
   "result.gadgets": "гаджеты",
-  "result.mvp": "MVP: {name}, {n} урона",
   "gad.blasterA.name": "Корневой рывок",
   "gad.blasterA.desc": "Рывок на 4 м: первый враг, в которого ты врежешься, получает 400 и опутан корнями.",
   "gad.blasterB.name": "Кора",

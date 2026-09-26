@@ -41,7 +41,6 @@
   "result.kos": "击倒",
   "result.cubes": "能量块",
   "result.gadgets": "妙具",
-  "result.mvp": "MVP：{name}，{n} 伤害",
   "gad.blasterA.name": "根缚冲锋",
   "gad.blasterA.desc": "冲锋 4 米：撞到的第一个敌人受到 400 伤害并被定身。",
   "gad.blasterB.name": "树皮之肤",

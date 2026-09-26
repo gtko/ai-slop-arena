@@ -41,7 +41,6 @@
   "result.kos": "K.O.s",
   "result.cubes": "Würfel",
   "result.gadgets": "Gadgets",
-  "result.mvp": "MVP: {name}, {n} Schaden",
   "gad.blasterA.name": "Wurzelsturm",
   "gad.blasterA.desc": "Sturmangriff über 4 m: Der erste Gegner, den du rammst, erleidet 400 und wird festgewurzelt.",
   "gad.blasterB.name": "Borkenhaut",

@@ -41,6 +41,8 @@ import { PAD } from './input.js';
 import { MetaUI, skinFilter, framed, titleText } from './metaui.js';
 import { awardMatch, leagueBotLevel, cosFor } from './profile.js';
 import { parseCos, FRAMES } from './cosmetics.js';
+import { EmoteWheel } from './emotewheel.js';
+import { PERSONA_ICONS } from './ai.js';
 import { recordMatch } from './quests.js';
 import './style.css';
 import './meta.css';
@@ -253,6 +255,8 @@ menus.ctx.autoQuality = autoQuality;
 // Phones and tablets: virtual sticks + pause button (touch.js).
 const touch = isTouchDevice ? new TouchControls(input, { onPause: () => { if (!menus.paused && game.mode === 'play') menus.openPause(); } }) : null;
 if (touch) touch.setSuperLabel(t('hud.super'));
+// Emote wheel (v0.13): B, R3 or the 😀 touch button during a match.
+const wheel = new EmoteWheel(input, i => game.localEmote(i));
 // Android / iOS app: the back button closes panels and pauses the match, leaving the app pauses it.
 if (isNativeApp) {
   const pauseMatch = () => { if (!menus.paused && menus.ctx.isInMatch()) { menus.openPause(); return true; } return false; };
@@ -653,7 +657,8 @@ function showMatchLoad(mapKey, roster) {
     el.innerHTML = `<span class="ml-ok">✓</span><img src="${portrait(typeOf(r.type))}" alt="" style="filter:${skinFilter(typeOf(r.type), C.skin)}"><div class="ml-name"></div><div class="ml-title"></div><div class="ml-sub"></div><div class="ml-bar"><i></i></div>`;
     el.querySelector('.ml-title').textContent = r.human ? titleText(C.title) : '';
     el.querySelector('.ml-name').textContent = r.id === net.id ? t('lobby.you', { name: r.name }) : r.name;
-    el.querySelector('.ml-sub').textContent = r.human ? `${PLAT_ICON[r.plat] || '🌐'} ${T.name}` : `${t('load.bot')} · ${T.name}`;
+    el.querySelector('.ml-sub').textContent = r.human ? `${PLAT_ICON[r.plat] || '🌐'} ${T.name}`
+      : `${r.per ? PERSONA_ICONS[r.per] + ' ' + t('persona.' + r.per) : t('load.bot')} · ${T.name}`;
     if (!r.human) el.querySelector('.ml-bar i').style.width = '100%';
     cards.appendChild(el);
   }
@@ -872,19 +877,50 @@ game.onFeat = (kind, n) => {
   else if (kind === 'crate') achievements.crate();
   else achievements.cubes(n);
 };
-// Result stat card: your damage, KOs, cubes and gadgets, and who dealt the most damage (MVP).
+// Result stat card: your damage, KOs, cubes and gadgets, then the match awards (v0.13): the MVP
+// (most damage) and the best at K.O.s, cubes, gadgets, supers, crates and emotes.
+const AWARDS = [['kos', '💀', 2], ['cubes', '💎', 3], ['supers', '🌟', 2], ['gadgets', '🧰', 3], ['crates', '📦', 3], ['emotes', '💬', 2]];
+const who = b => (b === game.player ? t('hud.you') : b.name);
 function showStats() {
   const P = game.player, el = $('#resStats');
   if (!P) { el.innerHTML = ''; return; }
-  const mvp = game.brawlers.reduce((a, b) => (b.stats.dmg > a.stats.dmg ? b : a), P);
   const tile = (icon, v, label) => `<div><span>${icon}</span><b>${v}</b><small>${label}</small></div>`;
+  const best = k => game.brawlers.reduce((a, b) => (b.stats[k] > a.stats[k] ? b : a), P);
+  const mvp = best('dmg');
+  const list = [{ b: mvp, html: `<i>👑</i><span>${t('award.mvp')}</span> <b></b>` }];
+  for (const [k, icon, min] of AWARDS) {
+    const b = best(k);
+    if (b.stats[k] >= min) list.push({ b, html: `<i>${icon}</i><span>${t('award.' + k, { n: b.stats[k] })}</span> <b></b>` });
+  }
+  // yours first, then the others; 5 at most
+  list.sort((x, y) => (y.b === P) - (x.b === P));
   el.innerHTML = tile('💥', Math.round(P.stats.dmg), t('result.dmg')) + tile('💀', P.stats.kos, t('result.kos'))
     + tile('💎', P.stats.cubes, t('result.cubes')) + tile(GADGET_ICONS[P.type.key + P.gadget], P.stats.gadgets, t('result.gadgets'))
-    + `<p class="mvp${mvp === P ? ' me' : ''}">👑 ${t('result.mvp', { name: mvp === P ? t('hud.you') : mvp.name, n: Math.round(mvp.stats.dmg) })}</p>`;
+    + `<div class="awards">${list.slice(0, 5).map(a => `<span class="award${a.b === P ? ' me' : ''}">${a.html}</span>`).join('')}</div>`;
+  el.querySelectorAll('.award b').forEach((n, i) => { n.textContent = who(list[i].b); });
+}
+
+// Podium (v0.13): the top 3 on steps, with their looks, once the match has a winner.
+let podiumFor = null;
+function showPodium() {
+  const el = $('#resPodium');
+  if (!game.ended || !game.player) { el.innerHTML = ''; $('.result').classList.remove('podium-on'); podiumFor = null; return; }
+  if (podiumFor === game) return;
+  podiumFor = game;
+  const top = game.brawlers.filter(b => b.rank >= 1 && b.rank <= 3).sort((a, b) => a.rank - b.rank);
+  const order = [top[1], top[0], top[2]].filter(Boolean); // 2 - 1 - 3
+  el.innerHTML = order.map(b => {
+    const C = b.cos;
+    return `<div class="pd p${b.rank}${b === game.player ? ' me' : ''}">${framed(C.frame, `<img src="${portrait(b.type.key)}" alt="" style="filter:${skinFilter(b.type.key, C.skin)}">`)}
+      <span class="pd-name"></span><span class="pd-title">${b.human ? titleText(C.title) : b.persona ? PERSONA_ICONS[b.persona] + ' ' + t('persona.' + b.persona) : ''}</span><span class="pd-step">${b.rank}</span></div>`;
+  }).join('');
+  el.querySelectorAll('.pd-name').forEach((n, i) => { n.textContent = who(order[i]); });
+  $('.result').classList.add('podium-on');
 }
 
 game.onResult = (rank, won) => {
   showStats();
+  showPodium();
   achievements.result(rank, won, { night: lighting.night >= 0.5 });
   if (played && !played.ended) {
     played.ended = true;
@@ -1013,6 +1049,9 @@ function frame(ts) {
   renderer.info.reset();
   input.poll();
   menus.update(dt);
+  if (!$('#result').classList.contains('hidden') && game.ended && podiumFor !== game) { showPodium(); showStats(); } // solo: the bots finished the match
+  const inMatch = game.mode === 'play' && game.player && !menus.paused && !$('#hud').classList.contains('hidden') && $('#result').classList.contains('hidden');
+  if (inMatch) wheel.update(); else if (wheel.open) wheel.close();
   if (input.padHit(PAD.Y)) nextTimeOfDay();
   if (input.padHit(PAD.BACK)) setSetting('debugPanel', !settings.debugPanel);
   game.update(dt);

@@ -41,7 +41,6 @@
   "result.kos": "tyrmäykset",
   "result.cubes": "kuutiot",
   "result.gadgets": "gadgetit",
-  "result.mvp": "MVP: {name}, {n} vahinkoa",
   "gad.blasterA.name": "Juurirynnäkkö",
   "gad.blasterA.desc": "Rynnistä 4 m: ensimmäinen vihollinen, johon törmäät, ottaa 400 ja juurtuu paikalleen.",
   "gad.blasterB.name": "Kaarnanahka",

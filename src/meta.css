@@ -165,7 +165,7 @@
 .pd.p2 .pd-step { height: 44px; background: linear-gradient(#e6ecf5, #9aa6b8); color: var(--ink); }
 .pd.p3 .pd-step { height: 30px; background: linear-gradient(#f0b27a, #b86b2e); color: var(--ink); }
 .pd.me .pd-name { color: var(--blue); }
-.awards { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 520px; margin: 2px auto 6px; }
+.awards { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 520px; margin: 2px auto 6px; }
 .awards:empty { display: none; }
 .award { display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 12px; background: rgba(255,255,255,0.07); border: 2px solid var(--ink); font-size: 12px; font-weight: 800; animation: podiumIn 0.4s both; }
 .award.me { background: rgba(255, 210, 63, 0.18); border-color: var(--yellow); }
@@ -243,3 +243,22 @@
 .players li span[data-title]::after { content: attr(data-title); display: block; font-size: 10px; font-weight: 800; color: var(--muted); }
 .ml-card .ml-title { font-size: 10px; font-weight: 800; color: var(--yellow); min-height: 1.2em; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ml-card.ml-fr { border-radius: 16px; }
+
+/* ------------------------------ emotes and speech bubbles ------------------------------ */
+.ov-bubble { position: absolute; left: 50%; bottom: 100%; margin-bottom: 4px; transform: translateX(-50%) scale(0); opacity: 0; pointer-events: none;
+  transition: transform 0.18s cubic-bezier(.3, 1.6, .5, 1), opacity 0.15s; white-space: nowrap; }
+.ov-bubble.on { transform: translateX(-50%) scale(1); opacity: 1; }
+.ov-bubble.emote { font-size: 40px; line-height: 1; filter: drop-shadow(0 3px 0 var(--ink)); }
+.ov-bubble.talk { padding: 4px 10px; border-radius: 12px; background: #fff; color: var(--ink); border: 3px solid var(--ink); font-family: 'Nunito', system-ui, sans-serif; font-weight: 900; font-size: 13px; max-width: 220px; white-space: normal; width: max-content; }
+.ov-bubble.talk::after { content: ''; position: absolute; left: 50%; bottom: -9px; margin-left: -6px; border: 6px solid transparent; border-top-color: var(--ink); }
+
+#emoteWheel { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: auto; z-index: 5; }
+#emoteWheel::before { content: ''; position: absolute; left: -150px; top: -150px; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(rgba(16, 12, 30, 0.75), rgba(16, 12, 30, 0.35) 70%, transparent 71%); }
+#emoteWheel button { position: absolute; left: -30px; top: -30px; width: 60px; height: 60px; border-radius: 50%; border: 3px solid var(--ink); background: rgba(255,255,255,0.92);
+  font-size: 32px; line-height: 1; cursor: pointer; box-shadow: 0 4px 0 var(--ink); animation: ewIn 0.18s both; }
+#emoteWheel button:hover, #emoteWheel button.on { background: var(--yellow); }
+#emoteWheel button small { position: absolute; right: -2px; bottom: -4px; font-family: var(--display); font-size: 12px; color: #fff; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; }
+#emoteWheel .ew-hint { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); font-family: var(--display); font-size: 14px; color: #fff; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; white-space: nowrap; }
+@keyframes ewIn { from { opacity: 0; scale: 0.4; } }
+#touch .t-emote { position: absolute; right: calc(250px + env(safe-area-inset-right)); bottom: calc(34px + env(safe-area-inset-bottom)); width: 46px; height: 46px; border-radius: 50%;
+  border: 3px solid var(--ink); background: rgba(255,255,255,0.3); font-size: 24px; line-height: 1; pointer-events: auto; touch-action: none; padding: 0; }

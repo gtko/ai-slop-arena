@@ -41,7 +41,6 @@
   "result.kos": "nocautes",
   "result.cubes": "cubos",
   "result.gadgets": "gadgets",
-  "result.mvp": "MVP: {name}, {n} de dano",
   "gad.blasterA.name": "Investida raiz",
   "gad.blasterA.desc": "Avance 4 m: o primeiro inimigo que você atingir sofre 400 e fica enraizado.",
   "gad.blasterB.name": "Pele de casca",

@@ -41,7 +41,6 @@
   "result.kos": "KO数",
   "result.cubes": "キューブ",
   "result.gadgets": "ガジェット",
-  "result.mvp": "MVP: {name}（{n} ダメージ）",
   "gad.blasterA.name": "ルートチャージ",
   "gad.blasterA.desc": "4m突進。最初にぶつかった敵に400ダメージを与え、根で拘束する。",
   "gad.blasterB.name": "バークスキン",
