@@ -161,7 +161,7 @@ export class BotBrain {
       const s = d + (o.hp / o.maxHp) * (4 + H.lowHp) - (o === this.target ? 2 : 0);
       if (s < bestS) { bestS = s; best = o; }
     }
-    if (best !== this.target) { this.seen = 0; this.seenAt = g.time; if (best && best.isPlayer && Math.random() < 0.5) g.bark(b, 'spot'); } // memory starts with the new target
+    if (best !== this.target) { this.seen = 0; this.seenAt = g.time; if (best && best.human && Math.random() < 0.5) g.bark(b, 'spot'); } // memory starts with the new target
     this.target = best;
     this.crate = null;
 
