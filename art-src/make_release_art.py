@@ -1109,6 +1109,61 @@ def v0140():
     img.convert('RGB').save(os.path.join(OUT, 'v0.14.0-kappa.png'), optimize=True)
 
 
+def v0150():
+    banner('v0.15.0', 'WILD ISLES', 'Bites in the bushes. Islands falling.',
+           [('🏝️', 'Windmill Isles'), ('🌿', 'Pip & Chomp'), ('🍡', 'Mochi'), ('💥', 'Map kit')],
+           'v0.15.0-banner.png', ('pipchomp', 'mochi', 'kappa'))
+
+    # Windmill Isles and the map kit (src/kit.js): real numbers
+    W, H = 1600, 900
+    img = background(W, H, glow=(0.5, 0.3))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'THE ISLANDS ARE FALLING', display(56), YELLOW, anchor='ma')
+    shot = Image.open(os.path.join(ROOT, 'public', 'assets', 'site', 'map_isles.jpg')).convert('RGBA')
+    shot = shot.resize((760, 475), Image.LANCZOS)
+    card(img, (50, 130, 830, 625), outline=(47, 158, 68), radius=24)
+    mask = Image.new('L', shot.size, 0); ImageDraw.Draw(mask).rounded_rectangle((0, 0, *shot.size), 18, fill=255)
+    img.paste(shot, (60, 140), mask)
+    d.text((440, 650), 'Windmill Isles: no gas, the islands crumble', font=body(26, 'Bold'), fill=TEXT, anchor='ma')
+    d.text((440, 692), 'outer islands at 40 s and 60 s, the bridges at 80 s,', font=body(22, 'Bold'), fill=MUTED, anchor='ma')
+    d.text((440, 726), 'then the middle shrinks, then the gas', font=body(22, 'Bold'), fill=MUTED, anchor='ma')
+    rows = [('🌀', 'Ring-outs', 'pushed into the void: the pusher gets the K.O.'),
+            ('🌉', 'Bridges', '1200 HP against explosions, then they fall'),
+            ('🦘', 'Jump pads', 'to the next ground, 150 on landing (Oasis too)'),
+            ('💥', 'Barrels', '900 in 2.5 m, a big push, chain reactions (Dunes too)'),
+            ('🍄', 'Mushrooms', '+1200 health over 2 s, back in 20 s'),
+            ('👣', 'Arenas react', 'footprints, rubble, a light on freed cubes')]
+    for i, (icon, head, line) in enumerate(rows):
+        y = 130 + i * 122
+        card(img, (860, y, W - 50, y + 108), outline=(47, 158, 68), radius=20)
+        d.text((890, y + 26), icon, font=emoji(48), embedded_color=True)
+        d.text((965, y + 16), head, font=display(30), fill=YELLOW)
+        d.text((965, y + 60), line, font=body(20, 'Bold'), fill=TEXT)
+    img.convert('RGB').save(os.path.join(OUT, 'v0.15.0-isles.png'), optimize=True)
+
+    # the two new brawlers (src/brawler.js, src/combat.js, src/gadgets.js)
+    W, H = 1600, 860
+    img = background(W, H, glow=(0.5, 0.35))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'TWO NEW BRAWLERS', display(56), YELLOW, anchor='ma')
+    cols = [('pipchomp', 'PIP & CHOMP', 'Assassin · 4200 HP', (47, 158, 68),
+             ['Lunge-bite: 4 m, 3 x 950,', 'bends 15° to its target', 'Super: Venus Trap, a bush', 'that bites, roots, reveals', 'Leap Snack · Spore Puff']),
+            ('mochi', 'MOCHI', 'Tank · 6800 HP', (230, 73, 128),
+             ['Belly bump: 3 jelly waves,', 'pushes (off a cliff!)', 'Super: Mochi Pound, a 9 m', 'leap, 1000 and a stun', 'Belly Slide · Sticky Mochi'])]
+    for k, (key, name, sub, col, lines) in enumerate(cols):
+        x0 = 60 + k * 760
+        card(img, (x0, 120, x0 + 720, 780), outline=col, radius=26)
+        pic = Image.open(os.path.join(UI, key + '.png')).convert('RGBA')
+        pic = pic.resize((int(pic.width * 330 / pic.height), 330), Image.LANCZOS)
+        img.alpha_composite(pic, (x0 + 30, 440))
+        d.text((x0 + 360, 145), name, font=display(44), fill=YELLOW, anchor='ma')
+        d.text((x0 + 360, 205), sub, font=body(24, 'Bold'), fill=MUTED, anchor='ma')
+        for li, line in enumerate(lines):
+            d.text((x0 + 360, 250 + li * 38), line, font=body(24, 'Bold'), fill=TEXT, anchor='ma')
+    d.text((W // 2, 815), 'Each unlocks for 1,500 Slop Coins or 240 Gems, or try them free in Training', font=body(22, 'Bold'), fill=MUTED, anchor='ma')
+    img.convert('RGB').save(os.path.join(OUT, 'v0.15.0-brawlers.png'), optimize=True)
+
+
 if __name__ == '__main__':
     import sys
     os.makedirs(OUT, exist_ok=True)
@@ -1132,5 +1187,6 @@ if __name__ == '__main__':
     v0130()
     v0131()
     v0140()
+    v0150()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')
