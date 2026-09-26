@@ -14,8 +14,12 @@ for (const file of readdirSync(dir).filter(f => f.endsWith('.js'))) {
   try {
     assert.ok(MAPS[key], `${file}: no map "${key}" in maps.js`);
     const M = MAPS[key], rows = M.full || [];
-    const get = (i, j) => rows[j]?.[i] ?? 'X'; // quadrant maps: every tile reads as open floor below
-    const grid = rows.length ? get : (i, j) => (i === 0 || j === 0 || i === N - 1 || j === N - 1 ? 'X' : '.');
+    // the real grid, as arena.js builds it: a full layout, or the top-left quadrant mirrored 4 ways
+    const Q = M.layout, grid = (i, j) => {
+      if (i < 0 || j < 0 || i >= N || j >= N) return 'X';
+      const ch = rows.length ? rows[j]?.[i] || 'V' : Q[Math.min(j, N - 1 - j)]?.[Math.min(i, N - 1 - i)] || '.';
+      return ch === 'S' ? '.' : ch;
+    };
     let seed = 1;
     const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     const arena = {

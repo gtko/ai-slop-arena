@@ -101,7 +101,7 @@ export default function grove(L) {
       if (!b.T) {
         // a visible brawler right under the wall: flutter off along it (never from a hidden one)
         const near = seen.find(p => Math.hypot(p.pos.x - bx, p.pos.z - bz) < 3.5);
-        if (near) go(b, Math.sign(b.side < 2 ? bx - near.pos.x : bz - near.pos.z || 1) * (4 + R() * 4), 1.2);
+        if (near) go(b, Math.sign((b.side < 2 ? bx - near.pos.x : bz - near.pos.z) || 1) * (4 + R() * 4), 1.2);
         else if ((b.wait -= dt) <= 0) {
           if (R() < 0.15) go(b, (R() - 0.5) * 12, 0.9);
           else if (R() < 0.6) go(b, (R() - 0.5) * 1.4, 0);

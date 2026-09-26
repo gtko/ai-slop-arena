@@ -38,12 +38,13 @@ const appBuild = {
 };
 
 // Authoritative server (`vite build --mode server`): the game rules bundled for the Cloudflare
-// Worker as worker/sim.js, with the sound and translation modules swapped for server stubs.
+// Worker as worker/sim.js, with the sound, translation and ambient fauna modules swapped for server stubs.
 const serverBuild = {
   resolve: {
     alias: [
       { find: /^\.\/audio\.js$/, replacement: resolve(__dirname, 'src/server/audio.js') },
       { find: /^\.\/i18n\/index\.js$/, replacement: resolve(__dirname, 'src/server/i18n.js') },
+      { find: /^\.\/ambient\/index\.js$/, replacement: resolve(__dirname, 'src/server/ambient.js') },
       { find: /^meshoptimizer$/, replacement: resolve(__dirname, 'src/server/meshopt.js') },
     ],
   },

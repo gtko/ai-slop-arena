@@ -32,6 +32,7 @@ export class Ambient {
     this.group.name = 'ambient';
     game.arena.group.add(this.group); // disposed with the arena
     this.systems = [];
+    this.seen = [];
     const key = game.mapKey, mod = MODULES[`./maps/${key}.js`];
     if (!mod?.default) return;
     const g = game, self = this;
@@ -45,7 +46,7 @@ export class Ambient {
       swarm: o => self.add(new Swarm(self, o, L)),
       every: fn => self.add({ update: fn }),
       // brawlers the local player can see (alive): the only ones animals may react to
-      seen: () => g.brawlers.filter(b => b.alive && g.fxVisible(b)),
+      seen: () => self.seen,
     };
     try { mod.default(L); } catch (err) { console.warn('ambient', key, err); }
   }
@@ -65,7 +66,15 @@ export class Ambient {
   }
 
   update(dt, t) {
-    for (const s of this.systems) s.update(dt, t);
+    const g = this.g;
+    this.seen = g.brawlers.filter(b => b.alive && g.fxVisible(b)); // once a frame, for every species
+    for (const s of this.systems) { // in order: a map's own L.every may adjust what a helper just placed
+      if (s.broken) continue;
+      try { s.update(dt, t); } catch (err) { // cosmetic: a broken species stops, the match plays on
+        console.warn('ambient', g.mapKey, err);
+        s.broken = true;
+      }
+    }
   }
 }
 
