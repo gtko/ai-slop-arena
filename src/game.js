@@ -580,7 +580,7 @@ export class Game {
 
   // Cube Rain (Weekly Chaos): from 12 s on, 2 power cubes fall on open ground every 6 s.
   cubeRain() {
-    if (!this.authority || this.ended || this.mode !== 'play' || this.time < this.rainT) return;
+    if (this.mutator !== 'cubeRain' || !this.authority || this.ended || this.mode !== 'play' || this.time < this.rainT) return;
     this.rainT = this.time + 6;
     const A = this.arena;
     for (let k = 0; k < 2; k++) {
@@ -837,7 +837,7 @@ export class Game {
     this.updateCrown(t);
     this.updateDrops(dt);
     this.events.update(dt);
-    if (this.mutator === 'cubeRain') this.cubeRain();
+    this.cubeRain();
     if (this.dojo) this.updateDojo();
     this.updateVisibility();
     this.updateFoliage(dt);

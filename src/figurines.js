@@ -274,7 +274,7 @@ const RECOL_FRAG = /* glsl */`
 if ( uRecol.x != 0.0 || uRecol.y != 1.0 || uRecol.z != 1.0 ) {
   vec3 yiq = mat3( 0.299, 0.596, 0.211, 0.587, -0.274, -0.523, 0.114, -0.322, 0.312 ) * diffuseColor.rgb;
   float hc = cos( uRecol.x ), hs = sin( uRecol.x );
-  yiq.yz = vec2( yiq.y * hc - yiq.z * hs, yiq.y * hs + yiq.z * hc ) * uRecol.y;
+  yiq.yz = vec2( yiq.y * hc + yiq.z * hs, yiq.z * hc - yiq.y * hs ) * uRecol.y; // same turn as CSS hue-rotate (the previews)
   diffuseColor.rgb = max( mat3( 1.0, 1.0, 1.0, 0.956, -0.272, -1.106, 0.621, -0.647, 1.703 ) * yiq, 0.0 ) * uRecol.z;
 }
 if ( uGold > 0.0 ) {

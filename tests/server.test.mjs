@@ -208,6 +208,7 @@ await test('the arena event never starts in the training dojo', () => {
 await test('emotes: sent with the input, one every 2.5 s, and they reveal you', () => {
   const { m, out, g } = match('oasis', ['alice']);
   const a = g.byId.get('alice');
+  a.maxHp = a.hp = 1e7; // the bots wake up meanwhile: alice must still be standing
   while (g.time < 6) m.advance(0.05);
   const at = { from: 'alice', x: a.net.x, z: a.net.y, ax: 1, az: 0, px: a.pos.x, pz: a.pos.z, f: 0, s: 0, g: 0 };
   m.input({ ...at, em: 1, ei: 3 });
@@ -242,9 +243,11 @@ await test('Weekly Chaos mutators change the rules on the server', () => {
   assert.equal(run('gadgetFrenzy', 0).g.gadgetLockout, 2);
   assert.equal(run('gasBreath', 0).g.poison.interval, 4.5);
   assert.equal(run('nightHunt', 0).g.sightRange, 9);
-  const rain = run('cubeRain', 20), dry = run(null, 20);
-  const cubes = x => events(x.out).filter(e => e.e === 'item').length;
-  assert.ok(cubes(rain) >= cubes(dry) + 4, 'no cube rain');
+  const rain = run('cubeRain', 13), dry = run(null, 13);
+  assert.ok(rain.g.rainT > 17, 'the first cubes did not fall at 12 s');
+  for (const x of [rain, dry]) { const n = x.g.items.length; x.g.rainT = 0; x.g.cubeRain(); x.n = x.g.items.length - n; }
+  assert.equal(rain.n, 2, 'no cube rain');
+  assert.equal(dry.n, 0, 'cube rain without the mutator');
   const { g } = run('superRush', 6), b = g.brawlers[1], o = g.brawlers[2];
   b.superCharge = 0; g.damage(o, 100, b);
   assert.ok(Math.abs(b.superCharge - 200 / b.type.superCost) < 1e-9, 'supers do not charge twice as fast');

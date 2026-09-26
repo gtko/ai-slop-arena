@@ -52,7 +52,7 @@ function inFan(b, p, o) {
   const half = { blaster: 0.36, frostbite: 0.2 }[b.type.key];
   if (!half) return false;
   const dx = o.pos.x - b.pos.x, dz = o.pos.z - b.pos.z, d = Math.hypot(dx, dz);
-  if (d > b.type.range + 1.5) return false;
+  if (d > b.type.range + 2.5) return false; // range counts from the muzzle, plus both radii
   const diff = Math.atan2(dx, dz) - Math.atan2(p.x - b.pos.x, p.z - b.pos.z);
   return Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff))) < half + Math.atan2(1.2, Math.max(d, 0.5));
 }
