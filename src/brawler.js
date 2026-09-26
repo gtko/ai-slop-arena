@@ -304,7 +304,7 @@ export class Brawler {
         sfx('immune', this.g.volumeAt(this.pos.x, this.pos.z));
       }
     }
-    const statusMul = (this.freezeT > 0 || this.rootT > 0 ? 0 : this.slowT > 0 ? this.slowMul || 0.55 : 1) * (this.slowSelfT > 0 ? 0.8 : 1);
+    const statusMul = (this.freezeT > 0 || this.rootT > 0 ? 0 : this.slowT > 0 ? this.slowMul || 0.55 : 1) * (this.slowSelfT > 0 ? 0.8 : 1) * (this.g.speedMul ?? 1);
 
     // Brawl-style regen: 13%/s after 3s without dealing or taking damage.
     const calm = hasStar(this, 'sapRegen') ? 2 : 3; // star power: regen kicks in sooner

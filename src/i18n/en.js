@@ -580,4 +580,9 @@ export default {
   'award.gadgets': { one: "Gadgeteer · {n} gadget", other: "Gadgeteer · {n} gadgets" },
   'award.crates': { one: "Crate crusher · {n} crate", other: "Crate crusher · {n} crates" },
   'award.emotes': { one: "Chatterbox · {n} emote", other: "Chatterbox · {n} emotes" },
+  'event.geysers': "GEYSERS!",
+  'event.meteors': "METEOR SHOWER!",
+  'event.lightning': "LIGHTNING ROD!",
+  'event.blizzard': "BLIZZARD!",
+  'event.fogbank': "FOG BANK!",
 };

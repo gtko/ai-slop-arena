@@ -905,8 +905,8 @@ let podiumFor = null;
 function showPodium() {
   const el = $('#resPodium');
   if (!game.ended || !game.player) { el.innerHTML = ''; $('.result').classList.remove('podium-on'); podiumFor = null; return; }
-  if (podiumFor === game) return;
-  podiumFor = game;
+  if (podiumFor === game.matchNo) return;
+  podiumFor = game.matchNo;
   const top = game.brawlers.filter(b => b.rank >= 1 && b.rank <= 3).sort((a, b) => a.rank - b.rank);
   const order = [top[1], top[0], top[2]].filter(Boolean); // 2 - 1 - 3
   el.innerHTML = order.map(b => {
@@ -1049,7 +1049,7 @@ function frame(ts) {
   renderer.info.reset();
   input.poll();
   menus.update(dt);
-  if (!$('#result').classList.contains('hidden') && game.ended && podiumFor !== game) { showPodium(); showStats(); } // solo: the bots finished the match
+  if (!$('#result').classList.contains('hidden') && game.ended && podiumFor !== game.matchNo) { showPodium(); showStats(); } // solo: the bots finished the match
   const inMatch = game.mode === 'play' && game.player && !menus.paused && !$('#hud').classList.contains('hidden') && $('#result').classList.contains('hidden');
   if (inMatch) wheel.update(); else if (wheel.open) wheel.close();
   if (input.padHit(PAD.Y)) nextTimeOfDay();

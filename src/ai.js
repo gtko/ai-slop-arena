@@ -73,7 +73,7 @@ const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
 export const PERSONAS = ['hunter', 'camper', 'looter', 'vulture', 'coward', 'showoff'];
 export const PERSONA_ICONS = { hunter: '🎯', camper: '⛺', looter: '💰', vulture: '🦅', coward: '🐔', showoff: '🕺' };
 const HABITS = {
-  hunter: { sight: 6, grace: -3, retreat: 0.22, loot: 0.6 },
+  hunter: { sight: 6, retreat: 0.22, loot: 0.6 },
   camper: { sight: -2, camp: true },
   looter: { loot: 1.8, retreat: 0.4 },
   vulture: { lowHp: 10, sight: 2 },
@@ -308,6 +308,12 @@ export class BotBrain {
       if (Z.owner === b) continue;
       const dx = b.pos.x - Z.x, dz = b.pos.z - Z.z, d = Math.hypot(dx, dz);
       if (d < Z.r + 1 && d > 1e-3) { move.x += dx / d * 1.5; move.z += dz / d * 1.5; }
+    }
+    // arena events (events.js): step out of a telegraph, the sharper the sooner
+    for (const W of g.events.warns) {
+      if (W.t > 0.4 + this.skill * 0.9) continue;
+      const dx = b.pos.x - W.x, dz = b.pos.z - W.z, d = Math.hypot(dx, dz);
+      if (d < 2.4 && d > 1e-3) { move.x += dx / d * 2; move.z += dz / d * 2; }
     }
   }
 

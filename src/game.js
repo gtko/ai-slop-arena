@@ -13,7 +13,8 @@ import { t } from './i18n/index.js';
 import { Feel, weapon } from './feel.js';
 import { GADGETS, GADGET_CHARGES, GADGET_LOCKOUT, parseLoadout, validLoadout, flareFx, gadgetFx } from './gadgets.js';
 import { KOFX, validCos, EMOTES, EMOTE_ICONS } from './cosmetics.js';
-import { PERSONAS, PERSONA_ICONS } from './ai.js';
+import { PERSONAS } from './ai.js';
+import { ArenaEvents } from './events.js';
 
 const NAMES = ['Bolt', 'Nova', 'Rex', 'Juno', 'Pix', 'Kai', 'Moxie', 'Zed', 'Luna', 'Taro', 'Fizz', 'Oona', 'Brick', 'Echo'];
 const TYPE_KEYS = Object.keys(TYPES);
@@ -70,6 +71,8 @@ export class Game {
     scene.add(this.fx);
     this.effects = new Effects(this.fx);
     this.combat = new Combat(this);
+    this.events = new ArenaEvents(this); // themed arena events (v0.13)
+    this.speedMul = 1;                    // everyone's speed (the blizzard slows it)
     this.arena = null;
     this.poison = null;
     this.brawlers = [];
@@ -122,12 +125,14 @@ export class Game {
     for (const it of this.items) this.fx.remove(it.mesh);
     this.items = [];
     this.combat.clear();
+    this.events.clear(); // first: it gives back the sight a blizzard or fog bank took
     this.effects.clear();
     if (this.poison) this.poison.dispose();
     if (this.weather) this.weather.dispose();
     if (this.arena) this.arena.dispose();
 
     this.mapKey = MAPS[mapKey] ? mapKey : 'oasis';
+    this.matchNo = (this.matchNo || 0) + 1; // which match this is (the result screen knows it drew it)
     this.net = net;
     this.outbox = [];
     this.ended = false;
@@ -179,6 +184,8 @@ export class Game {
     for (const D of this.dropping || []) this.fx.remove(D.beam, D.ring);
     if (dojo) this.setupDojo();
     this.drops = this.mode === 'play' && !dojo ? [40 + Math.random() * 10, 85 + Math.random() * 10] : [];
+    // the arena's own event, between the two drops (the authority starts it)
+    this.events.reset(this.mapKey, this.mode === 'play' && !dojo ? 55 + Math.random() * 8 : Infinity);
     this.dropping = [];
     this.gadgetSeq = 0;
     this.emoteSeq = 0;
@@ -743,6 +750,7 @@ export class Game {
         case 'emo': if (b && b.alive && Number.isInteger(e.i) && EMOTES[e.i]) this.emoteFx(b, e.i); break;
         case 'bark': if (b && b.alive && typeof e.k === 'string') this.barkFx(b, e.k); break;
         case 'dropWarn': this.dropWarn(e.i, e.j); break;
+        case 'arena': this.events.onEvent(e); break;
         case 'zoneOff': this.combat.zones.filter(Z => Z.once && Math.hypot(Z.x - e.x, Z.z - e.z) < 0.1).forEach(Z => { Z.t = 0; }); break;
         case 'ice': this.arena.iceWall(e.t, 3); break;
         case 'zone': this.combat.zone({ ...e.z, owner: this.byId.get(e.z.owner), col: new THREE.Color(...e.z.col) }); break;
@@ -799,6 +807,7 @@ export class Game {
     this.updateItems(dt, t);
     this.updateCrown(t);
     this.updateDrops(dt);
+    this.events.update(dt);
     if (this.dojo) this.updateDojo();
     this.updateVisibility();
     this.updateFoliage(dt);
