@@ -974,6 +974,64 @@ def v0120():
     img.convert('RGB').save(os.path.join(OUT, 'v0.12.0-more.png'), optimize=True)
 
 
+def v0130():
+    banner('v0.13.0', 'LEVEL UP', 'Every match earns something. Everyone sees it.',
+           [('⭐', 'Account levels'), ('📜', 'Quests'), ('🏆', 'Bot League'), ('🎨', 'Cosmetics')],
+           'v0.13.0-banner.png', ('volt', 'gunslinger', 'blaster'))
+
+    # what a match pays (src/profile.js, src/quests.js): real numbers
+    feats = [('⭐', 'Account level', ['~55 XP a match', 'coins every level,', 'cosmetics at 16 levels']),
+             ('📜', 'Quests', ['3 daily + 1 weekly', 'stamped when done,', 'one reroll a day']),
+             ('🏆', 'Bot League', ['trophies per brawler', 'in solo, 20 rewards', 'on the Trophy Road']),
+             ('🪙', 'Slop Coins', ['earned only by playing,', 'a new shop every day,', 'looks only']),
+             ('🎨', 'Cosmetics', ['recolours, golden', 'figurines, trails,', 'K.O. effects, frames']),
+             ('🏅', 'Podium', ['the top 3 on steps,', 'MVP and 6 more', 'match awards'])]
+    W, H = 1600, 840
+    img = background(W, H, glow=(0.5, 0.3))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'EVERY MATCH EARNS SOMETHING', display(56), YELLOW, anchor='ma')
+    cw, chh, gx, gy = 470, 300, 30, 30
+    x0 = (W - (3 * cw + 2 * gx)) // 2
+    for i, (icon, head, lines) in enumerate(feats):
+        x, y = x0 + (i % 3) * (cw + gx), 140 + (i // 3) * (chh + gy)
+        card(img, (x, y, x + cw, y + chh), outline=(150, 120, 230), radius=26)
+        d.text((x + cw // 2, y + 22), icon, font=emoji(58), embedded_color=True, anchor='ma')
+        d.text((x + cw // 2, y + 108), head, font=display(34), fill=YELLOW, anchor='ma')
+        for li, line in enumerate(lines):
+            d.text((x + cw // 2, y + 164 + li * 36), line, font=body(23, 'Bold'), fill=TEXT, anchor='ma')
+    img.convert('RGB').save(os.path.join(OUT, 'v0.13.0-progress.png'), optimize=True)
+
+    # the arena events (src/events.js) and the Weekly Chaos (src/mutators.js)
+    events = [('oasis', '⛲', 'Geysers', 'erupt under your feet'), ('dunes', '☄️', 'Meteor shower', 'smashes walls and crates'),
+              ('grove', '⚡', 'Lightning rod', 'strikes the closest brawler'), ('frost', '🌨️', 'Blizzard', 'sight 7 m, slower steps'),
+              ('marsh', '🍄', 'Fog bank', 'fog closes in, healing mushrooms')]
+    muts = [('💎', 'Cube Rain'), ('🌙', 'Night Hunt'), ('☠️', 'Gas Breath'), ('🌟', 'Super Rush'), ('🧰', 'Gadget Frenzy')]
+    W, H = 1600, 900
+    img = background(W, H, glow=(0.5, 0.3))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'THE ARENAS FIGHT BACK', display(56), YELLOW, anchor='ma')
+    for k, (key, icon, name, desc) in enumerate(events):
+        x, y = 60 + k * 300, 130
+        card(img, (x, y, x + 280, y + 380), outline=(125, 227, 255), radius=24)
+        m = Image.open(os.path.join(ROOT, 'public', 'assets', 'ui', 'map_' + key + '.jpg')).convert('RGBA')
+        z = 248 * 1.35 / m.width  # zoomed in on the middle: some previews have white margins
+        m = m.resize((int(m.width * z), int(m.height * z)), Image.LANCZOS)
+        m = m.crop(((m.width - 248) // 2, (m.height - 140) // 2, (m.width - 248) // 2 + 248, (m.height - 140) // 2 + 140))
+        img.alpha_composite(m, (x + 16, y + 16))
+        d.text((x + 140, y + 170), icon, font=emoji(52), embedded_color=True, anchor='ma')
+        d.text((x + 140, y + 240), name, font=display(30), fill=(125, 227, 255), anchor='ma')
+        for li, line in enumerate(wrap(d, desc, body(21, 'Bold'), 240)):
+            d.text((x + 140, y + 290 + li * 30), line, font=body(21, 'Bold'), fill=TEXT, anchor='ma')
+    d.text((W // 2, 548), 'Every hit is telegraphed on the ground first', font=body(26, 'Bold'), fill=TEXT, anchor='ma')
+    outlined(d, (W // 2, 610), 'WEEKLY CHAOS', display(46), (255, 107, 216), anchor='ma')
+    for k, (icon, name) in enumerate(muts):
+        x, y = 60 + k * 300, 690
+        card(img, (x, y, x + 280, y + 150), outline=(255, 107, 216), radius=24)
+        d.text((x + 140, y + 18), icon, font=emoji(50), embedded_color=True, anchor='ma')
+        d.text((x + 140, y + 94), name, font=display(28), fill=TEXT, anchor='ma')
+    img.convert('RGB').save(os.path.join(OUT, 'v0.13.0-arenas.png'), optimize=True)
+
+
 if __name__ == '__main__':
     import sys
     os.makedirs(OUT, exist_ok=True)
@@ -994,5 +1052,6 @@ if __name__ == '__main__':
     v0101()
     v0110()
     v0120()
+    v0130()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')

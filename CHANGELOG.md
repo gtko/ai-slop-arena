@@ -3,6 +3,15 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.13.0](docs/releases/v0.13.0.md): Level up
+
+<a href="docs/releases/v0.13.0.md"><img src="docs/releases/img/v0.13.0-banner.png" alt="v0.13.0: level up" width="100%"></a>
+
+- ⭐ Account levels, daily and weekly quests, a Bot League with its Trophy Road.
+- 🎨 Slop Coins earned by playing, a daily shop, recolours, golden figurines, trails, K.O. effects, frames and titles.
+- 😀 Emote wheel, a result podium with awards, bots with personalities.
+- 🌋 An event on every arena and a Weekly Chaos twist. Update required to play online.
+
 ## [v0.12.0](docs/releases/v0.12.0.md): Gadgets
 
 <a href="docs/releases/v0.12.0.md"><img src="docs/releases/img/v0.12.0-banner.png" alt="v0.12.0: gadgets" width="100%"></a>
