@@ -145,8 +145,10 @@ export class Game {
     this.effects.clear();
     if (this.poison) this.poison.dispose();
     if (this.weather) this.weather.dispose();
+    if (this.kit) this.kit.dispose();
     if (this.arena) this.arena.dispose();
 
+    this.headless = headless; // the server: no one looks, so no cosmetics (kit.js)
     this.mapKey = MAPS[mapKey] ? mapKey : 'oasis';
     this.matchNo = (this.matchNo || 0) + 1; // which match this is (the result screen knows it drew it)
     this.net = net;

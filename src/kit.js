@@ -25,6 +25,7 @@ const DOOM_WARN = 5;
 const r2 = v => Math.round(v * 100) / 100;
 const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3();
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
+const _r = new THREE.Matrix4(), _w = new THREE.Matrix4();
 
 export class MapKit {
   constructor(game) {
@@ -258,6 +259,7 @@ export class MapKit {
     }
     this.cloudMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2),
       new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xc4d8f0, emissiveIntensity: 0.55, roughness: 1, flatShading: true }), puffs.length);
+    this.cloudMesh.frustumCulled = false; // drifts out of the bounding sphere it had at first
     G.add(this.cloudMesh);
     this.placeClouds(0);
 
@@ -280,6 +282,7 @@ export class MapKit {
     this.birdBody = new THREE.InstancedMesh(body, gull, nb);
     this.birdWingL = new THREE.InstancedMesh(wing, gull, nb);
     this.birdWingR = new THREE.InstancedMesh(wing, gull, nb);
+    for (const M of [this.birdBody, this.birdWingL, this.birdWingR]) M.frustumCulled = false; // they fly around
     G.add(this.birdBody, this.birdWingL, this.birdWingR);
 
     // far islets: a grassy top on an upside-down rock, a round tree or a tiny windmill
@@ -360,7 +363,7 @@ export class MapKit {
   }
 
   flyBirds(t) {
-    const B = this.birds, _r = new THREE.Matrix4(), _w = new THREE.Matrix4();
+    const B = this.birds;
     B.forEach((b, k) => {
       const F = b.F, a = F.a + F.w * t, dir = Math.sign(F.w);
       // along the circle: heading is the tangent
@@ -614,6 +617,7 @@ export class MapKit {
         }
         continue;
       }
+      if (g.ended || g.headless) continue; // the match is over / the server: nobody watches it shake
       const p = Math.min(1, (g.time - L.t0) / DOOM_WARN), amp = 0.02 + 0.13 * p * p;
       G.position.set(L.cx + (Math.random() - 0.5) * amp * 2, (Math.random() - 0.5) * amp * 0.6, L.cz + (Math.random() - 0.5) * amp * 2);
       G.rotation.set(Math.sin(g.time * 23) * amp * 0.05, 0, Math.cos(g.time * 19) * amp * 0.05);
@@ -772,6 +776,13 @@ export class MapKit {
   }
   inPuff(x, z) { return this.puffs.length > 0 && this.puffs.some(P => Math.hypot(P.x - x, P.z - z) < P.r); }
 
+  // Made here but only reachable while an island is doomed: the arena walk would miss them.
+  dispose() {
+    this.crackTex?.dispose();
+    this.pebble?.dispose();
+    this.pebbleMat?.dispose();
+  }
+
   onEvent(e) {
     switch (e.k) {
       case 'trap': { const b = this.g.byId.get(e.id); if (b) { for (const T of this.traps.filter(T => T.owner === b)) this.removeTrap(T); this.addTrap(b, e.i, e.j); } break; }
@@ -804,9 +815,9 @@ export class MapKit {
     if (this.sails) this.sails.rotation.z += dt * 0.6;
     if (this.padMat) this.padMat.emissiveIntensity = 0.6 + 0.5 * Math.sin(g.time * 5);
     if (this.clouds) this.clouds.offset.x += dt * 0.004;
-    if (this.cloudMesh) this.placeClouds(dt);
-    if (this.birds) this.flyBirds(performance.now() / 1000);
-    if (this.islets) for (const I of this.islets) {
+    if (this.cloudMesh && !g.headless) this.placeClouds(dt);
+    if (this.birds && !g.headless) this.flyBirds(performance.now() / 1000);
+    if (this.islets && !g.headless) for (const I of this.islets) {
       I.g.position.y = I.y + Math.sin(g.time * 0.5 + I.ph) * 0.35;
       if (I.g.userData.hub) I.g.userData.hub.rotation.z += dt * 0.9;
     }
