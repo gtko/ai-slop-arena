@@ -38,7 +38,7 @@ import { preloadFigurines, setFigurineDetail } from './figurines.js';
 import { preloadProps, PROPS } from './props.js';
 import { enableCartoonShading, cartoonGradePass } from './cartoon.js';
 import { PAD } from './input.js';
-import { MetaUI, skinFilter, framed, titleText } from './metaui.js';
+import { MetaUI, skinFilter, framed, titleText, num } from './metaui.js';
 import { awardMatch, leagueBotLevel, cosFor, unlock, owns } from './profile.js';
 import { parseCos, FRAMES } from './cosmetics.js';
 import { EmoteWheel } from './emotewheel.js';
@@ -50,6 +50,10 @@ import './meta.css';
 import './home.css';
 
 installTelemetry(); // crash reports first: the rest of the start-up can fail
+{ // heavy display fonts for Chinese, Japanese, Korean: only in those languages (see home.css --display)
+  const cjk = { ja: 'M+PLUS+Rounded+1c:wght@800', 'zh-CN': 'Noto+Sans+SC:wght@900', 'zh-TW': 'Noto+Sans+TC:wght@900', ko: 'Noto+Sans+KR:wght@900' }[document.documentElement.lang];
+  if (cjk) document.head.insertAdjacentHTML('beforeend', `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${cjk}&display=swap">`);
+}
 translateDom();
 
 const $ = s => document.querySelector(s);
@@ -305,7 +309,7 @@ function renderHero() {
   $('#heroRole').textContent = t(`brawler.${chosen}.role`);
   $('#heroDesc').textContent = t(`brawler.${chosen}.desc`);
   const next = LEVELS[P.level];
-  $('#heroMastery').innerHTML = `<b>${t('menu.mastery', { n: P.level })}</b><i><u style="width:${(P.frac * 100).toFixed(0)}%"></u></i>${next ? `<small>${P.p} / ${next}</small>` : ''}`;
+  $('#heroMastery').innerHTML = `<b>${t('menu.mastery', { n: P.level })}</b><i><u style="width:${(P.frac * 100).toFixed(0)}%"></u></i>${next ? `<small><bdi dir="ltr">${P.p} / ${next}</bdi></small>` : ''}`;
   const bar = (label, v, max) => `<div><small>${label}</small><i><u style="width:${Math.min(100, v / max * 100).toFixed(0)}%"></u></i><b>${v}</b></div>`;
   $('#heroStats').innerHTML = bar(t('menu.hp'), T.hp, 5000) + bar(t('menu.range'), T.range, 16) + bar(t('menu.speed'), T.speed, 7);
   cards.querySelectorAll('.rt').forEach(c => {
@@ -375,7 +379,8 @@ let chaosOn = false;
 try { chaosOn = localStorage.getItem('iaslop-chaos') === '1'; } catch { /* private mode */ }
 function chaosChip(btn, on, enabled = true) {
   const m = weeklyMutator();
-  btn.innerHTML = `<span class="cc-l">🌀 ${t('chaos.name')} · <b>${MUT_ICONS[m]} ${t('mut.' + m)}</b></span><em>${on ? t('chaos.on') : t('chaos.off')}</em>`;
+  btn.innerHTML = `<span class="cc-l"><small>🌀 ${t('chaos.name')}</small><b>${MUT_ICONS[m]} ${t('mut.' + m)}</b></span><em>${on ? t('chaos.on') : t('chaos.off')}</em>`;
+  btn.setAttribute('aria-label', `${t('chaos.name')}: ${t('mut.' + m)}`);
   btn.setAttribute('role', 'switch');
   btn.setAttribute('aria-checked', on);
   btn.classList.toggle('on', on);
@@ -502,13 +507,16 @@ let finalMusic = false; // the final showdown theme already started this match
 // The menu's live match (attract mode) stars your brawler, with your looks, on the map you picked;
 // the camera stays close on it (game.js updateCamera). It restarts when you pick another brawler or map.
 function showcaseRoster() {
-  const roster = makeRoster([]);
+  const roster = makeRoster([]), others = Object.keys(TYPES).filter(k => k !== chosen);
   Object.assign(roster[0], { type: brawlerString(chosen), cos: cosFor(chosen), per: undefined });
+  for (const r of roster.slice(1)) if (typeOf(r.type) === chosen) r.type = others[Math.floor(Math.random() * others.length)]; // one of a kind
   return roster;
 }
-function attract(mapKey = chosenMap !== 'random' && MAPS[chosenMap] ? chosenMap : randomMap()) {
+const showcaseMap = () => (chosenMap !== 'random' && MAPS[chosenMap] ? chosenMap : randomMap());
+function attract(mapKey = showcaseMap()) {
   achievements.end();
   game.showcaseRoster = showcaseRoster;
+  game.showcaseMap = showcaseMap;
   game.newMatch({ mapKey, roster: showcaseRoster() });
 }
 // On the home screen only: a new pick restarts the backdrop (not while a match or the lobby runs).
@@ -996,7 +1004,7 @@ function showStats() {
   }
   // yours first, then the others; 5 at most
   list.sort((x, y) => (y.b === P) - (x.b === P));
-  el.innerHTML = tile('💥', Math.round(P.stats.dmg), t('result.dmg')) + tile('💀', P.stats.kos, t('result.kos'))
+  el.innerHTML = tile('💥', num(Math.round(P.stats.dmg)), t('result.dmg')) + tile('💀', P.stats.kos, t('result.kos'))
     + tile('💎', P.stats.cubes, t('result.cubes')) + tile(GADGET_ICONS[P.type.key + P.gadget], P.stats.gadgets, t('result.gadgets'))
     + `<div class="awards">${list.slice(0, 5).map(a => `<span class="award${a.b === P ? ' me' : ''}">${a.html}</span>`).join('')}</div>`;
   el.querySelectorAll('.award b').forEach((n, i) => { n.textContent = who(list[i].b); });
@@ -1079,6 +1087,24 @@ addEventListener('keydown', e => {
 
 /* ------------------------------ loop ------------------------------ */
 
+// Menu showcase framing: shift the picture so the star stands in the middle of the free space
+// (between the brawler info and the play panel, under the navigation), not at the screen centre.
+let viewKey = '';
+function frameShowcase() {
+  const on = game.star && game.mode === 'attract' && !$('#menu').classList.contains('hidden');
+  let key = 'off', dx = 0, dy = 0;
+  if (on) {
+    const L = $('.hero-info').getBoundingClientRect(), R = $('.play-panel').getBoundingClientRect(), nav = $('.topnav').getBoundingClientRect();
+    dx = Math.round((L.right + R.left) / 2 - innerWidth / 2);
+    dy = Math.round(nav.bottom / 2);
+    key = `${innerWidth}x${innerHeight}:${dx}:${dy}`;
+  }
+  if (key === viewKey) return;
+  viewKey = key;
+  if (on) camera.setViewOffset(innerWidth, innerHeight, -dx, -dy, innerWidth, innerHeight);
+  else camera.clearViewOffset();
+}
+
 const timer = new THREE.Timer();
 timer.connect(document); // pause-safe: no giant delta after the tab was hidden
 const stats = $('#stats');
@@ -1159,6 +1185,7 @@ function frame(ts) {
   if (inMatch) wheel.update(); else if (wheel.open) wheel.close();
   if (input.padHit(PAD.Y)) nextTimeOfDay();
   if (input.padHit(PAD.BACK)) setSetting('debugPanel', !settings.debugPanel);
+  frameShowcase();
   game.update(dt);
   if (touch) touch.update(game.player);
   autoQuality.update(document.visibilityState === 'visible' && $('#loader').classList.contains('done'));

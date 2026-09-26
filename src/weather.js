@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { disposeOwnTextures } from './arena.js';
 import { radialTexture, shared, mulberry } from './materials.js';
 import { sfx, setWeatherBed } from './audio.js';
 
@@ -94,6 +95,7 @@ export class Weather {
     });
     // billowing dust clouds: big soft sprites drifting with the wind
     const tex = radialTexture('rgba(235,160,95,0.55)', 'rgba(235,160,95,0)', 128, 40);
+    tex.userData.perMatch = true; // freed with the weather
     this.clouds = [];
     for (let k = 0; k < 42; k++) {
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: rnd(0.25, 0.5) }));
@@ -116,10 +118,11 @@ export class Weather {
         x.fillStyle = g; x.fillRect(px + ox - rad, py + oy - rad, rad * 2, rad * 2);
       }
     }
-    const tex = new THREE.CanvasTexture(c);
+    const tex = this.fogTex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     this.mist = [0.3, 0.8, 1.35].map((y, k) => {
       const t = tex.clone(); t.repeat.set(3 + k, 3 + k);
+      t.userData.perMatch = true;
       const m = new THREE.Mesh(new THREE.PlaneGeometry(80, 70).rotateX(-Math.PI / 2),
         new THREE.MeshBasicMaterial({ map: t, color: 0xffffff, transparent: true, opacity: [0.38, 0.26, 0.17][k], depthWrite: false }));
       m.position.y = y;
@@ -339,7 +342,8 @@ export class Weather {
 
   dispose() {
     this.g.fx.remove(this.group);
-    this.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+    this.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { disposeOwnTextures(o.material); o.material.dispose(); } });
+    if (this.fogTex) this.fogTex.dispose();
     if (this.overlay) this.overlay.style.opacity = '0';
     shared.wind.value = 1;
   }

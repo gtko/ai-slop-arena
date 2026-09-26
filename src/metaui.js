@@ -14,7 +14,8 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 export const num = n => Number(n).toLocaleString(lang); // numbers in the game's language, not the browser's
 export const coin = n => `<span class="coin-n"><i class="coin"></i>${typeof n === 'number' ? num(n) : n}</span>`;
-const clock = ms => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 1440 ? t('meta.days', { n: Math.floor(m / 1440) }) : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`; };
+const unit = (u, v) => { try { return new Intl.NumberFormat(lang, { style: 'unit', unit: u, unitDisplay: 'narrow' }).format(v); } catch { return v + u[0]; } };
+const clock = ms => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 1440 ? t('meta.days', { n: Math.floor(m / 1440) }) : `${unit('hour', Math.floor(m / 60))} ${unit('minute', m % 60)}`; };
 const cap = s => s[0].toUpperCase() + s.slice(1);
 const questText = q => t('quest.' + q.kind, { n: num(q.target), brawler: q.brawler ? cap(q.brawler) : '' });
 
@@ -43,7 +44,7 @@ export function itemView(id, portrait) {
     case 'ko': return { icon: `<span class="emo">${KOFX_ICONS[a]}</span>`, name: t('cos.ko.' + KOFX[a]), sub: t('cos.kind.ko') };
     case 'emote': return { icon: `<span class="emo">${EMOTE_ICONS[EMOTES.indexOf(a)]}</span>`, name: t('cos.emote.' + a), sub: t('cos.kind.emote') };
     case 'frame': return { icon: framed(+a, iconHtml(W.icon, portrait)), name: t('cos.frame.' + FRAMES[a]), sub: t('cos.kind.frame') };
-    case 'title': return { icon: `<span class="title-chip">${esc(t('cos.title.' + TITLES[a]))}</span>`, name: t('cos.title.' + TITLES[a]), sub: t('cos.kind.title') };
+    case 'title': return { icon: `<span class="title-chip">${esc(t('cos.title.' + TITLES[a]))}</span>`, name: '', sub: t('cos.kind.title') }; // the chip is the name
     case 'icon': return { icon: iconHtml(+a, portrait), name: '', sub: t('cos.kind.icon') };
     default: return { icon: '', name: id, sub: '' };
   }
@@ -165,7 +166,7 @@ export class MetaUI {
         <span class="pin"></span><i class="q-ico">${QUEST_ICONS[q.kind]}</i>
         ${weekly ? `<em class="q-week">${t('quest.weekly')}</em>` : ''}
         <p>${esc(questText(q))}</p>
-        <div class="q-bar"><u style="width:${(q.n / q.target * 100).toFixed(0)}%"></u><span>${num(q.n)} / ${num(q.target)}</span></div>
+        <div class="q-bar"><u style="width:${(q.n / q.target * 100).toFixed(0)}%"></u><span><bdi dir="ltr">${num(q.n)} / ${num(q.target)}</bdi></span></div>
         <div class="q-rew">${coin(q.coins)} <small>+${weekly ? 150 : 30} XP</small></div>
         ${q.done ? `<b class="stamp">${t('quest.done')}</b>` : !weekly && !B.rerolled ? `<button class="q-reroll" data-i="${i}" title="${t('quest.reroll')}" aria-label="${t('quest.reroll')}">🎲</button>` : ''}
       </div>`;
@@ -219,7 +220,8 @@ export class MetaUI {
     const d = new Date(), R = rng(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`), out = [];
     const pool = shopPool(this.brawlers).filter(id => !EARNED_HERE.has(id));
     for (const kinds of [['skin'], ['trail', 'ko'], ['emote'], ['frame', 'title'], ['icon', 'trail', 'ko', 'skin']]) {
-      const a = pool.filter(id => kinds.includes(kindOf(id)) && !out.includes(id));
+      let a = pool.filter(id => kinds.includes(kindOf(id)) && !out.includes(id));
+      if (!out.length) a = a.filter(id => !Pr.owns(id)).length ? a.filter(id => !Pr.owns(id)) : a; // the featured skin: one you don't have
       if (a.length) out.push(a[Math.floor(R() * a.length)]);
     }
     return out;
@@ -301,8 +303,11 @@ export class MetaUI {
       ${this.tab === 'emote' ? `<p class="meta-foot">${t('col.emoteHint')}</p>` : ''}`;
     const preview = id => {
       const v = itemView(id, this.portrait), own = has(id);
+      this.body.querySelectorAll('.col-item').forEach(b => b.classList.toggle('sel', b.dataset.id === id));
       this.body.querySelector('.col-preview').innerHTML = `<span class="cp-ico">${v.icon}</span><b>${esc(v.name || v.sub)}</b><small>${esc(v.name ? v.sub : '')}</small>
-        <em>${!own ? '🔒 ' + esc(how(id)) : wearable && this.worn(id) ? '✓ ' + t('col.equipped') : ''}</em>`;
+        <em>${!own ? '🔒 ' + esc(how(id)) : wearable && this.worn(id) ? '✓ ' + t('col.equipped') : ''}</em>
+        ${!own && today.has(id) ? `<button class="cp-shop">🛒 ${t('meta.shop')}</button>` : ''}`;
+      this.body.querySelector('.cp-shop')?.addEventListener('click', () => { sfx('click'); this.open('shop'); });
     };
     preview(worn);
     this.body.querySelectorAll('.col-tab').forEach(b => b.addEventListener('click', () => { sfx('click'); this.tab = b.dataset.tab; this.render(); }));

@@ -188,6 +188,7 @@ export class Game {
     this.restartT = -1;
     this.camTarget = this.player || this.brawlers[0];
     this.star = this.mode === 'attract' && this.showcaseRoster ? this.brawlers[0] : null; // menu showcase (main.js)
+    if (this.star) this.stageStar();
     this.camFocus.copy(this.camTarget.pos);
     this.feel.reset();
     // supply drops (authority schedules, everyone sees): ~40-50 s and ~85-95 s into the match
@@ -485,6 +486,23 @@ export class Game {
     }
   }
 
+  // Menu showcase: the star starts on the most open ground near the middle (no bush, no cactus
+  // in front of it), wears the player's colours, and the camera starts on it (no slide-in).
+  stageStar() {
+    const S = this.star, A = this.arena, spot = new THREE.Vector3();
+    let best = null, bs = -1;
+    for (let j = 6; j < 19; j++) for (let i = 6; i < 19; i++) {
+      if (A.get(i, j) !== '.') continue;
+      let open = 0;
+      for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) if (A.get(i + di, j + dj) === '.') open++;
+      if (open > bs) { bs = open; best = [i, j]; }
+    }
+    if (best) { A.center(best[0], best[1], spot); S.pos.set(spot.x, 0, spot.z); S.net.set(spot.x, spot.z); }
+    S.teamColors();
+    this.camFocus.copy(S.pos);
+    this.feel.zoom = this.menuZoom ?? 0.36;
+  }
+
   // Training dojo: the other brawlers stand in a loose row a few metres ahead, as dummies.
   setupDojo() {
     this.brains.clear();
@@ -611,7 +629,7 @@ export class Game {
     this.crown = tie ? null : best;
     if (!this.crownMesh) this.crownMesh = crownMesh(this.fx);
     const c = this.crownMesh, W = this.crown;
-    c.visible = !!W && this.fxVisible(W) && W.root.visible;
+    c.visible = !!W && this.fxVisible(W) && W.root.visible && this.mode !== 'attract';
     if (c.visible) { c.position.set(W.pos.x, W.pos.y + 3.55 + Math.sin(t * 3) * 0.06, W.pos.z); c.rotation.y = t * 1.4; }
   }
 
@@ -859,7 +877,7 @@ export class Game {
     if (this.mode === 'attract' && this.brawlers.filter(b => b.alive).length <= 1) {
       if (this.restartT < 0) this.restartT = 3;
       this.restartT -= dt;
-      if (this.restartT <= 0) this.newMatch({ mapKey: randomMap(), roster: this.showcaseRoster ? this.showcaseRoster() : null });
+      if (this.restartT <= 0) this.newMatch({ mapKey: this.showcaseMap ? this.showcaseMap() : randomMap(), roster: this.showcaseRoster ? this.showcaseRoster() : null });
     }
   }
 
@@ -1091,7 +1109,7 @@ export class Game {
     for (const b of this.brawlers) {
       if (!b.alive) continue;
       b.inPoison = this.poison.isPoisonedAt(b.pos.x, b.pos.z);
-      if (!b.inPoison) { b.poisonTick = 0.4; continue; }
+      if (!b.inPoison || b === this.star) { b.poisonTick = 0.4; continue; }
       b.poisonTick -= dt;
       if (b.poisonTick <= 0) {
         b.poisonTick = 1;
@@ -1223,8 +1241,7 @@ export class Game {
       desired.copy(tgt.pos);
       if (tgt === P && tgt.alive) { desired.x += F.lookX; desired.z += F.lookZ; }
     }
-    if (this.star && this.mode === 'attract') tgt = this.camTarget = this.star; // menu: always on your brawler
-    if (tgt) desired.copy(tgt.pos);
+    if (this.star && this.mode === 'attract') { tgt = this.camTarget = this.star; desired.copy(tgt.pos); } // menu: always on your brawler
     desired.x = THREE.MathUtils.clamp(desired.x, -(HALF - 9), HALF - 9);
     desired.z = THREE.MathUtils.clamp(desired.z, -(HALF - 11), HALF - 6);
     desired.y = 0;
@@ -1236,7 +1253,7 @@ export class Game {
       const alive = this.brawlers.reduce((n, b) => n + (b.alive ? 1 : 0), 0);
       zoom = alive === 2 ? 1.1 : alive === 3 ? 1.06 : 1;
     }
-    if (this.star && this.mode === 'attract') zoom = this.menuZoom ?? 0.55; // close on the showcased brawler
+    if (this.star && this.mode === 'attract') zoom = this.menuZoom ?? 0.36; // close on the showcased brawler
     this.bushIdleT = P && P.alive && P.inBush && P.moveIntent.lengthSq() < 0.02 ? this.bushIdleT + dt : 0;
     if (this.bushIdleT > 1.5) zoom *= 0.94;
     F.update(dt, zoom);

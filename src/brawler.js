@@ -243,7 +243,7 @@ export class Brawler {
   // Readability: your brawler has a bright outline and ring, enemies a dark red one (the colour-blind
   // option makes it blue against orange). Outline materials shared between brawlers get a copy.
   teamColors() {
-    const cb = this.g.colorblind, me = this.isPlayer;
+    const cb = this.g.colorblind, me = this.isPlayer || this.g.star === this; // the menu's star wears your colours
     this.ring.material.color.copy(me ? (cb ? RING.meCb : RING.me) : (cb ? RING.foeCb : RING.foe));
     const line = me ? (cb ? LINE.meCb : LINE.me) : (cb ? LINE.foeCb : LINE.foe);
     this.model.root.traverse(o => {

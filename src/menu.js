@@ -302,7 +302,7 @@ export class Menus {
   /* ------------------------------ navigation ------------------------------ */
 
   activeOverlay() {
-    for (const id of ['#levelUp', '#options', '#pause', '#result', '#lobby', '#meta', '#menu']) {
+    for (const id of ['#levelUp', '#options', '#pause', '#result', '#lobby', '#meta', '#mapsPop', '#menu']) {
       const o = $(id);
       if (o && !o.classList.contains('hidden')) return o;
     }
@@ -365,7 +365,7 @@ export class Menus {
     if (this.optionsOpen) { this.closeOptions(); return true; }
     if (this.paused) { this.closePause(); return true; }
     const root = this.activeOverlay();
-    if (root && (root.id === 'meta' || root.id === 'menu') && this.ctx.closePage && this.ctx.closePage()) return true; // a page, the map picker
+    if (root && ['meta', 'menu', 'mapsPop'].includes(root.id) && this.ctx.closePage && this.ctx.closePage()) return true; // a page, the map picker
     if (root && root.id === 'lobby') { $('#lobbyBack').click(); return true; }
     if (root && root.id === 'result' && this.ctx.isOnline()) { $('#result').classList.add('hidden'); return true; }
     return false;

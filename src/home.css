@@ -462,3 +462,76 @@ body.touch #emoteWheel button small { display: none; }
   #meta .rd-ico, #meta .rd-ico img { height: 52px; }
   .rd-arrow { width: 34px; height: 34px; }
 }
+
+/* ======================= acceptance test, round 2 ======================= */
+/* loadout: one column whenever the info column is narrow; long single words may break */
+@media (max-width: 1400px) { #loadout { grid-template-columns: 1fr; } }
+#loadout .lo-name { overflow-wrap: anywhere; hyphens: auto; }
+/* stat bars aligned on one shared label column */
+.hero-stats { grid-template-columns: max-content 1fr auto; column-gap: 10px; }
+.hero-stats div { display: contents; }
+.hero-stats small, .hero-role { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85), 0 0 8px rgba(0, 0, 0, 0.5); }
+
+/* map picker: pinned beside the play panel, bottom-aligned, always fully on screen */
+.pp-maps { position: fixed; right: calc(var(--g) + 340px + 14px); top: auto; bottom: var(--g); width: 540px;
+  max-width: calc(100vw - 340px - 3 * var(--g) - 14px); max-height: calc(100vh - var(--nav) - 2 * var(--g)); overflow-y: auto; z-index: 6; }
+.pp-maps::after { display: none; }
+@media (max-width: 1000px) { .pp-maps { right: calc(var(--g) + 290px + 14px); max-width: calc(100vw - 290px - 3 * var(--g) - 14px); } }
+
+/* Weekly Chaos: the caption above, the mutator name below, both whole */
+.play-panel .chaos-chip .cc-l { display: flex; flex-direction: column; line-height: 1.15; }
+.play-panel .chaos-chip .cc-l small { font-size: 9.5px; letter-spacing: 0.8px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.play-panel .chaos-chip .cc-l b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+
+/* nav badges sit on the icon, not over the label */
+.tn-tabs button i { position: relative; }
+.tn-tabs em { top: 10px; right: auto; left: 26px; }
+/* big ONLINE label clears its subtitle in scripts with tall marks */
+:lang(ar) .pp-play b, :lang(th) .pp-play b, :lang(vi) .pp-play b { line-height: 1.25; }
+.pp-play small { margin-top: 2px; }
+/* Greek and Vietnamese: one font for the whole word (Lilita only has part of their letters) */
+:lang(el), :lang(vi) { --display: 'Manrope', 'Nunito', system-ui, sans-serif; }
+:lang(th) .lo-group em, :lang(th) #mapPick small { font-size: 12px; line-height: 1.4; }
+.col-tab small { margin-left: 0; margin-inline-start: 6px; }
+
+/* collection: the previewed tile is marked; locked recolours keep their colours */
+#meta .col-item.sel { outline: 2px solid rgba(255, 255, 255, 0.55); outline-offset: -2px; }
+#meta .col-item.locked .col-ico { opacity: 0.75; filter: saturate(0.6) brightness(0.8); }
+.cp-shop { margin-top: 6px; padding: 8px 16px; border-radius: 10px; border: 2px solid var(--ink); background: linear-gradient(#ffe36b, #ffbf1f); color: var(--ink); font-family: var(--display); font-size: 15px; cursor: pointer; box-shadow: 0 3px 0 var(--ink); }
+/* finished quests: a bold stamp over the reward line */
+.stamp { opacity: 1; bottom: 6px; }
+.q-note.done { filter: none; }
+.q-note.done > :not(.stamp):not(.pin) { opacity: 0.6; }
+
+/* result: the button bar is a full-width fade, not a slab */
+#result .row-btns { margin: 0 -40px; padding: 18px 40px 14px; background: linear-gradient(transparent, rgba(8, 6, 18, 0.96) 45%); }
+
+/* options tabs: a fade shows there is more to scroll */
+.opt-tabs { mask-image: linear-gradient(90deg, #000 88%, transparent); }
+
+/* touch: the health bar leaves room for the buttons, SUPER written inside its button */
+body.touch #myhp { width: min(300px, 24vw); }
+body.touch #touch .t-super b { top: 50%; margin-top: 12px; font-size: 9px; }
+
+/* phones: back to the safe-area gutters, a smaller info column, and the pages fit */
+@media (max-height: 520px) and (orientation: landscape) {
+  :root { --g: calc(12px + env(safe-area-inset-left)); }
+  #loadout { grid-template-columns: 1fr 1fr; }
+  #loadout .lo-desc { display: none; }
+  .hero-info { width: min(300px, calc(100vw - 236px - 3 * var(--g) - 60px)); }
+  .play-panel { right: calc(10px + env(safe-area-inset-right)); }
+  .roster { gap: 5px; }
+  .rt { width: 50px; }
+  .pp-maps { right: calc(236px + 10px + env(safe-area-inset-right) + 10px); bottom: calc(8px + env(safe-area-inset-bottom)); width: 330px;
+    max-width: calc(100vw - 236px - 3 * var(--g) - 10px); max-height: calc(100vh - var(--nav) - 16px); }
+  .play-panel .chaos-chip .cc-l small { font-size: 8.5px; }
+  .play-panel .chaos-chip .cc-l b { font-size: 11px; }
+  #meta .col-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; mask-image: linear-gradient(90deg, #000 90%, transparent); }
+  #meta .col-tab { flex: none; }
+  #meta .col-tab small { display: none; }
+  #meta .meta-lead { display: none; }
+  #meta .rd-stop { min-height: 124px; }
+  .rd-track { padding: 10px 4px 12px; }
+  body.touch #killfeed { top: calc(72px + env(safe-area-inset-top)); }
+  #result .row-btns { margin: 0 -14px; padding: 16px 14px 12px; }
+}

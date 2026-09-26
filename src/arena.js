@@ -182,6 +182,7 @@ export class Arena {
     const cartoon = M.ground === 'cartoon';
     if (!groundMaps.has(key)) groundMaps.set(key, cartoon ? cartoonGround(...(M.groundTones || [])) : groundTexture(image(M.ground) || image('sand'), M.checker));
     const map = groundMaps.get(key).clone();
+    map.userData.perMatch = true;
     map.repeat.set(N / 2, N / 2);
     const groundN = cartoon ? null : tex(M.ground + '_n', N, N) || tex('sand_n', N, N); // one normal tile per arena tile
     // Wet maps: darker, glossier floor so lanterns, lightning and projectiles smear across it.
@@ -654,7 +655,19 @@ export class Arena {
     this.scene.remove(this.group);
     this.group.traverse(o => {
       if (o.geometry) o.geometry.dispose();
-      if (o.material) [].concat(o.material).forEach(m => m.dispose());
+      if (o.material) [].concat(o.material).forEach(m => { disposeOwnTextures(m); m.dispose(); });
     });
+    // textures held in shader uniforms or kits, made for this arena
+    if (this.water && this.water.u) { this.water.normalTex.dispose(); this.water.u.uShore.value.dispose(); }
+    if (this.lanternKit) this.lanternKit.haloTex.dispose();
+  }
+}
+
+// Texture copies made for one match (assets.js tex(), ground clones) go with the arena; shared
+// textures (props, caches) stay.
+export function disposeOwnTextures(m) {
+  for (const k of ['map', 'normalMap', 'alphaMap', 'emissiveMap', 'roughnessMap', 'aoMap', 'bumpMap']) {
+    const t = m[k];
+    if (t && t.userData && t.userData.perMatch) t.dispose();
   }
 }
