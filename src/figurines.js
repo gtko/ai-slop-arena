@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { MeshoptSimplifier } from 'meshoptimizer';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { ASSET_BASE } from './assets.js';
 import { charMat, shared } from './materials.js';
@@ -72,7 +73,36 @@ function prepare(key, gltf, aniso) {
   const eye = mesh.geometry.getAttribute('_eye'), lidRGB = mesh.userData.lid || mesh.geometry.userData?.lid;
   if (eye) mesh.geometry.setAttribute('aEye', eye);
   const lid = eye && lidRGB ? new THREE.Color().setRGB(lidRGB[0], lidRGB[1], lidRGB[2], THREE.SRGBColorSpace) : null;
-  return { scene, clips: gltf.animations, map, gain: textureGain(map), flames, sway: !!soft, lid, name: mesh.name };
+  return { scene, mesh, clips: gltf.animations, map, gain: textureGain(map), flames, sway: !!soft, lid, name: mesh.name };
+}
+
+// Level of detail (v0.12, mobile): the same vertices (skinning, eyes, soft parts untouched) with
+// fewer triangles, from meshoptimizer; the figurines of a type share their geometry, so swapping
+// its index changes every brawler of that type at once, outline included.
+// ratio: share of the triangles kept (1 = full model).
+let detail = 1;
+export async function setFigurineDetail(ratio) {
+  detail = ratio;
+  if (ratio < 0.99) await MeshoptSimplifier.ready;
+  for (const T of templates.values()) T.mesh.geometry.setIndex(lodIndex(T, detail));
+}
+
+function lodIndex(T, ratio) {
+  const g = T.mesh.geometry;
+  T.fullIndex ||= g.index;
+  if (ratio >= 0.99) return T.fullIndex;
+  T.lod ||= {};
+  if (T.lod[ratio]) return T.lod[ratio];
+  const pos = g.attributes.position, uv = g.attributes.uv, n = pos.count;
+  const P = new Float32Array(n * 3), U = new Float32Array(n * 2);
+  for (let i = 0; i < n; i++) {
+    P[i * 3] = pos.getX(i); P[i * 3 + 1] = pos.getY(i); P[i * 3 + 2] = pos.getZ(i);
+    if (uv) { U[i * 2] = uv.getX(i); U[i * 2 + 1] = uv.getY(i); }
+  }
+  const idx = new Uint32Array(T.fullIndex.array), target = Math.floor(idx.length * ratio / 3) * 3;
+  // UVs weigh in so the painted texture (faces, eyes) keeps its seams
+  const [out] = MeshoptSimplifier.simplifyWithAttributes(idx, P, 3, U, 2, [1, 1], null, target, 0.03);
+  return (T.lod[ratio] = new THREE.BufferAttribute(n > 65535 ? out : new Uint16Array(out), 1));
 }
 
 // Flame hair: aFlame = (weight, 0 at the flame base -> 1 at the tips) on the head vertices, which
