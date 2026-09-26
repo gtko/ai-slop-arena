@@ -38,7 +38,7 @@ carry no weights. Every bone's local X axis is its side axis (knees, elbows and 
 | Victory | ✓ | last one standing: jumping, fists up |
 | Wave | | hello, when some brawlers pop in |
 | Bored | | idle for a while: sigh, foot tapping, checks the watch, head shake |
-| Fidget | | idle for a while, one per brawler: shotgun on the shoulder (Blaster), revolver twirl (Gunslinger), fireball juggling (Bomber), staff taps and shivers (Frostbite), glitch and reboot (Volt) |
+| Fidget | | idle for a while, one per brawler: shotgun on the shoulder (Blaster), revolver twirl (Gunslinger), fireball juggling (Bomber), staff taps and shivers (Frostbite), glitch and reboot (Volt), balancing and patting the water dish, syringe twirl (Kappa) |
 | Cough | | upper body, in the poison gas |
 | Cheer | | upper body, fist pump after a knockout |
 
@@ -85,7 +85,7 @@ changes (it moves the automatic cut), rerun `export_rig.mjs <key>` first.
   (`weapons` in the landmarks: which vertices, and the grip). Clips can move that bone: the Wave puts
   an armed hand's weapon away at the hip and takes it back.
 - `sway` in the landmarks paints the soft parts (Blaster's leaves, Bomber's flames, Gunslinger's gills
-  and tail, Frostbite's cape, robe hem and hair, Volt's antennas and tufts): 0 where they are attached,
+  and tail, Frostbite's cape, robe hem and hair, Volt's antennas and tufts, Kappa's hair ring and dress hem): 0 where they are attached,
   1 at the tips. It ships as the `_sway` vertex attribute (and a `Sway` vertex group in the .blend /
   FBX, handy for a cloth or jiggle setup); in the game a vertex shader makes them flutter, lean with
   the wind and trail behind the brawler's motion through a spring (`src/figurines.js`,

@@ -15,6 +15,7 @@ export const RIGS = {
   bomber: { weapon: 'L', style: 'throw' },
   frostbite: { weapon: 'R', style: 'staff' },
   volt: { weapon: 'both', style: 'cast' },
+  kappa: { weapon: 'R', style: 'throw' },
 };
 
 const SRC = 'art-src/figurines', OUT = 'art-src/rig/work', MARKS = 'art-src/rig/landmarks';

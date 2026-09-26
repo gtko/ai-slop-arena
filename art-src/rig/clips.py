@@ -918,6 +918,24 @@ def c_fidget(C, t):
         blend_arm(P, 'L', q(X, -0.8 - 0.5 * toss) @ C.hang['L'], e, (-1.1 + 0.5 * toss, 0, 0))
         P.head(-0.45 * toss * e, 0.1 * e, 0)
         P.loc.z = -0.03 * (1 - toss) * e
+    elif k == 'kappa':  # the water dish tips: wobbles to rebalance it, pats it, twirls the syringe
+        wob = env(t, 0.1, 0.3, 0.9, 1.2)
+        sway_ = math.sin(TAU * 1.8 * (t - 0.1)) * wob
+        P.head(0.05 * wob, 0, 0.22 * sway_)
+        P.spine(0, 0, -0.08 * sway_)
+        P.loc.x += -0.03 * sway_
+        for s, sg in (('L', 1), ('R', -1)):  # arms out for balance
+            blend_arm(P, s, C.arm_to(s, (sg * 0.9, -0.1, -0.15)), wob * (0.5 if C.armed(s) else 0.8), (-0.2, 0, 0))
+        s = C.free  # the free hand pats the side of the dish, three times
+        pat = env(t, 1.1, 1.4, 2.1, 2.4)
+        tap = 0.5 + 0.5 * math.cos(TAU * 3.0 * (t - 1.4))
+        blend_arm(P, s, C.arm_to(s, C.up_dir(s, -1.0 + 0.3 * tap, 0.05)), pat, (-1.0 + 0.3 * tap, 0, 0))
+        P.head(-0.08 * pat, -SIDE[s][1] * 0.12 * pat, SIDE[s][1] * 0.1 * pat)
+        w = 'R' if s == 'L' else 'L'  # the syringe: a quick twirl, then a proud little lift
+        spin = ease(clamp01((t - 1.5) / 1.0)) * TAU
+        e = env(t, 1.3, 1.5, 2.6, 2.9)
+        blend_arm(P, w, q(X, -0.6) @ C.hang[w], e, (-0.7, 0, 0))
+        P.pre(SIDE[w][0] + 'Hand', q(X, -spin * e))
     elif k == 'frostbite':  # taps the staff twice, then shivers
         e = env(t, 0.1, 0.3, 1.5, 1.8)
         tap = abs(math.sin(math.pi * clamp01((t - 0.3) / 1.2) * 2))
