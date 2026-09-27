@@ -345,6 +345,8 @@
   "mod.kicked.leader": "Oda lideri seni odadan attı.",
   "mod.kicked.cheat": "Maçtan atıldın: imkânsız hareketler (hız veya ışınlanma).",
   "err.outdated": "Oyunun bu sürümü eski: sayfayı yenile veya uygulamayı güncelle.",
+  "err.outdatedApp": "Bir oyun güncellemesi yolda: oyunu bir dakika içinde yeniden başlat. Bu devam ederse en son sürümü yükle.",
+  "app.updateReady": "Güncelleme hazır: uygulamak için oyunu yeniden başlat.",
   "bug.button": "Hata bildir",
   "bug.something": "Bir sorun mu var? Hata bildir",
   "bug.title": "Hata bildir",

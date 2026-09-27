@@ -1,4 +1,4 @@
-import { serverOrigin, clientId, platformName } from './platform.js';
+import { serverOrigin, clientId, platformName, isNativeApp } from './platform.js';
 import { t } from './i18n/index.js';
 import { botLevel } from './skill.js';
 
@@ -11,7 +11,8 @@ export const PROTOCOL = 6; // must match worker/index.js; older clients are told
 // Server refusals come with a code we translate; bans keep the server's text (it has the date).
 export function serverError(msg) {
   if (msg.code === 'full' || msg.msg === 'Room is full') return t('err.full');
-  if (msg.code === 'outdated') return t('err.outdated');
+  // the mobile apps update themselves over the air (src/ota.js): a restart fixes it
+  if (msg.code === 'outdated') return t(isNativeApp ? 'err.outdatedApp' : 'err.outdated');
   if (msg.code === 'kicked') return t('mod.kicked.leader');
   return msg.msg || t('err.unreachable');
 }

@@ -237,6 +237,9 @@ export default {
 
   // connection errors
   'err.outdated': 'This version of the game is out of date: refresh the page or update the app.',
+  // mobile apps: the update comes over the air (src/ota.js), a restart applies it
+  'err.outdatedApp': 'A game update is on its way: restart the game in a minute. If this keeps happening, install the latest version.',
+  'app.updateReady': 'Update ready: restart the game to apply it.',
   'err.unreachable': 'Could not reach the server',
   'err.full': 'Room is full',
   'err.notFound': 'No room {code} found',

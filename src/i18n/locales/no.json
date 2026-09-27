@@ -345,6 +345,8 @@
   "mod.kicked.leader": "Romlederen kastet deg ut av rommet.",
   "mod.kicked.cheat": "Du ble kastet ut av kampen: umulige bevegelser (fart eller teleport).",
   "err.outdated": "Denne versjonen av spillet er utdatert: last inn siden på nytt eller oppdater appen.",
+  "err.outdatedApp": "En spilloppdatering er på vei: start spillet på nytt om et minutt. Hvis det fortsetter, installer den nyeste versjonen.",
+  "app.updateReady": "Oppdatering klar: start spillet på nytt for å bruke den.",
   "bug.button": "Rapporter en bug",
   "bug.something": "Noe galt? Rapporter en bug",
   "bug.title": "Rapporter en bug",
