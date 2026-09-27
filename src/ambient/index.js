@@ -303,7 +303,7 @@ class Critters {
       // a visible brawler too close: run the other way, or slide off on the ice (never from someone hidden)
       c.flee -= dt;
       if (shy && c.flee <= 0 && c.mode !== 3) for (const b of seen) {
-        const dx = c.pos.x - b.pos.x, dz = c.pos.z - b.pos.z, d = Math.hypot(dx, dz) || 1;
+        const dx = c.pos.x - b.pos.x || 0.01, dz = c.pos.z - b.pos.z, d = Math.hypot(dx, dz);
         if (d >= shy) continue;
         c.flee = 1.4; c.x = null;
         if (!(this.slides(c.pos.x, c.pos.z) && this.slide(c, dx / d, dz / d, slideV * 1.4))) { c.to.set(c.pos.x + dx / d * 3, 0, c.pos.z + dz / d * 3); c.mode = 2; }
@@ -327,7 +327,8 @@ class Critters {
           const want = Math.atan2(dx, dz), diff = Math.atan2(Math.sin(want - c.yaw), Math.cos(want - c.yaw)), tr = turn * (c.mode === 2 ? 1.6 : 1) * dt;
           c.yaw += Math.max(-tr, Math.min(tr, diff));
           let step = (c.mode === 2 ? run : walk) * Math.max(0.25, Math.cos(diff)) * dt;
-          if (P && this.hop && P.T.hop) step *= P.current(k) === 'Hop' ? P.T.hop[Math.floor(P.phase(k) * 24) % 24] : 0; // only while airborne
+          // hops: only move while airborne (off screen the clip is not advanced: move evenly)
+          if (P && this.hop && P.T.hop && P.shown(k)) step *= P.current(k) === 'Hop' ? P.T.hop[Math.floor(P.phase(k) * 24) % 24] : 0;
           step = Math.min(step, d);
           const nx = c.pos.x + dx / d * step, nz = c.pos.z + dz / d * step, i = A.toTile(nx), j = A.toTile(nz);
           if (this.on(A.get(i, j), i, j)) { c.pos.x = nx; c.pos.z = nz; } else this.rest(c); // the ground changed (a wall, the void)
@@ -365,7 +366,7 @@ class Critters {
       if (P.has('Slide')) clip = 'Slide';
       else { pitch = c.lie * Math.PI / 2; y += c.lie * 0.2 * s; } // no belly slide: flop the idle pose
     } else if (moving) {
-      clip = swim && P.has('Swim') ? 'Swim' : this.hop ? 'Hop' : c.mode === 2 && P.has('Run') ? 'Run' : P.has('Walk') ? 'Walk' : 'Hop';
+      clip = swim && P.has('Swim') ? 'Swim' : this.hop ? 'Hop' : c.mode === 2 && P.has('Run') ? 'Run' : P.has('Walk') ? 'Walk' : P.has('Run') ? 'Run' : 'Hop';
       rate = Math.max(0.4, Math.min(2.5, (c.mode === 2 ? run : walk) / (P.speed(clip) * Math.max(0.05, s))));
     } else if (swim && P.has('Swim')) rate = 0.5, clip = 'Swim'; // paddling on the spot
     else if (c.x) clip = P.done(k) ? (c.x = null, 'Idle') : null; // an extra plays to its end

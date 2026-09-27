@@ -117,7 +117,8 @@ export function frustumOf(camera) {
 //   P.pose(k, x, y, z, yaw, pitch, roll, scale)   (scale 0 hides it)
 //   P.play(k, clip, rate, fade, once)  crossfade to a clip (false: the model has no such clip)
 //   P.done(k)      the one-shot clip it plays has ended
-//   P.has(clip), P.speed(clip) (ground speed m/s at scale 1), P.phase(k) (0..1 in the current clip)
+//   P.has(clip), P.speed(clip) (ground speed m/s at scale 1), P.phase(k) (0..1 in the current clip),
+//   P.current(k) (its clip name), P.shown(k) (on screen: off screen the clips are not advanced)
 export class Puppets {
   constructor(amb, key, n, o = {}) {
     this.key = key; this.n = n; this.list = null; this.T = null;
@@ -165,6 +166,7 @@ export class Puppets {
   done(k) { const p = this.list[k]; return !p.cur || (p.once && (p.cur.paused || !p.cur.enabled)); }
   phase(k) { const a = this.list[k].cur; return a ? (a.time / a.getClip().duration) % 1 : 0; }
   current(k) { return this.list[k].cur?.getClip().name; }
+  shown(k) { return this.list[k].root.visible; } // on screen at the last update (animated)
   // after the systems posed them: animate the ones on screen, hold the others (their time is kept
   // and caught up when they come back into view)
   update(dt, fr) {
