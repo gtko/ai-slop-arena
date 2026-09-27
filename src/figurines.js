@@ -81,15 +81,31 @@ function prepare(key, gltf, aniso) {
 
 // Level of detail (v0.12, mobile): the same vertices (skinning, eyes, soft parts untouched) with
 // fewer triangles, from meshoptimizer; the figurines of a type share their geometry, so swapping
-// its index changes every brawler of that type at once, outline included.
+// its index changes every brawler of that type at once.
+// The outline is a second skinned draw of the figurine (an inverted hull, see buildFigurine): on
+// mobile it gets its own, coarser index over the same vertices, as only its silhouette shows.
 // ratio: share of the triangles kept (1 = full model).
 let detail = 1;
+const hullRatio = r => (r >= 0.99 ? 1 : Math.max(0.12, r * 0.5));
 export async function setFigurineDetail(ratio) {
   detail = ratio;
   try {
     if (ratio < 0.99) await MeshoptSimplifier.ready;
-    for (const T of templates.values()) T.mesh.geometry.setIndex(lodIndex(T, detail));
+    for (const T of templates.values()) {
+      T.mesh.geometry.setIndex(lodIndex(T, detail));
+      if (T.hull) T.hull.setIndex(lodIndex(T, hullRatio(detail)));
+    }
   } catch (e) { console.warn('figurine detail', e); } // no WebAssembly: full detail
+}
+
+// The outline's geometry: the figurine's attributes (skin, soft parts, flames), its own index.
+function hullGeometry(T) {
+  if (T.hull) return T.hull;
+  const g = T.mesh.geometry, h = new THREE.BufferGeometry();
+  for (const [k, a] of Object.entries(g.attributes)) h.setAttribute(k, a);
+  h.setIndex(detail < 0.99 && T.lod ? lodIndex(T, hullRatio(detail)) : g.index);
+  h.boundingSphere = g.boundingSphere; h.boundingBox = g.boundingBox;
+  return (T.hull = h);
 }
 
 function lodIndex(T, ratio) {
@@ -344,7 +360,7 @@ export function buildFigurine(key) {
   mesh.castShadow = mesh.receiveShadow = true;
   mesh.frustumCulled = false; // bounds move with the pose
   const lineMat = figurineOutline(0.02, T.flames, sway); // finer than the rigs: lots of small details
-  const line = new THREE.SkinnedMesh(mesh.geometry, lineMat);
+  const line = new THREE.SkinnedMesh(hullGeometry(T), lineMat);
   line.position.copy(mesh.position); line.quaternion.copy(mesh.quaternion); line.scale.copy(mesh.scale);
   mesh.parent.add(line);
   line.bind(mesh.skeleton, mesh.bindMatrix);
