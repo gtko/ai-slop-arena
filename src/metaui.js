@@ -253,7 +253,7 @@ export class MetaUI {
     const card = (id, { price = priceOf(id), deal = 0, cls = '' } = {}) => {
       const v = itemView(id, this.portrait), own = Pr.owns(id), wear = own && WEARABLE.has(kindOf(id)), cost = Math.round(price * (1 - deal));
       let btn;
-      if (!own) btn = kindOf(id) === 'skin' // skins: Slop Coins or Gems
+      if (!own) btn = kindOf(id) === 'skin' && !cls.includes('earned') // skins: Slop Coins or Gems (the golden one is earned)
         ? `<div class="sh-two">${buyBtn(id, SKIN_COINS, 'coins')}<span>${t('shop.or')}</span>${buyBtn(id, cost)}</div>`
         : buyBtn(id, cost);
       else if (wear && !this.worn(id)) btn = `<button class="sh-buy sh-wear" data-wear="${id}">${t('shop.equip')}</button>`;
