@@ -43,6 +43,7 @@ All green before going on. If a feature changed online play, also run a local en
 ```bash
 # edit "version" in package.json, then
 npm install --package-lock-only
+npm run native:version   # iOS version + build number in the Xcode project (npm test checks it)
 ```
 
 If the online protocol changed (worker/index.js + src/net.js `PROTOCOL`), both must be bumped
