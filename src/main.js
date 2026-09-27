@@ -433,7 +433,7 @@ function renderHero() {
   const later = () => { if (!queued) queued = requestAnimationFrame(fit); };
   if (info && picker) {
     const ro = new ResizeObserver(later);
-    ro.observe(picker); ro.observe($('#loadout')); ro.observe($('#heroStats'));
+    ro.observe(picker); ro.observe(info); // info: absolute with an auto height, it follows its content (unlock panel, name, fonts)
     addEventListener('resize', later);
   }
 }
