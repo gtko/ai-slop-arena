@@ -462,7 +462,7 @@ export default {
   'road.reached': "Trophy Road {n}",
   'shop.owned': "OWNED",
   'shop.refresh': "New items in {time}",
-  'shop.fair': "Slop Coins are earned by playing and unlock brawlers. Looks cost Gems: nothing here makes you stronger.",
+  'shop.fair': "Slop Coins are earned by playing and unlock brawlers and skins. Other looks cost Gems: nothing here makes you stronger.",
   'col.atLevel': "Level {n}",
   'col.onRoad': "Trophy Road {n}",
   'col.gold': "Mastery {n}",

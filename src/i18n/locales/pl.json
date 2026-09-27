@@ -477,7 +477,7 @@
   "road.reached": "Droga trofeów {n}",
   "shop.owned": "POSIADANE",
   "shop.refresh": "Nowe przedmioty za {time}",
-  "shop.fair": "Slop Coins zdobywasz, grając, i odblokowujesz nimi zadymiarzy. Wygląd kosztuje Klejnoty: nic tutaj nie czyni cię silniejszym.",
+  "shop.fair": "Slop Coins zdobywasz, grając, i odblokowujesz nimi zadymiarzy i skórki. Inny wygląd kosztuje Klejnoty: nic tutaj nie czyni cię silniejszym.",
   "col.atLevel": "Poziom {n}",
   "col.onRoad": "Droga trofeów {n}",
   "col.gold": "Mistrzostwo {n}",

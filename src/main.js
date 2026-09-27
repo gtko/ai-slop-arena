@@ -35,7 +35,7 @@ import { settings, set as setSetting, onChange, MOBILE } from './settings.js';
 import { Menus } from './menu.js';
 import { OUTLINES } from './models.js';
 import { preloadFigurines, setFigurineDetail } from './figurines.js';
-import { preloadProps, PROPS } from './props.js';
+import { preloadProps, PROPS, setPropDetail } from './props.js';
 import { enableCartoonShading, cartoonGradePass } from './cartoon.js';
 import { PAD } from './input.js';
 import { MetaUI, skinFilter, framed, titleText, num, coin, gem } from './metaui.js';
@@ -104,6 +104,14 @@ gtao._overrideVisibility = () => {
   }
   if (lighting.helper && lighting.helper.visible) { lighting.helper.visible = false; gtao._visibilityCache.push(lighting.helper); }
 };
+// The pre-pass is a second renderer.render(): without this, every shadow map (sun, and the player
+// lantern after dusk) would be drawn again for it, although it only reads normals and depth.
+const gtaoRender = gtao.render.bind(gtao);
+gtao.render = (...args) => {
+  const auto = renderer.shadowMap.autoUpdate;
+  renderer.shadowMap.autoUpdate = false;
+  try { gtaoRender(...args); } finally { renderer.shadowMap.autoUpdate = auto; }
+};
 composer.addPass(gtao);
 const sight = new Sight(); // dims what walls, trees and crates hide from you
 composer.addPass(sight.pass);
@@ -156,7 +164,7 @@ function applySetting(k) {
       if (v !== 'cycle') lighting.setPreset(+v);
       break;
     case 'shake': game.shakeEnabled = v; break;
-    case 'detail': setFigurineDetail(v ?? 1); break; // figurine level of detail (mobile)
+    case 'detail': setFigurineDetail(v ?? 1); setPropDetail(v ?? 1); game.setDetail(v ?? 1); break; // levels of detail (mobile)
     case 'colorblind': document.body.classList.toggle('cb', v); game.colorblind = v; for (const b of game.brawlers) b.teamColors(); break;
     case 'fps': $('#fpsBadge').classList.toggle('hidden', !v); break;
     case 'debugPanel': $('#panel').classList.toggle('off', !v); break;
@@ -342,6 +350,20 @@ function renderSkins() {
   }));
 }
 
+// Touch screens (phones, tablets): the skin row starts folded to its title, which opens it, so the
+// roster and the arena stay in view; the choice lasts for the session.
+{
+  const bar = $('.skinbar'), head = bar.querySelector('.sb-head');
+  let open = sessionStorage.getItem('skinbarOpen');
+  const fold = f => { bar.classList.toggle('collapsed', f); head.setAttribute('aria-expanded', String(!f)); if (!f) renderSkins(); };
+  if (isTouchDevice) {
+    head.setAttribute('role', 'button'); head.tabIndex = 0;
+    fold(open !== '1');
+    const flip = () => { sfx('click'); const f = !bar.classList.contains('collapsed'); fold(f); try { sessionStorage.setItem('skinbarOpen', f ? '0' : '1'); } catch {} };
+    head.addEventListener('click', flip);
+    head.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
+  }
+}
 $('.skinbar').querySelectorAll('.sb-arrow').forEach(b => b.addEventListener('click', () => {
   const tr = $('#heroSkins');
   tr.scrollBy({ left: +b.dataset.d * tr.clientWidth * 0.8, behavior: 'smooth' });
@@ -1279,7 +1301,7 @@ const TIPS = ['tip.bushes', 'tip.crates', 'tip.gas', 'tip.brawlers', 'tip.tod', 
   await Promise.all([
     loadTextures(renderer, tick(t('loader.ground'))),
     preloadFigurines(Object.keys(TYPES), renderer, tick(t('loader.brawlers'))).then(() => setFigurineDetail(settings.detail ?? 1)),
-    preloadProps(renderer, tick(t('loader.decor'))),
+    preloadProps(renderer, tick(t('loader.decor'))).then(() => setPropDetail(settings.detail ?? 1)),
   ]);
   clearInterval(tipTimer);
   $('#ldStep').textContent = t('loader.ready');

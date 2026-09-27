@@ -63,10 +63,14 @@ let ICE_BLOCK = null, SUPPLY_BAND = null;
 
 export class Arena {
   // headless: the server builds the arena for its rules; nobody looks at the shore dressing there
-  constructor(scene, map = MAPS.oasis, { headless = false } = {}) {
+  // detail: scenery level of detail (settings "detail", see setDetail)
+  constructor(scene, map = MAPS.oasis, { headless = false, detail = 1 } = {}) {
     this.scene = scene;
     this.map = map;
     this.headless = headless;
+    this.decor = []; // instanced meshes of the ring around the arena (setDetail thins them)
+    this.minor = []; // small shadow casters (wall-top lanterns, crate gems, barrel hoops...): no shadow below detail 0.6
+    this.detail = detail;
     const QUARTER = map.layout;
     this.group = new THREE.Group();
     scene.add(this.group);
@@ -105,6 +109,23 @@ export class Arena {
     this.buildCrates();
     this.buildTorches();
     this.buildDecor();
+    this.setDetail(detail);
+  }
+
+  // Mobile presets (detail < 1): the props drop triangles (props.js). Below 0.6 (mobile low and
+  // medium), the ring around the arena also loses half of its outer trees and stops casting
+  // shadows (they fall on the grass outside, where nobody plays).
+  // The small lanterns on the outer walls and the power cubes over the crates stop casting shadows
+  // there too: one shadow draw each, for a speck of shadow.
+  setDetail(d) {
+    this.detail = d;
+    const lite = d < 0.6;
+    for (const m of this.decor) {
+      m.count = lite ? m.userData.lite : m.userData.full;
+      m.castShadow = !lite;
+    }
+    this.minor = this.minor.filter(m => m.parent?.parent); // not the gems of broken crates
+    for (const m of this.minor) m.castShadow = !lite;
   }
 
   /* ------------------------------ queries ------------------------------ */
@@ -421,6 +442,7 @@ export class Arena {
     const sign = new THREE.Mesh(new THREE.CircleGeometry(0.22, 3), new THREE.MeshBasicMaterial({ color: 0x111111 }));
     sign.position.set(0, 0.95, 0.63); g.add(sign);
     g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    g.traverse(o => { if (o.isMesh && o !== body) { o.castShadow = this.detail >= 0.6; this.minor.push(o); } }); // hoops and sign: inside the body's shadow
     g.rotation.y = this.rand() * Math.PI * 2;
     this.group.add(g);
     // no power cube inside: its "gem" is a dummy so crate code (spin, flash) just works
@@ -465,6 +487,8 @@ export class Arena {
       const top = sculpted ? sculpted.boundingBox?.max.y ?? 1.5 : 1.45;
       const gm = add(gem, gemMat, top + 0.1);
       gm.rotation.set(Math.PI / 4, Math.PI / 4, 0);
+      gm.castShadow = this.detail >= 0.6;
+      this.minor.push(gm);
       g.rotation.y = (this.rand() - 0.5) * 0.3;
       if (supply) { // gold, and a bit bigger
         mat.color.set(0xffd46b);
@@ -495,6 +519,7 @@ export class Arena {
         : makeLantern(kit, pedestal);
       L.group.position.set(x, baseY, z);
       L.group.rotation.y = this.rand() * Math.PI * 2;
+      if (!pedestal) L.group.traverse(o => { if (o.isMesh && o.castShadow) this.minor.push(o); });
       this.group.add(L.group);
       L.halo.position.x = x; L.halo.position.z = z; L.halo.position.y += baseY;
       this.halos.add(L.halo);
@@ -523,13 +548,17 @@ export class Arena {
         // the camera looks from the south: tall props on the first southern rows would stand
         // between it and the players, so they are kept low there
         const low = j >= N && j <= N + 1 ? 0.45 : 1;
-        (byKind[kind] ||= []).push([_v.x + (this.rand() - 0.5) * 1.4, _v.z + (this.rand() - 0.5) * 1.4, (0.8 + this.rand() * 0.5) * low]);
+        // every other tree from the 3rd row out may go on mobile (setDetail); a fixed pattern, so
+        // the rand() sequence and the full ring stay the same
+        const thin = out >= 3 && (i + j) % 2 === 0;
+        (byKind[kind] ||= []).push([_v.x + (this.rand() - 0.5) * 1.4, _v.z + (this.rand() - 0.5) * 1.4, (0.8 + this.rand() * 0.5) * low, thin]);
       }
     }
     const barkMat = new THREE.MeshStandardMaterial({ color: 0x7a4e2e, roughness: 0.9, vertexColors: true });
     const plainMat = new THREE.MeshStandardMaterial({ roughness: 0.7, vertexColors: true });
     // One instanced mesh per 45° sector of the ring: an instanced mesh is culled as a whole, so a
     // single ring-wide mesh would draw every tree around the arena whenever one is on screen.
+    // The trees setDetail may drop go last in each mesh, so a lower instance count hides them.
     const addInstanced = (geo, mat, pts, depth, tint) => {
       const sectors = Array.from({ length: 8 }, () => []);
       for (const p of pts) sectors[Math.floor((Math.atan2(p[1], p[0]) + Math.PI) / (Math.PI * 2) * 8) % 8].push(p);
@@ -537,7 +566,10 @@ export class Arena {
         if (!sec.length) continue;
         const mesh = new THREE.InstancedMesh(geo, mat, sec.length);
         if (depth) mesh.customDepthMaterial = depth;
-        sec.forEach(([x, z, s, ry, sy], k) => {
+        const lite = sec.filter(p => !p[5]).length;
+        let a = 0, b = lite;
+        sec.forEach(([x, z, s, ry, sy, thin]) => { // tints drawn in ring order, whatever the slot
+          const k = thin ? b++ : a++;
           _q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, ry);
           _m.compose(_v.set(x, 0, z), _q, _s.set(s, s * sy, s));
           mesh.setMatrixAt(k, _m);
@@ -545,24 +577,27 @@ export class Arena {
         });
         mesh.castShadow = mesh.receiveShadow = true;
         mesh.computeBoundingSphere();
+        mesh.userData.full = sec.length;
+        mesh.userData.lite = lite;
+        this.decor.push(mesh);
         this.group.add(mesh);
       }
     };
     const FIT = { round: { height: 4.6 }, pine: { height: 5.4 }, dead: { height: 4.4 }, cactus: { height: 2.8 }, cliff: { height: 3.2 } };
     for (const [kind, raw] of Object.entries(byKind)) {
-      const pts = raw.map(([x, z, s]) => [x, z, s, this.rand() * 6.28, 0.9 + this.rand() * 0.25]);
+      const pts = raw.map(([x, z, s, thin]) => [x, z, s, this.rand() * 6.28, 0.9 + this.rand() * 0.25, thin]);
       const name = TREE_PROP[kind] && snowy(TREE_PROP[kind], M.snow);
       if (name && hasProp(name)) {
         const tint = () => _c.setHSL(0, 0, 0.88 + this.rand() * 0.16);
-        const big = kind === 'cliff' ? pts.map(([x, z, s, ry]) => [x, z, s * (1.2 + this.rand() * 0.9), ry, 0.8 + this.rand() * 0.5]) : pts;
-        addInstanced(propGeometry(name, FIT[kind]), propMaterial(name), big, propDepth(name), tint);
+        const big = kind === 'cliff' ? pts.map(([x, z, s, ry, , thin]) => [x, z, s * (1.2 + this.rand() * 0.9), ry, 0.8 + this.rand() * 0.5, thin]) : pts;
+        addInstanced(propGeometry(name, FIT[kind], true), propMaterial(name), big, propDepth(name), tint);
         continue;
       }
       if (kind === 'cactus') { addInstanced(cactusGeometry(4, 2.4), plainMat, pts); continue; }
       if (kind === 'dead') { addInstanced(deadTree(6), plainMat, pts); continue; }
       if (kind === 'cliff') {
         const rock = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
-        addInstanced(cliffGeometry(8), rock, pts.map(([x, z, s, ry]) => [x, z, s * (1.4 + this.rand() * 1.2), ry, 0.7 + this.rand() * 0.8]));
+        addInstanced(cliffGeometry(8), rock, pts.map(([x, z, s, ry, , thin]) => [x, z, s * (1.4 + this.rand() * 1.2), ry, 0.7 + this.rand() * 0.8, thin]));
         continue;
       }
       const geo = kind === 'pine' ? pineTree(5) : roundTree(3);

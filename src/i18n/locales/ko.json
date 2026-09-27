@@ -441,7 +441,7 @@
   "road.reached": "트로피 로드 {n}",
   "shop.owned": "보유 중",
   "shop.refresh": "{time} 후 새 아이템",
-  "shop.fair": "Slop Coins는 플레이로 얻고 브롤러를 잠금 해제해요. 외형은 보석이 필요해요: 더 강해지는 건 없어요.",
+  "shop.fair": "Slop Coins는 플레이로 얻고 브롤러와 스킨을 잠금 해제해요. 다른 외형은 보석이 필요해요: 더 강해지는 건 없어요.",
   "col.atLevel": "레벨 {n}",
   "col.onRoad": "트로피 로드 {n}",
   "col.gold": "숙련도 {n}",

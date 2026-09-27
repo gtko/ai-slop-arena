@@ -453,7 +453,7 @@
   "road.reached": "Kupa Yolu {n}",
   "shop.owned": "SENDE",
   "shop.refresh": "{time} sonra yeni ürünler",
-  "shop.fair": "Slop Coins oynayarak kazanılır ve savaşçıların kilidini açar. Görünümler Elmas ile alınır: buradaki hiçbir şey seni güçlendirmez.",
+  "shop.fair": "Slop Coins oynayarak kazanılır; savaşçıların ve kostümlerin kilidini açar. Diğer görünümler Elmas ile alınır: buradaki hiçbir şey seni güçlendirmez.",
   "col.atLevel": "Seviye {n}",
   "col.onRoad": "Kupa Yolu {n}",
   "col.gold": "Ustalık {n}",

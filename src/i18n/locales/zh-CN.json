@@ -441,7 +441,7 @@
   "road.reached": "奖杯之路 {n}",
   "shop.owned": "已拥有",
   "shop.refresh": "{time} 后上新",
-  "shop.fair": "Slop Coins 通过游戏获得，用于解锁英雄。外观需要宝石：这里没有任何东西能让你变强。",
+  "shop.fair": "Slop Coins 通过游戏获得，用于解锁英雄和皮肤。其他外观需要宝石：这里没有任何东西能让你变强。",
   "col.atLevel": "等级 {n}",
   "col.onRoad": "奖杯之路 {n}",
   "col.gold": "精通 {n}",

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { MeshoptSimplifier } from 'meshoptimizer';
 import { ASSET_BASE } from './assets.js';
 import { charMat, shared } from './materials.js';
 
@@ -90,7 +91,8 @@ function swayPatch(sh) {
 //   { height }        uniform scale to that height
 //   { width }         uniform scale so the footprint's longest side has that width
 //   { box: [x,y,z] }  stretched to exactly that box (wall blocks fill their tile)
-export function propGeometry(name, fit) {
+// far: only ever seen from afar (the decor ring around the arena), so it may drop more triangles.
+export function propGeometry(name, fit, far = false) {
   const P = loaded.get(name);
   if (!P) return null;
   const g = P.geo.clone(), s = P.size;
@@ -99,7 +101,49 @@ export function propGeometry(name, fit) {
     const k = fit.height ? fit.height / s.y : fit.width / Math.max(s.x, s.z);
     g.scale(k, k, k);
   }
+  const ref = { ref: new WeakRef(g), P, far };
+  live.add(ref);
+  g.addEventListener('dispose', () => live.delete(ref));
+  if (simplifierReady) g.setIndex(lodIndex(P, lodRatio(far)));
   return g;
+}
+
+// Levels of detail (mobile, settings "detail" < 1): the props are instanced by the hundred (tree
+// ring, bushes, walls), so their triangles add up in every pass (view, sun shadow, lantern shadow).
+// Same vertices, fewer triangles (meshoptimizer): swapping the index of every live copy changes the
+// props of the current match at once. Full models at detail 1 (desktop medium and up).
+let detail = 1, simplifierReady = false;
+const live = new Set(); // { ref: WeakRef<geometry>, P, far } of every propGeometry copy in use
+const lodRatio = far => (detail >= 0.99 ? 1 : detail >= 0.6 ? (far ? 0.3 : 0.5) : (far ? 0.2 : 0.3));
+
+export async function setPropDetail(d) {
+  detail = d;
+  try {
+    if (detail < 0.99) { await MeshoptSimplifier.ready; simplifierReady = true; }
+    for (const e of live) {
+      const g = e.ref.deref();
+      if (!g) { live.delete(e); continue; }
+      const idx = lodIndex(e.P, lodRatio(e.far));
+      if (g.index !== idx) g.setIndex(idx);
+    }
+  } catch (e) { console.warn('prop detail', e); } // no WebAssembly: full detail
+}
+
+function lodIndex(P, ratio) {
+  P.fullIndex ||= P.geo.index;
+  if (ratio >= 0.99 || !simplifierReady) return P.fullIndex;
+  P.lod ||= {};
+  if (P.lod[ratio]) return P.lod[ratio];
+  const g = P.geo, n = g.attributes.position.count, uv = g.attributes.uv;
+  const idx = new Uint32Array(P.fullIndex.array), target = Math.floor(idx.length * ratio / 3) * 3;
+  const pos = new Float32Array(g.attributes.position.array);
+  // UVs weigh in a little so the painted texture holds; 'Permissive' lets edges collapse across the
+  // UV seams of the generated atlases (fragmented: the leaf ball would not go below 87% without it)
+  const err = 0.05;
+  const [out] = uv
+    ? MeshoptSimplifier.simplifyWithAttributes(idx, pos, 3, new Float32Array(uv.array), 2, [0.3, 0.3], null, target, err, ['Permissive'])
+    : MeshoptSimplifier.simplify(idx, pos, 3, target, err, ['Permissive']);
+  return (P.lod[ratio] = new THREE.BufferAttribute(n > 65535 ? out : new Uint16Array(out), 1));
 }
 
 export const propMaterial = name => loaded.get(name)?.mat;

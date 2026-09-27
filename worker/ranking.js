@@ -22,7 +22,7 @@ export const rpForMmr = mmr => Math.max(0, (mmr - 850) * 2);
 export const botLevelFor = mmr => Math.min(0.95, Math.max(0.05, 0.3 + (mmr - START_MMR) / 1200));
 
 // Matchmaking: how far apart MMRs may be, growing with the oldest player's wait (ms).
-export const mmrWindow = waitMs => 150 + (waitMs / 1000) * 2.5;
+export const mmrWindow = waitMs => 150 + (waitMs / 1000) * 5; // 300 when the bots fill in at 30 s
 
 // players: [{ key, mmr, rp, matches, rank }] (humans of one match, rank 1..8; Duo: 1..4 per team).
 // Returns [{ key, mmr, rp, matches, wins, delta, tier, prevTier }].
@@ -53,7 +53,7 @@ export function rate(players, { visible = true, duo = false } = {}) {
 // the closest tickets queued, whatever their MMR (a match with humans beats one with bots), and bots
 // fill the rest. A ticket is a player or a party (size: its players; the whole party or nothing).
 // Returns the tickets (their sizes add up to `size` at most) or null.
-export function pickGroup(queue, now, size = 8, forceAt = 60 * 1000) {
+export function pickGroup(queue, now, size = 8, forceAt = 30 * 1000) {
   if (!queue.length) return null;
   const q = [...queue].sort((a, b) => a.joined - b.joined);
   const anchor = q[0], waited = now - anchor.joined, n = e => e.size || 1;
