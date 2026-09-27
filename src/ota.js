@@ -1,61 +1,88 @@
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
+import { Network } from '@capacitor/network';
 import { version } from '../package.json';
 import { WEB_ORIGIN } from './platform.js';
-import { shouldDownload, pickDownloaded, settleAttempt } from './updates.js';
+import { shouldDownload, pickDownloaded, nativeVersion, loadState, downloadStarted, downloadDone, bootFailed, bootOk } from './updates.js';
 
 // Android / iOS only (loaded by main.js): over-the-air updates of the web bundle (docs/ota-updates.md).
-// 1. notifyAppReady() at once: this bundle booted, the plugin keeps it (a bundle that never gets here is
-//    rolled back to the previous one after appReadyTimeout, capacitor.config.json).
-// 2. A newer bundle downloaded during an earlier session is switched to now, at launch, while the menu
-//    is up: never during a match.
-// 3. Otherwise the manifest (GET /app/latest.json on our Worker) is read in the background; a newer bundle
-//    this native shell can run is downloaded, and applies at the next launch.
-// Every failure (offline, the release still building, a broken zip) is silent: the next launch retries.
+// - atLaunch(), as soon as main.js runs: if the last switch to a new bundle did not boot, count it; if a
+//   newer bundle was downloaded during an earlier session, switch to it now, before the loader and long
+//   before any match (the web view reloads into it).
+// - appReady(), once the loader is done and the menu is up: notifyAppReady() (the plugin keeps a bundle
+//   that gets here and rolls back one that does not within appReadyTimeout, capacitor.config.json).
+//   Then, when the player is on the home screen (not in a match, a room or the queue) and on Wi-Fi,
+//   the manifest (GET /app/latest.json on our Worker) is read; a newer bundle this native shell can run
+//   is downloaded, and applies at the next launch.
+// Every failure (offline, the release still building, a broken zip) is silent; attempts are counted per
+// version so a bundle that keeps failing is not downloaded again and again (src/updates.js).
 
-const TRIED = 'iaslop-ota-tried';   // version switched to at the last launch (did it boot?)
-const FAILED = 'iaslop-ota-failed'; // versions that never booted here: not downloaded again
-const NATIVE = 'iaslop-ota-native'; // the native shell's own version (its built-in bundle's version)
+const STATE = 'iaslop-ota';        // { failed, boots, downloads } (src/updates.js loadState)
+const TRIED = 'iaslop-ota-tried';  // version switched to at the last launch (did it boot?)
+const NATIVE = 'iaslop-ota-native'; // the shell's version, recorded while its built-in bundle runs
 const get = k => { try { return localStorage.getItem(k); } catch { return null; } };
 const put = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private */ } };
-const readFailed = () => { try { const a = JSON.parse(get(FAILED) || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
+const readState = () => loadState(get(STATE));
+const saveState = s => put(STATE, JSON.stringify(s));
+const warn = e => console.warn('[ota]', (e && e.message) || e);
+const HOME_POLL = 5000;
 
-// inMatch(): true while a match runs (nothing reloads then). onReady(version): a bundle is downloaded
-// and applies at the next launch.
-export async function startUpdates({ inMatch = () => false, onReady } = {}) {
-  try {
-    await CapacitorUpdater.notifyAppReady();
+let switching = null; // atLaunch() is switching bundles: nothing else runs
 
-    let failed = readFailed();
+export function atLaunch() {
+  switching = (async () => {
     const tried = get(TRIED);
-    if (tried) {
-      failed = settleAttempt(tried, version, failed);
-      put(FAILED, JSON.stringify(failed));
-      put(TRIED, null);
-    }
+    if (tried && tried !== version) { saveState(bootFailed(readState(), tried)); put(TRIED, null); }
+    const current = await CapacitorUpdater.current();
+    // Switch only from a bundle known to work (the built-in one, or one that booted before): it is
+    // the one the plugin falls back to if the new bundle does not boot.
+    if (current.bundle.id !== 'builtin' && current.bundle.status !== 'success') return false;
+    const { bundles } = await CapacitorUpdater.list();
+    const ready = pickDownloaded(bundles, { running: version, failed: readState().failed });
+    if (!ready) return false;
+    put(TRIED, ready.version);
+    try { await CapacitorUpdater.set({ id: ready.id }); } catch (e) { put(TRIED, null); throw e; }
+    return true; // the web view reloads into the new bundle
+  })().catch(e => { warn(e); return false; });
+  return switching;
+}
 
-    // The built-in bundle's version is the shell's version (android versionName follows package.json,
-    // but the iOS project keeps its own marketing version): remember it while it runs.
+// onHome(): true while the home screen is shown with no match, room or queue. onReady(version): a
+// bundle is downloaded and applies at the next launch (called while on the home screen).
+export async function appReady({ onHome = () => true, onReady } = {}) {
+  try {
+    if (switching && await switching) return;
+    await CapacitorUpdater.notifyAppReady();
+    if (get(TRIED) === version) { saveState(bootOk(readState(), version)); put(TRIED, null); }
+
     const current = await CapacitorUpdater.current();
     if (current.bundle.id === 'builtin') put(NATIVE, version);
-    const native = get(NATIVE) || current.native;
+    const native = nativeVersion(current.native, get(NATIVE));
 
     const { bundles } = await CapacitorUpdater.list();
-    const ready = pickDownloaded(bundles, { running: version, failed });
-    if (ready && !inMatch()) {
-      put(TRIED, ready.version);
-      try { await CapacitorUpdater.set({ id: ready.id }); } catch (e) { put(TRIED, null); throw e; }
-      return; // the web view reloads into the new bundle
-    }
-    if (ready) return; // downloaded already: it applies at the next launch
+    if (pickDownloaded(bundles, { running: version, failed: readState().failed })) return; // applies next launch
 
-    if (navigator.connection && navigator.connection.saveData) return; // data saver: no big download
+    await until(async () => onHome() && await onWifi());
     const res = await fetch(`${WEB_ORIGIN}/app/latest.json`, { cache: 'no-store' });
     if (!res.ok) return;
     const manifest = await res.json();
-    if (!shouldDownload(manifest, { running: version, native, failed })) return;
+    if (!shouldDownload(manifest, { running: version, native, state: readState() })) return;
+    // The plugin cannot pause a download: it only starts from the home screen, on Wi-Fi.
+    if (!onHome() || !await onWifi()) return;
+    saveState(downloadStarted(readState(), manifest.version));
     await CapacitorUpdater.download({ url: manifest.url, version: manifest.version });
-    if (onReady) onReady(manifest.version);
+    saveState(downloadDone(readState(), manifest.version));
+    if (onReady) { await until(async () => onHome()); onReady(manifest.version); }
   } catch (e) {
-    console.warn('[ota]', e && e.message || e);
+    warn(e);
   }
+}
+
+// Wi-Fi only: the bundle is ~60 MB. Unknown / missing network plugin: no download.
+async function onWifi() {
+  try { return (await Network.getStatus()).connectionType === 'wifi'; } catch { return false; }
+}
+
+// Resolves once test() is true, checking every few seconds (this session only).
+async function until(test) {
+  while (!await test()) await new Promise(r => setTimeout(r, HOME_POLL));
 }

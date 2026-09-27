@@ -286,18 +286,9 @@ if (isNativeApp) {
   import('./native.js').then(m => m.bindAppEvents({ onBack: () => meta.close() || menus.back() || pauseMatch(), onHide: pauseMatch }))
     .catch(e => console.warn('[native]', e));
 }
-// Android / iOS app: over-the-air updates of the game (src/ota.js). A downloaded update applies at the
-// next launch; a small toast says so, never during a match.
-if (isNativeApp) {
-  const updateReady = () => {
-    if (menus.ctx.isInMatch()) return;
-    $('#updateToast').classList.remove('hidden');
-    setTimeout(() => $('#updateToast').classList.add('hidden'), 8000);
-  };
-  $('#updateToastX').addEventListener('click', () => $('#updateToast').classList.add('hidden'));
-  import('./ota.js').then(m => m.startUpdates({ inMatch: () => menus.ctx.isInMatch(), onReady: updateReady }))
-    .catch(e => console.warn('[ota]', e));
-}
+// Android / iOS app: over-the-air updates of the game (src/ota.js). A bundle downloaded earlier is
+// switched to right now, before the loader; the check and download wait for the loader (below).
+const ota = isNativeApp ? import('./ota.js').then(m => { m.atLaunch(); return m; }).catch(e => { console.warn('[ota]', e); return null; }) : null;
 
 $('#optionsBtn').addEventListener('click', () => { sfx('click'); leaveHome(); menus.openOptions('#menu'); });
 // Android app: achievements mirrored to Google Play Games, and a button for Play's achievements screen.
@@ -1322,6 +1313,19 @@ const TIPS = ['tip.bushes', 'tip.crates', 'tip.gas', 'tip.brawlers', 'tip.tod', 
   try { first = !localStorage.getItem('iaslop-opened'); localStorage.setItem('iaslop-opened', '1'); } catch { /* private mode */ }
   track('app_opened', { load_ms: Math.round(performance.now()), first_launch: first, gpu: (settings.gpu || '').slice(0, 120), screen: `${innerWidth}x${innerHeight}`, touch: isTouchDevice });
   setTimeout(() => $('#loader').classList.add('done'), 250);
+}
+// Android / iOS app: the game loaded, so this bundle is good (notifyAppReady). Updates are then looked for
+// and downloaded only on the home screen (no match, room or queue), and a small toast says when one
+// is ready: it applies at the next launch.
+if (ota) {
+  const onHome = () => !$('#menu').classList.contains('hidden') && $('#hud').classList.contains('hidden')
+    && !net.connected && !mm.searching && !pqTimer;
+  const updateReady = () => {
+    $('#updateToast').classList.remove('hidden');
+    setTimeout(() => $('#updateToast').classList.add('hidden'), 8000);
+  };
+  $('#updateToastX').addEventListener('click', () => $('#updateToast').classList.add('hidden'));
+  ota.then(m => m && m.appReady({ onHome, onReady: updateReady }));
 }
 for (const k of Object.keys(settings)) applySetting(k);
 lighting.setPreset(settings.tod === 'cycle' ? 2 : +settings.tod, true);
