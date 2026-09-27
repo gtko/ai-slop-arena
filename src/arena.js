@@ -69,6 +69,8 @@ export class Arena {
     this.map = map;
     this.headless = headless;
     this.decor = []; // instanced meshes of the ring around the arena (setDetail thins them)
+    this.minor = []; // small shadow casters (wall-top lanterns, crate gems): no shadow below detail 0.6
+    this.detail = detail;
     const QUARTER = map.layout;
     this.group = new THREE.Group();
     scene.add(this.group);
@@ -113,12 +115,17 @@ export class Arena {
   // Mobile presets (detail < 1): the props drop triangles (props.js). Below 0.6 (mobile low and
   // medium), the ring around the arena also loses half of its outer trees and stops casting
   // shadows (they fall on the grass outside, where nobody plays).
+  // The small lanterns on the outer walls and the power cubes over the crates stop casting shadows
+  // there too: one shadow draw each, for a speck of shadow.
   setDetail(d) {
+    this.detail = d;
     const lite = d < 0.6;
     for (const m of this.decor) {
       m.count = lite ? m.userData.lite : m.userData.full;
       m.castShadow = !lite;
     }
+    this.minor = this.minor.filter(m => m.parent?.parent); // not the gems of broken crates
+    for (const m of this.minor) m.castShadow = !lite;
   }
 
   /* ------------------------------ queries ------------------------------ */
@@ -479,6 +486,8 @@ export class Arena {
       const top = sculpted ? sculpted.boundingBox?.max.y ?? 1.5 : 1.45;
       const gm = add(gem, gemMat, top + 0.1);
       gm.rotation.set(Math.PI / 4, Math.PI / 4, 0);
+      gm.castShadow = this.detail >= 0.6;
+      this.minor.push(gm);
       g.rotation.y = (this.rand() - 0.5) * 0.3;
       if (supply) { // gold, and a bit bigger
         mat.color.set(0xffd46b);
@@ -509,6 +518,7 @@ export class Arena {
         : makeLantern(kit, pedestal);
       L.group.position.set(x, baseY, z);
       L.group.rotation.y = this.rand() * Math.PI * 2;
+      if (!pedestal) L.group.traverse(o => { if (o.isMesh && o.castShadow) this.minor.push(o); });
       this.group.add(L.group);
       L.halo.position.x = x; L.halo.position.z = z; L.halo.position.y += baseY;
       this.halos.add(L.halo);
