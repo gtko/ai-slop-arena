@@ -103,6 +103,7 @@ export class Ambient {
       try { s.update(dt, t); } catch (err) { // cosmetic: a broken species stops, the match plays on
         console.warn('ambient', g.mapKey, err);
         s.broken = true;
+        if (s.P?.list) for (let k = 0; k < s.P.list.length; k++) s.P.pose(k, 0, 0, 0, 0, 0, 0, 0); // not frozen mid-air
       }
     }
     const fr = frustumOf(g.camera);
