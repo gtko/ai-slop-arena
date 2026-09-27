@@ -26,7 +26,11 @@ for (const file of readdirSync(dir).filter(f => f.endsWith('.js'))) {
       get: grid, map: M, toTile: x => Math.floor(x / TILE + N / 2), charAt(x, z) { return grid(this.toTile(x), this.toTile(z)); },
       center: (i, j, v = new THREE.Vector3()) => v.set((i - N / 2) * TILE + TILE / 2, 0, (j - N / 2) * TILE + TILE / 2),
     };
-    const calls = [], geo = (g, what) => assert.ok(g?.isBufferGeometry && g.attributes.position.count > 0, `${file}: ${what} is not a geometry`);
+    const calls = [], KEYS = /^(fennec|arctic_fox|cat|hedgehog|squirrel|frog|hare|penguin|duck|hen|sparrow|vulture|raven|lizard)$/;
+    let rigs = 0;
+    // a stand-in of fauna.js Puppets: never loaded (the toy path), as when a model is missing
+    const puppets = (key, n) => { assert.match(key, KEYS, `${file}: no fauna model "${key}"`); rigs += n; return { ready: false, n, has: () => false }; };
+    const geo = (g, what) => assert.ok(g?.isBufferGeometry && g.attributes.position.count > 0, `${file}: ${what} is not a geometry`);
     const L = {
       THREE, group: new THREE.Group(), arena, map: M, key, density: 1, rand, toy, game: { brawlers: [] },
       spots(test, n) {
@@ -34,8 +38,15 @@ for (const file of readdirSync(dir).filter(f => f.endsWith('.js'))) {
         return ok.length ? Array.from({ length: n }, () => ok[Math.floor(rand() * ok.length)].clone()) : [];
       },
       seen: () => [],
-      flock(o) { geo(o.body, 'flock body'); geo(o.wing, 'flock wing'); calls.push(['flock', o.count ?? 8]); },
+      flock(o) { geo(o.body, 'flock body'); geo(o.wing, 'flock wing'); if (o.key) puppets(o.key, o.count ?? 8); calls.push(['flock', o.count ?? 8]); },
       walkers(o) { geo(o.geometry, 'walker geometry'); if (o.on) assert.equal(typeof o.on, 'function'); calls.push(['walkers', o.count ?? 5]); },
+      critters(o) {
+        if (o.toy) geo(o.toy, 'critter toy');
+        for (const f of ['on', 'home', 'slide', 'swim']) if (o[f]) assert.equal(typeof o[f], 'function', `${file}: critters ${f}`);
+        puppets(o.key, o.count ?? 5);
+        calls.push(['critters', o.count ?? 5]);
+      },
+      rig(key, n) { assert.ok(Number.isInteger(n) && n >= 0, `${file}: rig count`); return puppets(key, n); },
       swarm(o) { if (o.geometry) geo(o.geometry, 'swarm geometry'); if (o.at) assert.ok(Array.isArray(o.at)); calls.push(['swarm', o.count ?? 12]); },
       every(fn) { assert.equal(typeof fn, 'function'); fn(0.016, 1); calls.push(['every', 0]); },
     };
@@ -46,8 +57,9 @@ for (const file of readdirSync(dir).filter(f => f.endsWith('.js'))) {
     const total = calls.reduce((s, [, n]) => s + n, 0);
     assert.ok(calls.length <= 8, `${file}: ${calls.length} systems (8 at most: one draw call or three each)`);
     assert.ok(total <= 160, `${file}: ${total} creatures (160 at most)`);
+    assert.ok(rigs <= 40, `${file}: ${rigs} rigged creatures (40 at most, ambient/index.js RIG_BUDGET)`);
     L.group.traverse(o => { if (o.isMesh) assert.ok(o.geometry, `${file}: a mesh without geometry`); });
-    console.log(`ok   ambient ${key}: ${calls.map(([k, n]) => `${k}${n ? ' ' + n : ''}`).join(', ')}`);
+    console.log(`ok   ambient ${key}: ${calls.map(([k, n]) => `${k}${n ? ' ' + n : ''}`).join(', ')} (${rigs} rigged)`);
   } catch (err) {
     failed++;
     console.log(`FAIL ambient ${key}\n     ${err.message}`);
