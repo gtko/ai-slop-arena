@@ -344,6 +344,8 @@
   "mod.kicked.leader": "房主已將你踢出房間。",
   "mod.kicked.cheat": "你已被移出對戰：異常移動（速度或瞬間移動）。",
   "err.outdated": "遊戲版本已過期：請重新整理頁面或更新應用程式。",
+  "err.outdatedApp": "遊戲更新即將到來：請在一分鐘後重新啟動遊戲。如果問題持續，請安裝最新版本。",
+  "app.updateReady": "更新已就緒：重新啟動遊戲即可套用。",
   "bug.button": "回報 Bug",
   "bug.something": "遇到問題？回報 Bug",
   "bug.title": "回報 Bug",

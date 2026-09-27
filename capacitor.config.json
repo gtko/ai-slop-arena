@@ -9,5 +9,19 @@
   "ios": {
     "backgroundColor": "#16121f",
     "contentInset": "never"
+  },
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": false,
+      "updateUrl": "",
+      "statsUrl": "",
+      "channelUrl": "",
+      "allowModifyUrl": false,
+      "shakeMenu": false,
+      "appReadyTimeout": 45000,
+      "autoDeleteFailed": true,
+      "autoDeletePrevious": true,
+      "resetWhenUpdate": true
+    }
   }
 }

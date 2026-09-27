@@ -347,6 +347,8 @@
   "mod.kicked.leader": "Lider pokoju wyrzucił cię z pokoju.",
   "mod.kicked.cheat": "Wyrzucono cię z meczu: niemożliwe ruchy (prędkość lub teleport).",
   "err.outdated": "Ta wersja gry jest nieaktualna: odśwież stronę lub zaktualizuj aplikację.",
+  "err.outdatedApp": "Aktualizacja gry jest w drodze: uruchom grę ponownie za minutę. Jeśli to się powtarza, zainstaluj najnowszą wersję.",
+  "app.updateReady": "Aktualizacja gotowa: uruchom grę ponownie, aby ją zastosować.",
   "bug.button": "Zgłoś błąd",
   "bug.something": "Coś nie tak? Zgłoś błąd",
   "bug.title": "Zgłoś błąd",

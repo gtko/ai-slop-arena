@@ -345,6 +345,8 @@
   "mod.kicked.leader": "De kamerleider heeft je uit de kamer gekickt.",
   "mod.kicked.cheat": "Je bent uit de match verwijderd: onmogelijke bewegingen (snelheid of teleport).",
   "err.outdated": "Deze versie van het spel is verouderd: ververs de pagina of update de app.",
+  "err.outdatedApp": "Er komt een game-update aan: start het spel over een minuut opnieuw. Blijft dit gebeuren, installeer dan de nieuwste versie.",
+  "app.updateReady": "Update klaar: start het spel opnieuw om hem toe te passen.",
   "bug.button": "Bug melden",
   "bug.something": "Klopt er iets niet? Meld een bug",
   "bug.title": "Bug melden",

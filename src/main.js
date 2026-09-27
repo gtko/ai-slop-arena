@@ -286,6 +286,9 @@ if (isNativeApp) {
   import('./native.js').then(m => m.bindAppEvents({ onBack: () => meta.close() || menus.back() || pauseMatch(), onHide: pauseMatch }))
     .catch(e => console.warn('[native]', e));
 }
+// Android / iOS app: over-the-air updates of the game (src/ota.js). A bundle downloaded earlier is
+// switched to right now, before the loader; the check and download wait for the loader (below).
+const ota = isNativeApp ? import('./ota.js').then(m => { m.atLaunch(); return m; }).catch(e => { console.warn('[ota]', e); return null; }) : null;
 
 $('#optionsBtn').addEventListener('click', () => { sfx('click'); leaveHome(); menus.openOptions('#menu'); });
 // Android app: achievements mirrored to Google Play Games, and a button for Play's achievements screen.
@@ -421,9 +424,10 @@ function renderLoadout() {
   const opt = (kind, v, icon, name, lock) => `<button class="lo-opt${lo.includes(v) ? ' on' : ''}${lock ? ' locked' : ''}" data-${kind}="${v}"${lock ? ' disabled' : ''}
     title="${name}${lock ? ' · ' + t('menu.locked', { n: lock }) : ''}"><span class="lo-ico">${icon}</span><span class="lo-name">${name}</span>${lock ? `<em class="lo-lock">🔒 ${lock}</em>` : ''}</button>`;
   const lvl = P.level;
-  root.innerHTML = `<div class="lo-group"><em>${t('menu.gadget')}</em>
+  // lo-cur: the picked one's name next to the title (touch screens show icons only)
+  root.innerHTML = `<div class="lo-group"><em>${t('menu.gadget')}<span class="lo-cur"> · ${t(`gad.${key}${lo[0]}.name`)}</span></em>
       ${opt('g', 'A', GADGET_ICONS[key + 'A'], t(`gad.${key}A.name`), 0)}${opt('g', 'B', GADGET_ICONS[key + 'B'], t(`gad.${key}B.name`), lvl < GADGET_B_AT ? GADGET_B_AT : 0)}</div>
-    <div class="lo-group"><em>${t('menu.star')}</em>
+    <div class="lo-group"><em>${t('menu.star')}<span class="lo-cur"> · ${t(`star.${STARS[key][+lo[1] - 1]}.name`)}</span></em>
       ${opt('s', '1', STAR_ICONS[0], t(`star.${STARS[key][0]}.name`), 0)}${opt('s', '2', STAR_ICONS[1], t(`star.${STARS[key][1]}.name`), lvl < STAR_2_AT ? STAR_2_AT : 0)}</div>
     <p class="lo-desc"><b>${GADGET_ICONS[key + lo[0]]}</b> ${t(`gad.${key}${lo[0]}.desc`)}<br><b>${STAR_ICONS[+lo[1] - 1]}</b> ${t(`star.${STARS[key][+lo[1] - 1]}.desc`)}</p>`;
   root.querySelectorAll('.lo-opt:not(.locked)').forEach(b => b.addEventListener('click', () => {
@@ -1309,6 +1313,19 @@ const TIPS = ['tip.bushes', 'tip.crates', 'tip.gas', 'tip.brawlers', 'tip.tod', 
   try { first = !localStorage.getItem('iaslop-opened'); localStorage.setItem('iaslop-opened', '1'); } catch { /* private mode */ }
   track('app_opened', { load_ms: Math.round(performance.now()), first_launch: first, gpu: (settings.gpu || '').slice(0, 120), screen: `${innerWidth}x${innerHeight}`, touch: isTouchDevice });
   setTimeout(() => $('#loader').classList.add('done'), 250);
+}
+// Android / iOS app: the game loaded, so this bundle is good (notifyAppReady). Updates are then looked for
+// and downloaded only on the home screen (no match, room or queue), and a small toast says when one
+// is ready: it applies at the next launch.
+if (ota) {
+  const onHome = () => !$('#menu').classList.contains('hidden') && $('#hud').classList.contains('hidden')
+    && !net.connected && !mm.searching && !pqTimer;
+  const updateReady = () => {
+    $('#updateToast').classList.remove('hidden');
+    setTimeout(() => $('#updateToast').classList.add('hidden'), 8000);
+  };
+  $('#updateToastX').addEventListener('click', () => $('#updateToast').classList.add('hidden'));
+  ota.then(m => m && m.appReady({ onHome, onReady: updateReady }));
 }
 for (const k of Object.keys(settings)) applySetting(k);
 lighting.setPreset(settings.tod === 'cycle' ? 2 : +settings.tod, true);

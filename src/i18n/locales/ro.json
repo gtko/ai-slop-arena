@@ -346,6 +346,8 @@
   "mod.kicked.leader": "Liderul camerei te-a dat afară din cameră.",
   "mod.kicked.cheat": "Ai fost scos din meci: mișcări imposibile (viteză sau teleportare).",
   "err.outdated": "Această versiune a jocului e învechită: reîncarcă pagina sau actualizează aplicația.",
+  "err.outdatedApp": "O actualizare a jocului este pe drum: repornește jocul peste un minut. Dacă se tot întâmplă, instalează cea mai nouă versiune.",
+  "app.updateReady": "Actualizare pregătită: repornește jocul pentru a o aplica.",
   "bug.button": "Raportează un bug",
   "bug.something": "Ceva nu merge? Raportează un bug",
   "bug.title": "Raportează un bug",

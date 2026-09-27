@@ -347,6 +347,8 @@
   "mod.kicked.leader": "Vedoucí místnosti tě vyhodil z místnosti.",
   "mod.kicked.cheat": "Byl jsi vyhozen ze zápasu: nemožné pohyby (rychlost nebo teleport).",
   "err.outdated": "Tato verze hry je zastaralá: obnov stránku nebo aktualizuj aplikaci.",
+  "err.outdatedApp": "Aktualizace hry je na cestě: za minutu hru restartuj. Pokud se to opakuje, nainstaluj nejnovější verzi.",
+  "app.updateReady": "Aktualizace je připravena: restartuj hru, aby se použila.",
   "bug.button": "Nahlásit bug",
   "bug.something": "Něco nefunguje? Nahlas bug",
   "bug.title": "Nahlásit bug",

@@ -449,6 +449,11 @@ body.touch .overlay { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 #bugToast.hidden { display: none; }
 #bugToast button { font: inherit; font-weight: 900; padding: 6px 10px; border-radius: 10px; border: 2px solid var(--ink); background: var(--yellow); color: var(--ink); cursor: pointer; }
 #bugToast #bugToastX { background: transparent; color: var(--text); border-color: transparent; }
+#updateToast { position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top)); transform: translateX(-50%); z-index: 900;
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 16px; border-radius: 14px; border: 3px solid var(--ink);
+  background: rgba(40, 32, 60, 0.95); color: var(--text); font-weight: 800; box-shadow: 0 6px 0 rgba(0,0,0,0.35); pointer-events: auto; }
+#updateToast.hidden { display: none; }
+#updateToastX { font: inherit; font-weight: 900; padding: 4px 8px; background: transparent; color: var(--text); border: 0; cursor: pointer; }
 #bug.overlay, #report.overlay { z-index: 60; }
 .bug-card h2 { font-size: 48px; }
 .bug-card .hint { margin: 0; }

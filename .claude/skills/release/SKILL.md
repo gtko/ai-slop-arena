@@ -43,10 +43,17 @@ All green before going on. If a feature changed online play, also run a local en
 ```bash
 # edit "version" in package.json, then
 npm install --package-lock-only
+npm run native:version   # iOS version + build number in the Xcode project (npm test checks it)
 ```
 
 If the online protocol changed (worker/index.js + src/net.js `PROTOCOL`), both must be bumped
 together, and the notes must carry the "update required" warning (old apps are refused online).
+
+Mobile over-the-air updates (docs/ota-updates.md): the installed Android/iOS apps download this
+release's web bundle by themselves. If this release adds, removes or upgrades a native Capacitor
+plugin (package.json `@capacitor/*` / `@capgo/*`, or `android/` / `ios/` changes the JS relies on),
+set `MIN_NATIVE` in `src/updates.js` to the new version: older apps then keep their bundle, and the
+notes must tell mobile players to install the new APK.
 
 ## 3. Graphic release notes
 
@@ -66,9 +73,10 @@ together, and the notes must carry the "update required" warning (old apps are r
 
 ```bash
 op run --env-file=.env.op -- npm run deploy   # builds (source maps -> Sentry), then wrangler deploy
-# site serves this build, rooms accept the protocol, refuse old ones, queue answers (retried while
+# site serves this build, rooms accept the protocol, refuse old ones, queue answers, the mobile
+# update manifest (/app/latest.json) announces this version (retried while
 # the new version propagates; a plain `sleep 30` is blocked by the harness)
-for i in 1 2 3 4 5 6; do if npm run check:prod > "$TEMP/prod.log" 2>&1; then break; fi; sleep 10; done; tail -7 "$TEMP/prod.log"
+for i in 1 2 3 4 5 6; do if npm run check:prod > "$TEMP/prod.log" 2>&1; then break; fi; sleep 10; done; tail -8 "$TEMP/prod.log"
 ```
 
 - A Cloudflare `500 / code 10013` is transient: run `npx wrangler deploy` again.
@@ -108,8 +116,15 @@ If a job fails: `gh run view $ID --log-failed`, fix, commit, push, then re-run t
 gh release view vX.Y.Z --json url,assets --jq '.url, (.assets[] | "\(.name) \(.size/1048576|floor) MB")'
 ```
 
-- Six assets: `AISlopArena-steam-windows.zip`, `-steam-linux.tar.gz`, `-epic-windows.zip`,
-  `-android.apk`, `-ios-simulator.zip`, `-web.zip`.
+- Seven assets: `AISlopArena-steam-windows.zip`, `-steam-linux.tar.gz`, `-epic-windows.zip`,
+  `-android.apk`, `-ios-simulator.zip`, `-web.zip`, and `-app-bundle.zip` (the mobile OTA update).
+- The OTA chain answers: the manifest names this version and its zip downloads (a 302 to GitHub's
+  storage then 200); from then on the installed apps pick it up at their next launch.
+
+```bash
+curl -s https://ai-slop-arena.gtux-prog.workers.dev/app/latest.json
+curl -sIL "https://github.com/gtko/ai-slop-arena/releases/download/vX.Y.Z/AISlopArena-app-bundle.zip" | grep -E "^HTTP|content-length"
+```
 - The description is the notes file (the workflow applies it; if not: `gh release edit vX.Y.Z --notes-file docs/releases/vX.Y.Z.md`).
 - Open the release page in the browser pane and look at it: banner and infographics load
   (raw.githubusercontent may take a few minutes to refresh an image that changed).

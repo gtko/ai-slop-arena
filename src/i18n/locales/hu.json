@@ -345,6 +345,8 @@
   "mod.kicked.leader": "A szoba vezetője kirúgott a szobából.",
   "mod.kicked.cheat": "Eltávolítottunk a meccsből: lehetetlen mozgás (sebesség vagy teleport).",
   "err.outdated": "A játék ezen verziója elavult: frissítsd az oldalt vagy az alkalmazást.",
+  "err.outdatedApp": "Úton van egy játékfrissítés: indítsd újra a játékot egy perc múlva. Ha ez ismétlődik, telepítsd a legújabb verziót.",
+  "app.updateReady": "A frissítés kész: indítsd újra a játékot az alkalmazásához.",
   "bug.button": "Hiba bejelentése",
   "bug.something": "Valami nem stimmel? Jelents hibát",
   "bug.title": "Hiba bejelentése",

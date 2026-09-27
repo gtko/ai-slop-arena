@@ -345,6 +345,8 @@
   "mod.kicked.leader": "Le chef du salon t'a exclu du salon.",
   "mod.kicked.cheat": "Tu as été exclu de la partie : déplacements impossibles (vitesse ou téléportation).",
   "err.outdated": "Cette version du jeu est obsolète : actualise la page ou mets à jour l'appli.",
+  "err.outdatedApp": "Une mise à jour du jeu arrive : redémarre le jeu dans une minute. Si ça continue, installe la dernière version.",
+  "app.updateReady": "Mise à jour prête : redémarre le jeu pour l'appliquer.",
   "bug.button": "Signaler un bug",
   "bug.something": "Un souci ? Signaler un bug",
   "bug.title": "Signaler un bug",

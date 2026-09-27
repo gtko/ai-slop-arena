@@ -344,6 +344,8 @@
   "mod.kicked.leader": "Chủ phòng đã đuổi bạn khỏi phòng.",
   "mod.kicked.cheat": "Bạn đã bị loại khỏi trận: di chuyển bất thường (tốc độ hoặc dịch chuyển).",
   "err.outdated": "Phiên bản game này đã cũ: hãy tải lại trang hoặc cập nhật ứng dụng.",
+  "err.outdatedApp": "Bản cập nhật trò chơi đang đến: hãy khởi động lại trò chơi sau một phút. Nếu vẫn tiếp tục, hãy cài phiên bản mới nhất.",
+  "app.updateReady": "Bản cập nhật đã sẵn sàng: khởi động lại trò chơi để áp dụng.",
   "bug.button": "Báo lỗi",
   "bug.something": "Có gì sai à? Báo lỗi",
   "bug.title": "Báo lỗi",

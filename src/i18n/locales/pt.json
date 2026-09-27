@@ -345,6 +345,8 @@
   "mod.kicked.leader": "O líder da sala expulsou-te.",
   "mod.kicked.cheat": "Foste expulso da partida: movimentos impossíveis (velocidade ou teletransporte).",
   "err.outdated": "Esta versão do jogo está desatualizada: atualiza a página ou a app.",
+  "err.outdatedApp": "Uma atualização do jogo está a caminho: reinicia o jogo daqui a um minuto. Se continuar a acontecer, instala a versão mais recente.",
+  "app.updateReady": "Atualização pronta: reinicia o jogo para a aplicar.",
   "bug.button": "Reportar um bug",
   "bug.something": "Algo errado? Reporta um bug",
   "bug.title": "Reportar um bug",

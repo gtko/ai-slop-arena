@@ -1,7 +1,8 @@
 // After `npm run deploy`: checks the live server. Usage: node scripts/check-prod.mjs [origin]
 // - the site and the game page answer and serve the bundle just built (dist/play.html);
 // - a room accepts the current protocol and refuses an old one ("outdated");
-// - the matchmaking queue answers.
+// - the matchmaking queue answers;
+// - the mobile apps' update manifest announces this version (docs/ota-updates.md).
 import { readFileSync } from 'node:fs';
 
 const ORIGIN = process.argv[2] || 'https://ai-slop-arena.gtux-prog.workers.dev';
@@ -31,5 +32,9 @@ const old = await first(`${WS}/ws/${room}?name=old&b=volt`, ['welcome', 'error']
 check(old && old.t === 'error' && old.code === 'outdated', 'room refuses old clients (outdated)');
 const queue = await first(`${WS}/mm?${id}`, ['queue', 'matched', 'error']);
 check(queue && queue.t === 'queue', 'matchmaking queue answers');
+const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+const ota = await fetch(`${ORIGIN}/app/latest.json?nocache=${Date.now()}`).then(r => r.ok ? r.json() : null).catch(() => null);
+check(ota && ota.version === version && ota.url.endsWith(`/v${version}/AISlopArena-app-bundle.zip`) && !!ota.minNative,
+  `app update manifest announces v${version}${ota ? ` (minNative ${ota.minNative})` : ''}`);
 if (failed) { console.error(`\n${failed} check(s) failed`); process.exit(1); }
 console.log('\nproduction looks good');
