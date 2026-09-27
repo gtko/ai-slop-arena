@@ -315,7 +315,9 @@ def cut_contacts(body, label, names, D):
             return True  # two different limbs
         if not limbs:  # the tail against the back stays sewn on: a hole would show more than a stretch
             return False
-        return limbs[0][1] not in roots  # a lower leg or paw against the body or tail
+        # a front paw / forearm against the chest (it rises to the face); back feet stay sewn to
+        # the body: their gap would open while the body rocks over planted feet
+        return limbs[0][1] in ('forearm', 'hand')
 
     me = body.data
     bm = bmesh.new()
