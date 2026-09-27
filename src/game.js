@@ -89,6 +89,7 @@ export class Game {
     this.combat = new Combat(this);
     this.events = new ArenaEvents(this); // themed arena events (v0.13)
     this.speedMul = 1;                    // everyone's speed (the blizzard slows it)
+    this.detail = 1;                      // scenery level of detail (setDetail)
     this.arena = null;
     this.poison = null;
     this.brawlers = [];
@@ -128,6 +129,14 @@ export class Game {
     this.buildAim();
   }
 
+  // Level of detail of the scenery (settings "detail", set by main.js; < 1 on the mobile presets):
+  // lighter decor, fewer shadow casters, fewer animals. Cosmetic only, never on the server.
+  setDetail(d) {
+    this.detail = d;
+    if (this.arena) this.arena.setDetail(d);
+    if (this.ambient) this.ambient.setDetail(d);
+  }
+
   /* ------------------------------ match setup ------------------------------ */
 
   // opts: { mapKey, roster, localId, net }. No localId = attract mode (bots only, menu backdrop).
@@ -158,7 +167,7 @@ export class Game {
     this.ended = false;
     this.endT = -1;
     this.superSeq = 0;
-    this.arena = new Arena(this.scene, MAPS[this.mapKey], { headless });
+    this.arena = new Arena(this.scene, MAPS[this.mapKey], { headless, detail: this.detail });
     this.weather = this.lighting.weather = new Weather(this, MAPS[this.mapKey].weather);
     this.weather.setDensity(this.weatherDensity ?? 1);
     this.kit = new MapKit(this); // jump pads, barrels, bridges, the void... (v0.15)
@@ -1653,6 +1662,12 @@ export class Game {
     } else lamp.intensity = 0;
     // Skip the lamp's shadow render while it is off (daytime): saves a full scene pass.
     // The map must exist first though: an unallocated sampler2DShadow breaks every lit draw.
-    lamp.shadow.autoUpdate = lamp.intensity > 0.01 || !lamp.shadow.map;
+    // Mobile presets (detail < 1): that pass costs as much as the view itself, so the lamp only
+    // casts shadows in the real night on mobile high, never below (it still lights, unshadowed;
+    // the stale map is ignored at shadow intensity 0, no shader recompile).
+    const full = this.detail >= 0.99;
+    const shadowed = lamp.intensity > 0.01 && (full || (this.detail >= 0.6 && lamp.intensity > 35));
+    lamp.shadow.intensity = full || shadowed ? 1 : 0;
+    lamp.shadow.autoUpdate = shadowed || !lamp.shadow.map;
   }
 }

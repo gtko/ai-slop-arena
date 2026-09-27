@@ -127,7 +127,7 @@ export class Puppets {
     this.key = key; this.n = n; this.list = null; this.T = null;
     this.world = FLYERS.has(key) ? 1 : WORLD;
     this.radius = o.radius ?? 1; // culling sphere (m at scale 1): wide for flyers
-    if (n > 0) loadFauna(key).then(T => { if (T && !amb.dead) this.build(T, amb.rigRoot); });
+    if (n > 0) loadFauna(key).then(T => { if (T && !amb.dead) { this.build(T, amb.rigRoot); amb.setDetail(amb.detail); } });
   }
   build(T, parent) {
     this.T = T;

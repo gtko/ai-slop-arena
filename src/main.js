@@ -35,7 +35,7 @@ import { settings, set as setSetting, onChange, MOBILE } from './settings.js';
 import { Menus } from './menu.js';
 import { OUTLINES } from './models.js';
 import { preloadFigurines, setFigurineDetail } from './figurines.js';
-import { preloadProps, PROPS } from './props.js';
+import { preloadProps, PROPS, setPropDetail } from './props.js';
 import { enableCartoonShading, cartoonGradePass } from './cartoon.js';
 import { PAD } from './input.js';
 import { MetaUI, skinFilter, framed, titleText, num, coin, gem } from './metaui.js';
@@ -164,7 +164,7 @@ function applySetting(k) {
       if (v !== 'cycle') lighting.setPreset(+v);
       break;
     case 'shake': game.shakeEnabled = v; break;
-    case 'detail': setFigurineDetail(v ?? 1); break; // figurine level of detail (mobile)
+    case 'detail': setFigurineDetail(v ?? 1); setPropDetail(v ?? 1); game.setDetail(v ?? 1); break; // levels of detail (mobile)
     case 'colorblind': document.body.classList.toggle('cb', v); game.colorblind = v; for (const b of game.brawlers) b.teamColors(); break;
     case 'fps': $('#fpsBadge').classList.toggle('hidden', !v); break;
     case 'debugPanel': $('#panel').classList.toggle('off', !v); break;
@@ -1287,7 +1287,7 @@ const TIPS = ['tip.bushes', 'tip.crates', 'tip.gas', 'tip.brawlers', 'tip.tod', 
   await Promise.all([
     loadTextures(renderer, tick(t('loader.ground'))),
     preloadFigurines(Object.keys(TYPES), renderer, tick(t('loader.brawlers'))).then(() => setFigurineDetail(settings.detail ?? 1)),
-    preloadProps(renderer, tick(t('loader.decor'))),
+    preloadProps(renderer, tick(t('loader.decor'))).then(() => setPropDetail(settings.detail ?? 1)),
   ]);
   clearInterval(tipTimer);
   $('#ldStep').textContent = t('loader.ready');

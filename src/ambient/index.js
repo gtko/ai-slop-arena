@@ -43,6 +43,7 @@ export class Ambient {
     this.puppets = [];
     this.rigs = 0;
     this.dead = false;
+    this.detail = game.detail ?? 1;
     this.systems = [];
     this.seen = [];
     const key = game.mapKey, mod = MODULES[`./maps/${key}.js`];
@@ -63,6 +64,20 @@ export class Ambient {
       seen: () => self.seen,
     };
     try { mod.default(L); } catch (err) { console.warn('ambient', key, err); }
+    this.setDetail(this.detail);
+  }
+
+  // Scenery level of detail (game.setDetail): on mobile low and medium (< 0.6) the animals cast no
+  // shadow (a skinned creature would be skinned and drawn a second time for the sun's shadow map).
+  // Their number already follows the particle density ("weather").
+  setDetail(d) {
+    this.detail = d;
+    const cast = d >= 0.6;
+    for (const root of [this.group, this.rigRoot]) root.traverse(o => {
+      if (!o.isMesh) return;
+      o.userData.cast ??= o.castShadow;
+      o.castShadow = cast && o.userData.cast;
+    });
   }
 
   add(s) { this.systems.push(s); return s; }
