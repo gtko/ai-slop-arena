@@ -38,7 +38,7 @@ hosts run the same wait. Protocol v3.
 ## Matchmaking
 
 One global queue (Matchmaker Durable Object) for web, Steam, Epic, Android and iOS:
-8 players -> match right away; otherwise, once the oldest player has waited **1 minute**, whoever
+8 players -> match right away; otherwise, once the oldest player has waited **30 s**, whoever
 is in the queue plays and **bots fill** the empty slots. "Play now with bots" skips the wait for one
 player. Matched players get a room code and the room starts when everyone is in (or after 15 s).
 
@@ -56,7 +56,7 @@ Every player has two numbers, kept by the server only (`Players` object, maths i
   adapts (so the bots stay right), the RP do not move, so nobody can farm bots.
 - RP drift toward the MMR: underrated players (RP well below what their MMR suggests) gain 1.5x,
   overrated ones lose 1.5x.
-- Matchmaking window: MMRs within 150, growing by 2.5 per second of the oldest player's wait; at 1 minute
+- Matchmaking window: MMRs within 150, growing by 5 per second of the oldest player's wait; at 30 s
   everyone queued plays (closest MMRs first) and bots fill up.
 - The bots' difficulty is never chosen by the player: matchmaking uses the group's MMR, solo and
   private rooms a hidden level kept on the device (`src/skill.js`) that follows the results.

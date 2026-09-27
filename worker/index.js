@@ -21,7 +21,7 @@ import { rate, tierOf, pickGroup, partyMmr, botLevelFor, START_MMR } from './ran
 const PROTOCOL = 6;          // clients send ?v=6 (v0.15: Windmill Isles, map kit, Pip & Chomp, Mochi); older builds are told to update
 const MAX_PLAYERS = 8;
 const CODE = /^[A-Z0-9]{4,6}$/;
-const QUEUE_BOTS_AFTER = 60 * 1000;     // matchmaking: after 1 minute, whoever is queued plays and bots fill up
+const QUEUE_BOTS_AFTER = 30 * 1000;     // matchmaking: after 30 s, whoever is queued plays and bots fill up
 const MATCHED_WAIT = 15 * 1000;         // a matched room starts when everyone is in, or after 15 s
 const LOAD_WAIT = 25 * 1000;  // the pre-match loading screen waits at most this long for everyone
 const COUNTDOWN = 3000;       // then 3-2-1, and the match starts on every screen at once
