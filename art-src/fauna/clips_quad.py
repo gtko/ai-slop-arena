@@ -33,6 +33,8 @@ DEFAULTS = {
     'ears': 1.0,
     'sit_pitch': 34.0,   # degrees the body rears up when sitting
     'sniff': 1.0,
+    'head': 1.0,         # neck and head rotations
+    'scratch': 1.0,      # how high the scratching hind leg swings
 }
 
 
@@ -143,20 +145,23 @@ class Quad:
         d = min(max(math.hypot(dy, dz), abs(l1 - l2) + 1e-4), (l1 + l2) * 0.9995)
         base = math.atan2(dz, dy)
         cosA = (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d)
-        cross = (W.y - A.y) * (K.z - A.z) - (W.z - A.z) * (K.y - A.y)  # side of the rest bend
-        s = 1.0 if cross >= 0 else -1.0
+        s = 1.0 if leg[0] == 'F' else -1.0  # elbows fold back, knees fold forward (whatever the rest pose)
         a1 = base + s * math.acos(max(-1.0, min(1.0, cosA)))
         th1 = wrap(a1 - ang(A, K))
         ky, kz = A.y + l1 * math.cos(a1), A.z + l1 * math.sin(a1)
         wy, wz = A.y + d * math.cos(base), A.z + d * math.sin(base)
         th2 = wrap(math.atan2(wz - kz, wy - ky) - ang(K, W) - th1)
-        want = Quaternion((1, 0, 0), math.radians(pitch)) @ (T - W)
-        want = to_rest.to_3x3() @ want
-        th3 = wrap(math.atan2(want.z, want.y) - ang(W, T) - th1 - th2)
+        # the paw only half keeps level: these round figurine paws have their ankle inside the paw
+        # blob, and a fully compensated ankle folds the blob flat
+        flat = to_rest.to_3x3() @ (T - W)
+        th3 = 0.5 * wrap(math.atan2(flat.z, flat.y) - ang(W, T) - th1 - th2) + math.radians(pitch)
         X = Vector((1, 0, 0))
         return {up: Quaternion(X, th1), lo: Quaternion(X, th2), paw: Quaternion(X, th3)}
 
     def solve(self, P):
+        for b in ('Neck', 'Head'):  # a head sunk in the body (hedgehog) turns less
+            if b in P.e:
+                P.e[b] = P.e[b] * self.p['head']
         D = {n: Euler([math.radians(a) for a in v], 'XYZ').to_quaternion() for n, v in P.e.items() if n in self.has}
         M = self.fk(D, P.loc)
         for leg, (up, _lo, paw) in LEGS.items():
@@ -174,7 +179,7 @@ class Quad:
 
 # ------------------------------------------------------------------ shared motion
 
-def paw_cycle(ph, stride, lift, beta, curl=50.0):
+def paw_cycle(ph, stride, lift, beta, curl=30.0):
     """One paw over a cycle phase: planted and sliding back (stance), then lifted forward (swing)."""
     if ph < beta:
         return -stride / 2 + stride * ph / beta, 0.0, 0.0
@@ -261,7 +266,7 @@ def c_run(C, t, dur):
     else:  # half-bound: hind pair, suspension, front pair, gathered suspension
         order, beta = (('BL', 0.0), ('BR', 0.07), ('FL', 0.45), ('FR', 0.52)), 0.3
     for leg, off in order:
-        y, z, pitch = paw_cycle((u - off) % 1, stride, lift, beta, curl=70)
+        y, z, pitch = paw_cycle((u - off) % 1, stride, lift, beta, curl=40)
         P.paw[leg] = (Vector((0, y, z)), pitch)
     bob = 0.03 * C.H * C.p['bob']
     if C.p['gait'] == 'trot':
@@ -307,10 +312,23 @@ def c_look(C, t, dur):
 
 
 def c_sit(C, t, dur):
-    """Rears up onto the haunches, front legs straight, tail curls round (once, ends seated)."""
+    """Rears up onto the haunches, front legs straight, tail curls round (once, ends seated).
+    The rear-up is capped so the hips keep the hind legs half folded (no rump through the ground)."""
+    if not hasattr(C, 'sit_scale'):
+        C.sit_scale = 1.0
+        for s in (1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4):
+            C.sit_scale = s
+            P = sit_pose(C, dur, dur)
+            hip = C.joint(P, 'BackUpperL').z - C.head['BackPawL'].z
+            if hip > 0.38 * C.hind:
+                break
+    return sit_pose(C, t, dur)
+
+
+def sit_pose(C, t, dur):
     P = Pose()
     k = back_out(ramp(t, 0.15, 0.95) ** 0.9 if t > 0.15 else 0.0, 1.2)
-    pitch = C.p['sit_pitch']
+    pitch = C.p['sit_pitch'] * C.sit_scale
     P.rot('Hips', x=3 * env(t, 0.0, 0.12, 0.12, 0.3) - pitch * k)  # a small lean forward first
     P.rot('Spine2', x=4 * k)
     P.rot('Chest', x=3 * k)
@@ -326,11 +344,11 @@ def c_sit(C, t, dur):
         dy = (sh.y - C.head[LEGS[leg][2]].y) * k
         P.paw[leg] = (Vector((0, dy, 0)), 0.0)
     for leg in ('BL', 'BR'):
-        P.paw[leg] = (Vector((0, -0.04 * C.H * k, 0)), -8 * k)
+        P.paw[leg] = (Vector((0, -0.07 * C.H * k, 0)), -8 * k)  # hind paws tuck forward under the haunches
     ears(C, P, x=4 * k, z=-4 * wobble(t, 0.95, 5, 6))
     curl = ramp(t, 0.5, 1.3)
     for i, b in enumerate(('Tail1', 'Tail2', 'Tail3')):
-        P.rot(b, x=(pitch * 0.9 if i == 0 else -4) * k, z=(22 + 10 * i) * curl * C.p['tail'])
+        P.rot(b, x=(pitch + 10 if i == 0 else -3) * k, z=(16 + 6 * i) * curl * C.p['tail'])
     breathe(C, P, t, dur, 0.5 * ramp(t, 0.8, 1.2))
     return P
 
@@ -346,7 +364,7 @@ def c_sniff(C, t, dur):
     scan = 14 * math.sin(TAU * 0.8 * (t - 0.55)) * env(t, 0.55, 0.9, 1.4, 1.8)
     P.rot('Neck', x=26 * k, z=0.4 * scan)
     P.rot('Head', x=16 * k + 4 * math.sin(TAU * 6.5 * t) * sn, z=0.6 * scan)
-    ears(C, P, x=12 * k)
+    ears(C, P, x=-14 * k, z=6 * k)  # ears lean back so they stay up while the nose goes down
     wag = 12 * math.sin(TAU * 3 * t) * env(t, 0.4, 0.7, 1.7, 2.1)
     for i, b in enumerate(('Tail1', 'Tail2', 'Tail3')):
         P.rot(b, x=(12 * k if i == 0 else 0), z=wag * (0.6 + 0.3 * i) * C.p['tail'])
@@ -364,9 +382,10 @@ def c_scratch(C, t, dur):
     P.rot('Hips', x=-14 * k, y=-9 * k + 1.5 * s * fast)
     P.rot('Chest', y=-3 * k)
     P.fk.add('BL')
-    P.rot('BackUpperL', x=-80 * k + 6 * s * fast, y=-22 * k)
-    P.rot('BackLowerL', x=45 * k + 22 * math.sin(TAU * 7 * t - 0.9) * fast)
-    P.rot('BackPawL', x=35 * k)
+    a = C.p['scratch']
+    P.rot('BackUpperL', x=a * (-92 * k + 7 * s * fast), y=-18 * k * a)  # swung forward, up toward the ear
+    P.rot('BackLowerL', x=a * (-20 * k + 24 * math.sin(TAU * 7 * t - 0.9) * fast))
+    P.rot('BackPawL', x=25 * k * a)
     P.paw['BR'] = (Vector((0, -0.02 * C.H * k, 0)), -6 * k)
     P.rot('Neck', x=6 * k, y=10 * k, z=16 * k)
     P.rot('Head', x=6 * k, y=16 * k + 3 * math.sin(TAU * 7 * t - 1.6) * fast, z=8 * k)

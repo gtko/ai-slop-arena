@@ -208,10 +208,10 @@ def orient(obj, key, over):
     if over.get('flip'):
         s = -s
     h = s * a
-    yaw = -math.pi / 2 - math.atan2(h[1], h[0])
+    yaw = -math.pi / 2 - math.atan2(h[1], h[0]) + math.radians(over.get('yaw', 0.0))
     p = (co - np.array([c[0], c[1], 0])) @ rot_z(yaw).T
     fix = symmetry_yaw(p, H0)
-    yaw += math.radians(fix + over.get('yaw', 0.0))
+    yaw += math.radians(fix)
     print(f'{key}: axis {a.round(3)}, head end by height {geo:+.3f}, by reference view {prior:+.3f}, '
           f'symmetry {fix:+.0f} deg, yaw {math.degrees(yaw):.0f} deg')
     p = (co - np.array([c[0], c[1], 0])) @ rot_z(yaw).T
@@ -256,7 +256,11 @@ def auto_marks(co, H):
     span = yB - yF
     half = np.mean([abs(np.median(paws[k][:, 0])) for k in paws])
     mid = (np.abs(y - (yF + yB) / 2) < 0.2 * span) & (np.abs(x) < 0.5 * half)
-    belly = float(z[mid].min()) if mid.sum() else 0.35 * H
+    for q in paws.values():  # not the inner faces of the leg columns
+        pc = np.median(q[:, :2], 0)
+        mid &= np.hypot(x - pc[0], y - pc[1]) > 0.6 * min(half, span / 2)
+    strip = mid & (np.abs(x) < 0.3 * half)  # right under the spine, away from the legs' inner faces
+    belly = float(z[strip].min()) if strip.sum() >= 3 else (float(z[mid].min()) if mid.sum() else 0.35 * H)
     top = float(z[mid].max()) if mid.sum() else 0.6 * H
     info.update(yF=yF, yB=yB, belly=belly, top=top, half=half)
     zs = belly + 0.5 * (top - belly)  # spine height
@@ -265,12 +269,13 @@ def auto_marks(co, H):
     J['Spine1'] = J['Hips'].lerp(J['Chest'], 1 / 3)
     J['Spine2'] = J['Hips'].lerp(J['Chest'], 2 / 3)
     # legs: slice centres of each leg column
-    r = 0.9 * min(half, span / 2)
+    r = 0.7 * min(half, span / 2)  # stays on one leg column
     info['leg_radius'] = {}
     for leg, (up, lo, paw) in LEGS.items():
         q = paws[leg]
         pc = np.median(q[:, :2], 0)
-        zk, zw = 0.5 * belly, max(0.06 * H, 0.22 * belly)
+        zw = max(0.06 * H, 0.25 * belly)
+        zk = max(0.8 * belly, zw + 0.04 * H)  # knee / elbow just under the belly: a real bend
         cols = {}
         for name, zz in (('top', belly - 0.02 * H), ('knee', zk), ('wrist', zw)):
             cen, _ = slice_centre(co, zz, pc, r, 0.012 * H)
@@ -279,10 +284,14 @@ def auto_marks(co, H):
         rad = float(np.percentile(np.hypot(kp[:, 0] - cols['knee'][0], kp[:, 1] - cols['knee'][1]), 85)) if len(kp) > 5 else 0.05 * H
         info['leg_radius'][leg] = rad
         bend = (0.08 if leg[0] == 'F' else -0.08) * belly  # elbows behind, knees ahead: the IK bend side
-        J[up] = Vector((cols['top'][0], cols['top'][1], belly + 0.35 * (top - belly)))
+        J[up] = Vector((cols['knee'][0], cols['knee'][1], belly + 0.35 * (top - belly)))
         J[lo] = Vector((cols['knee'][0], cols['knee'][1] + bend, zk))
         J[paw] = Vector((cols['wrist'][0], cols['wrist'][1], zw))
         J[paw.replace('Paw', 'Toe')] = Vector((pc[0], q[:, 1].min() + 0.2 * rad, 0.02 * H))
+    # shoulders and hips are symmetric even when the model stands with staggered paws
+    for a, b in (('FrontUpperL', 'FrontUpperR'), ('BackUpperL', 'BackUpperR')):
+        sx, sy = (abs(J[a].x) + abs(J[b].x)) / 2, (J[a].y + J[b].y) / 2
+        J[a].x, J[b].x, J[a].y, J[b].y = sx, -sx, sy, sy
     # ears: from the top down, the slices of the front half stay split in two (no vertex near x = 0)
     front = co[y < (yF + yB) / 2]
     zmax = front[:, 2].max()
@@ -301,10 +310,10 @@ def auto_marks(co, H):
         hv = co[(y < yF - 0.03 * H) & (z > belly) & (z < cap)]
     hx = float(np.ptp(hv[:, 0])) / 2
     hc = Vector((0, float((hv[:, 1].min() + hv[:, 1].max()) / 2), float(min(hv[:, 2].max(), cap) - hx)))
-    J['Neck'] = Vector((0, yF, zs + 0.5 * (top - zs)))
-    to_neck = (J['Neck'] - hc)
-    J['Head'] = hc + to_neck.normalized() * min(0.6 * hx, 0.8 * to_neck.length)
+    # skull joint: below and behind the head's centre; the neck sits halfway down to the chest
+    J['Head'] = hc + Vector((0, 0.35 * hx, -0.6 * hx))
     J['HeadEnd'] = hc + Vector((0, -hx, 0))
+    J['Neck'] = J['Chest'].lerp(J['Head'], 0.5)
     info['head'] = (hc, hx)
     if ears:
         for s, sg in (('L', 1), ('R', -1)):
@@ -420,7 +429,7 @@ def inv_dist(P, segs, power):
     return w / w.sum(1, keepdims=True)
 
 
-def skin(body, rig, J, info, H, passes=3):
+def skin(body, rig, J, info, H, passes=6):
     """Regions (legs, ears, head, tail, body) blended by smoothsteps, distance to the bones inside a
     region, a few smoothing passes along the surface. Heat weights break on these generated meshes."""
     me = body.data
@@ -440,29 +449,50 @@ def skin(body, rig, J, info, H, passes=3):
     if 'Tail1' in ix:
         tb = [n for n in ('Tail1', 'Tail2', 'Tail3') if n in ix]
         a, b = np.array(J['Tail1']), np.array(J['Tail2'])
-        n = (b - a) / np.linalg.norm(b - a)
-        near = np.min(np.stack([seg_dist(P, *seg[t]) for t in tb], 1), 1)
-        m = smoothstep(-0.01 * H, 0.025 * H, (P - a) @ n) * (near < 0.25 * H)
+        # everything behind the rump (a plane leaning a little toward the tail's first bone): a bushy
+        # tail curling down or up must not keep half its vertices on the hips
+        n = 0.3 * (b - a) / np.linalg.norm(b - a) + np.array([0, 1.0, 0.5])  # tilted: the low rump stays
+        n /= np.linalg.norm(n)
+        m = smoothstep(-0.015 * H, 0.03 * H, (P - a) @ n) * (P[:, 2] > 0.5 * info['belly'])
         put(tb, inv_dist(P, [seg[t] for t in tb], 4), m)
-    a, c = np.array(J['Head']), np.array(J['Neck'])
-    n = (a - c) / np.linalg.norm(a - c)
-    m = smoothstep(-0.02 * H, 0.02 * H, (P - a) @ n)
+    # head: beyond a plane through the skull joint, tilted between the snout direction and up
+    a = np.array(J['Head'])
+    f = np.array(J['HeadEnd']) - a
+    n = f / np.linalg.norm(f) + np.array([0, 0, 0.4])
+    n /= np.linalg.norm(n)
+    m = smoothstep(-0.03 * H, 0.03 * H, (P - a) @ n)
     put(['Head'], np.ones((len(P), 1)), m)
-    eb = info['ear_base']
-    for s, sg in (('L', 1), ('R', -1)):
-        if 'Ear' + s in ix:
-            m = smoothstep(eb - 0.015 * H, eb + 0.03 * H, P[:, 2]) * (P[:, 0] * sg > 0) * (P[:, 1] < (info['yF'] + info['yB']) / 2)
-            put(['Ear' + s], np.ones((len(P), 1)), m)
+    # ears: near their own bone (closer than to the other ear), past a plane just above the base
+    ear = [s for s in 'LR' if 'Ear' + s in ix]
+    for s in ear:
+        o = 'R' if s == 'L' else 'L'
+        base, tip = seg['Ear' + s]
+        L = np.linalg.norm(tip - base)
+        d = seg_dist(P, base, tip)
+        near = (d < 0.5 * L) & ((d < seg_dist(P, *seg['Ear' + o])) if o in ear else True)
+        near &= P[:, 0] * np.sign(base[0]) > 0.01 * H  # never the crown between the ears
+        m = smoothstep(-0.01 * H, 0.035 * H, (P - base) @ ((tip - base) / L)) * near
+        put(['Ear' + s], np.ones((len(P), 1)), m)
     belly = info['belly']
+    flat = np.array([1, 1, 0])
+    dist = {}
+    for leg, (up, lo, paw) in LEGS.items():
+        toe = paw.replace('Paw', 'Toe')
+        axis = [(J[up], J[lo]), (J[lo], J[paw]), (J[paw], J[toe])]
+        # distance to the leg's axis seen from above: legs are columns ending in a paw
+        dist[leg] = np.min(np.stack([seg_dist(P * flat, np.array(a) * flat, np.array(b) * flat) for a, b in axis], 1), 1)
+    nearest = np.array(list(LEGS))[np.argmin(np.stack(list(dist.values()), 1), 1)]
     for leg, bones in LEGS.items():
         up, lo, paw = bones
         par = 'Chest' if leg[0] == 'F' else 'Hips'
-        axis = [(np.array(J[up]), np.array(J[lo])), (np.array(J[lo]), np.array(J[paw]))]
         r = info['leg_radius'][leg]
-        # distance to the leg's vertical axis, ignoring z: legs are columns
-        d = np.min(np.stack([seg_dist(P * [1, 1, 0], a * [1, 1, 0], b * [1, 1, 0]) for a, b in axis], 1), 1)
+        d = dist[leg]
         side = np.sign(J[up].x)
-        inside = (d < 1.35 * r) & (P[:, 0] * side > 0) & (P[:, 2] < J[up].z + 0.03 * H)
+        # a soft column around the leg (a hard edge there tears the armpit when the leg swings)
+        inside = (1 - smoothstep(1.1 * r, 2.4 * r, d)) * (P[:, 0] * side > 0) * (P[:, 2] < J[up].z + 0.03 * H)
+        # under the belly, around a leg, it is all leg (a low-slung belly between the legs stays body)
+        low = (P[:, 2] < belly - 0.01 * H) & (d < 2.6 * r)
+        inside = np.maximum(inside, low) * (nearest == leg)
         body_share = smoothstep(belly - 0.03 * H, J[up].z + 0.02 * H, P[:, 2])
         wl = inv_dist(P, [seg[b] for b in bones], 5) * (1 - body_share)[:, None]
         w = np.concatenate([wl, body_share[:, None]], 1)
@@ -493,7 +523,9 @@ def skin(body, rig, J, info, H, passes=3):
 
 PALETTE = [(0.9, 0.2, 0.2), (0.2, 0.7, 0.2), (0.2, 0.3, 0.95), (0.95, 0.8, 0.1), (0.8, 0.2, 0.9),
            (0.1, 0.85, 0.85), (1.0, 0.5, 0.1), (0.5, 0.3, 0.1), (0.6, 0.6, 0.6), (0.2, 0.5, 0.4),
-           (0.95, 0.5, 0.7), (0.4, 0.9, 0.4)]
+           (0.95, 0.5, 0.7), (0.4, 0.9, 0.4), (0.3, 0.1, 0.6), (1.0, 1.0, 0.6), (0.0, 0.4, 0.9),
+           (0.7, 0.9, 0.1), (0.9, 0.1, 0.5), (0.5, 0.9, 0.9), (0.6, 0.4, 0.8), (0.9, 0.7, 0.5),
+           (0.3, 0.3, 0.3), (0.1, 0.6, 0.1), (0.7, 0.1, 0.1), (0.1, 0.1, 0.5)]
 
 
 def weight_colours(body, W, names):
@@ -513,7 +545,7 @@ def bone_sticks(rig, H):
         ax = (t - h)
         if ax.length < 1e-6:
             continue
-        r = max(0.006 * H, 0.08 * ax.length)
+        r = max(0.01 * H, 0.12 * ax.length)
         u = ax.orthogonal().normalized() * r
         v = ax.normalized().cross(u)
         base = h + ax * 0.15
@@ -629,7 +661,7 @@ def check_sheet(key, rig, body, W, names, H):
     for mode, xray in (('TEXTURE', False), ('VERTEX', False), ('VERTEX', True)):
         sh.color_type = mode
         sh.show_xray = xray
-        sh.xray_alpha = 0.3
+        sh.xray_alpha = 0.5
         sticks.hide_render = not xray
         row = []
         for name in ('side', 'front', 'above', 'top'):
@@ -644,8 +676,9 @@ def check_sheet(key, rig, body, W, names, H):
     return tile_sheet(rows, os.path.join(out, key + '.png'))
 
 
-def preview_sheet(key, rig, body, H, frames=6, size=200):
-    """Every clip, `frames` frames across; one row side view, one row 3/4-top view."""
+def preview_sheet(key, rig, body, H, frames=6, size=200, only=None):
+    """Every clip, `frames` frames across; one row side view, one row 3/4-top view.
+    only: one clip, bigger, with front and top-down views too (work/preview/<key>_<clip>.png)."""
     out = os.path.join(WORK, 'preview')
     tmp = os.path.join(out, 'frames')
     os.makedirs(tmp, exist_ok=True)
@@ -654,14 +687,15 @@ def preview_sheet(key, rig, body, H, frames=6, size=200):
     sc = bpy.context.scene
     sc.display.shading.color_type = 'TEXTURE'
     rows = []
+    views = ('side', 'top', 'front', 'above') if only else ('side', 'top')
     for name, _fn, _dur, loop in clips.CLIPS:
         act = bpy.data.actions.get(name)
-        if not act:
+        if not act or (only and name != only):
             continue
         rig.animation_data.action = act
         n = int(act.frame_range[1])
         fs = [round(i * n / (frames if loop else frames - 1)) for i in range(frames)]
-        for view in ('side', 'top'):
+        for view in views:
             lab = label(cams[view], name, ext)
             row = []
             for i, f in enumerate(fs):
@@ -676,7 +710,46 @@ def preview_sheet(key, rig, body, H, frames=6, size=200):
     sc.frame_set(0)
     for c in cams.values():
         bpy.data.objects.remove(c)
-    return tile_sheet(rows, os.path.join(out, key + '.png'))
+    return tile_sheet(rows, os.path.join(out, f'{key}_{only}.png' if only else key + '.png'))
+
+
+def stretch_report(rig, body, H):
+    """Per clip, how far the skin's edges stretch (posed length / rest length): tearing shows up here
+    before it shows in a render. Prints the worst edge and the 99th percentile over the clip."""
+    me = body.data
+    E = np.empty(len(me.edges) * 2, dtype=np.int64)
+    me.edges.foreach_get('vertices', E)
+    E = E.reshape(-1, 2)
+    P0 = verts(me)
+    l0 = np.maximum(np.linalg.norm(P0[E[:, 0]] - P0[E[:, 1]], axis=1), 1e-6)
+    sc = bpy.context.scene
+    out = {}
+    for name, *_ in clips.CLIPS:
+        act = bpy.data.actions.get(name)
+        if not act:
+            continue
+        rig.animation_data.action = act
+        worst = (0.0, 0.0, 0)
+        for f in range(0, int(act.frame_range[1]) + 1, 2):
+            sc.frame_set(f)
+            ev = body.evaluated_get(bpy.context.evaluated_depsgraph_get())
+            m = ev.to_mesh()
+            P = np.empty(len(m.vertices) * 3)
+            m.vertices.foreach_get('co', P)
+            ev.to_mesh_clear()
+            P = P.reshape(-1, 3)
+            l1 = np.linalg.norm(P[E[:, 0]] - P[E[:, 1]], axis=1)
+            e = int(np.argmax(l1 - l0))
+            grow = (l1[e] - l0[e]) / H  # the longest an edge got, in heights (tiny edges don't count)
+            worst = max(worst, (float(grow), float(np.percentile(l1 / l0, 99)), f))
+            if '--verbose' in sys.argv and grow > 0.1:
+                print(f'  {name}@{f}: edge at {P0[E[e, 0]].round(3)} grew {100 * grow:.0f}% of height')
+        out[name] = worst
+    rig.animation_data.action = None
+    sc.frame_set(0)
+    print('stretch (worst edge growth % of height, 99th pct ratio, frame):',
+          ', '.join(f'{n} {100 * a:.1f}%/{b:.2f}@{f}' for n, (a, b, f) in out.items()))
+    return out
 
 
 # ------------------------------------------------------------------ 5. export, pack
@@ -739,7 +812,7 @@ def build(key, raw):
 def main():
     argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
     raw = argv[argv.index('--raw') + 1] if '--raw' in argv else RAW
-    skip = {raw}
+    skip = {argv[i + 1] for i, a in enumerate(argv[:-1]) if a in ('--raw', '--only')}
     keys = [a for a in argv if not a.startswith('--') and a not in skip] or KEYS
     for key in keys:
         body, rig, J, info, H, W, names = build(key, raw)
@@ -749,8 +822,10 @@ def main():
         made, speed = clips.make_all(rig, J, info, H)
         rig['speed'] = speed
         print(key, 'clips:', ', '.join(f'{n} {d:.2f}s' for n, d in made), '| speed', speed)
+        stretch_report(rig, body, H)
         if '--preview' in argv:
-            print(key, 'preview:', preview_sheet(key, rig, body, H))
+            only = argv[argv.index('--only') + 1] if '--only' in argv else None
+            print(key, 'preview:', preview_sheet(key, rig, body, H, size=360 if only else 200, only=only))
         if '--no-export' not in argv:
             print(key, 'exported:', export(key, rig, body))
             pack(key)
