@@ -157,7 +157,7 @@ export class Game {
     this.ended = false;
     this.endT = -1;
     this.superSeq = 0;
-    this.arena = new Arena(this.scene, MAPS[this.mapKey]);
+    this.arena = new Arena(this.scene, MAPS[this.mapKey], { headless });
     this.weather = this.lighting.weather = new Weather(this, MAPS[this.mapKey].weather);
     this.weather.setDensity(this.weatherDensity ?? 1);
     this.kit = new MapKit(this); // jump pads, barrels, bridges, the void... (v0.15)
