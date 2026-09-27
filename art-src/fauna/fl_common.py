@@ -240,6 +240,9 @@ def frame_rot(a1, a2, b1, b2):
     return (fr(b1, b2) @ fr(a1, a2).transposed()).to_quaternion()
 
 
+IK_MISS = [0.0]
+
+
 def two_bone_ik(fk, P, upper, lower, target, pole, foot=None, foot_world=I):
     """Place upper/lower so the lower bone's tail lands on `target` (armature frame), the joint
     bending toward `pole` (a world direction), keeping the bone twist in the bend plane. The foot
@@ -251,6 +254,8 @@ def two_bone_ik(fk, P, upper, lower, target, pole, foot=None, foot_world=I):
     a = (fk.head0[lower] - fk.head0[upper]).length
     b = (fk.tail0[lower] - fk.head0[lower]).length
     D = target - S
+    if D.length > (a + b) * 0.999:  # out of reach: the foot lifts off (counted, see make_clips)
+        IK_MISS[0] = max(IK_MISS[0], D.length - (a + b))
     dist = min(max(D.length, abs(a - b) + 1e-4, 1e-4), (a + b) * 0.999)
     u = D.normalized()
     along = (a * a - b * b + dist * dist) / (2 * dist)
@@ -303,6 +308,7 @@ def make_clips(rig, fk, clips):
         rig.animation_data.action = act
         n = max(2, round(dur * FPS))
         last = {}
+        IK_MISS[0] = 0.0
         for f in range(n + 1):
             P = fn(0.0 if loop and f == n else f / FPS)
             key_pose(rig, fk, P, f, last)
@@ -310,6 +316,8 @@ def make_clips(rig, fk, clips):
         act.use_frame_range = True
         act.use_cyclic = loop
         made.append((name, n / FPS, loop))
+        if IK_MISS[0] > 0:
+            print(f'  {name}: a foot misses its target by up to {IK_MISS[0] * 1000:.1f} mm')
     rig.animation_data.action = None
     for pb in rig.pose.bones:
         pb.rotation_quaternion = I
@@ -441,6 +449,8 @@ def _setup_render(size):
     sc.render.resolution_x = sc.render.resolution_y = size
     sc.render.image_settings.file_format = 'PNG'
     sc.render.film_transparent = False
+    sc.view_settings.view_transform = 'Standard'
+    sc.view_settings.exposure = 0.6
     sc.world = sc.world or bpy.data.worlds.new('w')
 
 

@@ -10,6 +10,9 @@ Rig: root > body > neck > head, body > tail, and per wing arm > forearm > hand (
 wing folds on the upstroke and the tips lag and curl through the downstroke. Joints are found on the
 mesh and can be corrected in art-src/fauna/landmarks/<key>.json:
   {"rotate": [x, y, z] degrees before anything, "pitch": 90, "head_lift": 50,
+   "wing_flat": false (a model whose body is already about level but whose wings stand up, like a
+                 perched bird: each wing is turned about the shoulder in the rest pose so its span runs
+                 along x, its plane is horizontal and its leading edge faces forward),
    "joints": {"shoulder": [x, y, z], "elbow": ..., "wrist": ..., "tip": ... (left side, mirrored),
               "tailtip", "tailbase", "chest", "neckbase", "headbase", "beak", ...: [x, y, z] or {"z": ..}},
    "flap": {"period": s, "amp": degrees}}
@@ -59,19 +62,27 @@ def joints(obj, marks):
     V = C.verts(obj)
     span = np.ptp(V[:, 0])
     half = V[:, 0].max()
+    # wings flat (chord along y, thin along z), or still standing up in the model (wing_flat: chord
+    # along z, thin along y; they are laid flat later by turning the arms in the rest pose)
+    up = bool(marks.get('wing_flat', False))
+    thin, chord = (1, 2) if up else (2, 1)
     # the shoulder: where the thick body gives way to the thin wing
-    th0 = np.ptp(V[np.abs(V[:, 0]) < 0.04 * span, 2])
+    th0 = np.ptp(V[np.abs(V[:, 0]) < 0.04 * span, thin])
     xs = 0.3 * half
     for x in np.linspace(0.05 * span, 0.4 * half, 40):
         band = V[np.abs(np.abs(V[:, 0]) - x) < 0.01 * span]
-        if len(band) and np.ptp(band[:, 2]) < 0.45 * th0:
+        if len(band) and np.ptp(band[:, thin]) < 0.45 * th0:
             xs = x
             break
 
     def wing_pt(x):
         band = V[(np.abs(np.abs(V[:, 0]) - x) < 0.02 * span) & (V[:, 0] > 0)]
-        lead, trail = band[:, 1].min(), band[:, 1].max()
-        return Vector((x, lead + 0.3 * (trail - lead), float(np.median(band[:, 2]))))
+        c = band[:, chord]
+        lead, trail = (c.max(), c.min()) if up else (c.min(), c.max())  # leading edge: top / front
+        p = [x, 0.0, 0.0]
+        p[chord] = lead + 0.3 * (trail - lead)
+        p[thin] = float(np.median(band[:, thin]))
+        return Vector(p)
 
     tipx = half * 0.97
     J = {'shoulder': wing_pt(xs * 0.95), 'elbow': wing_pt(xs + 0.3 * (tipx - xs)),
@@ -145,6 +156,19 @@ def weights(obj, J, span, Lb, xs):
                 w[b] = w.get(b, 0) + x * om
         W.append(w)
     return W
+
+
+def flatten(V, J, sg, xs):
+    """The rotation laying one standing wing flat: its span (shoulder -> tip) onto the x axis, the
+    plane of its vertices (least-variance normal) horizontal, the leading edge (top) forward."""
+    W = V[V[:, 0] * sg > 1.3 * xs]
+    c = W - W.mean(axis=0)
+    n = Vector(np.linalg.eigh(c.T @ c)[1][:, 0])  # the wing plate's normal
+    span = mirror(J['tip'], sg) - mirror(J['shoulder'], sg)
+    chord = n.cross(span).normalized()
+    if chord.z > 0:
+        chord = -chord  # from the leading (top) edge toward the trailing edge
+    return C.frame_rot(span, chord, Vector((sg, 0, 0)), Vector((0, 1, 0)))
 
 
 def bake_rest(obj, rig, P, fk):
@@ -273,12 +297,25 @@ def build(key, opts):
     rig = C.build_armature(key, layout(J, span))
     C.apply_weights(obj, rig, weights(obj, J, span, Lb, xs), smooth_passes=3)
     lift = math.radians(marks.get('head_lift', 50))
-    if lift:
+    flat = marks.get('wing_flat', False)
+    if lift or flat:  # lift the head to look ahead / lay standing wings flat, leading edge forward
         fk = C.FK(rig)
         P = C.Pose()
         P.rot('neck', q(X, -0.55 * lift))
         P.rot('head', q(X, -0.45 * lift))
+        if flat:
+            V = C.verts(obj)
+            for s, sg in SIDES:
+                P.rot('arm.' + s, flatten(V, J, sg, xs))
         bake_rest(obj, rig, P, fk)
+        k = SPAN.get(key, span) / np.ptp(C.verts(obj)[:, 0])
+        if abs(k - 1) > 0.01:  # flattened wings reach farther: back to the contract wingspan
+            C.transform(obj, Matrix.Scale(k, 4))
+            C.select_only(rig)
+            bpy.ops.object.mode_set(mode='EDIT')
+            for b in rig.data.edit_bones:
+                b.head, b.tail = b.head * k, b.tail * k
+            bpy.ops.object.mode_set(mode='OBJECT')
     return obj, rig, span, marks
 
 

@@ -181,6 +181,7 @@ def joints(obj, key, marks):
                 setattr(J[n], a, val)
         else:
             J[n] = Vector(v)
+    J['cy'] = (y0 + y1) / 2  # not a joint: the middle of the mesh, for the cameras
     return J, R, L, H
 
 
@@ -253,7 +254,7 @@ class Lizard:
             pole = (K - S) - u * (K - S).dot(u)
             self.legs[(s, end)] = (a, b, c, W.copy(), pole.normalized())
         w = marks.get('walk', {})
-        self.period = w.get('period', 0.5)
+        self.period = w.get('period', 0.42)
         reach = min((self.fk.head0[c] - self.fk.head0[a]).length for a, b, c, *_ in self.legs.values())
         self.sweep = w.get('sweep', 0.75 * reach)
         self.lift = w.get('lift', 0.35 * reach)
@@ -309,9 +310,9 @@ def c_walk(Lz, t):
             e = ease(k)
             y = Lz.sweep / 2 - Lz.sweep * e
             z = Lz.lift * math.sin(math.pi * k)
-            pitch = -0.5 * math.sin(math.pi * k)  # toes curl up in the air
-        offs[(s, end)] = Vector((0.1 * Lz.sweep * sg * math.sin(math.pi * min(1, k)) if u >= duty else 0, y, z))
-        rots[(s, end)] = q(X, pitch)
+            pitch = 0.35 * math.sin(math.pi * k)  # the sprawled toes tip up in the air
+        offs[(s, end)] = Vector((0.0, y, z))
+        rots[(s, end)] = q(Y, -sg * pitch)
     # the S wave: girdles turn opposite, so each reaching leg's shoulder / hip comes forward
     a = math.radians(14)
     w = math.sin(TAU * ph)
@@ -354,11 +355,13 @@ def c_pushup(Lz, t, dur=2.6):
         k = math.sin(math.pi * (u % 1.0)) ** 2  # up and down, a snap at the top
     base = env(t, 0.0, 0.25, 2.2, 2.55)
     lift = base * (0.35 + 0.65 * k)
-    P.move('root', (0, 0, 0.01 * Lz.L * lift))
-    P.rot('spine', q(X, -0.2 * lift))
-    P.rot('chest', q(X, -0.12 * lift))
-    P.rot('neck', q(X, 0.1 * lift))
-    P.rot('head', q(X, 0.12 * lift) @ q(Y, 0.1 * base * math.sin(TAU * t)))
+    # the front legs are almost straight at rest: the push-ups dip below the rest pose (elbows
+    # bending) and come back up just above it, so the hands stay planted
+    bob = base * (1.2 * k - 0.5)
+    P.rot('spine', q(X, -0.12 * bob))
+    P.rot('chest', q(X, -0.06 * bob))
+    P.rot('neck', q(X, 0.2 * lift))
+    P.rot('head', q(X, 0.15 * lift) @ q(Y, 0.1 * base * math.sin(TAU * t)))
     Lz.tail(P, lambda i: 0.05 * base * math.sin(TAU * t - i), 0, lift=0.08 * lift)
     return Lz.plant(P)
 
@@ -373,10 +376,10 @@ def clips(Lz):
 
 # ------------------------------------------------------------------ main
 
-def views(L):
-    return [('side', (1.6, 0, 0.12), (0, 0, 0.12), L * 1.15),
-            ('top', (0, 0, 2.0), (0, 0, 0), L * 1.15),
-            ('persp', (-1.0, -1.1, 1.2), (0, 0.05, 0.05), L * 1.15)]
+def views(L, cy=0.0):
+    return [('side', (1.6, cy, 0.1), (0, cy, 0.1), L * 1.05),
+            ('top', (0, cy, 2.0), (0, cy, 0), L * 1.05),
+            ('persp', (-1.0, cy - 1.1, 1.2), (0, cy, 0.05), L * 1.2)]
 
 
 def build(key, opts):
@@ -389,8 +392,8 @@ def build(key, opts):
     J, R, L, H = joints(obj, key, marks)
     print(key, f'tris {tris} (dropped {junk} islands) heading {heading:.0f} deg  length {L:.3f} height {H:.3f}')
     if '--check' in opts:  # orientation and joints, no rig
-        mk = C.markers(J.values(), 0.008)
-        print(key, 'check:', C.raw_views(key, obj, views(L), 400, 'TEXTURE', '_joints'))
+        mk = C.markers([v for k, v in J.items() if k != 'cy'], 0.006)
+        print(key, 'check:', C.raw_views(key, obj, views(L, J['cy']), 400, 'TEXTURE', '_joints'))
         for m in mk:
             C.bpy.data.objects.remove(m)
     rig = C.build_armature(key, layout(J, L))
@@ -408,7 +411,7 @@ def main():
         print(key, 'bones', len(rig.data.bones), 'clips', ', '.join(f'{n} {d:.2f}s{" loop" if lp else ""}' for n, d, lp in made),
               'walk speed', speed, 'm/s')
         if '--preview' in opts:
-            print(key, 'preview:', C.contact_sheet(key, rig, obj, views(L)[:2], made, grid=(0.0, 1.2)))
+            print(key, 'preview:', C.contact_sheet(key, rig, obj, views(L, J['cy']), made, size=260, grid=(0.0, 1.2)))
         C.drop_weight_colors(obj)
         C.export(key, rig, obj, {'speed': {'Walk': speed}})
         if '--nopack' not in opts:
