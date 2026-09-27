@@ -350,6 +350,20 @@ function renderSkins() {
   }));
 }
 
+// Touch screens (phones, tablets): the skin row starts folded to its title, which opens it, so the
+// roster and the arena stay in view; the choice lasts for the session.
+{
+  const bar = $('.skinbar'), head = bar.querySelector('.sb-head');
+  let open = sessionStorage.getItem('skinbarOpen');
+  const fold = f => { bar.classList.toggle('collapsed', f); head.setAttribute('aria-expanded', String(!f)); if (!f) renderSkins(); };
+  if (isTouchDevice) {
+    head.setAttribute('role', 'button'); head.tabIndex = 0;
+    fold(open !== '1');
+    const flip = () => { sfx('click'); const f = !bar.classList.contains('collapsed'); fold(f); try { sessionStorage.setItem('skinbarOpen', f ? '0' : '1'); } catch {} };
+    head.addEventListener('click', flip);
+    head.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
+  }
+}
 $('.skinbar').querySelectorAll('.sb-arrow').forEach(b => b.addEventListener('click', () => {
   const tr = $('#heroSkins');
   tr.scrollBy({ left: +b.dataset.d * tr.clientWidth * 0.8, behavior: 'smooth' });

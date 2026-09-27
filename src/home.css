@@ -191,8 +191,11 @@ body:has(#menu:not(.hidden)) #fpsBadge { top: calc(var(--nav) + 8px); }
   .hero-info { left: 24px; width: 42%; }
   .hero-stage { left: 44%; width: 56%; }
   .roster { left: 24px; }
-  .rt { width: 64px; height: 72px; }
-  .rt img { height: 80px; }
+  html .picker { max-width: calc(100vw - 306px - 2 * var(--g) - 16px); } /* html: this block comes before the base rule */
+  .picker .roster { gap: 6px; }
+  .rt { width: 66px; height: 76px; }
+  .rt img { height: 82px; }
+  .rt b { font-size: 10px; letter-spacing: -0.3px; }
 }
 
 /* laptops and short windows: the hero column must end above the roster */
@@ -240,9 +243,9 @@ body:has(#menu:not(.hidden)) #fpsBadge { top: calc(var(--nav) + 8px); }
   #loadout .lo-desc { font-size: 10px; line-height: 1.3; }
   .hero-stage { left: 50%; width: 50%; top: 4px; bottom: 74px; }
   .roster { left: calc(14px + env(safe-area-inset-left)); bottom: calc(8px + env(safe-area-inset-bottom)); gap: 6px; }
-  .rt { width: 54px; height: 58px; border-radius: 10px; }
+  .rt { width: 62px; height: 60px; border-radius: 10px; }
   .rt img { height: 66px; }
-  .rt b { font-size: 9.5px; padding-top: 8px; }
+  .rt b { font-size: 9px; letter-spacing: -0.2px; padding-top: 8px; }
   .rt i { min-width: 15px; height: 15px; font-size: 9px; line-height: 15px; }
   .play-panel { right: calc(10px + env(safe-area-inset-right)); top: calc(var(--nav) + 8px); bottom: calc(8px + env(safe-area-inset-bottom)); width: 236px; gap: 6px; }
   .home-quests { display: none; }
@@ -521,7 +524,7 @@ body.touch #touch .t-super b { top: 50%; margin-top: 12px; font-size: 9px; }
   .hero-info { width: min(300px, calc(100vw - 236px - 3 * var(--g) - 60px)); }
   .play-panel { right: calc(10px + env(safe-area-inset-right)); }
   .roster { gap: 5px; }
-  .rt { width: 50px; }
+  .rt { width: 58px; }
   .pp-maps { right: calc(236px + 10px + env(safe-area-inset-right) + 10px); bottom: calc(8px + env(safe-area-inset-bottom)); width: 330px;
     max-width: calc(100vw - 236px - 3 * var(--g) - 10px); max-height: calc(100vh - var(--nav) - 16px); }
   .play-panel .chaos-chip .cc-l small { font-size: 8.5px; }
@@ -537,12 +540,23 @@ body.touch #touch .t-super b { top: 50%; margin-top: 12px; font-size: 9px; }
 }
 
 /* the picker, bottom left: the chosen brawler's skins (a carousel) above the brawler row */
-.picker { position: absolute; left: var(--g); bottom: 26px; display: flex; flex-direction: column; gap: 10px; width: max-content; max-width: min(470px, 34vw); }
-.picker .roster { position: static; }
+.picker { position: absolute; left: var(--g); bottom: 26px; display: flex; flex-direction: column; gap: 10px; width: max-content;
+  max-width: calc(100vw - 340px - 3 * var(--g)); } /* up to the play panel: 8 brawlers need the room */
+.picker .roster { position: static; max-width: 100%; overflow-x: auto; scrollbar-width: none; padding-top: 2px; }
+.picker .roster::-webkit-scrollbar { display: none; }
+.picker .rt { flex: none; } /* never squeezed: the row scrolls when it has no room left */
 .skinbar { padding: 8px 10px 10px; border-radius: 16px; background: rgba(14, 11, 30, 0.72); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(6px); }
 .sb-head { display: flex; align-items: baseline; gap: 8px; margin: 0 2px 6px; }
 .sb-head b { font-family: var(--display); font-weight: 400; font-size: 14px; letter-spacing: 0.8px; }
 .sb-head small { font-size: 11px; font-weight: 900; color: var(--muted); }
+/* folded (touch screens, main.js): only the title shows, with a chevron; a tap opens it */
+.skinbar[class] .sb-head[role=button] { cursor: pointer; margin-bottom: 0; }
+.skinbar .sb-head[role=button]::after { content: '▾'; margin-left: auto; font-size: 13px; color: var(--muted); transition: transform 0.15s; }
+.skinbar:not(.collapsed) .sb-head[role=button] { margin-bottom: 6px; }
+.skinbar.collapsed .sb-head[role=button]::after { transform: rotate(-90deg); }
+.skinbar.collapsed { align-self: flex-start; padding: 6px 12px; }
+.skinbar.collapsed .sb-row { display: none; }
+.skinbar .sb-head[role=button] { display: flex; } /* even where the title is otherwise hidden (short landscape) */
 .sb-row { display: flex; align-items: center; gap: 6px; }
 .sb-arrow { display: none; flex: none; width: 28px; height: 28px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.06); color: #fff; font-size: 18px; line-height: 1; cursor: pointer; }
 .sb-row.scrolls .sb-arrow { display: block; }
@@ -563,7 +577,7 @@ body.touch #touch .t-super b { top: 50%; margin-top: 12px; font-size: 9px; }
 .hs.locked i { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-size: 18px; }
 @media (max-height: 760px) { .hs { width: 64px; } .hs-art { height: 50px; } .hs-art img { height: 58px; } .picker { gap: 8px; } .skinbar { padding: 6px 8px 8px; } }
 @media (max-height: 520px) and (orientation: landscape) {
-  .picker { left: var(--g); bottom: calc(8px + env(safe-area-inset-bottom)); gap: 5px; max-width: calc(100vw - 236px - 3 * var(--g) - 10px); }
+  html .picker { left: var(--g); bottom: calc(8px + env(safe-area-inset-bottom)); gap: 5px; max-width: calc(100vw - 236px - 3 * var(--g) - 10px); }
   .skinbar { padding: 4px 6px 5px; border-radius: 12px; }
   .sb-head { display: none; }
   .hs { width: 46px; border-radius: 9px; padding-bottom: 2px; }
