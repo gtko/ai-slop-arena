@@ -14,5 +14,7 @@ steam/store/trailer.mp4
 worker/build
 art-src/rig/work/
 art-src/rig/out/
+art-src/fauna/work/
+art-src/fauna/out/
 __pycache__/
 *.blend1
