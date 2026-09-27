@@ -1164,6 +1164,55 @@ def v0150():
     img.convert('RGB').save(os.path.join(OUT, 'v0.15.0-brawlers.png'), optimize=True)
 
 
+def v0160():
+    banner('v0.16.0', 'LIVING ARENAS', 'Fauna everywhere. Islands reborn.',
+           [('🦊', '14 animals'), ('🏝️', 'New Windmill Isles'), ('🌊', 'Round ponds'), ('🐦', 'Birds & bees')],
+           'v0.16.0-banner.png', ('kappa', 'pipchomp', 'mochi'))
+
+    # the 14 rigged species (art-src/fauna, src/ambient): reference art straight from the pipeline
+    W, H = 1600, 1060
+    img = background(W, H, glow=(0.5, 0.3))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 26), 'THE ARENAS ARE ALIVE', display(56), YELLOW, anchor='ma')
+    d.text((W // 2, 104), '14 figurine animals, rigged and animated: they walk, hop, peck, fly and flee', font=body(24, 'Bold'), fill=MUTED, anchor='ma')
+    fauna = [('fennec', 'Fennec'), ('arctic_fox', 'Arctic fox'), ('cat', 'Cat'), ('hedgehog', 'Hedgehog'), ('squirrel', 'Squirrel'),
+             ('frog', 'Frog'), ('hare', 'Hare'), ('penguin', 'Penguin'), ('duck', 'Duck'), ('hen', 'Hen'),
+             ('sparrow', 'Sparrow'), ('lizard', 'Lizard'), ('vulture', 'Vulture'), ('raven', 'Raven')]
+    cw, ch, gap = 280, 262, 22
+    for k, (key, name) in enumerate(fauna):
+        row, col = divmod(k, 5)
+        n = 5 if row < 2 else 4
+        x0 = (W - (n * cw + (n - 1) * gap)) // 2 + col * (cw + gap)
+        y0 = 150 + row * (ch + gap)
+        card(img, (x0, y0, x0 + cw, y0 + ch), outline=(47, 158, 68), radius=22)
+        pic = Image.open(os.path.join(ROOT, 'art-src', 'fauna', key + '.png')).convert('RGBA').resize((200, 200), Image.LANCZOS)
+        mask = Image.new('L', pic.size, 0); ImageDraw.Draw(mask).rounded_rectangle((0, 0, *pic.size), 18, fill=255)
+        img.paste(pic, (x0 + (cw - 200) // 2, y0 + 12), mask)
+        d.text((x0 + cw // 2, y0 + 222), name, font=display(28), fill=YELLOW, anchor='ma')
+    d.text((W // 2, 1012), 'Painted with gpt-image, sculpted by Hunyuan3D on a local GPU, rigged in Blender · they never give away a hidden player', font=body(21, 'Bold'), fill=MUTED, anchor='ma')
+    img.convert('RGB').save(os.path.join(OUT, 'v0.16.0-fauna.png'), optimize=True)
+
+    # Windmill Isles rework and the rounded decor (src/maps.js, src/kit.js, src/shore.js)
+    W, H = 1600, 860
+    img = background(W, H, glow=(0.5, 0.35))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'WINDMILL ISLES, REBUILT', display(56), YELLOW, anchor='ma')
+    rows = [('🌀', 'A pinwheel of round islands', '4 big islands, 4 islets, a round middle island'),
+            ('🏠', 'The windmill in the middle', 'a 3 x 3 landmark, sculpted by the 3D pipeline'),
+            ('🧭', 'No spawn in the middle', 'the 8 spawns sit on the big islands'),
+            ('💥', 'Islands shake, then drop', '5 s of cracks, pebbles and rumble, then one piece falls'),
+            ('⏱️', 'Crumble order', 'islets 40 s, big islands 60 s, bridges 80 s, middle rings 95 s, 105 s'),
+            ('☁️', 'An open sky below', 'clouds, gulls, far islets with tiny windmills'),
+            ('🌊', 'Rounded decor everywhere', 'round ponds with banks and reeds, frozen lakes, soft island coasts')]
+    for i, (icon, head, line) in enumerate(rows):
+        y = 118 + i * 102
+        card(img, (60, y, W - 60, y + 90), outline=(47, 158, 68), radius=20)
+        d.text((92, y + 18), icon, font=emoji(48), embedded_color=True)
+        d.text((170, y + 10), head, font=display(30), fill=YELLOW)
+        d.text((170, y + 52), line, font=body(22, 'Bold'), fill=TEXT)
+    img.convert('RGB').save(os.path.join(OUT, 'v0.16.0-isles.png'), optimize=True)
+
+
 if __name__ == '__main__':
     import sys
     os.makedirs(OUT, exist_ok=True)
@@ -1188,5 +1237,6 @@ if __name__ == '__main__':
     v0131()
     v0140()
     v0150()
+    v0160()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')

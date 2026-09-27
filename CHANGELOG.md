@@ -3,6 +3,14 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.16.0](docs/releases/v0.16.0.md): Living arenas
+
+<a href="docs/releases/v0.16.0.md"><img src="docs/releases/img/v0.16.0-banner.png" alt="v0.16.0: living arenas" width="100%"></a>
+
+- 🦊 14 animated animals on the six maps; they never give away a hidden player.
+- 🏝️ Windmill Isles rebuilt: round pinwheel islands, the windmill in the centre, islands that shake then drop, no spawn in the middle.
+- 🌊 Round ponds with banks and reeds, frozen lakes, soft island coasts.
+
 ## [v0.15.0](docs/releases/v0.15.0.md): Wild isles
 
 <a href="docs/releases/v0.15.0.md"><img src="docs/releases/img/v0.15.0-banner.png" alt="v0.15.0: wild isles" width="100%"></a>
