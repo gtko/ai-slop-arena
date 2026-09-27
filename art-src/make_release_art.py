@@ -1213,6 +1213,31 @@ def v0160():
     img.convert('RGB').save(os.path.join(OUT, 'v0.16.0-isles.png'), optimize=True)
 
 
+def v0161():
+    banner('v0.16.1', 'TABLET READY', 'Faster, lighter, and it updates itself.',
+           [('⏱️', '30 s queue'), ('🪙', 'Skins for coins'), ('📱', 'Tablet speed'), ('🔄', 'Auto-updates')],
+           'v0.16.1-banner.png', ('blaster', 'gunslinger', 'bomber'))
+
+    # what changed (worker/ranking.js, src/cosmetics.js, src/props.js, src/ota.js): real numbers
+    W, H = 1600, 900
+    img = background(W, H, glow=(0.5, 0.35))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'PLAYED WITH THE KIDS, FIXED FOR THE KIDS', display(50), YELLOW, anchor='ma')
+    rows = [('⏱️', 'Half the wait online', 'bots fill the match after 30 s instead of 1 minute'),
+            ('🪙', 'Skins for Slop Coins', '1,000 coins or 290 Gems: about 50 matches of play'),
+            ('📱', 'Five times lighter on tablets', 'Rainy Grove, mobile low: 3.56 M triangles a frame down to 0.71 M'),
+            ('🖥️', 'Lighter on PCs too', 'shadows drawn once a frame: about 30% fewer triangles, same picture'),
+            ('🧩', 'A home screen that fits', '8 brawler cards at full width, gadgets as icons when space is short'),
+            ('🔄', 'The app updates itself', 'new versions download on Wi-Fi and apply at the next launch')]
+    for i, (icon, head, line) in enumerate(rows):
+        y = 120 + i * 124
+        card(img, (60, y, W - 60, y + 108), outline=(90, 150, 230), radius=20)
+        d.text((92, y + 26), icon, font=emoji(50), embedded_color=True)
+        d.text((175, y + 16), head, font=display(32), fill=YELLOW)
+        d.text((175, y + 62), line, font=body(23, 'Bold'), fill=TEXT)
+    img.convert('RGB').save(os.path.join(OUT, 'v0.16.1-changes.png'), optimize=True)
+
+
 if __name__ == '__main__':
     import sys
     os.makedirs(OUT, exist_ok=True)
@@ -1238,5 +1263,6 @@ if __name__ == '__main__':
     v0140()
     v0150()
     v0160()
+    v0161()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')

@@ -3,6 +3,14 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.16.1](docs/releases/v0.16.1.md): Tablet ready
+
+<a href="docs/releases/v0.16.1.md"><img src="docs/releases/img/v0.16.1-banner.png" alt="v0.16.1: tablet ready" width="100%"></a>
+
+- ⏱️ Bots fill online matches after 30 s; 🪙 skins for 1,000 Slop Coins.
+- 📱 Up to 5× lighter on tablets and phones, 30% lighter on PCs.
+- 🧩 A home screen that fits every window; 🔄 mobile apps update themselves (install this version once).
+
 ## [v0.16.0](docs/releases/v0.16.0.md): Living arenas
 
 <a href="docs/releases/v0.16.0.md"><img src="docs/releases/img/v0.16.0-banner.png" alt="v0.16.0: living arenas" width="100%"></a>
