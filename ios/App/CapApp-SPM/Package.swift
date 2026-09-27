@@ -14,7 +14,8 @@ let package = Package(
         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.5.2"),
         .package(name: "CapacitorApp", path: "../../../node_modules/@capacitor/app"),
         .package(name: "CapacitorScreenOrientation", path: "../../../node_modules/@capacitor/screen-orientation"),
-        .package(name: "CapacitorStatusBar", path: "../../../node_modules/@capacitor/status-bar")
+        .package(name: "CapacitorStatusBar", path: "../../../node_modules/@capacitor/status-bar"),
+        .package(name: "CapgoCapacitorUpdater", path: "../../../node_modules/@capgo/capacitor-updater")
     ],
     targets: [
         .target(
@@ -24,7 +25,8 @@ let package = Package(
                 .product(name: "Cordova", package: "capacitor-swift-pm"),
                 .product(name: "CapacitorApp", package: "CapacitorApp"),
                 .product(name: "CapacitorScreenOrientation", package: "CapacitorScreenOrientation"),
-                .product(name: "CapacitorStatusBar", package: "CapacitorStatusBar")
+                .product(name: "CapacitorStatusBar", package: "CapacitorStatusBar"),
+                .product(name: "CapgoCapacitorUpdater", package: "CapgoCapacitorUpdater")
             ]
         )
     ]

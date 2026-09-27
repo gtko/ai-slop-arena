@@ -66,12 +66,19 @@ jobs:
         with: { distribution: temurin, java-version: 21, cache: gradle }
       - run: npm ci
       - run: npx vite build --mode app && npx cap sync android
+      # The same web bundle, zipped with index.html at the root: the over-the-air update the installed
+      # apps download (src/ota.js, served by the Worker's /app/latest.json, docs/ota-updates.md).
+      - run: cd dist-app && zip -qr ../AISlopArena-app-bundle.zip .
       - name: Debug APK
         working-directory: android
         run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
       - run: cp android/app/build/outputs/apk/debug/app-debug.apk AISlopArena-android.apk
       - uses: actions/upload-artifact@v4
-        with: { name: android, path: AISlopArena-android.apk }
+        with:
+          name: android
+          path: |
+            AISlopArena-android.apk
+            AISlopArena-app-bundle.zip
 
   ios:
     name: iOS (simulator)
@@ -83,11 +90,13 @@ jobs:
       - run: npm ci
       - run: npx vite build --mode app && npx cap sync ios
       # Unsigned simulator build: proves the project compiles and runs in Xcode's simulator.
+      # The app's version is package.json's, like the Android versionName (OTA updates compare it).
       # A device / App Store build needs the Apple certificates (see docs/platforms.md).
       - name: Build
         run: |
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
-            -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+            -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_ALLOWED=NO \
+            MARKETING_VERSION="$(node -p "require('./package.json').version")" build
       - run: cd build/Build/Products/Release-iphonesimulator && zip -qry "$GITHUB_WORKSPACE/AISlopArena-ios-simulator.zip" App.app
       - uses: actions/upload-artifact@v4
         with: { name: ios, path: AISlopArena-ios-simulator.zip }

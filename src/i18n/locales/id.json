@@ -344,6 +344,8 @@
   "mod.kicked.leader": "Pemimpin room mengeluarkanmu dari room.",
   "mod.kicked.cheat": "Kamu dikeluarkan dari match: gerakan mustahil (kecepatan atau teleport).",
   "err.outdated": "Versi game ini sudah usang: muat ulang halaman atau perbarui aplikasi.",
+  "err.outdatedApp": "Pembaruan game sedang dalam perjalanan: mulai ulang game dalam satu menit. Jika terus terjadi, pasang versi terbaru.",
+  "app.updateReady": "Pembaruan siap: mulai ulang game untuk menerapkannya.",
   "bug.button": "Laporkan bug",
   "bug.something": "Ada masalah? Laporkan bug",
   "bug.title": "Laporkan bug",

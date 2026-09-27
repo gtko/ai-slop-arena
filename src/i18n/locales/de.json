@@ -345,6 +345,8 @@
   "mod.kicked.leader": "Der Raumleiter hat dich aus dem Raum gekickt.",
   "mod.kicked.cheat": "Du wurdest aus dem Match entfernt: unmögliche Bewegungen (Tempo oder Teleport).",
   "err.outdated": "Diese Spielversion ist veraltet: Lade die Seite neu oder aktualisiere die App.",
+  "err.outdatedApp": "Ein Spiel-Update ist unterwegs: Starte das Spiel in einer Minute neu. Wenn das weiter passiert, installiere die neueste Version.",
+  "app.updateReady": "Update bereit: Starte das Spiel neu, um es anzuwenden.",
   "bug.button": "Bug melden",
   "bug.something": "Stimmt was nicht? Bug melden",
   "bug.title": "Bug melden",

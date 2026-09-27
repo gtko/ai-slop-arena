@@ -286,6 +286,18 @@ if (isNativeApp) {
   import('./native.js').then(m => m.bindAppEvents({ onBack: () => meta.close() || menus.back() || pauseMatch(), onHide: pauseMatch }))
     .catch(e => console.warn('[native]', e));
 }
+// Android / iOS app: over-the-air updates of the game (src/ota.js). A downloaded update applies at the
+// next launch; a small toast says so, never during a match.
+if (isNativeApp) {
+  const updateReady = () => {
+    if (menus.ctx.isInMatch()) return;
+    $('#updateToast').classList.remove('hidden');
+    setTimeout(() => $('#updateToast').classList.add('hidden'), 8000);
+  };
+  $('#updateToastX').addEventListener('click', () => $('#updateToast').classList.add('hidden'));
+  import('./ota.js').then(m => m.startUpdates({ inMatch: () => menus.ctx.isInMatch(), onReady: updateReady }))
+    .catch(e => console.warn('[ota]', e));
+}
 
 $('#optionsBtn').addEventListener('click', () => { sfx('click'); leaveHome(); menus.openOptions('#menu'); });
 // Android app: achievements mirrored to Google Play Games, and a button for Play's achievements screen.

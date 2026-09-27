@@ -345,6 +345,8 @@
   "mod.kicked.leader": "Rumsledaren sparkade ut dig ur rummet.",
   "mod.kicked.cheat": "Du togs bort från matchen: omöjliga rörelser (hastighet eller teleport).",
   "err.outdated": "Den här versionen av spelet är föråldrad: ladda om sidan eller uppdatera appen.",
+  "err.outdatedApp": "En speluppdatering är på väg: starta om spelet om en minut. Om det fortsätter, installera den senaste versionen.",
+  "app.updateReady": "Uppdateringen är klar: starta om spelet för att använda den.",
   "bug.button": "Rapportera en bugg",
   "bug.something": "Något fel? Rapportera en bugg",
   "bug.title": "Rapportera en bugg",
