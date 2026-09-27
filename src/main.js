@@ -416,6 +416,28 @@ function renderHero() {
   });
 }
 
+// The hero column must end above the picker (skins + roster), whatever the window: when it doesn't
+// fit, drop what matters least first (fit-1 blurb, fit-2 loadout descriptions, fit-3 stats, fit-4
+// gadgets and star powers as icons). Re-measured when the window, the picker or the content changes.
+{
+  const info = $('.hero-info'), picker = $('.picker');
+  let queued = 0;
+  const fit = () => {
+    queued = 0;
+    if (!info || !picker || !info.offsetParent) return;
+    for (let k = 1; k <= 4; k++) info.classList.remove('fit-' + k);
+    // the column's box may stretch: measure where its content ends
+    const over = () => Math.max(...[...info.children].map(c => c.offsetParent ? c.getBoundingClientRect().bottom : 0)) > picker.getBoundingClientRect().top - 12;
+    for (let k = 1; k <= 4 && over(); k++) info.classList.add('fit-' + k);
+  };
+  const later = () => { if (!queued) queued = requestAnimationFrame(fit); };
+  if (info && picker) {
+    const ro = new ResizeObserver(later);
+    ro.observe(picker); ro.observe(info); // info: absolute with an auto height, it follows its content (unlock panel, name, fonts)
+    addEventListener('resize', later);
+  }
+}
+
 // Loadout of the chosen brawler: its mastery, gadget A / B and star power 1 / 2 (mastery.js gates).
 const typeOf = s => { const k = parseLoadout(s).type; return Object.hasOwn(TYPES, k) ? k : 'blaster'; };
 const STAR_ICONS = ['⭐', '🌟'];
