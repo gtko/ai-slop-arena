@@ -191,7 +191,9 @@ export class MapKit {
       land.forEach(([i, j], k) => {
         A.center(i, j, _v);
         _q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, (i * 7 + j * 13) % 6);
-        _m.compose(_v.setY(0), _q, _s.set(1, 0.7 + ((i * 31 + j * 17) % 10) / 16, 1));
+        // tucked under the rounded coast (arena.js groundGeometry): narrower where it bends close
+        const F = A.field, w = F ? Math.min(1, Math.max(0.4, (F.dist(F.at(_v.x, _v.z)) + 0.3) / 1.3)) : 1;
+        _m.compose(_v.setY(F ? -0.3 : 0), _q, _s.set(w, 0.7 + ((i * 31 + j * 17) % 10) / 16, w));
         this.rock.setMatrixAt(k, _m);
         this.rock.setColorAt(k, col.setHSL(0.07 + ((i * 5 + j * 3) % 4) * 0.01, 0.3, 0.36 + ((i * 11 + j * 7) % 5) * 0.025));
         this.rockIdx.set(A.key(i, j), k);
