@@ -32,8 +32,8 @@ const SHOT_BLOCK = new Set(['X', '#', 'C', 'T', 'K', 'G', 'E', 'M']);
 export const isCrate = ch => ch === 'C' || ch === 'E';
 export const WALL_H = 2.1;
 export const BOUND_H = 2.7;
-// Near water the floor stops at this level of the land field (shore.js), a little outside the
-// 'W' tiles: the sandy lip of the basin fills the rest.
+// Near water the floor stops at this level of the land field (shore.js), ~0.15 m outside the 'W'
+// tiles: the basin's walkable sandy lip fills the rest, and the water starts at the tile edge.
 const SHORE_LIP = 0.62;
 const smooth = t => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
@@ -338,7 +338,7 @@ export class Arena {
     const sig = this.grid.map(r => r.map(ch => +!'WIV='.includes(ch)).join('')).join('');
     if (this.field && this.fieldSig === sig) return this.field;
     this.fieldSig = sig;
-    return new TileField(N, TILE, (i, j) => (i < 0 || j < 0 || i >= N || j >= N ? out : this.isLand(i, j)), sky ? { sigma: 0.75, level: 0.42, seed: 7 } : { sigma: 1, level: 0.45, seed: 7 });
+    return new TileField(N, TILE, (i, j) => (i < 0 || j < 0 || i >= N || j >= N ? out : this.isLand(i, j)), sky ? { sigma: 0.5, level: 0.35, seed: 7 } : { sigma: 0.5, level: 0.5, seed: 7 });
   }
 
   // Arena floor, holed where the water basins sink in, the ice lies and the void opens, along the
@@ -369,9 +369,13 @@ export class Arena {
     // under an island: a steep earth-and-rock wall right under the rim (seen from the camera on the
     // southern coasts), then narrowing down to a rough point a few metres below
     const wall = (x, z) => 0.8 + noise2(x * 0.6, z * 0.6, 5) * 0.8, deep = (x, z) => 1.2 + noise2(x * 0.35, z * 0.35, 9) * 1.6;
+    // (flat deep inside, so the whole-tile quads there meet their subdivided neighbours without gaps)
     const under = bandGeometry(F.band(0.5, Infinity, {
       keep: own, whole: mn => mn >= 0.95,
-      y: (x, z, f) => -0.32 - wall(x, z) * smooth((f - 0.5) / 0.05) - deep(x, z) * smooth((f - 0.55) / 0.4),
+      y: (x, z, f) => {
+        const rough = -0.32 - wall(x, z) * smooth((f - 0.5) / 0.05) - deep(x, z) * smooth((f - 0.55) / 0.4);
+        return rough + (-3.5 - rough) * smooth((f - 0.8) / 0.15);
+      },
     }), uv, false, true);
     const paint = (g, fn) => {
       const p = g.attributes.position, col = new Float32Array(p.count * 3), c = new THREE.Color();

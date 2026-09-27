@@ -145,10 +145,12 @@ ${CAUSTICS}`)
 
 /* ------------------------------------------------------------------ */
 
-// Bank profile across the land field f (shore.js): a low sandy lip from the floor's edge (f = lip)
-// to the water's outline (f = 0.5), then a slope down to the bed, full depth ~0.8 m into the pond.
+// Bank profile across the land field f (shore.js): a sandy beach from the floor's edge (f = lip,
+// on the dry tile) down to the surface exactly at the outline (f = 0.5, the 'W' tile edge on
+// straight banks, where collision starts), then a slope down to the bed.
 const smooth = t => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
-const bankY = (f, lip) => (f >= 0.5 ? 0.04 * Math.sin(Math.PI * (lip - f) / (lip - 0.5)) : BED_Y * smooth((0.5 - f) / 0.32));
+const bankY = (f, lip) => (f >= 0.5 ? WATER_Y * (1 - smooth((f - 0.5) / (lip - 0.5)))
+  : WATER_Y + (BED_Y - WATER_Y) * smooth((0.5 - f) / 0.3));
 
 export class Water {
   constructor(arena, N, TILE, HALF, style = 'water', lip = 0.66) {
@@ -162,10 +164,7 @@ export class Water {
     this.field = arena.field;
     // a cell of the shore band belongs to this pond if a 'W' tile is next to it
     this.near = (i, j) => { for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) if (this.isWater(i + di, j + dj)) return true; return false; };
-    // where the bank goes under: the field level at which it crosses the surface
-    let a = 0.05, b = 0.5;
-    for (let k = 0; k < 30; k++) { const m = (a + b) / 2; if (bankY(m, lip) < WATER_Y) a = m; else b = m; }
-    this.waterline = (a + b) / 2;
+    this.waterline = 0.5; // where the bank goes under: the outline itself (bankY)
 
     this.ripples = Array.from({ length: MAX_RIPPLES }, () => new THREE.Vector4(0, 0, -99, 0));
     this.nextRipple = 0;

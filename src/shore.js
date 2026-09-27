@@ -4,8 +4,9 @@ import { mulberry } from './materials.js';
 // Rounded outlines for tile sets (pond shores, frozen ponds, island coasts). The set is blurred into
 // a soft field: the exact Gaussian blur of the union of its tile squares, plus a little noise. A
 // level of it runs parallel to straight tile edges, rounds the corners off (inwards on convex ones,
-// outwards on concave ones) and wobbles a bit, so a blocky pond reads as a natural one while it
-// stays on its tiles give or take a few centimetres. Collision stays per tile; this is only drawn.
+// outwards on concave ones) and wobbles a bit, so a blocky pond reads as a natural one. Straight
+// edges stay on the tile edge (level 0.5) give or take the wobble; corners move by ~0.55 sigma
+// along the diagonal. Collision stays per tile; this is only drawn.
 // The field is remapped so that the chosen outline (`level`) is always f = 0.5.
 
 const RES = 6; // field samples per tile
