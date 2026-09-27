@@ -9,6 +9,8 @@ import { MAPS } from './maps.js';
 import { lanternKit, makeLantern, makeSculptedLantern, sculptedLanternMaterial } from './lantern.js';
 import { tex, image } from './assets.js';
 import { hasProp, propGeometry, propMaterial, propDepth, propMap } from './props.js';
+import { TileField, bandGeometry, noise2, shoreDecor } from './shore.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Sculpted prop (props.js) for each procedural style, when its model exists.
 const WALL_PROP = { strata: 'wall_canyon', strataDark: 'wall_canyon', mossbrick: 'wall_moss', stone: 'wall_moss', icestone: 'wall_ice', brick: 'wall_canyon' };
@@ -30,6 +32,10 @@ const SHOT_BLOCK = new Set(['X', '#', 'C', 'T', 'K', 'G', 'E', 'M']);
 export const isCrate = ch => ch === 'C' || ch === 'E';
 export const WALL_H = 2.1;
 export const BOUND_H = 2.7;
+// Near water the floor stops at this level of the land field (shore.js), a little outside the
+// 'W' tiles: the sandy lip of the basin fills the rest.
+const SHORE_LIP = 0.62;
+const smooth = t => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 const _m = new THREE.Matrix4();
@@ -56,9 +62,11 @@ function tintedBox(w, h, d, r, bottom = 0.62) {
 let ICE_BLOCK = null, SUPPLY_BAND = null;
 
 export class Arena {
-  constructor(scene, map = MAPS.oasis) {
+  // headless: the server builds the arena for its rules; nobody looks at the shore dressing there
+  constructor(scene, map = MAPS.oasis, { headless = false } = {}) {
     this.scene = scene;
     this.map = map;
+    this.headless = headless;
     const QUARTER = map.layout;
     this.group = new THREE.Group();
     scene.add(this.group);
@@ -79,11 +87,18 @@ export class Arena {
     this.rev = 0; // bumped whenever a tile opens up (line-of-sight caches key on it)
     this.iceWalls = []; // temporary ice walls (Frostbite gadget)
     this.torches = [];
+    const has = ch => this.grid.some(r => r.includes(ch));
+    this.hasWater = has('W'); this.hasIce = has('I');
     this.buildGround();
     this.buildWalls();
     this.buildBushes();
-    this.water = new Water(this, N, TILE, HALF, map.water === 'swamp' ? 'swamp' : 'water');
-    this.ice = new IceField(this, N, TILE);
+    this.water = new Water(this, N, TILE, HALF, map.water === 'swamp' ? 'swamp' : 'water', SHORE_LIP);
+    this.ice = new IceField(this);
+    if (!headless && (this.hasWater || this.hasIce)) { // pebbles and reeds along the rounded shores
+      const style = this.hasIce ? 'ice' : map.water === 'swamp' ? 'marsh' : map.ground === 'cartoon' ? 'oasis' : 'grove';
+      const near = (x, z) => { const i = this.toTile(x), j = this.toTile(z); for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) if ('WI'.includes(this.get(i + di, j + dj))) return true; return false; };
+      shoreDecor(this.group, this.field, { style, near, bank: this.hasIce ? 0.45 : 0.35 });
+    }
     this.buildObstacles();
     if (map.wet) this.buildPuddles();
     if (map.stones) this.buildStones();
@@ -190,13 +205,13 @@ export class Arena {
     map.repeat.set(N / 2, N / 2);
     const groundN = cartoon ? null : tex(M.ground + '_n', N, N) || tex('sand_n', N, N); // one normal tile per arena tile
     // Wet maps: darker, glossier floor so lanterns, lightning and projectiles smear across it.
-    const ground = new THREE.Mesh(
-      this.groundGeometry(),
-      new THREE.MeshStandardMaterial({
-        map, normalMap: groundN, normalScale: new THREE.Vector2(0.8, 0.8),
-        roughness: M.wet ? 0.42 : 0.93, color: M.wet ? 0xb4b4b4 : 0xffffff, envMapIntensity: M.wet ? 1.6 : 1,
-      }),
-    );
+    const top = new THREE.MeshStandardMaterial({
+      map, normalMap: groundN, normalScale: new THREE.Vector2(0.8, 0.8),
+      roughness: M.wet ? 0.42 : 0.93, color: M.wet ? 0xb4b4b4 : 0xffffff, envMapIntensity: M.wet ? 1.6 : 1,
+    });
+    this.field = this.landField();
+    // floating islands: the grass cap, then the earth and rock under its rounded coast
+    const ground = new THREE.Mesh(this.groundGeometry(), M.sky ? [top, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 })] : top);
     ground.receiveShadow = true;
     this.group.add(ground);
     this.groundMesh = ground;
@@ -314,26 +329,63 @@ export class Arena {
     this.group.add(mesh);
   }
 
-  // Arena floor as one quad per dry tile, leaving holes where the water basins sink in.
-  // UVs match the old single plane (v = 1 at -z) so the checker texture lines up.
-  // keep(i, j): a subset of the floor (kit.js lifts a doomed island out to shake it on its own)
+  isLand(i, j) { return i >= 0 && j >= 0 && i < N && j < N && !'WIV='.includes(this.grid[j][i]); } // not a basin, the void or a bridge (kit.js)
+  // Soft outline of the floor (shore.js): ponds, frozen ponds and island coasts come out rounded.
+  // Kept while the land tiles stay the same; none on the server, where nobody sees the floor.
+  landField() {
+    if (this.headless) return null;
+    const sky = !!this.map.sky, out = !sky; // around the arena: more floor, or the void of the sky maps
+    const sig = this.grid.map(r => r.map(ch => +!'WIV='.includes(ch)).join('')).join('');
+    if (this.field && this.fieldSig === sig) return this.field;
+    this.fieldSig = sig;
+    return new TileField(N, TILE, (i, j) => (i < 0 || j < 0 || i >= N || j >= N ? out : this.isLand(i, j)), sky ? { sigma: 0.75, level: 0.42, seed: 7 } : { sigma: 1, level: 0.45, seed: 7 });
+  }
+
+  // Arena floor, holed where the water basins sink in, the ice lies and the void opens, along the
+  // rounded outline of the land field. UVs match the old single plane (v = 1 at -z) so the checker
+  // texture lines up. keep(i, j): a subset of the floor (kit.js lifts a doomed island out to shake
+  // it on its own); a sliver of floor rounded out over a non-land tile goes with the closest land tile.
   groundGeometry(keep = null) {
-    const pos = [], uv = [], idx = [], S = N * TILE;
-    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-      if ('WIV='.includes(this.grid[j][i])) continue; // water / ice basins, the void, bridges (kit.js)
-      if (keep && !keep(i, j)) continue;
-      const x0 = (i - N / 2) * TILE, z0 = (j - N / 2) * TILE, o = pos.length / 3;
-      for (const [x, z] of [[x0, z0 + TILE], [x0 + TILE, z0 + TILE], [x0 + TILE, z0], [x0, z0]]) {
-        pos.push(x, 0, z);
-        uv.push((x + HALF) / S, (HALF - z) / S);
+    const F = this.field, S = N * TILE, sky = !!this.map.sky, ice = this.hasIce && !this.hasWater;
+    if (!F) return new THREE.BufferGeometry(); // the server
+    const own = keep && ((i, j, x, z) => {
+      if (this.isLand(i, j)) return keep(i, j);
+      let best = null, bd = Infinity;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+        if (!this.isLand(i + di, j + dj)) continue;
+        const x0 = (i + di - N / 2) * TILE, z0 = (j + dj - N / 2) * TILE;
+        const d = Math.hypot(Math.max(x0 - x, 0, x - x0 - TILE), Math.max(z0 - z, 0, z - z0 - TILE));
+        if (d < bd) { bd = d; best = [i + di, j + dj]; }
       }
-      idx.push(o, o + 1, o + 2, o, o + 2, o + 3);
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setAttribute('normal', new THREE.Float32BufferAttribute(pos.map((_, k) => (k % 3 === 1 ? 1 : 0)), 3));
-    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-    g.setIndex(idx);
+      return !!best && keep(best[0], best[1]);
+    });
+    const uv = (x, z) => [(x + HALF) / S, (HALF - z) / S];
+    // islands: the grass rolls over the coast; frozen ponds: a soft snow bank rings them
+    const edge = sky ? 0.62 : ice ? 0.64 : 0;
+    const y = sky ? (x, z, f) => (f < 0.62 ? -0.32 * ((0.62 - f) / 0.12) ** 2 : 0)
+      : ice ? (x, z, f) => (f < 0.64 ? 0.07 * Math.sin(Math.PI * (f - 0.5) / 0.14) : 0) : () => 0;
+    const top = bandGeometry(F.band(this.hasWater ? SHORE_LIP : 0.5, Infinity, { keep: own, y, whole: mn => mn >= edge }), uv, !edge);
+    if (!sky) return top;
+    // under an island: a steep earth-and-rock wall right under the rim (seen from the camera on the
+    // southern coasts), then narrowing down to a rough point a few metres below
+    const wall = (x, z) => 0.8 + noise2(x * 0.6, z * 0.6, 5) * 0.8, deep = (x, z) => 1.2 + noise2(x * 0.35, z * 0.35, 9) * 1.6;
+    const under = bandGeometry(F.band(0.5, Infinity, {
+      keep: own, whole: mn => mn >= 0.95,
+      y: (x, z, f) => -0.32 - wall(x, z) * smooth((f - 0.5) / 0.05) - deep(x, z) * smooth((f - 0.55) / 0.4),
+    }), uv, false, true);
+    const paint = (g, fn) => {
+      const p = g.attributes.position, col = new Float32Array(p.count * 3), c = new THREE.Color();
+      for (let k = 0; k < p.count; k++) { fn(c, p.getX(k), p.getY(k), p.getZ(k)); c.toArray(col, k * 3); }
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    };
+    const earth = new THREE.Color(0x6b4a2f), rock = new THREE.Color(0x9a7a5c), dark = new THREE.Color(0x5c4a3e);
+    paint(top, c => c.setRGB(1, 1, 1));
+    paint(under, (c, x, yy, z) => { // a dark soil band under the grass, then banded rock, darker deeper down
+      const d = -yy - 0.32, band = Math.sin(d * 5.5 + noise2(x * 0.5, z * 0.5, 3) * 4) * 0.06;
+      c.copy(earth).lerp(rock, smooth((d - 0.15) / 0.35)).lerp(dark, smooth((d - 1) / 2)).multiplyScalar(1 + band);
+    });
+    const g = mergeGeometries([top, under], true);
+    top.dispose(); under.dispose();
     return g;
   }
 
@@ -374,6 +426,7 @@ export class Arena {
   // Crumbling islands (kit.js): redraw the floor without the fallen tiles; bushes there go.
   rebuildGround(keep = null) {
     if (!this.groundMesh) return;
+    this.field = this.landField(); // if tiles fell into the void, the coast rounds off again
     this.groundMesh.geometry.dispose();
     this.groundMesh.geometry = this.groundGeometry(keep);
   }
