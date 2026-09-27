@@ -18,7 +18,7 @@
       "channelUrl": "",
       "allowModifyUrl": false,
       "shakeMenu": false,
-      "appReadyTimeout": 15000,
+      "appReadyTimeout": 45000,
       "autoDeleteFailed": true,
       "autoDeletePrevious": true,
       "resetWhenUpdate": true

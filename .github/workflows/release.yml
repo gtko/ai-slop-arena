@@ -88,15 +88,14 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
-      - run: npx vite build --mode app && npx cap sync ios
+      - run: npx vite build --mode app && node scripts/native-version.mjs && npx cap sync ios
       # Unsigned simulator build: proves the project compiles and runs in Xcode's simulator.
-      # The app's version is package.json's, like the Android versionName (OTA updates compare it).
+      # Version and build number come from package.json (scripts/native-version.mjs), like Android's.
       # A device / App Store build needs the Apple certificates (see docs/platforms.md).
       - name: Build
         run: |
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
-            -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_ALLOWED=NO \
-            MARKETING_VERSION="$(node -p "require('./package.json').version")" build
+            -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
       - run: cd build/Build/Products/Release-iphonesimulator && zip -qry "$GITHUB_WORKSPACE/AISlopArena-ios-simulator.zip" App.app
       - uses: actions/upload-artifact@v4
         with: { name: ios, path: AISlopArena-ios-simulator.zip }
