@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { shared, waterNormalTexture } from './materials.js';
 import { tex } from './assets.js';
+import { bandGeometry } from './shore.js';
 
 // Water sits in a real basin: the ground has holes over 'W' tiles, a sunken bed and banks
 // catch shadows and animated caustics, and a transparent lit surface goes on top.
@@ -144,15 +145,26 @@ ${CAUSTICS}`)
 
 /* ------------------------------------------------------------------ */
 
+// Bank profile across the land field f (shore.js): a sandy beach from the floor's edge (f = lip,
+// on the dry tile) down to the surface exactly at the outline (f = 0.5, the 'W' tile edge on
+// straight banks, where collision starts), then a slope down to the bed.
+const smooth = t => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+const bankY = (f, lip) => (f >= 0.5 ? WATER_Y * (1 - smooth((f - 0.5) / (lip - 0.5)))
+  : WATER_Y + (BED_Y - WATER_Y) * smooth((0.5 - f) / 0.3));
+
 export class Water {
-  constructor(arena, N, TILE, HALF, style = 'water') {
+  constructor(arena, N, TILE, HALF, style = 'water', lip = 0.66) {
     this.arena = arena;
-    this.N = N; this.TILE = TILE; this.HALF = HALF;
+    this.N = N; this.TILE = TILE; this.HALF = HALF; this.lip = lip; this.style = style;
     this.tiles = [];
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) if (arena.grid[j][i] === 'W') this.tiles.push([i, j]);
     this.group = new THREE.Group();
     arena.group.add(this.group);
-    if (!this.tiles.length) return;
+    if (!this.tiles.length || arena.headless) return; // the server only needs isWaterAt (arena.js)
+    this.field = arena.field;
+    // a cell of the shore band belongs to this pond if a 'W' tile is next to it
+    this.near = (i, j) => { for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) if (this.isWater(i + di, j + dj)) return true; return false; };
+    this.waterline = 0.5; // where the bank goes under: the outline itself (bankY)
 
     this.ripples = Array.from({ length: MAX_RIPPLES }, () => new THREE.Vector4(0, 0, -99, 0));
     this.nextRipple = 0;
@@ -176,23 +188,16 @@ export class Water {
 
   isWater(i, j) { return this.arena.get(i, j) === 'W'; }
 
-  // Per-texel distance to the nearest bank, so depth colour and foam flow across tile seams.
+  // Per-texel distance to the waterline (in tiles), so depth colour and foam follow the rounded
+  // shore (exact along straight banks, close enough in the bends).
   shoreTexture() {
-    const { N, TILE, HALF } = this, R = 16, S = N * R;
+    const { N, TILE, HALF, field } = this, R = 16, S = N * R, w = field.dist(this.waterline);
     const data = new Uint8Array(S * S);
     for (let py = 0; py < S; py++) for (let px = 0; px < S; px++) {
+      if (!this.near(Math.floor(px / R), Math.floor(py / R))) continue;
       const x = (px + 0.5) / R * TILE - HALF, z = (py + 0.5) / R * TILE - HALF;
-      const ti = Math.floor(px / R), tj = Math.floor(py / R);
-      if (!this.isWater(ti, tj)) continue;
-      let best = 3;
-      for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) {
-        const i = ti + di, j = tj + dj;
-        if (this.isWater(i, j)) continue;
-        const x0 = (i - N / 2) * TILE, z0 = (j - N / 2) * TILE;
-        const dx = Math.max(x0 - x, 0, x - (x0 + TILE)), dz = Math.max(z0 - z, 0, z - (z0 + TILE));
-        best = Math.min(best, Math.hypot(dx, dz) / TILE);
-      }
-      data[py * S + px] = Math.min(255, (best / 1.5) * 255);
+      const d = (w - field.dist(field.at(x, z))) / TILE;
+      if (d > 0) data[py * S + px] = Math.min(255, (d / 1.5) * 255);
     }
     const t = new THREE.DataTexture(data, S, S, THREE.RedFormat);
     t.magFilter = t.minFilter = THREE.LinearFilter;
@@ -200,34 +205,18 @@ export class Water {
     return t;
   }
 
+  // One sunken basin per pond, following the rounded shore: a dry lip, a sloping bank, the bed.
   buildBasin() {
-    const { N, TILE } = this, pos = [], nor = [], uv = [], idx = [];
-    const quad = (a, b, c, d, n, uvs, flip = false) => {
-      const o = pos.length / 3;
-      for (const p of [a, b, c, d]) pos.push(...p);
-      for (let k = 0; k < 4; k++) nor.push(...n);
-      uv.push(...uvs);
-      if (flip) idx.push(o, o + 2, o + 1, o, o + 3, o + 2); // banks are listed clockwise
-      else idx.push(o, o + 1, o + 2, o, o + 2, o + 3);
-    };
-    for (const [i, j] of this.tiles) {
-      const x0 = (i - N / 2) * TILE, z0 = (j - N / 2) * TILE, x1 = x0 + TILE, z1 = z0 + TILE;
-      const u0 = x0 / TILE, u1 = x1 / TILE, v0 = -z0 / TILE, v1 = -z1 / TILE;
-      quad([x0, BED_Y, z1], [x1, BED_Y, z1], [x1, BED_Y, z0], [x0, BED_Y, z0], [0, 1, 0], [u0, v1, u1, v1, u1, v0, u0, v0]);
-      const h0 = 0, h1 = BED_Y, vt = 0, vb = (h0 - h1) / TILE;
-      // banks: vertical faces on every edge that borders dry land, facing into the pool
-      if (!this.isWater(i - 1, j)) quad([x0, h0, z1], [x0, h0, z0], [x0, h1, z0], [x0, h1, z1], [1, 0, 0], [u0, vt, u1, vt, u1, vb, u0, vb], true);
-      if (!this.isWater(i + 1, j)) quad([x1, h0, z0], [x1, h0, z1], [x1, h1, z1], [x1, h1, z0], [-1, 0, 0], [u0, vt, u1, vt, u1, vb, u0, vb], true);
-      if (!this.isWater(i, j - 1)) quad([x0, h0, z0], [x1, h0, z0], [x1, h1, z0], [x0, h1, z0], [0, 0, 1], [u0, vt, u1, vt, u1, vb, u0, vb], true);
-      if (!this.isWater(i, j + 1)) quad([x1, h0, z1], [x0, h0, z1], [x0, h1, z1], [x1, h1, z1], [0, 0, -1], [u0, vt, u1, vt, u1, vb, u0, vb], true);
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
-    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-    g.setIndex(idx);
+    const { TILE, lip } = this, cell = (i, j) => this.near(i, j);
+    const b = this.field.band(-Infinity, lip, { keep: cell, y: (x, z, f) => bankY(f, lip), whole: (mn, mx) => mx < 0.1 });
+    const g = bandGeometry(b, (x, z) => [x / TILE, -z / TILE]);
+    // sun-dried lip, dark wet sand below the waterline
+    const P = this.style === 'swamp' ? [0x6e6248, 0x4a4234] : this.arena.map.ground === 'cartoon' ? [0xe6b98c, 0x8a7458] : [0x8a7458, 0x62563f];
+    const dry = new THREE.Color(P[0]), wet = new THREE.Color(P[1]), c = new THREE.Color(), col = new Float32Array(b.val.length * 3);
+    b.val.forEach((f, k) => c.copy(wet).lerp(dry, smooth((f - this.waterline + 0.02) / 0.12)).toArray(col, k * 3));
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
     const mat = bedMaterial(this.u, {
-      color: 0x7d7058, roughness: 0.6, map: tex('sand', 0.5, 0.5), normalMap: tex('sand_n', 0.5, 0.5),
+      color: 0xffffff, vertexColors: true, roughness: 0.6, map: tex('sand', 0.5, 0.5), normalMap: tex('sand_n', 0.5, 0.5),
       shadowSide: THREE.DoubleSide,
     });
     const mesh = new THREE.Mesh(g, mat);
@@ -236,17 +225,10 @@ export class Water {
     this.group.add(mesh);
   }
 
+  // the surface fills the shore outline; the bank above the waterline hides its rim
   buildSurface() {
-    const { N, TILE } = this, pos = [], idx = [];
-    for (const [i, j] of this.tiles) {
-      const x0 = (i - N / 2) * TILE, z0 = (j - N / 2) * TILE, o = pos.length / 3;
-      pos.push(x0, WATER_Y, z0 + TILE, x0 + TILE, WATER_Y, z0 + TILE, x0 + TILE, WATER_Y, z0, x0, WATER_Y, z0);
-      idx.push(o, o + 1, o + 2, o, o + 2, o + 3);
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setAttribute('normal', new THREE.Float32BufferAttribute(new Array(pos.length).fill(0).map((_, k) => (k % 3 === 1 ? 1 : 0)), 3));
-    g.setIndex(idx);
+    const b = this.field.band(-Infinity, 0.5, { keep: (i, j) => this.near(i, j), y: () => WATER_Y });
+    const g = bandGeometry(b, (x, z) => [x, z], true);
     this.surface = new THREE.Mesh(g, surfaceMaterial(this.u));
     this.surface.receiveShadow = true;
     this.surface.renderOrder = 1;
@@ -280,19 +262,12 @@ export class Water {
 /* ------------------------------------------------------------------ */
 
 export class IceField {
-  constructor(arena, N, TILE) {
-    const pos = [], idx = [];
-    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-      if (arena.grid[j][i] !== 'I') continue;
-      const x0 = (i - N / 2) * TILE, z0 = (j - N / 2) * TILE, o = pos.length / 3;
-      pos.push(x0, 0.01, z0 + TILE, x0 + TILE, 0.01, z0 + TILE, x0 + TILE, 0.01, z0, x0, 0.01, z0);
-      idx.push(o, o + 1, o + 2, o, o + 2, o + 3);
-    }
-    if (!pos.length) return;
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setAttribute('normal', new THREE.Float32BufferAttribute(pos.map((_, k) => (k % 3 === 1 ? 1 : 0)), 3));
-    g.setIndex(idx);
+  // The ice fills the rounded outline of the 'I' tiles (arena.field); the floor rings it with a
+  // snow bank (arena.js groundGeometry). Slipping stays per tile.
+  constructor(arena) {
+    if (!arena.hasIce || arena.headless) return;
+    const ice = (i, j) => { for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) if (arena.get(i + di, j + dj) === 'I') return true; return false; };
+    const g = bandGeometry(arena.field.band(-Infinity, 0.5, { keep: ice, y: () => 0.012 }), (x, z) => [x, z], true);
     const mat = new THREE.MeshStandardMaterial({ color: 0xbfe3ff, roughness: 0.06, metalness: 0.05, envMapIntensity: 1.2 });
     mat.onBeforeCompile = shader => {
       shader.vertexShader = shader.vertexShader

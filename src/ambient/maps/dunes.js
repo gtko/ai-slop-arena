@@ -1,5 +1,5 @@
-// Dune Storm: scorpions, ghost crabs and a fennec on the sand, tumbleweeds and dust devils pushed by
-// the storm (wind toward +x, as the sand grains in weather.js), a few kites riding it high up.
+// Dune Storm: scorpions, ghost crabs and fennecs on the sand, tumbleweeds and dust devils pushed by
+// the storm (wind toward +x, as the sand grains in weather.js), a few vultures riding it high up.
 export default function dunes(L) {
   const { THREE, arena: A, rand: R } = L;
   const open = ch => ch === '.' || ch === 'B';
@@ -42,9 +42,9 @@ export default function dunes(L) {
     { shape: 'cone', args: [0.06, 0.22, 5], pos: [0, 0.26, -0.28], rot: [-1.9, 0, 0], color: 0xf2c98a },
     { shape: 'cone', args: [0.04, 0.08, 5], pos: [0, 0.3, -0.41], rot: [-1.9, 0, 0], color: 0x2a1a14 },
   ]);
-  L.walkers({ geometry: fox, count: 2, gait: 'scuttle', speed: 1.6, pause: [4, 10], range: 5, shy: 4, scale: [0.95, 1.05] });
+  L.critters({ key: 'fennec', toy: fox, count: 3, gait: 'scuttle', speed: 0.8, run: 3.2, pause: [4, 10], range: 5, shy: 4, scale: [0.95, 1.05], rigScale: 1.2 });
 
-  // black kites leaning into the storm, high above the play area
+  // vultures leaning into the storm, high above the play area (the toy kites until the model is in)
   const kite = L.toy([
     { shape: 'cone', args: [0.1, 0.5, 5], rot: [Math.PI / 2, 0, 0], color: 0x5a3a26 },
     { shape: 'box', args: [0.1, 0.09, 0.1], pos: [0, 0.02, 0.27], color: 0x8a6446 },
@@ -56,7 +56,7 @@ export default function dunes(L) {
     { shape: 'tri', args: [0.75, 0.32], pos: [0.04, 0, 0], color: 0x5a3a26 },
     { shape: 'tri', args: [0.3, 0.14], pos: [0.5, 0.005, -0.02], color: 0x2a1a12 },
   ]);
-  L.flock({ body: kite, wing, count: 4, flocks: 2, radius: [8, 18], height: [10, 13], speed: 0.14, flap: 1.2, glide: 0.7, spread: 1.8, scale: [1, 1.2] });
+  L.flock({ key: 'vulture', body: kite, wing, count: 4, flocks: 2, radius: [8, 18], height: [10, 13], speed: 0.14, flap: 1.2, glide: 0.7, spread: 1.8, scale: [1, 1.2] });
 
   /* tumbleweeds: rolling and bouncing with the wind across the open sand, steering round walls */
   const weed = L.toy([

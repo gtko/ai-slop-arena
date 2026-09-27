@@ -1,5 +1,5 @@
-// Rainy Grove: frogs by the ponds, snails and hedgehogs out in the rain, robins hunched on the outer
-// walls, and wet leaves shaken off the trees around the arena.
+// Rainy Grove: frogs by the ponds, ducks on them, snails, hedgehogs and squirrels out in the rain, robins
+// hunched on the outer walls, and wet leaves shaken off the trees around the arena.
 export default function grove(L) {
   const { THREE, arena: A, rand: R } = L;
   const N = 25, HALF = 25, WALL = 24, WALL_H = 2.7; // arena.js: N, HALF, boundary tile centre, BOUND_H
@@ -22,7 +22,7 @@ export default function grove(L) {
     { shape: 'box', args: [0.05, 0.05, 0.08], pos: [0.1, 0.03, 0.15], color: 0x2a9a3a },
     { shape: 'box', args: [0.05, 0.05, 0.08], pos: [-0.1, 0.03, 0.15], color: 0x2a9a3a },
   ]);
-  L.walkers({ geometry: frog, count: 8, on: nearWater, gait: 'hop', speed: 1.2, pause: [1.5, 5], range: 1, shy: 3, scale: [1.1, 1.4] });
+  L.critters({ key: 'frog', toy: frog, count: 7, on: nearWater, gait: 'hop', speed: 1.2, run: 2.2, pause: [1.5, 5], range: 1, shy: 3, scale: [1.1, 1.4], rigScale: 0.8 });
 
   // snails: orange shell, slow, never flee (a snail is not going anywhere fast)
   const snail = L.toy([
@@ -47,7 +47,26 @@ export default function grove(L) {
     { shape: 'box', args: [0.03, 0.03, 0.03], pos: [0.06, 0.18, 0.22], color: 0x151010 },
     { shape: 'box', args: [0.03, 0.03, 0.03], pos: [-0.06, 0.18, 0.22], color: 0x151010 },
   ]);
-  L.walkers({ geometry: hedgehog, count: 3, gait: 'waddle', speed: 0.45, pause: [2, 6], range: 3, shy: 3, scale: [1, 1.2] });
+  L.critters({ key: 'hedgehog', toy: hedgehog, count: 3, gait: 'waddle', speed: 0.45, run: 1.1, pause: [2, 6], range: 3, shy: 3, scale: [1, 1.2], rigScale: 1.2 });
+
+  // squirrels on the grass next to the bushes, quick hops and long looks around
+  const byBush = (ch, i, j) => ch === '.' && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => A.get(i + a, j + b) === 'B');
+  const squirrel = L.toy([
+    { shape: 'sphere', args: [0.09, 0.9, 1, 1.3], pos: [0, 0.13, 0], color: 0xc0602a },
+    { shape: 'sphere', args: [0.1, 0.8, 1.5, 0.9], rot: [0.4, 0, 0], pos: [0, 0.26, -0.16], color: 0xe07a3a }, // bushy tail
+    { shape: 'cone', args: [0.07, 0.15, 6], rot: [Math.PI / 2, 0, 0], pos: [0, 0.18, 0.15], color: 0xc0602a },
+  ]);
+  L.critters({ key: 'squirrel', toy: squirrel, count: 3, on: byBush, gait: 'hop', speed: 1.6, run: 3, pause: [0.8, 3], range: 2, shy: 3.5, scale: [1.1, 1.3] });
+
+  // ducks paddling on the pond, waddling up the banks now and then
+  const duck = L.toy([
+    { shape: 'sphere', args: [0.15, 0.95, 0.7, 1.35], pos: [0, 0.16, 0], color: 0x8a6a4a },
+    { shape: 'sphere', args: [0.08], pos: [0, 0.3, 0.15], color: 0x2f8a4a },
+    { shape: 'box', args: [0.06, 0.025, 0.08], pos: [0, 0.29, 0.25], color: 0xffc21a },
+    { shape: 'box', args: [0.09, 0.05, 0.08], rot: [-0.5, 0, 0], pos: [0, 0.22, -0.2], color: 0x5a4430 },
+  ]);
+  L.critters({ key: 'duck', toy: duck, count: 3, on: (ch, i, j) => ch === 'W' || nearWater(ch, i, j), home: ch => ch === 'W',
+    swim: ch => ch === 'W', gait: 'waddle', speed: 0.4, run: 1.2, pause: [2, 6], range: 2, shy: 3.5, scale: [1, 1.15], rigScale: 1.1 });
 
   const dens = n => Math.max(1, Math.round(n * L.density));
   const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vector3(), _e = new THREE.Euler();

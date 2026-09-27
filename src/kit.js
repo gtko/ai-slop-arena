@@ -189,13 +189,10 @@ export class MapKit {
       this.rockIdx = new Map();
       const col = new THREE.Color();
       land.forEach(([i, j], k) => {
-        A.center(i, j, _v);
-        _q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, (i * 7 + j * 13) % 6);
-        _m.compose(_v.setY(0), _q, _s.set(1, 0.7 + ((i * 31 + j * 17) % 10) / 16, 1));
-        this.rock.setMatrixAt(k, _m);
         this.rock.setColorAt(k, col.setHSL(0.07 + ((i * 5 + j * 3) % 4) * 0.01, 0.3, 0.36 + ((i * 11 + j * 7) % 5) * 0.025));
         this.rockIdx.set(A.key(i, j), k);
       });
+      this.fitRocks(true);
       G.add(this.rock);
       this.buildSky();
     }
@@ -604,7 +601,10 @@ export class MapKit {
       grp.add(ground);
       let cracks = null;
       if (this.crackTex) {
-        cracks = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: this.crackTex, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+        const mat = new THREE.MeshBasicMaterial({ map: this.crackTex, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+        // only on the grass: the floor's second group (sky maps) is the rock under the island
+        cracks = new THREE.Mesh(geo, geo.groups.length ? [mat, this.noDraw ||= new THREE.MeshBasicMaterial({ visible: false })] : mat);
+        cracks.userData.mat = mat;
         cracks.position.y = 0.01; // world UVs: the cracks stay put on the ground texture
         cracks.renderOrder = 1;
         grp.add(cracks);
@@ -625,9 +625,26 @@ export class MapKit {
     this.rebuildFloor();
   }
   rebuildFloor() {
-    const A = this.A, out = new Set();
+    const A = this.A, out = new Set(), F = A.field;
     for (const L of this.lifted) if (!L.fall) for (const k of L.keys) out.add(k);
     A.rebuildGround(out.size ? (i, j) => !out.has(A.key(i, j)) : null);
+    if (A.field !== F) this.fitRocks(); // the coast moved in (the middle island shrinks)
+  }
+  // The rock under each island tile, tucked under the rounded coast (arena.js groundGeometry):
+  // narrower where the coast bends close. Rocks gone with their tile (lifted, fallen) stay gone.
+  fitRocks(all = false) {
+    const A = this.A, F = A.field;
+    if (!this.rock) return;
+    for (const [key, k] of this.rockIdx) {
+      if (!all) { this.rock.getMatrixAt(k, _m); if (_m.elements[5] === 0) continue; }
+      const i = key % N, j = Math.floor(key / N);
+      A.center(i, j, _v);
+      _q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, (i * 7 + j * 13) % 6);
+      const w = F ? Math.min(1, Math.max(0.4, (F.dist(F.at(_v.x, _v.z)) + 0.3) / 1.3)) : 1;
+      _m.compose(_v.setY(F ? -0.3 : 0), _q, _s.set(w, 0.7 + ((i * 31 + j * 17) % 10) / 16, w));
+      this.rock.setMatrixAt(k, _m);
+    }
+    this.rock.instanceMatrix.needsUpdate = true;
   }
   updateLifted(dt) {
     const g = this.g;
@@ -640,7 +657,7 @@ export class MapKit {
         if ((L.fall.t -= dt) <= 0) {
           this.group.remove(G);
           G.children[0].geometry.dispose();
-          L.cracks?.material.dispose();
+          L.cracks?.userData.mat.dispose();
           L.rock.dispose();
           this.lifted.splice(n, 1);
         }
@@ -650,7 +667,7 @@ export class MapKit {
       const p = Math.min(1, (g.time - L.t0) / DOOM_WARN), amp = 0.02 + 0.13 * p * p;
       G.position.set(L.cx + (Math.random() - 0.5) * amp * 2, (Math.random() - 0.5) * amp * 0.6, L.cz + (Math.random() - 0.5) * amp * 2);
       G.rotation.set(Math.sin(g.time * 23) * amp * 0.05, 0, Math.cos(g.time * 19) * amp * 0.05);
-      if (L.cracks) L.cracks.material.opacity = Math.min(0.85, 0.15 + p * 0.9);
+      if (L.cracks) L.cracks.userData.mat.opacity = Math.min(0.85, 0.15 + p * 0.9);
       // pebbles off the underside, dust on top, more and more of them
       if ((L.pebble -= dt) <= 0) {
         L.pebble = 0.35 - p * 0.25;
@@ -705,7 +722,7 @@ export class MapKit {
       L.fall = { vy: 0, rx: (Math.random() - 0.5) * 0.5, rz: (Math.random() - 0.5) * 0.5, t: 3.2 };
       L.grp.rotation.set(0, 0, 0);
       L.grp.position.set(L.cx, 0, L.cz);
-      if (L.cracks) L.cracks.material.opacity = 0.85;
+      if (L.cracks) L.cracks.userData.mat.opacity = 0.85;
       this.g.effects.dust(L.cx, L.cz, 14, 0xb89a74, Math.sqrt(L.keys.size) * 1.2);
     }
     A.rev++;
@@ -810,6 +827,7 @@ export class MapKit {
     this.crackTex?.dispose();
     this.pebble?.dispose();
     this.pebbleMat?.dispose();
+    this.noDraw?.dispose();
   }
 
   onEvent(e) {

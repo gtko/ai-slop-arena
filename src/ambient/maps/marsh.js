@@ -1,5 +1,5 @@
 // Misty Marsh: blinking fireflies, dragonflies darting over the pools, frogs hopping between the banks
-// and lily pads, bubbles popping on the water. Hide and seek in the fog: nothing here reacts to brawlers.
+// and lily pads, ducks paddling, bubbles popping on the water. Hide and seek in the fog: nothing here reacts to brawlers.
 const N = 25, TILE = 2, WATER_Y = -0.16; // arena.js / water.js (not imported: they need Vite)
 
 export default function marsh(L) {
@@ -126,6 +126,9 @@ export default function marsh(L) {
   });
   const frogMesh = inst(frogGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5 }), nfr);
   frogMesh.castShadow = true;
+  // the rigged frog (fauna.js) takes over from the toy once loaded: Idle on a perch with a Croak now
+  // and then, one Hop cycle per leap
+  const FR = L.rig('frog', nfr), HOP_T = 0.45;
   const perchY = (c, t) => (c.pad ? padTop(c.pad, t) + 0.02 : 0);
   const hopTo = (f, dst) => {
     f.from.copy(f.pos); f.to.copy(dst); f.hop = 0; f.st = 'hop';
@@ -148,6 +151,7 @@ export default function marsh(L) {
         if (f.at.pad) f.pos.set(f.at.p.x, 0, f.at.p.z);
         y = perchY(f.at, t);
         sy = 1 + Math.max(0, Math.sin(t * 5 + f.ph)) * 0.05; // throat pumping
+        f.croak = (f.croak ?? R() * 6) - dt;
         if ((f.tm -= dt) <= 0) {
           // mostly hop to another perch; now and then plop into the water and come up somewhere else
           let dive = null;
@@ -162,7 +166,7 @@ export default function marsh(L) {
           else f.tm = 2 + R() * 3;
         }
       } else if (f.st === 'hop') {
-        f.hop = Math.min(1, f.hop + dt / 0.45);
+        f.hop = Math.min(1, f.hop + dt / HOP_T);
         const endY = f.next ? perchY(f.next, t) : WATER_Y;
         f.pos.lerpVectors(f.from, f.to, f.hop);
         const startY = f.at ? perchY(f.at, t) : WATER_Y;
@@ -177,12 +181,31 @@ export default function marsh(L) {
         y = WATER_Y - 0.1; sc = f.tm > 0 ? 0 : f.s;
         if (f.tm <= 0) { f.next = pick(f.perches); hopTo(f, f.next.p); }
       }
+      if (FR.ready) {
+        if (f.st === 'hop') { if (f.hop < 0.1) FR.play(k, 'Hop', FR.T.clips.Hop ? FR.T.clips.Hop.duration / HOP_T : 1, 0.08, true); }
+        else if (f.st === 'sit' && f.croak <= 0 && FR.play(k, 'Croak', 1, 0.2, true)) f.croak = 4 + R() * 8;
+        else if (FR.done(k) || FR.current(k) === 'Hop') FR.play(k, 'Idle', 1, 0.25);
+        FR.pose(k, f.pos.x, y, f.pos.z, f.yaw, pitch * 0.6, 0, sc * 0.8);
+        return;
+      }
       _q.setFromEuler(_e.set(pitch, f.yaw, 0, 'YXZ'));
       _m.compose(_v.set(f.pos.x, y, f.pos.z), _q, _s.set(sc, sc * sy, sc));
       frogMesh.setMatrixAt(k, _m);
     });
+    if (FR.ready) frogMesh.visible = false;
     padMesh.instanceMatrix.needsUpdate = flMesh.instanceMatrix.needsUpdate = frogMesh.instanceMatrix.needsUpdate = true;
   });
+
+  /* ---------- ducks paddling on the pools, now and then up a bank (they ignore brawlers too) ---------- */
+  const nearPool = (ch, i, j) => ch === 'W' || (ch === '.' && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => isW(i + a, j + b)));
+  const duck = L.toy([
+    { shape: 'sphere', args: [0.15, 0.95, 0.7, 1.35], pos: [0, 0.16, 0], color: 0x8a6a4a },
+    { shape: 'sphere', args: [0.08], pos: [0, 0.3, 0.15], color: 0x2f8a4a },
+    { shape: 'box', args: [0.06, 0.025, 0.08], pos: [0, 0.29, 0.25], color: 0xffc21a },
+    { shape: 'box', args: [0.09, 0.05, 0.08], rot: [-0.5, 0, 0], pos: [0, 0.22, -0.2], color: 0x5a4430 },
+  ]);
+  if (water.length) L.critters({ key: 'duck', toy: duck, count: 3, on: nearPool, home: ch => ch === 'W', swim: ch => ch === 'W',
+    gait: 'waddle', speed: 0.35, pause: [2, 7], range: 2, shy: 0, scale: [1, 1.15], rigScale: 1.1 });
 
   /* ---------- bubbles: a dome swells on the murky surface, then pops ---------- */
   const nb = water.length ? n(12) : 0;

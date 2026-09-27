@@ -147,6 +147,7 @@ export class Game {
     if (this.poison) this.poison.dispose();
     if (this.weather) this.weather.dispose();
     if (this.kit) this.kit.dispose();
+    if (this.ambient) this.ambient.dispose(); // its rigged animals live outside the arena group
     if (this.arena) this.arena.dispose();
 
     this.headless = headless; // the server: no one looks, so no cosmetics (kit.js)
@@ -157,7 +158,7 @@ export class Game {
     this.ended = false;
     this.endT = -1;
     this.superSeq = 0;
-    this.arena = new Arena(this.scene, MAPS[this.mapKey]);
+    this.arena = new Arena(this.scene, MAPS[this.mapKey], { headless });
     this.weather = this.lighting.weather = new Weather(this, MAPS[this.mapKey].weather);
     this.weather.setDensity(this.weatherDensity ?? 1);
     this.kit = new MapKit(this); // jump pads, barrels, bridges, the void... (v0.15)
