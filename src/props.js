@@ -114,7 +114,7 @@ export function propGeometry(name, fit, far = false) {
 // props of the current match at once. Full models at detail 1 (desktop medium and up).
 let detail = 1, simplifierReady = false;
 const live = new Set(); // { ref: WeakRef<geometry>, P, far } of every propGeometry copy in use
-const lodRatio = far => (detail >= 0.99 ? 1 : detail >= 0.6 ? (far ? 0.25 : 0.5) : (far ? 0.12 : 0.3));
+const lodRatio = far => (detail >= 0.99 ? 1 : detail >= 0.6 ? (far ? 0.3 : 0.5) : (far ? 0.2 : 0.3));
 
 export async function setPropDetail(d) {
   detail = d;
@@ -139,7 +139,7 @@ function lodIndex(P, ratio) {
   const pos = new Float32Array(g.attributes.position.array);
   // UVs weigh in a little so the painted texture holds; 'Permissive' lets edges collapse across the
   // UV seams of the generated atlases (fragmented: the leaf ball would not go below 87% without it)
-  const err = ratio < 0.2 ? 0.1 : 0.05;
+  const err = 0.05;
   const [out] = uv
     ? MeshoptSimplifier.simplifyWithAttributes(idx, pos, 3, new Float32Array(uv.array), 2, [0.3, 0.3], null, target, err, ['Permissive'])
     : MeshoptSimplifier.simplify(idx, pos, 3, target, err, ['Permissive']);
