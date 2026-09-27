@@ -104,6 +104,14 @@ gtao._overrideVisibility = () => {
   }
   if (lighting.helper && lighting.helper.visible) { lighting.helper.visible = false; gtao._visibilityCache.push(lighting.helper); }
 };
+// The pre-pass is a second renderer.render(): without this, every shadow map (sun, and the player
+// lantern after dusk) would be drawn again for it, although it only reads normals and depth.
+const gtaoRender = gtao.render.bind(gtao);
+gtao.render = (...args) => {
+  const auto = renderer.shadowMap.autoUpdate;
+  renderer.shadowMap.autoUpdate = false;
+  try { gtaoRender(...args); } finally { renderer.shadowMap.autoUpdate = auto; }
+};
 composer.addPass(gtao);
 const sight = new Sight(); // dims what walls, trees and crates hide from you
 composer.addPass(sight.pass);
