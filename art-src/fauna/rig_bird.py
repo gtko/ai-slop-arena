@@ -33,7 +33,7 @@ ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
 OUT, WORK, MARKS = os.path.join(HERE, 'out'), os.path.join(HERE, 'work'), os.path.join(HERE, 'landmarks')
 GAME = os.path.join(ROOT, 'public', 'assets', 'models', 'fauna')
 FPS, TAU = 30, 2 * math.pi
-TRIS, TEX = 5000, 512  # body triangles before the wing shells (contract: ~6k in all), texture px
+TRIS, TEX = 5600, 512  # body triangles before the wing shells (contract: ~6k in all), texture px
 I, V0 = Quaternion(), Vector()
 
 # walk: T period (s, two steps), stride (per foot per cycle, x hip height), lift (x hip height), toe
@@ -41,20 +41,21 @@ I, V0 = Quaternion(), Vector()
 # (x the ground-fixed amount), tail wag (deg)
 SPECIES = {
     'duck': dict(height=0.5, neck=0.58, wings='shell', extra='Swim',
-                 walk=dict(T=0.7, stride=0.6, lift=0.3, toe=35, roll=9, yaw=7, sway=0.014, bob=0.01,
+                 walk=dict(T=0.6, stride=0.9, lift=0.3, toe=35, roll=9, yaw=7, sway=0.014, bob=0.01,
                            head=0.9, tail=12, pitch=0)),
     'hen': dict(height=0.55, neck=0.53, wings='shell', extra=None,
-                walk=dict(T=0.9, stride=0.75, lift=0.5, toe=55, roll=3, yaw=4, sway=0.006, bob=0.012,
+                walk=dict(T=0.8, stride=1.0, lift=0.5, toe=55, roll=3, yaw=4, sway=0.006, bob=0.012,
                           head=1.5, tail=5, pitch=-4)),
     'penguin': dict(height=0.6, neck=0.53, wings='flipper', extra='Slide',
                     walk=dict(T=0.6, stride=0.4, lift=0.14, toe=8, roll=13, yaw=9, sway=0.02, bob=0.006,
                               head=0.12, tail=8, pitch=0)),
     'sparrow': dict(height=0.25, neck=0.57, wings='shell', extra='Hop',
-                    walk=dict(T=0.4, stride=0.6, lift=0.32, toe=30, roll=4, yaw=4, sway=0.006, bob=0.012,
+                    walk=dict(T=0.4, stride=0.8, lift=0.32, toe=30, roll=4, yaw=4, sway=0.006, bob=0.012,
                               head=1.0, tail=14, pitch=0)),
 }
 KEYS = ['duck', 'hen', 'penguin', 'sparrow']
 SIDES = (('L', 1), ('R', -1))
+HOP = 0.3  # sparrow hop length, x height
 
 
 def sm(x):
@@ -212,16 +213,39 @@ def orient(obj, img, key, over):
     hv = V[head]
     hc = (np.percentile(hv[:, :2], 3, 0) + np.percentile(hv[:, :2], 97, 0)) / 2
     if beak.sum() >= 6:
-        fwd = V[beak, :2].mean(0) - hc
-        how = f'beak ({beak.sum()} verts)'
+        look = V[beak, :2].mean(0) - hc
     else:
-        fwd = hc - V[:, :2].mean(0)
-        how = 'head vs body'
+        look = hc - V[:, :2].mean(0)
+    # the body (with its tail) is longest along its heading; the head may be turned (the 3/4
+    # reference art) and the feet staggered, so the beak only says which way
+    bv = V[(V[:, 2] > z0 + 0.12 * H0) & (V[:, 2] < z0 + 0.5 * H0), :2]
+    bv = bv - bv.mean(0)
+    ev, evec = np.linalg.eigh(bv.T @ bv)
+    fwd = evec[:, 1]
+    if ev[1] < 1.15 * ev[0]:  # round body: trust the beak
+        fwd = look / np.linalg.norm(look)
+    fwd = fwd if fwd @ look > 0 else -fwd
     ang = -math.pi / 2 - math.atan2(fwd[1], fwd[0]) + rad(over.get('yaw', 0.0))
-    print(f'  heading from {how}: raw yaw {math.degrees(math.atan2(fwd[1], fwd[0])):.0f} deg, turn {math.degrees(ang):.0f}')
+    print(f'  heading along the body (axes {ev[1] / ev[0]:.2f}): raw yaw {math.degrees(math.atan2(fwd[1], fwd[0])):.0f} deg '
+          f'(beak {math.degrees(math.atan2(look[1], look[0])):.0f}), turn {math.degrees(ang):.0f}')
     s = SPECIES[key]['height'] / H0
     M = Matrix.Diagonal((s, s, s, 1)) @ Matrix.Rotation(ang, 4, 'Z') @ Matrix.Translation((0, 0, -z0))
     obj.data.transform(M)
+    # untwist a turned head: rotate what is above the neck (blended over the neck) to look ahead
+    V = verts(obj)
+    H = SPECIES[key]['height']
+    turn = math.atan2(look[1], look[0]) - math.atan2(fwd[1], fwd[0])
+    turn = (turn + math.pi) % TAU - math.pi
+    if abs(turn) > rad(6) and not over.get('keep_head'):
+        zn = over.get('neck', SPECIES[key]['neck']) * H
+        piv = V[np.abs(V[:, 2] - zn) < 0.02 * H, :2].mean(0)
+        k = -turn * smv(zn - 0.06 * H, zn + 0.05 * H, V[:, 2])
+        c, sn = np.cos(k), np.sin(k)
+        d = V[:, :2] - piv
+        V[:, 0] = piv[0] + c * d[:, 0] - sn * d[:, 1]
+        V[:, 1] = piv[1] + sn * d[:, 0] + c * d[:, 1]
+        obj.data.vertices.foreach_set('co', V.astype(np.float32).ravel())
+        print(f'  head untwisted by {math.degrees(-turn):.0f} deg')
     # centre between the feet (the lowest few percent, split left / right)
     V = verts(obj)
     H = SPECIES[key]['height']
@@ -275,9 +299,11 @@ def landmarks(V, key, over):
     J['beak'] = Vector((0, front[i, 1], front[i, 2]))
     J['top'] = Vector((0, hc.y, z.max()))
     yc = lambda q: mid(slab(V, q, 0.02 * H), 1)
-    J['head'] = Vector((0, yc(zn + 0.03 * H) + 0.02 * H, zn + 0.03 * H))
-    J['neck2'] = Vector((0, yc(zn - 0.03 * H) + 0.02 * H, zn - 0.03 * H))
-    J['neck1'] = Vector((0, yc(zn - 0.1 * H) + 0.03 * H, zn - 0.1 * H))
+    # the neck pivots sit under the back half of the head (slab centres would be dragged back by
+    # the tail and the wings)
+    J['head'] = Vector((0, hc.y + 0.04 * H, zn + 0.03 * H))
+    J['neck2'] = Vector((0, hc.y + 0.06 * H, zn - 0.03 * H))
+    J['neck1'] = Vector((0, hc.y + 0.08 * H, zn - 0.1 * H))
     # body and tail (the tail: behind where the side profile thins out)
     bv = V[(z > zb) & (z < zn)]
     yf = np.percentile(bv[:, 1], 1)
@@ -332,6 +358,8 @@ def landmarks(V, key, over):
             J[name[:-2] + '.R'] = Vector((-J[name].x, J[name].y, J[name].z))
     J['_zb'], J['_zn'] = zb, zn
     J['_wing_r'] = over.get('wing_r', 0.14 if sp['wings'] == 'shell' else 0.09) * H
+    if sp['wings'] == 'flipper':  # how far inside the flipper line its inner face lies
+        J['flipper_in'] = over.get('flipper_in', 0.04) * H
     return J
 
 
@@ -375,19 +403,23 @@ def wing_field(V, N, J, s, sg, soft):
     """How much each vertex is on the folded wing of side s (0..1), and where along it (arc)."""
     a, b, c = J['wing0.' + s], J['wing1.' + s], J['wing2.' + s]
     pts = [np.array(a), np.array(b), np.array(c)]
-    best, arc = np.full(len(V), 1e9), np.zeros(len(V))
+    best, arc, xl = np.full(len(V), 1e9), np.zeros(len(V)), np.zeros(len(V))
     cum = 0.0
     for p, q in zip(pts, pts[1:]):
         ab = q - p
         L = np.linalg.norm(ab)
         t = np.clip((V - p) @ ab / (L * L), 0, 1)
-        dist = np.linalg.norm(V - (p + t[:, None] * ab), axis=1)
+        foot = p + t[:, None] * ab
+        dist = np.linalg.norm(V - foot, axis=1)
         hit = dist < best
-        best[hit], arc[hit] = dist[hit], cum + t[hit] * L
+        best[hit], arc[hit], xl[hit] = dist[hit], cum + t[hit] * L, foot[hit, 0]
         cum += L
     r = J['_wing_r']
-    # capsule around the wing line, on the outer side, facing out
-    f = smv(r, r * (1 - soft), best) * smv(0.05, 0.35, N[:, 0] * sg) * (V[:, 0] * sg > 0)
+    f = smv(r, r * (1 - soft), best) * (V[:, 0] * sg > 0)
+    if 'flipper_in' in J:  # a flipper standing off the body: both faces, outward of its inner side
+        f = f * smv(-J['flipper_in'], -0.6 * J['flipper_in'], (V[:, 0] - xl) * sg)
+    else:  # a wing folded on the body: its outer surface only
+        f = f * smv(0.05, 0.35, N[:, 0] * sg)
     # the ends of the capsule are round: taper past the tip
     return f, arc, cum
 
@@ -404,20 +436,45 @@ def add_shells(obj, J, H):
     lay = bm.verts.layers.int.new('shell')
     patch = {}
     for s, sg in SIDES:  # both patches picked before any duplicate renumbers the vertices
-        core = wing_field(V, N, J, s, sg, 0.25)[0] > 0.5
-        patch[s] = [fc for fc in bm.faces if all(core[v.index] for v in fc.verts)]
+        # below the neck: a copy of neck skin left on the chest would show when the head turns
+        core = (wing_field(V, N, J, s, sg, 0.25)[0] > 0.5) & (V[:, 2] < J['_zn'] - 0.04 * H)
+        faces = {fc for fc in bm.faces if all(core[v.index] for v in fc.verts)}
+        best = []
+        while faces:  # keep the largest connected piece (no stray flakes)
+            stack, part = [faces.pop()], []
+            while stack:
+                f = stack.pop()
+                part.append(f)
+                for v in f.verts:
+                    for g in v.link_faces:
+                        if g in faces:
+                            faces.discard(g)
+                            stack.append(g)
+            best = max(best, part, key=len)
+        patch[s] = best
     for s, sg in SIDES:
         faces = patch[s]
         for off, flip in ((0.009, False), (0.006, True)):
             geom = bmesh.ops.duplicate(bm, geom=faces)['geom']
             nv = [e for e in geom if isinstance(e, bmesh.types.BMVert)]
-            nf = [e for e in geom if isinstance(e, bmesh.types.BMFace)]
+            nf = set(e for e in geom if isinstance(e, bmesh.types.BMFace))
             bm.normal_update()
             for v in nv:
                 v.co += v.normal * off * H
                 v[lay] = 1 if s == 'L' else 2
+            # round off the saw-tooth outline the triangle selection leaves: smooth the border loop
+            ring = {}
+            for e in {e for f in nf for e in f.edges}:
+                if len([f for f in e.link_faces if f in nf]) == 1:
+                    a, b = e.verts
+                    ring.setdefault(a, []).append(b)
+                    ring.setdefault(b, []).append(a)
+            for _ in range(6):
+                new = {v: v.co * 0.5 + sum((u.co for u in nb), Vector()) * (0.5 / len(nb)) for v, nb in ring.items()}
+                for v, co in new.items():
+                    v.co = co
             if flip:
-                bmesh.ops.reverse_faces(bm, faces=nf)
+                bmesh.ops.reverse_faces(bm, faces=list(nf))
         print(f'  wing shell {s}: {len(faces)} faces x 2')
     bm.to_mesh(me)
     code = np.array([v[lay] for v in bm.verts])
@@ -446,13 +503,16 @@ def skin_weights(obj, J, key, shell):
     zb, zn = J['_zb'], J['_zn']
     body = shell == 0
     # torso: body -> chest -> neck1 -> neck2 -> head by height
-    tilt = math.tan(rad(25))
+    # the neck / head boundaries slope: the chin goes with the head, the back stays on the chest
+    front, back = math.tan(rad(25)), math.tan(rad(40))
     chain = [('chest', J['chest'].z, 0.07), ('neck1', J['neck1'].z, 0.035), ('neck2', J['neck2'].z, 0.03),
              ('head', J['head'].z, 0.025)]
     carry = np.ones(n)
     below = 'body'
     for bone, jz, band in chain:
-        zz = z - tilt * (y - J['head'].y) if bone == 'head' else z
+        # (steep behind only where the neck leaves the chest: higher up, the nape is head)
+        dy = y - J[bone].y
+        zz = z if bone == 'chest' else z - np.where(dy > 0, back if bone == 'neck1' else 0.0, front) * dy
         u = smv(jz - band * H, jz + band * H, zz)
         W[:, B[below]] += carry * (1 - u)
         carry = carry * u
@@ -461,7 +521,8 @@ def skin_weights(obj, J, key, shell):
     # tail: past a plane through its base, across the tail direction
     t0, t1 = np.array(J['tail0']), np.array(J['tail1'])
     td = (t1 - t0) / np.linalg.norm(t1 - t0)
-    ft = smv(-0.035 * H, 0.035 * H, (V - t0) @ td) * (z > zb) * smv(zn + 0.1 * H, zn, z - 0.5 * np.maximum(0, y - J['tail0'].y))
+    # (a tail rising behind the head, like the hen's fan, must not take the back of the head)
+    ft = smv(-0.035 * H, 0.035 * H, (V - t0) @ td) * smv(t0[1] - 0.14 * H, t0[1] - 0.08 * H, y)
     ft *= (z > zb + 0.02 * H)
     W *= (1 - ft)[:, None]
     W[:, B['tail']] += ft
@@ -477,7 +538,8 @@ def skin_weights(obj, J, key, shell):
         dfoot = np.linalg.norm(V - (an + u[:, None] * at), axis=1)
         footw = smv(an[2] + 0.02 * H, an[2] - 0.015 * H, z) * (dfoot < 0.2 * H)
         footw = np.maximum(footw, smv(0.03 * H, 0.012 * H, z))  # anything flat on the ground: the foot
-        thw = smv(zb - 0.03 * H, zb + 0.03 * H, z) * smv(0.07 * H, 0.03 * H, dh)
+        # the thigh takes a little of the belly just around the top of the leg (a band, not a column)
+        thw = smv(zb - 0.03 * H, zb + 0.01 * H, z) * smv(zb + 0.08 * H, zb + 0.03 * H, z) * smv(0.07 * H, 0.03 * H, dh)
         lw = np.where(legm, 1.0, 0.0) + np.where(side & ~legm, thw * 0.6, 0.0)
         lw = np.clip(lw, 0, 1)
         ff = footw * legm
@@ -516,6 +578,9 @@ def skin_weights(obj, J, key, shell):
     idx = np.argsort(-W, axis=1)[:, 4:]
     np.put_along_axis(W, idx, 0, axis=1)
     W[W < 0.01] = 0
+    lost = W.sum(1) < 0.5
+    if lost.any():
+        print(f'  {lost.sum()} vertices without weights, e.g. {V[lost][:3].round(3).tolist()}')
     W /= np.maximum(W.sum(1, keepdims=True), 1e-9)
     obj.vertex_groups.clear()
     for b, i in B.items():
@@ -823,9 +888,9 @@ def c_flap(C, t, dur=1.8):
     ph = min(1.0, max(0.0, (t - 0.3) / 1.1))
     beat = math.sin(TAU * beats * ph) * bell(ph, 0, 1) ** 0.3 if 0 < ph < 1 else 0.0
     if C.sp['wings'] == 'flipper':
-        wings(p, C, flap=rad(35) * op + rad(35) * beat * op)
-    else:
-        wings(p, C, spread=op, flap=rad(25) * op + rad(40) * beat, fold=0.6 * op)
+        wings(p, C, flap=rad(28) * op + rad(22) * beat * op)
+    else:  # half open and fluttering up: a full span shows the shell as a flat plate
+        wings(p, C, spread=0.55 * op, flap=rad(30) * op + rad(28) * beat * op, fold=0.3 * op)
     p.rot('body', rx(-rad(10) * op))
     p.rot('chest', rx(-rad(6) * op))
     p.rot('neck2', rx(rad(8) * op))
@@ -838,7 +903,7 @@ def c_hop(C, t, T=0.4):
     """Sparrow hop: both feet together, crouch, spring, land. The ground part slides back at the
     travel speed (locomotion in place)."""
     H = C.H
-    d = 0.5 * C.h['thigh.L'].z * 1.6  # hop length
+    d = HOP * C.H  # hop length
     v = d / T
     u = (t / T) % 1
     ground = 0.4  # fraction of the cycle on the ground
@@ -886,7 +951,7 @@ def c_slide(C, t, T=1.6):
         p.rot('thigh.' + s, rx(-rad(35)) @ rz(-sg * rad(8)))
         p.rot('foot.' + s, rx(-rad(30) + rad(10) * math.sin(TAU * t / T + (0 if s == 'L' else math.pi))))
     wings(p, C, flap=rad(12) + rad(6) * rock, back=rad(10))
-    p.rot('tail', rx(-rad(20)))
+    p.rot('tail', rx(-rad(72)))  # trails flat behind (the body is tipped 82 deg)
     D, P = C.solve(p)
     X = C.skinned(D, P)
     if 'slide_y' not in C.cache:  # centre the lying body over the origin (same shift every frame)
@@ -959,7 +1024,7 @@ def make_clips(C):
     g = C.sp['walk']
     speed = {'Walk': round(gait(C, 0, g)[2], 3)}
     if C.sp['extra'] == 'Hop':
-        speed['Hop'] = round(0.5 * C.h['thigh.L'].z * 1.6 / 0.4, 3)
+        speed['Hop'] = round(HOP * C.H / 0.4, 3)
     if C.sp['extra'] == 'Swim':
         speed['Swim'] = 0.25
     rig['speed'] = speed
@@ -1059,7 +1124,7 @@ def check_sheet(C, key):
     me.color_attributes.active_color = attr
     balls = []
     for name, v in C.J.items():
-        if name.startswith('_'):
+        if not isinstance(v, Vector):
             continue
         bpy.ops.mesh.primitive_uv_sphere_add(radius=0.012 * H, location=v, segments=8, ring_count=6)
         balls.append(bpy.context.active_object)
@@ -1177,7 +1242,7 @@ def build(key, raw):
     print(f'== {key}')
     obj = import_raw(os.path.join(raw, key + '.glb'))
     obj.name = key
-    decimate(obj, TRIS)
+    decimate(obj, TRIS if SPECIES[key]['wings'] != 'shell' else TRIS - 900)  # shells add ~0.7-1.3k
     img = texture(obj)
     orient(obj, img, key, over)
     H = SPECIES[key]['height']
