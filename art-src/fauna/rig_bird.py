@@ -945,6 +945,13 @@ def make_clips(C):
         act.frame_range = (0, n)
         act.use_frame_range = True
         act.use_cyclic = loop
+        # the solver must mirror Blender's evaluation (planted feet stay planted): compare a frame
+        fm = n // 3
+        bpy.context.scene.frame_set(fm)
+        D, P = C.solve(fn(C, fm / FPS))
+        err = max((rig.pose.bones[b].tail - (P[b] + D[b] @ (C.t[b] - C.h[b]))).length for b in C.names)
+        if err > 1e-4:
+            print(f'  WARNING {name}: solver and Blender differ by {err:.5f} m')
         info[name] = dict(duration=round(n / FPS, 3), loop=loop)
     rig.animation_data.action = None
     for pb in rig.pose.bones:
@@ -1140,6 +1147,21 @@ def pack(key):
     return dst
 
 
+def inspect(path):
+    """What the game will get: triangles, joints, clips (duration from the time accessors), extras."""
+    import struct
+    b = open(path, 'rb').read()
+    n = struct.unpack_from('<I', b, 12)[0]
+    j = json.loads(b[20:20 + n])
+    acc = j['accessors']
+    tris = sum(acc[p['indices']]['count'] // 3 for m in j['meshes'] for p in m['primitives'])
+    clips = {a['name']: round(max(acc[s['input']]['max'][0] for s in a['samplers']), 3) for a in j['animations']}
+    extras = [nd['extras'] for nd in j['nodes'] if 'extras' in nd]
+    tex = [i.get('mimeType') for i in j.get('images', [])]
+    return dict(bytes=len(b), triangles=tris, joints=len(j['skins'][0]['joints']), clips=clips, extras=extras,
+                images=tex, extensions=j.get('extensionsRequired'))
+
+
 # ------------------------------------------------------------------ main
 
 def raw_dir(argv):
@@ -1194,8 +1216,8 @@ def main():
         report[key] = dict(clips=info, glb=os.path.getsize(path))
         if '--nopack' not in argv:
             dst = pack(key)
-            report[key]['packed'] = os.path.getsize(dst)
-            print(f'  packed: {dst} {os.path.getsize(dst)} bytes')
+            report[key]['packed'] = inspect(dst)
+            print(f'  packed: {dst}', json.dumps(report[key]['packed']))
     with open(os.path.join(WORK, 'report.json'), 'w') as f:
         json.dump(report, f, indent=1)
 
