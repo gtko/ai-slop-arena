@@ -453,7 +453,7 @@
   "road.reached": "Pokaalipolku {n}",
   "shop.owned": "OMISTETTU",
   "shop.refresh": "Uudet tuotteet {time} kuluttua",
-  "shop.fair": "Slop Coins ansaitaan pelaamalla, ja niillä avataan tappelijoita. Ulkoasut maksavat jalokiviä: mikään täällä ei tee sinusta vahvempaa.",
+  "shop.fair": "Slop Coins ansaitaan pelaamalla, ja niillä avataan tappelijoita ja asuja. Muut ulkoasut maksavat jalokiviä: mikään täällä ei tee sinusta vahvempaa.",
   "col.atLevel": "Taso {n}",
   "col.onRoad": "Pokaalipolku {n}",
   "col.gold": "Mestaruus {n}",

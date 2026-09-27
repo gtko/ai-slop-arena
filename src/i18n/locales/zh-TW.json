@@ -441,7 +441,7 @@
   "road.reached": "獎盃之路 {n}",
   "shop.owned": "已擁有",
   "shop.refresh": "{time} 後上新",
-  "shop.fair": "Slop Coins 透過遊玩獲得，用於解鎖英雄。外觀需要寶石：這裡沒有任何東西能讓你變強。",
+  "shop.fair": "Slop Coins 透過遊玩獲得，用於解鎖英雄和造型。其他外觀需要寶石：這裡沒有任何東西能讓你變強。",
   "col.atLevel": "等級 {n}",
   "col.onRoad": "獎盃之路 {n}",
   "col.gold": "精通 {n}",

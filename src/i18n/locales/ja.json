@@ -441,7 +441,7 @@
   "road.reached": "トロフィーロード {n}",
   "shop.owned": "所持済み",
   "shop.refresh": "新アイテムまで {time}",
-  "shop.fair": "Slop Coinsはプレイで獲得し、ブロウラーを解放できます。見た目はジェムで購入：強くなるものはありません。",
+  "shop.fair": "Slop Coinsはプレイで獲得し、ブロウラーとスキンを解放できます。その他の見た目はジェムで購入：強くなるものはありません。",
   "col.atLevel": "レベル {n}",
   "col.onRoad": "トロフィーロード {n}",
   "col.gold": "マスタリー {n}",

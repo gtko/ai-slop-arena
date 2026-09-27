@@ -8,7 +8,7 @@ import { track } from './telemetry.js';
 import * as Pr from './profile.js';
 import { board, reroll, resetIn, QUEST_ICONS } from './quests.js';
 import { SKINS, RECOLOURS, TRAILS, TRAIL_ICONS, KOFX, KOFX_ICONS, EMOTES, EMOTE_ICONS, FRAMES, TITLES, ICONS, GOLD_AT,
-  shopPool, priceOf, kindOf, BRAWLER_PRICE, GEM_PACKS } from './cosmetics.js';
+  shopPool, priceOf, kindOf, BRAWLER_PRICE, SKIN_COINS, GEM_PACKS } from './cosmetics.js';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -253,7 +253,9 @@ export class MetaUI {
     const card = (id, { price = priceOf(id), deal = 0, cls = '' } = {}) => {
       const v = itemView(id, this.portrait), own = Pr.owns(id), wear = own && WEARABLE.has(kindOf(id)), cost = Math.round(price * (1 - deal));
       let btn;
-      if (!own) btn = buyBtn(id, cost);
+      if (!own) btn = kindOf(id) === 'skin' // skins: Slop Coins or Gems
+        ? `<div class="sh-two">${buyBtn(id, SKIN_COINS, 'coins')}<span>${t('shop.or')}</span>${buyBtn(id, cost)}</div>`
+        : buyBtn(id, cost);
       else if (wear && !this.worn(id)) btn = `<button class="sh-buy sh-wear" data-wear="${id}">${t('shop.equip')}</button>`;
       else btn = `<button class="sh-buy" disabled>${wear ? t('col.equipped') : t('shop.owned')}</button>`;
       return `<div class="sh-item ${cls}${own ? ' own' : ''}">${deal && !own ? `<em class="sh-deal">-${Math.round(deal * 100)}%</em>` : ''}

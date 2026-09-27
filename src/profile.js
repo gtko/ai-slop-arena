@@ -39,8 +39,8 @@ export const level = () => levelInfo().level;
 export const coins = () => P.coins;
 export const gems = () => P.gems || 0;
 
-// Levels pay Slop Coins (for brawlers); a few milestones also give a prestige look that is never
-// sold (cosmetics are otherwise Gems only).
+// Levels pay Slop Coins (for brawlers and skins); a few milestones also give a prestige look that is never
+// sold.
 export const LEVEL_REWARDS = { 10: 'frame:3', 20: 'title:13', 25: 'frame:10', 30: 'title:14' };
 export const levelCoins = L => 50 + 10 * Math.min(L, 20);
 
@@ -136,11 +136,11 @@ export function unlock(id) { const r = give(id); save(); return r; }
 
 /* ------------------------------ shop and wardrobe ------------------------------ */
 
-// Buy with 'gems' (cosmetics, brawlers) or 'coins' (brawlers only).
+// Buy with 'gems' (cosmetics, brawlers) or 'coins' (brawlers and skins).
 export function buy(id, price, currency = 'gems') {
   const wallet = currency === 'coins' ? 'coins' : 'gems';
   if (owns(id) || (P[wallet] || 0) < price) return false;
-  if (currency === 'coins' && !id.startsWith('brawler:')) return false; // coins never buy looks
+  if (currency === 'coins' && !/^(brawler|skin):/.test(id)) return false; // coins buy no other looks
   P[wallet] -= price;
   P.owned.push(id);
   save();
