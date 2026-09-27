@@ -666,11 +666,14 @@ body.touch #touch .t-super b { top: 50%; margin-top: 12px; font-size: 9px; }
    hero blurb goes. The skin row starts folded (main.js). */
 #loadout .lo-cur { display: none; }
 body.touch .hero-desc { display: none; }
-body.touch #loadout { grid-template-columns: 1fr 1fr !important; gap: 4px 12px; padding: 6px 10px 8px; }
-body.touch #loadout .lo-group { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 5px; }
-body.touch #loadout .lo-group em { flex-basis: 100%; min-width: 0; }
-body.touch #loadout .lo-cur { display: inline; color: var(--text); letter-spacing: 0; }
-body.touch #loadout .lo-opt { position: relative; width: 42px; min-height: 0; height: 36px; padding: 0; justify-content: center; }
-body.touch #loadout .lo-name, body.touch #loadout .lo-desc { display: none; }
-body.touch #loadout .lo-ico { font-size: 19px; }
-body.touch #loadout .lo-lock { position: absolute; right: -4px; top: -6px; font-size: 8px; padding: 0 3px; }
+:is(body.touch, .hero-info.fit-4) #loadout { grid-template-columns: 1fr 1fr !important; gap: 4px 12px; padding: 6px 10px 8px; }
+:is(body.touch, .hero-info.fit-4) #loadout .lo-group { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 5px; }
+:is(body.touch, .hero-info.fit-4) #loadout .lo-group em { flex-basis: 100%; min-width: 0; }
+:is(body.touch, .hero-info.fit-4) #loadout .lo-cur { display: inline; color: var(--text); letter-spacing: 0; }
+:is(body.touch, .hero-info.fit-4) #loadout .lo-opt { position: relative; width: 42px; min-height: 0; height: 36px; padding: 0; justify-content: center; }
+:is(body.touch, .hero-info.fit-4) #loadout :is(.lo-name, .lo-desc) { display: none; }
+:is(body.touch, .hero-info.fit-4) #loadout .lo-ico { font-size: 19px; }
+:is(body.touch, .hero-info.fit-4) #loadout .lo-lock { position: absolute; right: -4px; top: -6px; font-size: 8px; padding: 0 3px; }
+
+/* the hero column shrinks to fit above the picker (main.js adds fit-1..4 as needed) */
+.hero-info.fit-1 .hero-desc, .hero-info.fit-2 #loadout .lo-desc, .hero-info.fit-3 .hero-stats { display: none; }
