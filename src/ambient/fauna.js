@@ -105,6 +105,9 @@ function airborne(T, clip, n = 24) {
 }
 
 const _pm = new THREE.Matrix4(), _fr = new THREE.Frustum(), _sph = new THREE.Sphere();
+// The models are real size, but the arena is not: the brawlers stand 2.5 m tall. Ground animals are
+// scaled to their world (a cat reaches a brawler's knee); the flyers stay real size, high up.
+const FLYERS = new Set(['vulture', 'raven']), WORLD = 1.9;
 // the camera's frustum, once a frame, for Puppets.update
 export function frustumOf(camera) {
   if (!camera) return null;
@@ -122,6 +125,7 @@ export function frustumOf(camera) {
 export class Puppets {
   constructor(amb, key, n, o = {}) {
     this.key = key; this.n = n; this.list = null; this.T = null;
+    this.world = FLYERS.has(key) ? 1 : WORLD;
     this.radius = o.radius ?? 1; // culling sphere (m at scale 1): wide for flyers
     if (n > 0) loadFauna(key).then(T => { if (T && !amb.dead) this.build(T, amb.rigRoot); });
   }
@@ -139,15 +143,15 @@ export class Puppets {
   }
   get ready() { return !!this.list; }
   has(name) { return !!this.T?.clips[name]; }
-  speed(name) { return this.T?.speed[name] || 1; }
+  speed(name) { return (this.T?.speed[name] || 1) * this.world; } // a bigger animal strides further
   pose(k, x, y, z, yaw, pitch = 0, roll = 0, s = 1) {
     const p = this.list[k], R = p.root;
     R.visible = s > 0;
     if (!R.visible) return;
     R.position.set(x, y, z);
     R.rotation.set(pitch, yaw, roll);
-    R.scale.setScalar(s);
-    p.s = s;
+    R.scale.setScalar(s * this.world);
+    p.s = s * this.world;
   }
   play(k, name, rate = 1, fade = 0.25, once = false) {
     const p = this.list[k], clip = this.T.clips[name];
