@@ -69,7 +69,7 @@ export class Arena {
     this.map = map;
     this.headless = headless;
     this.decor = []; // instanced meshes of the ring around the arena (setDetail thins them)
-    this.minor = []; // small shadow casters (wall-top lanterns, crate gems): no shadow below detail 0.6
+    this.minor = []; // small shadow casters (wall-top lanterns, crate gems, barrel hoops...): no shadow below detail 0.6
     this.detail = detail;
     const QUARTER = map.layout;
     this.group = new THREE.Group();
@@ -442,6 +442,7 @@ export class Arena {
     const sign = new THREE.Mesh(new THREE.CircleGeometry(0.22, 3), new THREE.MeshBasicMaterial({ color: 0x111111 }));
     sign.position.set(0, 0.95, 0.63); g.add(sign);
     g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    g.traverse(o => { if (o.isMesh && o !== body) { o.castShadow = this.detail >= 0.6; this.minor.push(o); } }); // hoops and sign: inside the body's shadow
     g.rotation.y = this.rand() * Math.PI * 2;
     this.group.add(g);
     // no power cube inside: its "gem" is a dummy so crate code (spin, flash) just works

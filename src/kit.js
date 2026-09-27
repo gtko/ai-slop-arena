@@ -154,8 +154,8 @@ export class MapKit {
         const st = new THREE.Mesh(stem, stemMat); st.position.y = 0.3;
         const cp = new THREE.Mesh(cap, capMat); cp.position.y = 0.55; cp.scale.y = 0.8;
         g.add(st, cp);
-        for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2, d = new THREE.Mesh(dot, dotMat); d.position.set(Math.cos(a) * 0.36, 0.85, Math.sin(a) * 0.36); g.add(d); }
-        g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+        for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2, d = new THREE.Mesh(dot, dotMat); d.position.set(Math.cos(a) * 0.36, 0.85, Math.sin(a) * 0.36); g.add(d); A.minor.push(d); }
+        g.traverse(o => { if (o.isMesh) o.castShadow = !A.minor.includes(o) || A.detail >= 0.6; }); // the dots: no shadow on mobile low (arena.setDetail)
         g.position.set(c.x, 0, c.z);
         G.add(g);
         s.mesh = g;
