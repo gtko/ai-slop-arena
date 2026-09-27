@@ -523,8 +523,8 @@ body.touch #touch .t-super b { top: 50%; margin-top: 12px; font-size: 9px; }
   #loadout .lo-desc { display: none; }
   .hero-info { width: min(300px, calc(100vw - 236px - 3 * var(--g) - 60px)); }
   .play-panel { right: calc(10px + env(safe-area-inset-right)); }
-  .roster { gap: 5px; }
-  .rt { width: 58px; }
+  .roster { gap: 4px; }
+  .rt { width: 54px; }
   .pp-maps { right: calc(236px + 10px + env(safe-area-inset-right) + 10px); bottom: calc(8px + env(safe-area-inset-bottom)); width: 330px;
     max-width: calc(100vw - 236px - 3 * var(--g) - 10px); max-height: calc(100vh - var(--nav) - 16px); }
   .play-panel .chaos-chip .cc-l small { font-size: 8.5px; }
@@ -660,3 +660,17 @@ body.touch #touch .t-super b { top: 50%; margin-top: 12px; font-size: 9px; }
   .pp-mode button small { font-size: 14px; }
 }
 .party-q { margin: 0 0 0 auto; padding: 5px 12px; border-radius: 9px; font-size: 13px; background: linear-gradient(#3fd3e6, #15aabf); color: #fff; }
+
+/* Touch screens: the home keeps the arena in view. Gadgets and star powers become one row of icons
+   (the picked one's name beside the title, the descriptions stay in the tooltip / collection), the
+   hero blurb goes. The skin row starts folded (main.js). */
+#loadout .lo-cur { display: none; }
+body.touch .hero-desc { display: none; }
+body.touch #loadout { grid-template-columns: 1fr 1fr !important; gap: 4px 12px; padding: 6px 10px 8px; }
+body.touch #loadout .lo-group { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 5px; }
+body.touch #loadout .lo-group em { flex-basis: 100%; min-width: 0; }
+body.touch #loadout .lo-cur { display: inline; color: var(--text); letter-spacing: 0; }
+body.touch #loadout .lo-opt { position: relative; width: 42px; min-height: 0; height: 36px; padding: 0; justify-content: center; }
+body.touch #loadout .lo-name, body.touch #loadout .lo-desc { display: none; }
+body.touch #loadout .lo-ico { font-size: 19px; }
+body.touch #loadout .lo-lock { position: absolute; right: -4px; top: -6px; font-size: 8px; padding: 0 3px; }

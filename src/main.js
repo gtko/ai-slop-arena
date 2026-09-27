@@ -421,9 +421,10 @@ function renderLoadout() {
   const opt = (kind, v, icon, name, lock) => `<button class="lo-opt${lo.includes(v) ? ' on' : ''}${lock ? ' locked' : ''}" data-${kind}="${v}"${lock ? ' disabled' : ''}
     title="${name}${lock ? ' · ' + t('menu.locked', { n: lock }) : ''}"><span class="lo-ico">${icon}</span><span class="lo-name">${name}</span>${lock ? `<em class="lo-lock">🔒 ${lock}</em>` : ''}</button>`;
   const lvl = P.level;
-  root.innerHTML = `<div class="lo-group"><em>${t('menu.gadget')}</em>
+  // lo-cur: the picked one's name next to the title (touch screens show icons only)
+  root.innerHTML = `<div class="lo-group"><em>${t('menu.gadget')}<span class="lo-cur"> · ${t(`gad.${key}${lo[0]}.name`)}</span></em>
       ${opt('g', 'A', GADGET_ICONS[key + 'A'], t(`gad.${key}A.name`), 0)}${opt('g', 'B', GADGET_ICONS[key + 'B'], t(`gad.${key}B.name`), lvl < GADGET_B_AT ? GADGET_B_AT : 0)}</div>
-    <div class="lo-group"><em>${t('menu.star')}</em>
+    <div class="lo-group"><em>${t('menu.star')}<span class="lo-cur"> · ${t(`star.${STARS[key][+lo[1] - 1]}.name`)}</span></em>
       ${opt('s', '1', STAR_ICONS[0], t(`star.${STARS[key][0]}.name`), 0)}${opt('s', '2', STAR_ICONS[1], t(`star.${STARS[key][1]}.name`), lvl < STAR_2_AT ? STAR_2_AT : 0)}</div>
     <p class="lo-desc"><b>${GADGET_ICONS[key + lo[0]]}</b> ${t(`gad.${key}${lo[0]}.desc`)}<br><b>${STAR_ICONS[+lo[1] - 1]}</b> ${t(`star.${STARS[key][+lo[1] - 1]}.desc`)}</p>`;
   root.querySelectorAll('.lo-opt:not(.locked)').forEach(b => b.addEventListener('click', () => {
