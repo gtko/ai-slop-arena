@@ -72,7 +72,7 @@ var rng := RandomNumberGenerator.new()
 func setup(a: Arena) -> void:
 	arena = a
 	rng.seed = 90210
-	if OS.get_cmdline_user_args().has("--nofauna"):
+	if DebugArgs.list().has("--nofauna"):
 		return
 	for spec in MAPS.get(String(a.map.get("key", "")), []):
 		match String(spec.kind):

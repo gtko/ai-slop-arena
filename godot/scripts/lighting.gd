@@ -39,8 +39,8 @@ func setup(a: Node3D, map: Dictionary) -> void:
 	sun = m.get("sun")
 	var we: WorldEnvironment = m.get("env")
 	env = we.environment
-	no_shadow = OS.get_cmdline_user_args().has("--noshadow")
-	for arg in OS.get_cmdline_user_args():
+	no_shadow = DebugArgs.list().has("--noshadow")
+	for arg in DebugArgs.list():
 		if arg.begins_with("--tod="):
 			tod = float(arg.substr(6))
 	_t = tod

@@ -41,7 +41,7 @@ static func parse(cos: String) -> Dictionary:
 # Re-colour / gild the fighter's model and remember its trail for the pool below.
 static func apply(f: Fighter, row: Dictionary) -> void:
 	var cos_str := String(row.get("cos", ""))
-	for a in OS.get_cmdline_user_args(): # test only: `--cos=2.1.0.0.1.0` dresses everybody
+	for a in DebugArgs.list(): # test only: `--cos=2.1.0.0.1.0` dresses everybody
 		if a.begins_with("--cos="):
 			cos_str = a.substr(6)
 	var c := parse(cos_str)

@@ -61,7 +61,7 @@ var _final_music := false
 
 func _ready() -> void:
 	Settings.load_all()
-	for a in OS.get_cmdline_user_args():
+	for a in DebugArgs.list():
 		if a.begins_with("--lang="):
 			Settings.lang = a.substr(7)      # (not saved) for screenshots
 	I18n.use(Settings.lang if Settings.lang != "" else I18n.detect())
@@ -170,7 +170,6 @@ func _autotest() -> void:
 					stats["touch_fired"] = true
 				if not stats.has("start_pos"):
 					stats["start_pos"] = me.position
-					print("AUTOTEST-PLAYING")
 			else:
 				last_move = Vector2(1, 0.3)
 				touch.move = Vector2(0.7, 0.4)
@@ -694,6 +693,8 @@ func _process(delta: float) -> void:
 			audio.play("tick")
 		if count_left <= 0.0:
 			audio.play("go")   # AUDIO HOOK
+			if DebugArgs.has("realinput"):
+				print("AUTOTEST-PLAYING")
 			_set_state(State.PLAYING)
 			status.text = ""
 	if me == null or arena == null:

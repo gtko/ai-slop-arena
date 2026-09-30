@@ -34,7 +34,7 @@ func setup(a: Arena, k: String) -> void:
 	rig = Node3D.new()
 	add_child(rig)
 	Foliage.wind = float(WIND.get(kind, 1.0))
-	if OS.get_cmdline_user_args().has("--noweather"):
+	if DebugArgs.list().has("--noweather"):
 		return
 	match kind:
 		"rain":

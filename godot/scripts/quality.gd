@@ -23,7 +23,7 @@ static var level: String = _initial()
 static var saver := false
 
 static func _initial() -> String:
-	for a in OS.get_cmdline_user_args():
+	for a in DebugArgs.list():
 		if a.begins_with("--quality=") and LEVELS.has(a.substr(10)):
 			return a.substr(10)
 	var cfg := ConfigFile.new()

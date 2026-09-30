@@ -322,7 +322,7 @@ func update(delta: float) -> void:
 # Test only (`--simkit` after `--`): plays the server's kit events on a timer so the effects can be
 # looked at without a match that reaches them: a trap, a barrel blast, a bridge break, a landing, an
 # island that shakes at 3 s and drops at 8 s, and the local player teleported onto a jump pad at 4 s.
-var _sim := OS.get_cmdline_user_args().has("--simkit")
+var _sim := DebugArgs.list().has("--simkit")
 var _sim_t := 0.0
 var _sim_step := 0
 

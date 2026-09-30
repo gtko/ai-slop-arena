@@ -225,7 +225,7 @@ func begin_match(start_msg: Dictionary, arena_: Arena, fighters_: Dictionary) ->
 	if arena.map.get("crumble", false):
 		params = {"startAt": 1e9, "interval": 7.0}
 	gas.setup(params)
-	_gas_debug = OS.get_cmdline_user_args().has("--gastest")   # screenshot check: pretend the gas clock is at 45 s
+	_gas_debug = DebugArgs.list().has("--gastest")   # screenshot check: pretend the gas clock is at 45 s
 	if _gas_debug:
 		gas.set_timer(45.0)
 	vision = float(arena.map.get("vision", 0.0))
