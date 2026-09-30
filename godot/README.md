@@ -37,3 +37,11 @@ export presets and store builds. `conversion` of decor and fauna models is not d
 
 Same room, same server: measure frame time, battery drain over a 10-minute match, startup time,
 export size and thermal behaviour on the same phone. See `../docs/godot-comparison.md`.
+
+## Export
+
+`export_presets.cfg` has Web, Android, iOS, Linux and Windows presets (install the matching Godot
+export templates first; Android needs the SDK + a keystore, iOS needs a Mac). Example:
+`godot --headless --path godot --export-release "Web" build/web/index.html`.
+The web preset uses the Compatibility (WebGL2) renderer automatically; native targets use Mobile
+(Vulkan / Metal).

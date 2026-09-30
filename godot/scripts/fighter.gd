@@ -17,6 +17,10 @@ var target := Vector3.ZERO
 var facing := 0.0
 var hidden_by_server := false
 var _body: MeshInstance3D
+var _model: Node3D
+var _anim: AnimationPlayer
+var _cur_anim := ""
+var _last_pos := Vector3.ZERO
 var _bar: MeshInstance3D
 var _bar_mat: StandardMaterial3D
 var _label: Label3D
@@ -35,6 +39,43 @@ func setup(row: Dictionary, brawlers: Dictionary) -> void:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = GameData.color_of(pal.main)
 	mat.roughness = 0.7
+	var glb := "res://assets/models/%s.glb" % key
+	if ResourceLoader.exists(glb):
+		_load_model(glb)
+	else:
+		_capsule(mat)
+	_hud()
+
+# The sculpted GLB, scaled to a 1.9 m tall brawler standing on the ground (models differ in size).
+func _load_model(path: String) -> void:
+	var inst: Node3D = (load(path) as PackedScene).instantiate()
+	var box := AABB()
+	var first := true
+	for mi in inst.find_children("*", "MeshInstance3D", true, false):
+		var a: AABB = (mi as MeshInstance3D).global_transform * (mi as MeshInstance3D).get_aabb()
+		box = a if first else box.merge(a)
+		first = false
+	var k := 1.9 / maxf(box.size.y, 0.01)
+	inst.scale = Vector3.ONE * k
+	inst.position.y = -box.position.y * k
+	add_child(inst)
+	_model = inst
+	for ap in inst.find_children("*", "AnimationPlayer", true, false):
+		_anim = ap
+	_play("idle")
+
+func _play(kind: String) -> void:
+	if _anim == null or kind == _cur_anim:
+		return
+	for n in _anim.get_animation_list():
+		if String(n).to_lower().contains(kind):
+			_cur_anim = kind
+			_anim.get_animation(n).loop_mode = Animation.LOOP_LINEAR
+			_anim.play(n)
+			return
+
+func _capsule(mat: StandardMaterial3D) -> void:
+	var pal: Dictionary = type.palette
 	_body = MeshInstance3D.new()
 	var cap := CapsuleMesh.new()
 	cap.radius = radius * 0.85
@@ -55,6 +96,8 @@ func setup(row: Dictionary, brawlers: Dictionary) -> void:
 	nose.material_override = nmat
 	_body.add_child(nose)
 	nose.position = Vector3(0, 0.15, radius * 0.9)
+
+func _hud() -> void:
 	_bar = MeshInstance3D.new()
 	var q := QuadMesh.new()
 	q.size = Vector2(1.4, 0.16)
@@ -90,6 +133,10 @@ func _process(delta: float) -> void:
 	_bar.scale.x = maxf(frac, 0.001)
 	_bar_mat.albedo_color = Color(0.9, 0.2, 0.2).lerp(Color(0.3, 0.9, 0.3), frac)
 	# a frozen / rooted / stunned brawler turns bluish, cheap status read without particles
-	var m := _body.material_override as StandardMaterial3D
-	m.emission_enabled = (flags & (8 | 16 | 32)) != 0
-	m.emission = Color(0.3, 0.6, 1.0)
+	var moving := position.distance_to(_last_pos) > 0.01
+	_last_pos = position
+	_play("run" if moving else "idle")
+	if _body:
+		var m := _body.material_override as StandardMaterial3D
+		m.emission_enabled = (flags & (8 | 16 | 32)) != 0
+		m.emission = Color(0.3, 0.6, 1.0)
