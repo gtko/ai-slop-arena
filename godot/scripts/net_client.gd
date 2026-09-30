@@ -9,6 +9,14 @@ signal closed
 const PROTOCOL := 6
 const WEB_ORIGIN := "wss://ai-slop-arena.gtux-prog.workers.dev"
 
+# Web build: same origin as the page (like the JS game). Native builds: the public server.
+static func default_origin() -> String:
+	if OS.has_feature("web"):
+		var o = JavaScriptBridge.eval("location.origin")
+		if typeof(o) == TYPE_STRING and o != "":
+			return String(o).replace("https://", "wss://").replace("http://", "ws://")
+	return WEB_ORIGIN
+
 var ws := WebSocketPeer.new()
 var id := ""
 var code := ""

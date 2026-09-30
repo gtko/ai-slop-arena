@@ -40,13 +40,13 @@ func _ready() -> void:
 	_build_scene()
 	_build_ui()
 	_apply_power_profile()
-	if OS.get_cmdline_user_args().has("--autotest"):
+	if DebugArgs.has("autotest"):
 		_autotest()
 
 # Headless end-to-end check against a local server: godot --headless --path godot -- --autotest ws://localhost:8787
 func _autotest() -> void:
-	var args := OS.get_cmdline_user_args()
-	var url := NetClient.WEB_ORIGIN
+	var args := DebugArgs.list()
+	var url := NetClient.default_origin()
 	for a in args:
 		if a.begins_with("ws"):
 			url = a
@@ -143,7 +143,7 @@ func _build_ui() -> void:
 	title.add_theme_font_size_override("font_size", 30)
 	menu_box.add_child(title)
 	server_edit = LineEdit.new()
-	server_edit.text = NetClient.WEB_ORIGIN
+	server_edit.text = NetClient.default_origin()
 	server_edit.placeholder_text = "server (wss://… or ws://localhost:8787)"
 	menu_box.add_child(server_edit)
 	code_edit = LineEdit.new()

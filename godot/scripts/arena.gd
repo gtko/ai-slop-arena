@@ -166,7 +166,7 @@ func _lanterns(tiles: Array) -> void:
 		light.omni_range = 6.0
 		light.light_energy = 1.2
 		light.shadow_enabled = false
-		if not OS.get_cmdline_user_args().has("--nolight"):
+		if not DebugArgs.has("nolight"):
 			add_child(light)
 
 # Map kit (v0.15): bridges, jump pads, healing mushrooms.
