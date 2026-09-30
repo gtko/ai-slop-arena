@@ -1,0 +1,158 @@
+{
+ "blaster": {
+  "key": "blaster",
+  "name": "Blaster",
+  "role": "Shotgun",
+  "hp": 4800,
+  "speed": 6,
+  "ammo": 3,
+  "reload": 1.7,
+  "range": 9.5,
+  "superCost": 2600,
+  "projSpeed": 25,
+  "palette": {
+   "main": 6273082,
+   "dark": 7029800,
+   "accent": 15895729,
+   "hair": 5216814,
+   "skin": 15255962
+  }
+ },
+ "gunslinger": {
+  "key": "gunslinger",
+  "name": "Gunslinger",
+  "role": "Sharpshooter",
+  "hp": 3600,
+  "speed": 6.6,
+  "ammo": 3,
+  "reload": 1.6,
+  "range": 16,
+  "superCost": 2800,
+  "projSpeed": 32,
+  "palette": {
+   "main": 15891112,
+   "dark": 6963125,
+   "accent": 4184296,
+   "hair": 14235247,
+   "skin": 16230596
+  }
+ },
+ "bomber": {
+  "key": "bomber",
+  "name": "Bomber",
+  "role": "Thrower",
+  "hp": 3400,
+  "speed": 6.1,
+  "ammo": 3,
+  "reload": 1.9,
+  "range": 13,
+  "superCost": 2400,
+  "projSpeed": 18,
+  "palette": {
+   "main": 16742943,
+   "dark": 3025452,
+   "accent": 16761402,
+   "hair": 16751135,
+   "skin": 3814454
+  }
+ },
+ "frostbite": {
+  "key": "frostbite",
+  "name": "Frostbite",
+  "role": "Ice mage",
+  "hp": 3300,
+  "speed": 6.3,
+  "ammo": 3,
+  "reload": 1.6,
+  "range": 12,
+  "superCost": 2500,
+  "projSpeed": 21,
+  "palette": {
+   "main": 10474751,
+   "dark": 3824268,
+   "accent": 15267583,
+   "hair": 6211839,
+   "skin": 14216447
+  }
+ },
+ "volt": {
+  "key": "volt",
+  "name": "Volt",
+  "role": "Electric bot",
+  "hp": 3100,
+  "speed": 6.8,
+  "ammo": 3,
+  "reload": 1.35,
+  "range": 13,
+  "superCost": 2600,
+  "projSpeed": 26,
+  "palette": {
+   "main": 4114144,
+   "dark": 2832970,
+   "accent": 16765503,
+   "hair": 10135476,
+   "skin": 9413301
+  }
+ },
+ "kappa": {
+  "key": "kappa",
+  "name": "Nurse Kappa",
+  "role": "Healer",
+  "hp": 3600,
+  "speed": 6.2,
+  "ammo": 3,
+  "reload": 1.7,
+  "range": 11,
+  "superCost": 2600,
+  "projSpeed": 16,
+  "palette": {
+   "main": 9754669,
+   "dark": 829048,
+   "accent": 16739179,
+   "hair": 4165434,
+   "skin": 9754669
+  }
+ },
+ "pipchomp": {
+  "key": "pipchomp",
+  "name": "Pip & Chomp",
+  "role": "Assassin",
+  "hp": 4200,
+  "speed": 6.8,
+  "ammo": 3,
+  "reload": 1.6,
+  "range": 4.5,
+  "superCost": 2200,
+  "projSpeed": 20,
+  "superReach": 8,
+  "palette": {
+   "main": 3120708,
+   "dark": 1989676,
+   "accent": 14037868,
+   "hair": 11638780,
+   "skin": 16115408
+  }
+ },
+ "mochi": {
+  "key": "mochi",
+  "name": "Mochi",
+  "role": "Tank",
+  "hp": 6800,
+  "speed": 5.6,
+  "ammo": 4,
+  "reload": 1.4,
+  "range": 3.5,
+  "superCost": 2400,
+  "projSpeed": 20,
+  "radius": 0.72,
+  "cubeHp": 250,
+  "superReach": 9,
+  "palette": {
+   "main": 16761556,
+   "dark": 15092096,
+   "accent": 16777215,
+   "hair": 16777215,
+   "skin": 16761556
+  }
+ }
+}
