@@ -50,6 +50,8 @@ func _autotest() -> void:
 	for a in args:
 		if a.begins_with("ws"):
 			url = a
+		elif a.begins_with("--server="):
+			url = a.substr(9)
 	server_edit.text = url
 	if args.has("--noshadow"):
 		sun.shadow_enabled = false
