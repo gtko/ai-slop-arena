@@ -18,3 +18,7 @@ art-src/fauna/work/
 art-src/fauna/out/
 __pycache__/
 *.blend1
+
+# Godot
+godot/.godot/
+godot/*.translation
