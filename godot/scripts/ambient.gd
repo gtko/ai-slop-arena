@@ -9,11 +9,11 @@ extends Node3D
 # flying off a bush someone hides in would give them away.
 # Quality "fauna" scales the counts (a phone on Low keeps 40 %).
 
-# longest side, in metres (the models are normalised to 2 m; the arena's brawlers are 1.9 m tall)
-const SIZE := {
-	"lizard": 0.95, "fennec": 0.85, "arctic_fox": 1.0, "cat": 0.85, "hedgehog": 0.5, "squirrel": 0.6, "hare": 0.75,
-	"frog": 0.42, "duck": 0.7, "hen": 0.6, "penguin": 0.85, "sparrow": 0.28, "raven": 1.5, "vulture": 2.4,
-}
+const FLYERS := ["vulture", "raven"]
+const WORLD := 1.9
+# per-species size on top of the world scale (src/ambient/maps: scale x rigScale)
+const SCALE := {"lizard": 1.1, "fennec": 1.2, "arctic_fox": 1.2, "cat": 1.1, "hedgehog": 1.3, "squirrel": 1.2, "hare": 1.0, "frog": 1.0,
+	"duck": 1.0, "hen": 0.95, "penguin": 1.0, "sparrow": 1.3, "raven": 1.35, "vulture": 1.1}
 const IDLES := ["Idle", "Idle", "Idle", "Look", "Sit", "Sniff", "Scratch", "Pushup", "TailFlick", "Groom", "Croak", "Peck", "Ears"]
 
 # kind: walkers wander on tiles ("on" = allowed tile chars, "near" = must be next to these chars);
@@ -104,7 +104,7 @@ func _tiles(chars: String, near := "") -> Array:
 			out.append(Vector2i(i, j))
 	return out
 
-func _instance(sp: String) -> Node3D:
+func _instance(sp: String, mul := 1.0) -> Node3D:
 	if not _scenes.has(sp):
 		var path := "res://assets/models/fauna/%s.glb" % sp
 		_scenes[sp] = load(path) if ResourceLoader.exists(path) else null
@@ -113,34 +113,59 @@ func _instance(sp: String) -> Node3D:
 		return null
 	var inst: Node3D = ps.instantiate()
 	if not _fits.has(sp):
-		_fits[sp] = _fit(inst, float(SIZE.get(sp, 0.6)))
+		_fits[sp] = _fit(inst)
+		for mi in inst.find_children("*", "MeshInstance3D", true, false): # glTF default metallic 1 = black without an env map
+			for s in (mi as MeshInstance3D).mesh.get_surface_count():
+				var bm := (mi as MeshInstance3D).mesh.surface_get_material(s) as BaseMaterial3D
+				if bm:
+					bm.metallic = 0.0
 		for ap in inst.find_children("*", "AnimationPlayer", true, false):
 			for n in (ap as AnimationPlayer).get_animation_list():
 				var loop := not String(n) in ["Sit", "Peck", "Scratch", "Look", "Groom", "Croak", "Pushup", "TailFlick", "Ears", "Sniff"]
 				(ap as AnimationPlayer).get_animation(n).loop_mode = Animation.LOOP_LINEAR if loop else Animation.LOOP_NONE
+	# the models are real size, the arena is not: brawlers stand 1.9 m tall. Ground animals are scaled to
+	# their world (a cat reaches a brawler's knee); the flyers stay real size, high up (fauna.js WORLD)
+	var k: float = (1.0 if FLYERS.has(sp) else WORLD) * mul
 	var fit: Dictionary = _fits[sp]
-	inst.scale = Vector3.ONE * float(fit.k)
-	inst.position = Vector3(0, float(fit.y), 0)
+	inst.scale = Vector3.ONE * k
+	inst.position = Vector3(-float(fit.cx) * k, -float(fit.y) * k, -float(fit.cz) * k)
 	var holder := Node3D.new()
 	holder.add_child(inst)
 	return holder
 
-# Scale so the longest side is `len` metres, feet on the ground (bind-pose bounds of the meshes).
-func _fit(inst: Node3D, len: float) -> Dictionary:
-	var box := AABB()
-	var first := true
-	for mi in inst.find_children("*", "MeshInstance3D", true, false):
-		var xf := Transform3D.IDENTITY
-		var n: Node = mi
-		while n != null and n != inst:
-			xf = (n as Node3D).transform * xf
-			n = n.get_parent()
-		var a: AABB = xf * (mi as MeshInstance3D).get_aabb()
-		box = a if first else box.merge(a)
-		first = false
-	var longest := maxf(box.size.x, maxf(box.size.y, box.size.z))
-	var k := len / maxf(longest, 1e-4)
-	return {"k": k, "y": -box.position.y * k}
+# Real bounds of the skinned mesh in its rest pose: the GLB's vertices are stored normalised, the size
+# lives in the skeleton (bone rest x inverse bind), so the mesh AABB says nothing about the size.
+func _fit(inst: Node3D) -> Dictionary:
+	var lo := Vector3(1e9, 1e9, 1e9)
+	var hi := Vector3(-1e9, -1e9, -1e9)
+	for sk in inst.find_children("*", "Skeleton3D", true, false):
+		var skel := sk as Skeleton3D
+		for mi in skel.find_children("*", "MeshInstance3D", true, false):
+			var m := mi as MeshInstance3D
+			if m.skin == null or m.mesh == null:
+				continue
+			var arr := m.mesh.surface_get_arrays(0)
+			var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var bones: PackedInt32Array = arr[Mesh.ARRAY_BONES]
+			var weights: PackedFloat32Array = arr[Mesh.ARRAY_WEIGHTS]
+			var per: int = bones.size() / maxi(verts.size(), 1)
+			var xfs: Array = []
+			for bi in m.skin.get_bind_count():
+				var bone := m.skin.get_bind_bone(bi)
+				if bone < 0:
+					bone = skel.find_bone(m.skin.get_bind_name(bi))
+				xfs.append(skel.get_bone_global_rest(bone) * m.skin.get_bind_pose(bi))
+			for i in range(0, verts.size(), 5):
+				var p := Vector3.ZERO
+				for kk in per:
+					var w: float = weights[i * per + kk]
+					if w > 0.0:
+						p += w * ((xfs[bones[i * per + kk]] as Transform3D) * verts[i])
+				lo = lo.min(p)
+				hi = hi.max(p)
+	if lo.x > hi.x:
+		return {"y": 0.0, "cx": 0.0, "cz": 0.0}
+	return {"y": lo.y, "cx": (lo.x + hi.x) / 2.0, "cz": (lo.z + hi.z) / 2.0}
 
 func _play(c: Dictionary, clip: String, speed := 1.0) -> void:
 	var ap: AnimationPlayer = c.ap
@@ -165,7 +190,7 @@ func _walkers(spec: Dictionary) -> void:
 	if homes.is_empty():
 		return
 	for k in int(spec.n):
-		var holder := _instance(String(spec.sp))
+		var holder := _instance(String(spec.sp), float(SCALE.get(String(spec.sp), 1.0)))
 		if holder == null:
 			return
 		add_child(holder)
@@ -194,6 +219,10 @@ func _step_walkers(delta: float, fighters: Dictionary) -> void:
 		if not node.visible:
 			continue
 		var pos: Vector3 = c.pos
+		if arena.char_at(pos.x, pos.z) == "V": # its ground crumbled away: gone with it
+			node.visible = false
+			c.idx = 999
+			continue
 		# shy: run from a brawler that gets too close
 		var flee := Vector3.ZERO
 		for sp in scared:
@@ -297,7 +326,7 @@ func _flock(spec: Dictionary) -> void:
 		for k in per:
 			if F.birds.size() + flocks.size() * 0 >= per:
 				break
-			var holder := _instance(String(spec.sp))
+			var holder := _instance(String(spec.sp), float(SCALE.get(String(spec.sp), 1.0)))
 			if holder == null:
 				return
 			add_child(holder)

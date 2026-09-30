@@ -188,6 +188,8 @@ func _kit(kinds: Dictionary) -> void:
 
 # Lighting, weather, water surface, fauna and cosmetics, then the quality preset.
 func _world() -> void:
+	if Quality.main_node() == null or get_parent() == null or get_parent().get("sun") == null:
+		return # headless unit tests build a bare arena
 	lighting = Lighting.new()
 	add_child(lighting)
 	lighting.setup(self, map)
@@ -314,6 +316,61 @@ func update(delta: float) -> void:
 	if skins:
 		skins.update(delta, fighters, self)
 	Foliage.update(delta, me, self)
+	if _sim:
+		_simulate(delta, fighters, me)
+
+# Test only (`--simkit` after `--`): plays the server's kit events on a timer so the effects can be
+# looked at without a match that reaches them: a trap, a barrel blast, a bridge break, a landing, an
+# island that shakes at 3 s and drops at 8 s, and the local player teleported onto a jump pad at 4 s.
+var _sim := OS.get_cmdline_user_args().has("--simkit")
+var _sim_t := 0.0
+var _sim_step := 0
+
+func _simulate(delta: float, fighters: Dictionary, me: Fighter) -> void:
+	_sim_t += delta
+	var plan := [1.0, 2.0, 3.0, 4.0, 5.0, 40.0]
+	if _sim_step >= plan.size() or _sim_t < plan[_sim_step]:
+		return
+	_sim_step += 1
+	match _sim_step:
+		1:
+			var c := center(12, 8)
+			for j in GameData.N:
+				for i in GameData.N:
+					if tile(i, j) == "E":
+						c = center(i, j)
+						on_event({"e": "crate", "i": i, "j": j})
+						break
+			kit.on_event({"e": "kit", "k": "trap", "id": me.id if me else "x", "i": 11, "j": 11})
+		2:
+			for k in kit.bridges.keys():
+				kit.on_event({"e": "kit", "k": "bridge", "i": k % GameData.N, "j": k / GameData.N})
+				break
+			kit.on_event({"e": "kit", "k": "land", "id": "x", "x": 2.0, "z": 2.0})
+		3:
+			var tiles: Array = []
+			for j in GameData.N:
+				for i in GameData.N:
+					var ch := tile(i, j)
+					var mi := to_tile(me.position.x) if me else 12
+					var mj := to_tile(me.position.z) if me else 12
+					if ch != "V" and ch != "=" and ch != "X" and absi(i - mi) <= 3 and absi(j - mj) <= 4 and (absi(i - mi) > 1 or absi(j - mj) > 1):
+						tiles.append([i, j])
+			_sim_tiles = tiles
+			kit.on_event({"e": "kit", "k": "doom", "t": tiles})
+		4:
+			if me and not kit.pads.is_empty():
+				me.position = Vector3(kit.pads[0].x, 0, kit.pads[0].z)
+				print("SIM pad start ", me.position, " dist ", kit.pads[0].dist)
+		5:
+			if me:
+				print("SIM pad mid ", me.position, " dash ", kit.dash)
+		6:
+			kit.on_event({"e": "kit", "k": "crumble", "t": _sim_tiles})
+			if me:
+				print("SIM after ", me.position)
+
+var _sim_tiles: Array = []
 
 # The local player's movement when the world matters: ice (momentum), jump pads and their flight.
 # Returns true when it moved `me` itself (main.gd then skips its plain walk).
@@ -505,14 +562,21 @@ func _ground(kinds: Dictionary) -> void:
 		add_child(self.water)
 		self.water.build(self, water, String(map.get("water", "water")))
 	if not map.get("sky", false):
-		var outer := MeshInstance3D.new()
-		var op := PlaneMesh.new()
-		op.size = Vector2(300, 300)
-		outer.mesh = op
-		outer.position.y = -0.08
-		var oc := Color(map.get("groundTones", [swatch[1]])[0]) if map.get("outer", "") == "" else Color(swatch[1])
-		outer.material_override = _mat(Color(swatch[1]).darkened(0.25) if map.get("outer", "") != "snow" else Color("eef4ff"))
-		add_child(outer)
+		# the land around the arena (maps.js `outer`: sand, grass, snow), as a frame: the water basins
+		# and their banks sit inside the arena, a full plane would cover them
+		var oc := {"sand": Color("e0b98a"), "snow": Color("eef4ff"), "grass": Color("5a9a3e")}.get(String(map.get("outer", "grass")), Color("5a9a3e")) as Color
+		var om := _mat(oc, 1.0)
+		var e := GameData.HALF
+		for r in [[Vector2(320, 150 - e), Vector3(0, 0, -(e + (150 - e) / 2.0))], [Vector2(320, 150 - e), Vector3(0, 0, e + (150 - e) / 2.0)],
+				[Vector2(150 - e, e * 2.0), Vector3(-(e + (150 - e) / 2.0), 0, 0)], [Vector2(150 - e, e * 2.0), Vector3(e + (150 - e) / 2.0, 0, 0)]]:
+			var outer := MeshInstance3D.new()
+			var op := PlaneMesh.new()
+			op.size = r[0]
+			outer.mesh = op
+			outer.position = (r[1] as Vector3) + Vector3(0, -0.08, 0)
+			outer.material_override = om
+			outer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			add_child(outer)
 
 func _flat_tiles(tiles: Array, col: Color, y: float, mat: Material = null, register := false) -> void:
 	if tiles.is_empty():
