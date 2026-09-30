@@ -179,7 +179,7 @@ func _autotest() -> void:
 		if a.begins_with("--shot="):
 			await RenderingServer.frame_post_draw
 			get_viewport().get_texture().get_image().save_png(a.substr(7))
-	print("AUTOTEST-INPUT touchscreen=%s touch_visible=%s touch_moved=%s touch_fired=%s start=%s end=%s" % [DisplayServer.is_touchscreen_available(), touch.visible, stats.get("touch_moved", false), stats.get("touch_fired", false), stats.get("start_pos", Vector3.ZERO), me.position if me else Vector3.ZERO])
+	print("AUTOTEST-INPUT touchsize=%s touchscreen=%s touch_visible=%s touch_moved=%s touch_fired=%s start=%s end=%s" % [touch.size, DisplayServer.is_touchscreen_available(), touch.visible, stats.get("touch_moved", false), stats.get("touch_fired", false), stats.get("start_pos", Vector3.ZERO), me.position if me else Vector3.ZERO])
 	print("AUTOTEST state=%d snaps=%d me=%s hp=%s pos=%s fighters=%d arena=%s matchmade=%s" % [state, stats.snaps, me != null, me.hp if me else -1, me.position if me else Vector3.ZERO, fighters.size(), arena != null, net.matchmade])
 	get_tree().quit(0 if stats.snaps > 20 and me != null else 1)
 

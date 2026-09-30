@@ -40,9 +40,9 @@ func _input(ev: InputEvent) -> void:
 				gadget_pressed.emit()
 			elif pos.distance_to(_emote_c()) <= 38.0:
 				emote_pressed.emit()
-			elif pos.x < size.x * 0.5 and _touch_move == -1:
+			elif pos.x < _vs().x * 0.5 and _touch_move == -1:
 				_touch_move = ev.index; _origin_move = pos; _cur_move = pos
-			elif pos.x >= size.x * 0.5 and _touch_aim == -1:
+			elif pos.x >= _vs().x * 0.5 and _touch_aim == -1:
 				_touch_aim = ev.index; _origin_aim = pos; _cur_aim = pos
 		else:
 			if ev.index == _touch_move:
@@ -97,9 +97,12 @@ func _draw() -> void:
 	draw_circle(e, 34.0, Color(0, 0, 0, 0.35))
 	draw_string(font, e + Vector2(-30, 8), "EMOTE", HORIZONTAL_ALIGNMENT_CENTER, 60, 15, Color(1, 1, 1, 0.85))
 
-func _super_c() -> Vector2: return Vector2(size.x - 125.0, size.y - 265.0)
-func _gadget_c() -> Vector2: return Vector2(size.x - 275.0, size.y - 200.0)
-func _emote_c() -> Vector2: return Vector2(size.x - 60.0, size.y - 430.0)
+# The control can report a zero size when it is laid out under a CanvasLayer (seen on web), so the
+# layout always comes from the viewport. Buttons sit in the bottom-right corner on any landscape phone.
+func _vs() -> Vector2: return get_viewport_rect().size
+func _super_c() -> Vector2: return Vector2(_vs().x - 110.0, _vs().y - 120.0)
+func _gadget_c() -> Vector2: return Vector2(_vs().x - 250.0, _vs().y - 70.0)
+func _emote_c() -> Vector2: return Vector2(_vs().x - 50.0, maxf(_vs().y - 290.0, 50.0))
 
 func _process(_delta: float) -> void:
 	# the charge state changes over time (glow pulse, cooldown sweep): redraw only while visible
