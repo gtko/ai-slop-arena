@@ -52,6 +52,14 @@ Test: `node` + playwright-core, page `?autotest&realinput&map=grove&server=ws://
 exports (no SDK here: `.github/workflows/godot.yml` builds the APK on GitHub), audible sound, CJK/Arabic fonts,
 gadget dashes and jump pads against the live server, Steam / Play Games hooks, cosmetics unlock rules.
 
+## Android APK (built here, not run on a device)
+
+An arm64 debug APK (85 MB, signed, verified with `apksigner`) is produced without the Google SDK
+downloads: Ubuntu's `apksigner zipalign adb` packages provide build-tools, plus a debug keystore and
+the editor settings `export/android/android_sdk_path`, `java_sdk_path`, `debug_keystore*`. Then:
+`godot --headless --path godot --export-debug "Android" build/android/ai-slop-arena.apk`
+(export templates 4.4.1 installed). Install with `adb install -r`. iOS needs a Mac with Xcode.
+
 ## Web hosting note
 
 The exported `index.pck` (about 58 MB) and `index.wasm` (44 MB, about 9 MB gzipped) exceed Cloudflare Workers
