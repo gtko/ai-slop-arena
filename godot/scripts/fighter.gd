@@ -24,6 +24,12 @@ var _last_pos := Vector3.ZERO
 var _bar: MeshInstance3D
 var _bar_mat: StandardMaterial3D
 var _label: Label3D
+var _meshes: Array[MeshInstance3D] = []
+var _flash_mat: StandardMaterial3D
+var _flash_t := 0.0
+var _faded := false
+var _emote: Label3D
+var _emote_t := 0.0
 
 var radius: float:
 	get: return float(type.get("radius", 0.62))
@@ -44,6 +50,8 @@ func setup(row: Dictionary, brawlers: Dictionary) -> void:
 		_load_model(glb)
 	else:
 		_capsule(mat)
+	for mi in find_children("*", "MeshInstance3D", true, false):
+		_meshes.append(mi as MeshInstance3D)
 	_hud()
 
 # The sculpted GLB, scaled to a 1.9 m tall brawler standing on the ground (models differ in size).
@@ -128,12 +136,60 @@ func _hud() -> void:
 	_label.position.y = 2.85
 	add_child(_label)
 
+# Hit flash: a white overlay on every mesh for ~0.14 s (one shared material, only assigned while flashing).
+func flash() -> void:
+	if _flash_mat == null:
+		_flash_mat = StandardMaterial3D.new()
+		_flash_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_flash_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_flash_mat.albedo_color = Color(1, 1, 1, 0.7)
+	if _flash_t <= 0.0:
+		for mi in _meshes:
+			mi.material_overlay = _flash_mat
+	_flash_t = 0.14
+
+# The local brawler fades while it hides in a bush (the server hides it from everyone else).
+func set_faded(on: bool) -> void:
+	if on == _faded:
+		return
+	_faded = on
+	for mi in _meshes:
+		mi.transparency = 0.55 if on else 0.0
+
+# Emote sticker above the head for 2 s.
+func show_emote(text: String, col: Color) -> void:
+	if _emote == null:
+		_emote = Label3D.new()
+		_emote.font_size = 72
+		_emote.pixel_size = 0.01
+		_emote.outline_size = 16
+		_emote.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_emote.no_depth_test = true
+		_emote.position.y = 3.5
+		add_child(_emote)
+	_emote.text = text
+	_emote.modulate = col
+	_emote.visible = true
+	_emote_t = 2.0
+
 func apply_row(x: float, z: float, f: float, h: float, mh: float, am: float, sup: float, cb: int, fl: int) -> void:
 	target = Vector3(x, 0, z)
 	facing = f
 	hp = h; max_hp = mh; ammo = am; super_charge = sup; cubes = cb; flags = fl
 
 func _process(delta: float) -> void:
+	if _flash_t > 0.0:
+		_flash_t -= delta
+		if _flash_t <= 0.0:
+			for mi in _meshes:
+				mi.material_overlay = null
+		else:
+			_flash_mat.albedo_color.a = 0.7 * clampf(_flash_t / 0.14, 0.0, 1.0)
+	if _emote_t > 0.0:
+		_emote_t -= delta
+		_emote.position.y = 3.5 + 0.1 * sin(_emote_t * 6.0)
+		if _emote_t <= 0.0:
+			_emote.visible = false
 	visible = alive and not hidden_by_server
 	if not visible:
 		return
