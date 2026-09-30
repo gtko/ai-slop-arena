@@ -163,13 +163,23 @@ func _autotest() -> void:
 					net.send({"t": "map", "map": a.substr(6)})
 			net.send({"t": "start"})
 		if state == State.PLAYING and me:
-			last_move = Vector2(1, 0.3)
-			touch.move = Vector2(0.7, 0.4)
-			touch.visible = true
+			if DebugArgs.has("realinput"):   # real touch / mouse events drive the player (mobile emulation test)
+				if touch.move != Vector2.ZERO:
+					stats["touch_moved"] = true
+				if touch.firing:
+					stats["touch_fired"] = true
+				if not stats.has("start_pos"):
+					stats["start_pos"] = me.position
+					print("AUTOTEST-PLAYING")
+			else:
+				last_move = Vector2(1, 0.3)
+				touch.move = Vector2(0.7, 0.4)
+				touch.visible = true
 	for a in args:
 		if a.begins_with("--shot="):
 			await RenderingServer.frame_post_draw
 			get_viewport().get_texture().get_image().save_png(a.substr(7))
+	print("AUTOTEST-INPUT touchscreen=%s touch_visible=%s touch_moved=%s touch_fired=%s start=%s end=%s" % [DisplayServer.is_touchscreen_available(), touch.visible, stats.get("touch_moved", false), stats.get("touch_fired", false), stats.get("start_pos", Vector3.ZERO), me.position if me else Vector3.ZERO])
 	print("AUTOTEST state=%d snaps=%d me=%s hp=%s pos=%s fighters=%d arena=%s matchmade=%s" % [state, stats.snaps, me != null, me.hp if me else -1, me.position if me else Vector3.ZERO, fighters.size(), arena != null, net.matchmade])
 	get_tree().quit(0 if stats.snaps > 20 and me != null else 1)
 
