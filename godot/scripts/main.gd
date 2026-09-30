@@ -91,6 +91,7 @@ func _apply_power_profile() -> void:
 	vp.msaa_3d = Viewport.MSAA_DISABLED if saver else Viewport.MSAA_2X
 	if sun:
 		sun.shadow_enabled = not saver
+	Quality.set_saver(saver)  # WORLD hook
 
 func _build_scene() -> void:
 	cam = Camera3D.new()
@@ -276,6 +277,8 @@ func _apply_snap(m: Dictionary) -> void:
 		me.position = Vector3(m.me[0], 0, m.me[1])
 
 func _apply_event(e: Dictionary) -> void:
+	if arena:
+		arena.on_event(e)  # WORLD hook
 	var f: Fighter = fighters.get(e.get("id", ""))
 	match e.get("e", ""):
 		"atk":
@@ -345,6 +348,8 @@ func _control(delta: float) -> void:
 	if kb != Vector2.ZERO:
 		mv = kb.limit_length(1.0)
 	last_move = mv
+	if arena.world_step(me, mv, delta):  # WORLD hook (ice, jump pads: it moved me)
+		mv = Vector2.ZERO
 	if mv != Vector2.ZERO:
 		var p := me.position + Vector3(mv.x, 0, mv.y) * float(me.type.speed) * delta
 		me.position = arena.collide_circle(p, me.radius)
