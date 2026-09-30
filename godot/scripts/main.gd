@@ -17,6 +17,7 @@ var touch: TouchControls
 var ui: Control
 var status: Label
 var hud: Label
+var hud_ui: Hud                    # HUD hook: in-match HUD + combat feedback (hud.gd)
 var code_edit: LineEdit
 var server_edit: LineEdit
 var brawler_pick: OptionButton
@@ -133,8 +134,14 @@ func _build_ui() -> void:
 	touch.visible = DisplayServer.is_touchscreen_available()
 	touch.super_pressed.connect(func(): super_seq += 1)
 	ui.add_child(touch)
+	hud_ui = Hud.new()   # HUD hook
+	ui.add_child(hud_ui)   # HUD hook
+	hud_ui.setup(net, cam, self, touch)   # HUD hook
+	hud_ui.menu_requested.connect(func(): _to_menu(""))   # HUD hook
+	hud_ui.play_again.connect(func(): _to_menu(""))   # HUD hook
 	hud = Label.new()
 	hud.position = Vector2(20, 12)
+	hud.visible = false   # HUD hook: replaced by hud_ui
 	hud.add_theme_font_size_override("font_size", 22)
 	ui.add_child(hud)
 	status = Label.new()
@@ -223,6 +230,7 @@ func _clear_match() -> void:
 		arena.queue_free()
 		arena = null
 	me = null
+	hud_ui.end_match()   # HUD hook
 
 # ---------------------------------------------------------------- network
 
@@ -243,9 +251,11 @@ func _on_message(m: Dictionary) -> void:
 			state = State.COUNTDOWN
 		"snap":
 			_apply_snap(m)
+			hud_ui.on_snapshot(m)   # HUD hook
 		"ev":
 			for e in m.list:
 				_apply_event(e)
+				hud_ui.on_event(e)   # HUD hook
 		"error", "kicked":
 			_to_menu(String(m.get("msg", "Refused by the server")))
 
@@ -269,6 +279,7 @@ func _start_match(m: Dictionary) -> void:
 		fighters[row.id] = f
 		if f.is_local:
 			me = f
+	hud_ui.begin_match(m, arena, fighters)   # HUD hook
 	status.text = "%s: get ready" % map_data.name
 	_final_music = false   # AUDIO HOOK: the map theme (+ weather bed) starts with the match
 	_me_hp = -1.0
@@ -414,11 +425,11 @@ func _control(delta: float) -> void:
 	send_t -= delta
 	if send_t <= 0.0:
 		send_t = 1.0 / SEND_HZ
-		net.send({"t": "in", "x": snappedf(me.position.x, 0.01), "z": snappedf(me.position.z, 0.01),
+		net.send(hud_ui.fill_input({"t": "in", "x": snappedf(me.position.x, 0.01), "z": snappedf(me.position.z, 0.01),
 			"ax": snappedf(aim_dir.x, 0.01), "az": snappedf(aim_dir.y, 0.01),
 			"px": snappedf(aim_point.x, 0.01), "pz": snappedf(aim_point.z, 0.01),
 			"f": 1 if firing else 0, "s": super_seq, "g": 0, "gx": snappedf(aim_dir.x, 0.01), "gz": snappedf(aim_dir.y, 0.01),
-			"em": 0, "ei": -1})
+			"em": 0, "ei": -1}))   # HUD hook (g/em/ei/ping come from hud_ui)
 
 func _mouse_ground() -> Variant:
 	var mp := get_viewport().get_mouse_position()
