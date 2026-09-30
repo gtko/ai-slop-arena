@@ -52,6 +52,7 @@ func setup(row: Dictionary, brawlers: Dictionary) -> void:
 		_capsule(mat)
 	for mi in find_children("*", "MeshInstance3D", true, false):
 		_meshes.append(mi as MeshInstance3D)
+	Skins.apply(self, row)  # WORLD hook
 	_hud()
 
 # The sculpted GLB, scaled to a 1.9 m tall brawler standing on the ground (models differ in size).

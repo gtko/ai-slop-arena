@@ -18,7 +18,17 @@ const BOUND_H := 2.7
 var rng := RandomNumberGenerator.new()
 var sails: Node3D
 var _hidden: Dictionary = {}   # tile key -> Array of [MultiMesh, index]
-var _decor: Array = []
+var _decor: Array = []         # [MultiMeshInstance3D, full instance count]
+# world (godot/scripts: kit, lighting, weather, water, ambient, skins): all children of the arena, so
+# they are freed with it and need no wiring in main.gd
+var kit: Kit
+var lighting: Lighting
+var weather: Weather
+var water: Water
+var ambient: Ambient
+var skins: Skins
+var ground_mats: Array = []          # the two floor tones (crumbling islands reuse them)
+var _ground_slots: Dictionary = {}   # tile key -> [MultiMesh, index]
 
 func build(map_data: Dictionary) -> void:
 	map = map_data
@@ -46,6 +56,7 @@ func build(map_data: Dictionary) -> void:
 	_windmill()
 	if not map.get("sky", false):
 		_decor_ring()
+	_world()
 
 func _snowy(prop: String) -> String:
 	return prop + "_snow" if map.get("snow", false) and PropLib.has(prop + "_snow") else prop
@@ -115,7 +126,7 @@ func _bushes(tiles: Array) -> void:
 		var list: Array = []
 		for t in tiles:
 			list.append({"pos": center(t.x, t.y), "yaw": rng.randf() * TAU, "mul": 1.0 + rng.randf() * 0.12})
-		var mmi := PropLib.multi("bush", {"width": 1.95}, list, false)
+		var mmi := PropLib.multi("bush", {"width": 1.95}, list, false, Foliage.material_for("bush", 0.05))
 		add_child(mmi)
 		for k in tiles.size():
 			_reg(tiles[k], mmi.multimesh, k)
@@ -169,45 +180,86 @@ func _lanterns(tiles: Array) -> void:
 		if not DebugArgs.has("nolight"):
 			add_child(light)
 
-# Map kit (v0.15): bridges, jump pads, healing mushrooms.
+# Map kit (v0.15): bridges, jump pads, healing mushrooms, sky islands (kit.gd).
 func _kit(kinds: Dictionary) -> void:
-	_flat(kinds.get("=", []), Color("9b6b3c"), 0.12, 1.9, 0.06)
-	_flat(kinds.get("J", []), Color("3fd8e8"), 0.05, 1.5, 0.05, true)
-	for t in kinds.get("H", []):
-		var stem := MeshInstance3D.new()
-		var cm := CylinderMesh.new()
-		cm.top_radius = 0.22; cm.bottom_radius = 0.3; cm.height = 0.7
-		cm.material = _mat(Color("f5e6d0"))
-		stem.mesh = cm
-		stem.position = center(t.x, t.y) + Vector3(0, 0.35, 0)
-		add_child(stem)
-		var cap := MeshInstance3D.new()
-		var sm := SphereMesh.new()
-		sm.radius = 0.7; sm.height = 0.9
-		sm.material = _mat(Color("e64980"))
-		cap.mesh = sm
-		cap.position = center(t.x, t.y) + Vector3(0, 0.95, 0)
-		add_child(cap)
+	kit = Kit.new()
+	add_child(kit)
+	kit.build(self, kinds)
 
-func _flat(tiles: Array, col: Color, y: float, size: float, thick: float, glow := false) -> void:
-	if tiles.is_empty():
+# Lighting, weather, water surface, fauna and cosmetics, then the quality preset.
+func _world() -> void:
+	if Quality.main_node() == null or get_parent() == null or get_parent().get("sun") == null:
+		return # headless unit tests build a bare arena
+	lighting = Lighting.new()
+	add_child(lighting)
+	lighting.setup(self, map)
+	weather = Weather.new()
+	add_child(weather)
+	weather.setup(self, String(map.get("weather", "clear")))
+	lighting.weather = weather
+	ambient = Ambient.new()
+	add_child(ambient)
+	ambient.setup(self)
+	skins = Skins.new()
+	add_child(skins)
+	if map.get("wet", false):
+		_puddles()
+	Quality.apply()
+
+func apply_quality() -> void:
+	var q := Quality.preset()
+	if lighting:
+		lighting.apply_quality()
+	if weather:
+		weather.apply_quality()
+	if ambient:
+		ambient.apply_quality()
+	if water:
+		water.apply_quality()
+	for d in _decor:
+		var mmi: MultiMeshInstance3D = d[0]
+		mmi.multimesh.visible_instance_count = int(ceilf(int(d[1]) * float(q.ring)))
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+# Glossy dark puddles on wet maps (arena.js buildPuddles): mirrors for lanterns, projectiles, lightning.
+func _puddles() -> void:
+	var spots: Array = []
+	for k in 40:
+		if spots.size() >= 22:
+			break
+		var i := rng.randi_range(1, GameData.N - 2)
+		var j := rng.randi_range(1, GameData.N - 2)
+		if tile(i, j) != ".":
+			continue
+		var c := center(i, j)
+		spots.append([c.x + rng.randf() - 0.5, c.z + rng.randf() - 0.5, 0.5 + rng.randf() * 0.6, rng.randf() * TAU])
+	if spots.is_empty():
 		return
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3(size, thick, size)
-	var m := _mat(col)
-	if glow:
-		m.emission_enabled = true
-		m.emission = col
-		m.emission_energy_multiplier = 1.2
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 1.0
+	mesh.bottom_radius = 1.0
+	mesh.height = 0.005
+	mesh.radial_segments = 20
+	mesh.rings = 1
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.14, 0.19, 0.23, 0.5)
+	m.roughness = 0.05
+	m.metallic = 0.3
+	m.metallic_specular = 1.0
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.render_priority = 1
 	mesh.material = m
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.mesh = mesh
-	mm.instance_count = tiles.size()
-	for k in tiles.size():
-		mm.set_instance_transform(k, Transform3D(Basis.IDENTITY, center(tiles[k].x, tiles[k].y) + Vector3(0, y, 0)))
+	mm.instance_count = spots.size()
+	for k in spots.size():
+		var sp: Array = spots[k]
+		var b := Basis(Vector3.UP, float(sp[3])) * Basis.from_scale(Vector3(float(sp[2]) * 1.4, 1.0, float(sp[2])))
+		mm.set_instance_transform(k, Transform3D(b, Vector3(float(sp[0]), 0.014, float(sp[1]))))
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mmi)
 
 # The windmill of Windmill Isles: a square of 'M' tiles drawn as one tower with turning sails.
@@ -245,6 +297,110 @@ func _windmill() -> void:
 func update(delta: float) -> void:
 	if sails:
 		sails.rotation.z += delta * 0.6
+	var m := get_parent()
+	var fighters: Dictionary = m.get("fighters") if m and m.get("fighters") != null else {}
+	var me: Fighter = m.get("me") if m else null
+	var focus := me.position if me else Vector3.ZERO
+	if kit:
+		kit.update(delta, fighters, me)
+	if lighting:
+		lighting.update(delta)
+		for id in fighters:
+			lighting.attach_blob(fighters[id])
+	if weather:
+		weather.update(delta, focus)
+	if water:
+		water.update(delta)
+	if ambient:
+		ambient.update(delta, fighters)
+	if skins:
+		skins.update(delta, fighters, self)
+	Foliage.update(delta, me, self)
+	if _sim:
+		_simulate(delta, fighters, me)
+
+# Test only (`--simkit` after `--`): plays the server's kit events on a timer so the effects can be
+# looked at without a match that reaches them: a trap, a barrel blast, a bridge break, a landing, an
+# island that shakes at 3 s and drops at 8 s, and the local player teleported onto a jump pad at 4 s.
+var _sim := OS.get_cmdline_user_args().has("--simkit")
+var _sim_t := 0.0
+var _sim_step := 0
+
+func _simulate(delta: float, fighters: Dictionary, me: Fighter) -> void:
+	_sim_t += delta
+	var plan := [1.0, 2.0, 3.0, 4.0, 5.0, 40.0]
+	if _sim_step >= plan.size() or _sim_t < plan[_sim_step]:
+		return
+	_sim_step += 1
+	match _sim_step:
+		1:
+			var c := center(12, 8)
+			for j in GameData.N:
+				for i in GameData.N:
+					if tile(i, j) == "E":
+						c = center(i, j)
+						on_event({"e": "crate", "i": i, "j": j})
+						break
+			kit.on_event({"e": "kit", "k": "trap", "id": me.id if me else "x", "i": 11, "j": 11})
+		2:
+			for k in kit.bridges.keys():
+				kit.on_event({"e": "kit", "k": "bridge", "i": k % GameData.N, "j": k / GameData.N})
+				break
+			kit.on_event({"e": "kit", "k": "land", "id": "x", "x": 2.0, "z": 2.0})
+		3:
+			var tiles: Array = []
+			for j in GameData.N:
+				for i in GameData.N:
+					var ch := tile(i, j)
+					var mi := to_tile(me.position.x) if me else 12
+					var mj := to_tile(me.position.z) if me else 12
+					if ch != "V" and ch != "=" and ch != "X" and absi(i - mi) <= 3 and absi(j - mj) <= 4 and (absi(i - mi) > 1 or absi(j - mj) > 1):
+						tiles.append([i, j])
+			_sim_tiles = tiles
+			kit.on_event({"e": "kit", "k": "doom", "t": tiles})
+		4:
+			if me and not kit.pads.is_empty():
+				me.position = Vector3(kit.pads[0].x, 0, kit.pads[0].z)
+				print("SIM pad start ", me.position, " dist ", kit.pads[0].dist)
+		5:
+			if me:
+				print("SIM pad mid ", me.position, " dash ", kit.dash)
+		6:
+			kit.on_event({"e": "kit", "k": "crumble", "t": _sim_tiles})
+			if me:
+				print("SIM after ", me.position)
+
+var _sim_tiles: Array = []
+
+# The local player's movement when the world matters: ice (momentum), jump pads and their flight.
+# Returns true when it moved `me` itself (main.gd then skips its plain walk).
+func world_step(me: Fighter, mv: Vector2, delta: float) -> bool:
+	return kit != null and kit.step_local(me, mv, delta)
+
+# Every server event goes through here first (main.gd): kit events, barrel blasts, wall / crate
+# debris, ring-out falls, K.O. effects.
+func on_event(e: Dictionary) -> void:
+	var fighters: Dictionary = get_parent().get("fighters")
+	match String(e.get("e", "")):
+		"kit":
+			kit.on_event(e)
+		"wall":
+			var c := center(int(e.i), int(e.j))
+			WorldFx.debris(self, Vector3(c.x, 1.0, c.z), GameData.color_of(map.get("debris", 0x9a8a70)), 12, 0.3, 6.0)
+			WorldFx.dust(self, c.x, c.z, 8, Color("c8b8a0"), 1.2)
+		"crate":
+			var c := center(int(e.i), int(e.j))
+			if tile(int(e.i), int(e.j)) == "E":
+				kit.barrel_fx(int(e.i), int(e.j))
+			else:
+				WorldFx.debris(self, Vector3(c.x, 0.8, c.z), Color("c98a2e"), 9, 0.26, 5.0)
+		"kill":
+			var f: Fighter = fighters.get(String(e.get("id", "")))
+			if f and int(e.get("f", 0)) == 1:
+				kit.fall_ghost(f)
+			if f and skins:
+				var by = e.get("by")
+				skins.ko_burst(f.position, fighters.get(String(by)) if by != null else null)
 
 # The ring of trees / rocks around the arena, one MultiMesh per kind.
 func _decor_ring() -> void:
@@ -278,10 +434,13 @@ func _decor_ring() -> void:
 			by_kind[kind].append({"pos": pos, "yaw": rng.randf() * TAU, "mul": mul, "ysq": 0.9 + rng.randf() * 0.25})
 	for kind in by_kind:
 		var prop := _snowy(TREE_PROP.get(kind, "tree_round"))
-		var mmi := PropLib.multi(prop, TREE_FIT.get(kind, {"height": 4.6}), by_kind[kind], false)
+		var list: Array = by_kind[kind]
+		list.shuffle() # the quality preset hides the tail of the list: keep the thinning even
+		var soft: bool = kind == "round" or kind == "pine" or kind == "dead"
+		var mmi := PropLib.multi(prop, TREE_FIT.get(kind, {"height": 4.6}), list, false, Foliage.material_for(prop, 0.06, true) if soft else null)
 		if mmi:
 			add_child(mmi)
-			_decor.append(mmi)
+			_decor.append([mmi, list.size()])
 
 func center(i: int, j: int) -> Vector3:
 	return Vector3((i - (GameData.N - 1) / 2.0) * GameData.TILE, 0.0, (j - (GameData.N - 1) / 2.0) * GameData.TILE)
@@ -308,22 +467,46 @@ func is_ice(x: float, z: float) -> bool:
 
 func break_tile(i: int, j: int) -> void:
 	_put(i, j, ".")
+	_hide_props(i, j)
+
+func _hide_props(i: int, j: int) -> void:
 	var key := j * GameData.N + i
 	if _hidden.has(key):
 		for e in _hidden[key]:
 			e[0].set_instance_transform(e[1], Transform3D(Basis.from_scale(Vector3.ZERO), Vector3.ZERO))
 		_hidden.erase(key)
 
-# Circle vs. blocked tiles: push the position out of every solid tile around it.
-func collide_circle(p: Vector3, r: float) -> Vector3:
+func set_tile(i: int, j: int, ch: String) -> void:
+	_put(i, j, ch)
+
+# A tile that falls away (crumbling island): whatever stood on it goes, it becomes void.
+func remove_tile(i: int, j: int) -> void:
+	_hide_props(i, j)
+	_put(i, j, "V")
+
+# Take the floor quad of a tile out of the shared floor (it moved to its own piece, or fell).
+func hide_ground(i: int, j: int) -> void:
+	var key := j * GameData.N + i
+	if _ground_slots.has(key):
+		var e: Array = _ground_slots[key]
+		e[0].set_instance_transform(e[1], Transform3D(Basis.from_scale(Vector3.ZERO), Vector3.ZERO))
+		_ground_slots.erase(key)
+
+# Circle vs. blocked tiles: push the position out of every solid tile around it. Void tiles ('V')
+# block feet like walls, except for a circle already over the void (a pushed brawler goes over the
+# edge and the void never pushes it back: src/arena.js collideCircle, `voidOk`).
+func collide_circle(p: Vector3, r: float, void_ok := false) -> Vector3:
 	var lim := GameData.HALF - r
 	p.x = clampf(p.x, -lim, lim)
 	p.z = clampf(p.z, -lim, lim)
 	var ci := to_tile(p.x); var cj := to_tile(p.z)
+	var over := tile(ci, cj) == "V"
 	for dj in range(-1, 2):
 		for di in range(-1, 2):
 			var i := ci + di; var j := cj + dj
 			if not blocks_move(i, j):
+				continue
+			if tile(i, j) == "V" and (void_ok or over):
 				continue
 			var c := center(i, j)
 			var h := GameData.TILE / 2.0
@@ -367,26 +550,35 @@ func _ground(kinds: Dictionary) -> void:
 			if ch == "V" or ch == "W" or ch == "S":
 				continue
 			((alt) if (i + j) % 2 == 1 else solid).append(Vector2i(i, j))
-	_flat_tiles(solid, Color(tones[0]), -0.02)
-	_flat_tiles(alt, Color(tones[1]), -0.02)
-	_flat_tiles(ice, Color(0.7, 0.88, 1.0), 0.0)
+	var wet: bool = map.get("wet", false)
+	var m0 := _mat(Color(tones[0]), 0.45 if wet else 0.9)
+	var m1 := _mat(Color(tones[1]), 0.45 if wet else 0.9)
+	ground_mats = [m0, m1]
+	_flat_tiles(solid, Color(tones[0]), -0.02, m0, true)
+	_flat_tiles(alt, Color(tones[1]), -0.02, m1, true)
+	_flat_tiles(ice, Color(0.7, 0.88, 1.0), 0.0, _mat(Color(0.7, 0.88, 1.0), 0.12))
 	if not water.is_empty():
-		var m := StandardMaterial3D.new()
-		m.albedo_color = Color(0.25, 0.6, 0.85, 0.8) if map.get("water", "water") != "swamp" else Color(0.3, 0.42, 0.28, 0.85)
-		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		m.roughness = 0.15
-		_flat_tiles(water, Color.WHITE, -0.25, m)
+		self.water = Water.new()
+		add_child(self.water)
+		self.water.build(self, water, String(map.get("water", "water")))
 	if not map.get("sky", false):
-		var outer := MeshInstance3D.new()
-		var op := PlaneMesh.new()
-		op.size = Vector2(300, 300)
-		outer.mesh = op
-		outer.position.y = -0.08
-		var oc := Color(map.get("groundTones", [swatch[1]])[0]) if map.get("outer", "") == "" else Color(swatch[1])
-		outer.material_override = _mat(Color(swatch[1]).darkened(0.25) if map.get("outer", "") != "snow" else Color("eef4ff"))
-		add_child(outer)
+		# the land around the arena (maps.js `outer`: sand, grass, snow), as a frame: the water basins
+		# and their banks sit inside the arena, a full plane would cover them
+		var oc := {"sand": Color("e0b98a"), "snow": Color("eef4ff"), "grass": Color("5a9a3e")}.get(String(map.get("outer", "grass")), Color("5a9a3e")) as Color
+		var om := _mat(oc, 1.0)
+		var e := GameData.HALF
+		for r in [[Vector2(320, 150 - e), Vector3(0, 0, -(e + (150 - e) / 2.0))], [Vector2(320, 150 - e), Vector3(0, 0, e + (150 - e) / 2.0)],
+				[Vector2(150 - e, e * 2.0), Vector3(-(e + (150 - e) / 2.0), 0, 0)], [Vector2(150 - e, e * 2.0), Vector3(e + (150 - e) / 2.0, 0, 0)]]:
+			var outer := MeshInstance3D.new()
+			var op := PlaneMesh.new()
+			op.size = r[0]
+			outer.mesh = op
+			outer.position = (r[1] as Vector3) + Vector3(0, -0.08, 0)
+			outer.material_override = om
+			outer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			add_child(outer)
 
-func _flat_tiles(tiles: Array, col: Color, y: float, mat: Material = null) -> void:
+func _flat_tiles(tiles: Array, col: Color, y: float, mat: Material = null, register := false) -> void:
 	if tiles.is_empty():
 		return
 	var mesh := PlaneMesh.new()
@@ -398,6 +590,8 @@ func _flat_tiles(tiles: Array, col: Color, y: float, mat: Material = null) -> vo
 	mm.instance_count = tiles.size()
 	for k in tiles.size():
 		mm.set_instance_transform(k, Transform3D(Basis.IDENTITY, center(tiles[k].x, tiles[k].y) + Vector3(0, y, 0)))
+		if register:
+			_ground_slots[tiles[k].y * GameData.N + tiles[k].x] = [mm, k]
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

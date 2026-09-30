@@ -20,6 +20,11 @@ static func info(prop: String) -> Dictionary:
 			mi = n
 			break
 		if mi:
+			# glTF materials without pbr data default to metallic 1: black without an environment map
+			for s in mi.mesh.get_surface_count():
+				var bm := mi.mesh.surface_get_material(s) as BaseMaterial3D
+				if bm:
+					bm.metallic = 0.0
 			var xf := Transform3D.IDENTITY
 			var n: Node = mi
 			while n != null and n != scene:
@@ -50,7 +55,7 @@ static func placement(prop: Dictionary, fit: Dictionary, pos: Vector3, yaw: floa
 	var local: Transform3D = Transform3D(Basis.from_scale(s), Vector3.ZERO) * Transform3D(Basis.IDENTITY, off) * xf
 	return Transform3D(Basis(Vector3.UP, yaw), pos) * local
 
-static func multi(prop_name: String, fit: Dictionary, placements: Array, shadows := true) -> MultiMeshInstance3D:
+static func multi(prop_name: String, fit: Dictionary, placements: Array, shadows := true, mat: Material = null) -> MultiMeshInstance3D:
 	var p := info(prop_name)
 	if p.is_empty() or placements.is_empty():
 		return null
@@ -64,6 +69,8 @@ static func multi(prop_name: String, fit: Dictionary, placements: Array, shadows
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if mat:
+		mmi.material_override = mat # foliage: sway + bush reveal (foliage.gd)
 	return mmi
 
 # Single (non-instanced) prop, for the windmill and its sails.

@@ -1,7 +1,8 @@
 // Exports the game data the Godot client needs from the JS source of truth (src/), so the two
-// clients never drift: maps (expanded 25x25 grids) and brawler stats. Run: node godot/tools/export-data.mjs
+// clients never drift: maps (expanded 25x25 grids), brawler stats and cosmetics. Run: node godot/tools/export-data.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
 import { MAPS } from '../../src/maps.js';
+import * as COS from '../../src/cosmetics.js';
 
 const N = 25;
 const out = {};
@@ -27,4 +28,15 @@ const end = src.indexOf('\n};', start);
 const types = new Function(`return ${src.slice(start + 'export const TYPES = '.length, end + 3)}`)();
 for (const t of Object.values(types)) delete t.desc;
 writeFileSync(new URL('../data/brawlers.json', import.meta.url), JSON.stringify(types, null, 1));
-console.log(`maps: ${Object.keys(out).length}, brawlers: ${Object.keys(types).length}`);
+
+// Cosmetics: src/cosmetics.js is pure data (skins with their recolours, trails, K.O. effects, the `cos`
+// string format). TRAIL_FX (particle colours, HDR) lives in effects.js, which imports three: read its
+// literal as text, like TYPES above.
+const fx = readFileSync(new URL('../../src/effects.js', import.meta.url), 'utf8');
+const fxStart = fx.indexOf('const TRAIL_FX = {');
+const fxEnd = fx.indexOf('\n};', fxStart);
+const trailFx = new Function(`return ${fx.slice(fxStart + 'const TRAIL_FX = '.length, fxEnd + 3)}`)();
+writeFileSync(new URL('../data/cosmetics.json', import.meta.url), JSON.stringify({
+  skins: COS.SKINS, recolours: COS.RECOLOURS, goldAt: COS.GOLD_AT, trails: COS.TRAILS, trailFx, kofx: COS.KOFX, cosDefault: COS.COS_DEFAULT,
+}, null, 1));
+console.log(`maps: ${Object.keys(out).length}, brawlers: ${Object.keys(types).length}, cosmetics: ok`);

@@ -181,13 +181,11 @@ func _notification(what: int) -> void:
 		_apply_power_profile()
 
 func _apply_power_profile() -> void:
-	var p := Settings.gfx_profile()
-	Engine.max_fps = int(p.fps)
-	var vp := get_viewport()
-	vp.scaling_3d_scale = float(p.scale)
-	vp.msaa_3d = int(p.msaa) as Viewport.MSAA
-	if sun:
-		sun.shadow_enabled = bool(p.shadows)
+	# fps cap here; render scale / MSAA / shadows / particle density live in Quality (world agent)
+	Engine.max_fps = int(Settings.gfx_profile().fps)
+	if Settings.gfx != "auto":
+		Quality.set_level(Settings.gfx)
+	Quality.set_saver(Settings.saver)  # WORLD hook
 
 func _build_scene() -> void:
 	cam = Camera3D.new()
@@ -599,6 +597,8 @@ func _apply_snap(m: Dictionary) -> void:
 		me.position = Vector3(m.me[0], 0, m.me[1])
 
 func _apply_event(e: Dictionary) -> void:
+	if arena:
+		arena.on_event(e)  # WORLD hook
 	var f: Fighter = fighters.get(e.get("id", ""))
 	match e.get("e", ""):
 		"atk":
@@ -703,6 +703,8 @@ func _control(delta: float) -> void:
 	if kb != Vector2.ZERO:
 		mv = kb.limit_length(1.0)
 	last_move = mv
+	if arena.world_step(me, mv, delta):  # WORLD hook (ice, jump pads: it moved me)
+		mv = Vector2.ZERO
 	if mv != Vector2.ZERO:
 		var p := me.position + Vector3(mv.x, 0, mv.y) * float(me.type.speed) * delta
 		me.position = arena.collide_circle(p, me.radius)
