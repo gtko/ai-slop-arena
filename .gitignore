@@ -22,3 +22,4 @@ __pycache__/
 # Godot
 godot/.godot/
 godot/*.translation
+godot/tools/node_modules/

@@ -1,0 +1,7 @@
+{
+  "name": "godot-tools",
+  "private": true,
+  "type": "module",
+  "description": "Asset conversion for the Godot client (Godot cannot read EXT_meshopt_compression GLBs)",
+  "dependencies": { "@gltf-transform/core": "^4.2.0", "@gltf-transform/extensions": "^4.2.0", "meshoptimizer": "^0.22.0" }
+}
