@@ -29,6 +29,16 @@ local movement with the same tile collision as the server, snapshot interpolatio
 events, wall/crate breaking, touch sticks + keyboard/mouse, and a battery profile (30 fps, 70 %
 render scale, no MSAA/shadows, 5 fps in the background).
 
+## Menus and meta
+
+`scripts/main.gd` is the state machine (MENU, QUEUE, LOBBY, LOADING, COUNTDOWN, PLAYING, OVER); screens are
+`menu.gd` (roster + 3D preview, loadout, mode, map, quick play, settings), `lobby.gd` (private rooms),
+`result_view.gd`. Settings persist in `user://settings.cfg` (`settings.gd`). Strings: `node godot/tools/export-i18n.mjs`
+writes `data/i18n/*.json` (30 locales + Godot-only keys of `tools/i18n-extra.json`), used through `I18n.t(key)`.
+Quick play uses the party route of the matchmaker (see `matchmaking_client.gd`, why). Layout checks:
+`godot --path godot -- --menushot=/tmp/m.png [--overlay=settings|room|queue|result] [--lang=fr] [--brawler=volt]`;
+end-to-end: `-- --autotest ws://localhost:8787 [--quick]`.
+
 ## Not yet (the honest list)
 
 Gadgets and star powers UI, emotes, cosmetics, the poison gas ring, water/shore/weather shaders,
