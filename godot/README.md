@@ -44,6 +44,10 @@ Everything is a client of the existing server (protocol v6, cross-play with the 
 
 Verified here (software GL renderer, llvmpipe): all 6 maps play against the local server with snapshots,
 web export runs in Chromium against the server, Linux export runs, the menu, lobby, quick play with bots.
+Also verified: the web export in a mobile-emulated Chromium (Android UA, touch, 844x390 landscape): real
+touch events move the player (left stick), aim and fire (right stick), and a full match runs to the K.O.
+result screen. That run found and fixed a real bug (the touch control had a zero size on web).
+Test: `node` + playwright-core, page `?autotest&realinput&map=grove&server=ws://host:8787`.
 **Not verified:** any real phone (touch, thermals, battery, Vulkan/Metal Mobile renderer), Android and iOS
 exports (no SDK here: `.github/workflows/godot.yml` builds the APK on GitHub), audible sound, CJK/Arabic fonts,
 gadget dashes and jump pads against the live server, Steam / Play Games hooks, cosmetics unlock rules.
