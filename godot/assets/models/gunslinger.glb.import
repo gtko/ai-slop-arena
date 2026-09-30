@@ -3,12 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://i5akjaxx62ak"
-valid=false
+uid="uid://bmstdsuysf6"
+path="res://.godot/imported/gunslinger.glb-3975a82b7f81c798a63100c68a736000.scn"
 
 [deps]
 
 source_file="res://assets/models/gunslinger.glb"
+dest_files=["res://.godot/imported/gunslinger.glb-3975a82b7f81c798a63100c68a736000.scn"]
 
 [params]
 

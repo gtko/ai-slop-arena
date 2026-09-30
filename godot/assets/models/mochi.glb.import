@@ -3,12 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://m5khoysk8rfd"
-valid=false
+uid="uid://58l780oskro4"
+path="res://.godot/imported/mochi.glb-d88d60c548eaabc8047e4b8783b817aa.scn"
 
 [deps]
 
 source_file="res://assets/models/mochi.glb"
+dest_files=["res://.godot/imported/mochi.glb-d88d60c548eaabc8047e4b8783b817aa.scn"]
 
 [params]
 

@@ -3,12 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cc4frw7eeq57r"
-valid=false
+uid="uid://dky6ech6nqnmc"
+path="res://.godot/imported/kappa.glb-ab6faab84668359348bc31940f15b508.scn"
 
 [deps]
 
 source_file="res://assets/models/kappa.glb"
+dest_files=["res://.godot/imported/kappa.glb-ab6faab84668359348bc31940f15b508.scn"]
 
 [params]
 

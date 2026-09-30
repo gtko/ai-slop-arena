@@ -3,12 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dbnkgsfhsukc8"
-valid=false
+uid="uid://ch2sdpkxa53dl"
+path="res://.godot/imported/pipchomp.glb-98ca396488382abaafac0a346d004066.scn"
 
 [deps]
 
 source_file="res://assets/models/pipchomp.glb"
+dest_files=["res://.godot/imported/pipchomp.glb-98ca396488382abaafac0a346d004066.scn"]
 
 [params]
 

@@ -13,6 +13,8 @@ cd godot/tools && npm i && node convert-models.mjs && cd ..   # meshopt GLBs -> 
 godot --path godot                      # desktop (Godot 4.4+)
 ```
 
+![Godot client, first render](../docs/godot-shot.png)
+
 Server: leave the default (production) or run `npm run dev:server` and type `ws://localhost:8787`.
 Headless end-to-end check against a running server:
 
@@ -31,7 +33,7 @@ render scale, no MSAA/shadows, 5 fps in the background).
 
 Gadgets and star powers UI, emotes, cosmetics, the poison gas ring, water/shore/weather shaders,
 fauna, audio, menus/meta (quests, ranking, achievements), matchmaking, Steam / Play Games hooks,
-export presets and store builds. `conversion` of decor and fauna models is not done either.
+export presets and store builds. The decor and fauna models are not converted yet (brawlers are, incl. Idle/Run/Shoot/Death clips).
 
 ## Comparing with the three.js build
 

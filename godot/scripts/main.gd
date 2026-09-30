@@ -64,6 +64,10 @@ func _autotest() -> void:
 			last_move = Vector2(1, 0.3)
 			touch.move = Vector2(0.7, 0.4)
 			touch.visible = true
+	for a in args:
+		if a.begins_with("--shot="):
+			await RenderingServer.frame_post_draw
+			get_viewport().get_texture().get_image().save_png(a.substr(7))
 	print("AUTOTEST state=%d snaps=%d me=%s hp=%s pos=%s fighters=%d arena=%s" % [state, stats.snaps, me != null, me.hp if me else -1, me.position if me else Vector3.ZERO, fighters.size(), arena != null])
 	get_tree().quit(0 if stats.snaps > 20 and me != null else 1)
 
@@ -270,6 +274,7 @@ func _apply_event(e: Dictionary) -> void:
 	match e.get("e", ""):
 		"atk":
 			if f:
+				f.play_once("super" if e.get("s", false) else "shoot")
 				_spawn_projectile(f, e)
 		"kill":
 			if f:

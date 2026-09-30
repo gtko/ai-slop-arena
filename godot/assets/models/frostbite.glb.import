@@ -3,12 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dnndwnpi8hhe3"
-valid=false
+uid="uid://bl13ixia7ss31"
+path="res://.godot/imported/frostbite.glb-c11af73ca01270385ccf393d641307c4.scn"
 
 [deps]
 
 source_file="res://assets/models/frostbite.glb"
+dest_files=["res://.godot/imported/frostbite.glb-c11af73ca01270385ccf393d641307c4.scn"]
 
 [params]
 

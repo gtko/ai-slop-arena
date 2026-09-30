@@ -49,6 +49,7 @@ func setup(row: Dictionary, brawlers: Dictionary) -> void:
 # The sculpted GLB, scaled to a 1.9 m tall brawler standing on the ground (models differ in size).
 func _load_model(path: String) -> void:
 	var inst: Node3D = (load(path) as PackedScene).instantiate()
+	add_child(inst)
 	var box := AABB()
 	var first := true
 	for mi in inst.find_children("*", "MeshInstance3D", true, false):
@@ -58,7 +59,6 @@ func _load_model(path: String) -> void:
 	var k := 1.9 / maxf(box.size.y, 0.01)
 	inst.scale = Vector3.ONE * k
 	inst.position.y = -box.position.y * k
-	add_child(inst)
 	_model = inst
 	for ap in inst.find_children("*", "AnimationPlayer", true, false):
 		_anim = ap
@@ -72,6 +72,17 @@ func _play(kind: String) -> void:
 			_cur_anim = kind
 			_anim.get_animation(n).loop_mode = Animation.LOOP_LINEAR
 			_anim.play(n)
+			return
+
+# One-shot clips (Shoot, Death); the idle/run logic resumes afterwards.
+func play_once(kind: String) -> void:
+	if _anim == null:
+		return
+	for n in _anim.get_animation_list():
+		if String(n).to_lower() == kind:
+			_anim.get_animation(n).loop_mode = Animation.LOOP_NONE
+			_anim.play(n)
+			_cur_anim = "once"
 			return
 
 func _capsule(mat: StandardMaterial3D) -> void:
@@ -135,7 +146,8 @@ func _process(delta: float) -> void:
 	# a frozen / rooted / stunned brawler turns bluish, cheap status read without particles
 	var moving := position.distance_to(_last_pos) > 0.01
 	_last_pos = position
-	_play("run" if moving else "idle")
+	if _anim == null or not _anim.is_playing() or _cur_anim != "once":
+		_play("run" if moving else "idle")
 	if _body:
 		var m := _body.material_override as StandardMaterial3D
 		m.emission_enabled = (flags & (8 | 16 | 32)) != 0

@@ -3,12 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://b15c3c76ta3sp"
-valid=false
+uid="uid://baksmr55egtto"
+path="res://.godot/imported/volt.glb-b6ecc21be4ea899e042a330e6bf9fc4d.scn"
 
 [deps]
 
 source_file="res://assets/models/volt.glb"
+dest_files=["res://.godot/imported/volt.glb-b6ecc21be4ea899e042a330e6bf9fc4d.scn"]
 
 [params]
 

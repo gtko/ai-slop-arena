@@ -3,12 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://d3q1glntxwnxn"
-valid=false
+uid="uid://dbtu6s0wps72c"
+path="res://.godot/imported/blaster.glb-a9952abce693a692215dd00250fb78f4.scn"
 
 [deps]
 
 source_file="res://assets/models/blaster.glb"
+dest_files=["res://.godot/imported/blaster.glb-a9952abce693a692215dd00250fb78f4.scn"]
 
 [params]
 
