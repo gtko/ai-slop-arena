@@ -37,6 +37,8 @@ func connect_room(origin: String, room: String, player_name: String, brawler: St
 	matchmade = false
 	_opening = true
 	ws = WebSocketPeer.new()
+	ws.inbound_buffer_size = 1 << 20   # a slow phone may fall behind the 15 Hz snapshots; do not drop them
+	ws.max_queued_packets = 4096
 	return ws.connect_to_url("%s/ws/%s?%s" % [origin, room.uri_encode(), identity_query(player_name, brawler, lo, cos)])
 
 func send(msg: Dictionary) -> void:

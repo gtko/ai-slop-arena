@@ -24,31 +24,36 @@ godot --headless --path godot -- --autotest ws://localhost:8787
 
 ## What is in
 
-Room join, match start, arena from the map grid (one MultiMesh per tile kind = few draw calls),
-local movement with the same tile collision as the server, snapshot interpolation (15 Hz), attack
-events, wall/crate breaking, touch sticks + keyboard/mouse, and a battery profile (30 fps, 70 %
-render scale, no MSAA/shadows, 5 fps in the background).
+Everything is a client of the existing server (protocol v6, cross-play with the three.js builds).
 
-## Menus and meta
+- **Flow:** main menu (brawler picker with 3D preview, loadout, profile icon, settings), quick play through the
+  ranked party queue with bots, private rooms by code (leader: map, Solo/Duo, chaos, kick), loading,
+  countdown, match, result screen, reconnect. 30 locales exported from `src/i18n` (EN/FR complete for the
+  Godot-only strings, others fall back to EN).
+- **World:** the 6 maps from the JS grids, sculpted props and brawlers (GLB, skeleton animations), map kit
+  (jump pads, bridges, void, crumbling isles, barrels, mushrooms, traps, ice), water, weather (rain, snow,
+  sandstorm, fog), times of day, foliage sway, fauna, skins/recolours/trails.
+- **Combat feedback:** HUD (HP, ammo, super, gadget, cubes, alive, kill feed, damage numbers, hit flash,
+  vignette), gas ring, fog of war visuals, emotes, pings, pause, result overlay.
+- **Audio:** the web game's SFX and music (OGG), pooled voices, ducking, per-map ambience.
+- **Input:** touch sticks + buttons, keyboard/mouse, gamepad via the default ui actions.
+- **Power:** Low/Medium/High (`Quality`), battery saver (30 fps, 0.7 render scale, no shadow map, 25 % particles),
+  5 fps in the background, menus stop 3D rendering.
 
-`scripts/main.gd` is the state machine (MENU, QUEUE, LOBBY, LOADING, COUNTDOWN, PLAYING, OVER); screens are
-`menu.gd` (roster + 3D preview, loadout, mode, map, quick play, settings), `lobby.gd` (private rooms),
-`result_view.gd`. Settings persist in `user://settings.cfg` (`settings.gd`). Strings: `node godot/tools/export-i18n.mjs`
-writes `data/i18n/*.json` (30 locales + Godot-only keys of `tools/i18n-extra.json`), used through `I18n.t(key)`.
-Quick play uses the party route of the matchmaker (see `matchmaking_client.gd`, why). Layout checks:
-`godot --path godot -- --menushot=/tmp/m.png [--overlay=settings|room|queue|result] [--lang=fr] [--brawler=volt]`;
-end-to-end: `-- --autotest ws://localhost:8787 [--quick]`.
+## Verified vs not
 
-## Not yet (the honest list)
+Verified here (software GL renderer, llvmpipe): all 6 maps play against the local server with snapshots,
+web export runs in Chromium against the server, Linux export runs, the menu, lobby, quick play with bots.
+**Not verified:** any real phone (touch, thermals, battery, Vulkan/Metal Mobile renderer), Android and iOS
+exports (no SDK here: `.github/workflows/godot.yml` builds the APK on GitHub), audible sound, CJK/Arabic fonts,
+gadget dashes and jump pads against the live server, Steam / Play Games hooks, cosmetics unlock rules.
 
-Gadgets and star powers UI, emotes, cosmetics, the poison gas ring, water/shore/weather shaders,
-fauna, audio, menus/meta (quests, ranking, achievements), matchmaking, Steam / Play Games hooks,
-export presets and store builds. The decor and fauna models are not converted yet (brawlers are, incl. Idle/Run/Shoot/Death clips).
+## Web hosting note
 
-## Comparing with the three.js build
-
-Same room, same server: measure frame time, battery drain over a 10-minute match, startup time,
-export size and thermal behaviour on the same phone. See `../docs/godot-comparison.md`.
+The exported `index.pck` (about 58 MB) and `index.wasm` (44 MB, about 9 MB gzipped) exceed Cloudflare Workers
+static assets' 25 MiB per-file limit. Serve them from R2 or split the assets (Godot PCK patching / separate
+packs) before deploying next to the current site. Web builds use the no-threads template so they work on
+iOS Safari without cross-origin isolation headers.
 
 ## Export
 
