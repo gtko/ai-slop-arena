@@ -31,8 +31,15 @@ var count_left := 0.0
 var aim_dir := Vector2(0, 1)
 var aim_point := Vector3.ZERO
 var last_move := Vector2.ZERO
+var audio: AudioManager           # AUDIO HOOK: pooled SFX + music (scripts/audio_manager.gd)
+var _last_count := 0
+var _me_hp := -1.0
+var _final_music := false
 
 func _ready() -> void:
+	audio = AudioManager.new()   # AUDIO HOOK
+	add_child(audio)
+	audio.play_music("menu")
 	net = NetClient.new()
 	add_child(net)
 	net.message.connect(_on_message)
@@ -172,7 +179,7 @@ func _build_ui() -> void:
 	start_btn.set_anchors_preset(Control.PRESET_CENTER)
 	start_btn.position = Vector2(-130, 0)
 	start_btn.visible = false
-	start_btn.pressed.connect(func(): net.send({"t": "start"}); start_btn.visible = false)
+	start_btn.pressed.connect(func(): audio.play("click"); net.send({"t": "start"}); start_btn.visible = false)   # AUDIO HOOK
 	ui.add_child(start_btn)
 
 func _random_code() -> String:
@@ -183,6 +190,8 @@ func _random_code() -> String:
 	return s
 
 func _join() -> void:
+	audio.play("click")   # AUDIO HOOK
+	audio.play_music("lobby")
 	var key: String = brawler_pick.get_item_metadata(brawler_pick.selected)
 	var err := net.connect_room(server_edit.text.strip_edges().trim_suffix("/"), code_edit.text.strip_edges().to_upper(), "Godot", key)
 	if err != OK:
@@ -195,6 +204,9 @@ func _join() -> void:
 func _to_menu(msg: String) -> void:
 	_clear_match()
 	state = State.MENU
+	audio.stop_jingle()   # AUDIO HOOK
+	audio.set_danger(0.0)
+	audio.play_music("menu")
 	menu_box.visible = true
 	start_btn.visible = false
 	status.text = msg
@@ -227,6 +239,7 @@ func _on_message(m: Dictionary) -> void:
 			_start_match(m)
 		"go":
 			count_left = float(m.get("in", 3000)) / 1000.0
+			_last_count = 0   # AUDIO HOOK
 			state = State.COUNTDOWN
 		"snap":
 			_apply_snap(m)
@@ -257,6 +270,9 @@ func _start_match(m: Dictionary) -> void:
 		if f.is_local:
 			me = f
 	status.text = "%s: get ready" % map_data.name
+	_final_music = false   # AUDIO HOOK: the map theme (+ weather bed) starts with the match
+	_me_hp = -1.0
+	audio.play_music("m_" + String(m.map))
 	net.send({"t": "lprog", "p": 100})
 	net.send({"t": "loaded"})
 
@@ -272,6 +288,7 @@ func _apply_snap(m: Dictionary) -> void:
 	for id in fighters:
 		if not seen.has(id) and fighters[id] != me:
 			fighters[id].hidden_by_server = true   # in a bush / fog: the server does not tell us
+	_audio_snap()   # AUDIO HOOK
 	if me and m.has("me") and int(m.me[2]) != fix_seen:
 		# the server refused one of our moves: snap back to where it says
 		fix_seen = int(m.me[2])
@@ -282,23 +299,44 @@ func _apply_event(e: Dictionary) -> void:
 	match e.get("e", ""):
 		"atk":
 			if f:
+				audio.play(("super_" if e.get("s", false) else "atk_") + String(f.type.key), f.position)   # AUDIO HOOK
+				if e.get("s", false) and f == me:
+					audio.duck()
 				f.play_once("super" if e.get("s", false) else "shoot")
 				_spawn_projectile(f, e)
 		"kill":
 			if f:
 				f.alive = false
+				audio.play("death", f.position)   # AUDIO HOOK
+				if fighters.get(e.get("by", "")) == me and f != me:
+					audio.play("kill")
+					audio.duck()
 			if f == me:
+				audio.set_danger(0.0)   # AUDIO HOOK
+				audio.play("lose")
 				state = State.OVER
 				status.text = "Knocked out — rank #%d" % int(e.get("rank", 0))
 		"win":
 			state = State.OVER
 			status.text = "YOU WIN!" if f == me else "%s wins" % (f.fname if f else "?")
+			if f == me:   # AUDIO HOOK
+				audio.play("win")
 		"wall":
 			if arena:
 				arena.break_tile(int(e.i), int(e.j))
+				audio.play("break", _tile_world(int(e.i), int(e.j)))   # AUDIO HOOK
 		"crate":
 			if arena:
 				arena.break_tile(int(e.i), int(e.j))
+				audio.play("crate", _tile_world(int(e.i), int(e.j)))   # AUDIO HOOK
+		"dmg":   # AUDIO HOOK
+			if f == me:
+				audio.play("damage")
+			elif fighters.get(e.get("s", "")) == me:
+				audio.play("hit")
+		"pick":   # AUDIO HOOK
+			if fighters.get(e.get("by", "")) == me:
+				audio.play("pickup")
 
 func _spawn_projectile(f: Fighter, e: Dictionary) -> void:
 	var mi := MeshInstance3D.new()
@@ -326,11 +364,16 @@ func _process(delta: float) -> void:
 	if state == State.COUNTDOWN:
 		count_left -= delta
 		status.text = str(ceili(maxf(count_left, 0.0)))
+		if ceili(maxf(count_left, 0.0)) != _last_count and count_left > 0.0:   # AUDIO HOOK
+			_last_count = ceili(count_left)
+			audio.play("tick")
 		if count_left <= 0.0:
+			audio.play("go")   # AUDIO HOOK
 			state = State.PLAYING
 			status.text = ""
 	if me == null or arena == null:
 		return
+	audio.listener = me.position   # AUDIO HOOK
 	if state == State.PLAYING and me.alive:
 		_control(delta)
 	_follow_camera(delta)
@@ -400,3 +443,25 @@ func _update_projectiles(delta: float) -> void:
 		if p.left <= 0.0 or (arena and GameData.SHOT_BLOCK.contains(arena.char_at(p.node.position.x, p.node.position.z))):
 			p.node.queue_free()
 			projectiles.remove_at(k)
+
+# AUDIO HOOK: low-health low-pass + heartbeat, and the final-phase song (last 3 standing).
+func _audio_snap() -> void:
+	if me == null or state != State.PLAYING:
+		return
+	var frac := clampf(me.hp / maxf(me.max_hp, 1.0), 0.0, 1.0)
+	var low := clampf((0.35 - frac) / 0.35, 0.0, 1.0) if me.alive else 0.0
+	audio.set_danger(low)
+	if low > 0.0 and _me_hp != me.hp:
+		audio.play("low_health")
+	_me_hp = me.hp
+	if not _final_music:
+		var alive := 0
+		for f in fighters.values():
+			if f.alive:
+				alive += 1
+		if alive <= 3 and alive > 1:
+			_final_music = true
+			audio.play_music("final")
+
+func _tile_world(i: int, j: int) -> Vector3:   # AUDIO HOOK
+	return Vector3((i + 0.5) * GameData.TILE - GameData.HALF, 0.0, (j + 0.5) * GameData.TILE - GameData.HALF)
