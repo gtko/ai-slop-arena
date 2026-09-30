@@ -23,3 +23,5 @@ __pycache__/
 godot/.godot/
 godot/*.translation
 godot/tools/node_modules/
+godot/assets/models/**/*.webp
+godot/assets/models/**/*.webp.import

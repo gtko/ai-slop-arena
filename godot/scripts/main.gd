@@ -51,6 +51,8 @@ func _autotest() -> void:
 		if a.begins_with("ws"):
 			url = a
 	server_edit.text = url
+	if args.has("--noshadow"):
+		sun.shadow_enabled = false
 	code_edit.text = "T" + _random_code().substr(0, 3)
 	_join()
 	var t0 := Time.get_ticks_msec()
@@ -59,6 +61,9 @@ func _autotest() -> void:
 	while Time.get_ticks_msec() - t0 < 14000:
 		await get_tree().create_timer(0.5).timeout
 		if state == State.LOBBY and start_btn.visible:
+			for a in args:
+				if a.begins_with("--map="):
+					net.send({"t": "map", "map": a.substr(6)})
 			start_btn.pressed.emit()
 		if state == State.PLAYING and me:
 			last_move = Vector2(1, 0.3)
@@ -237,6 +242,7 @@ func _start_match(m: Dictionary) -> void:
 	arena = Arena.new()
 	add_child(arena)
 	arena.build(map_data)
+	(env.environment as Environment).background_color = Color(map_data.swatch[1]) if map_data.get("sky", false) else Color("87c4e8")
 	for row in m.roster:
 		var f := Fighter.new()
 		add_child(f)
@@ -313,6 +319,8 @@ func _spawn_projectile(f: Fighter, e: Dictionary) -> void:
 
 func _process(delta: float) -> void:
 	_update_projectiles(delta)
+	if arena:
+		arena.update(delta)
 	if state == State.COUNTDOWN:
 		count_left -= delta
 		status.text = str(ceili(maxf(count_left, 0.0)))

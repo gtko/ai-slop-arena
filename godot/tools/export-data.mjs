@@ -15,8 +15,8 @@ for (const [key, m] of Object.entries(MAPS)) {
     }
     grid.push(row);
   }
-  out[key] = { key, name: m.name, tag: m.tag, weather: m.weather, swatch: m.swatch, vision: m.vision || 0,
-    wallCap: m.wallCap, boundCap: m.boundCap, debris: m.debris, groundTones: m.groundTones || null, grid };
+  const { layout, full, ...rest } = m; // every other field (theme, weather, kit options...) goes through untouched
+  out[key] = { key, ...rest, vision: m.vision || 0, grid };
 }
 writeFileSync(new URL('../data/maps.json', import.meta.url), JSON.stringify(out, null, 1));
 

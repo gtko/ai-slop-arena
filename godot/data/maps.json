@@ -2,20 +2,48 @@
  "oasis": {
   "key": "oasis",
   "name": "Oasis",
-  "tag": "Clear skies",
   "weather": "clear",
+  "tag": "Clear skies",
   "swatch": [
    "#f3cf8c",
    "#3fae5a"
   ],
-  "vision": 0,
-  "wallCap": 15628878,
-  "boundCap": 12607807,
-  "debris": 13197374,
+  "ground": "cartoon",
   "groundTones": [
    "#f0ad7e",
    "#eaa272"
   ],
+  "checker": "",
+  "outer": "sand",
+  "stones": true,
+  "wall": "strata",
+  "wallCap": 15628878,
+  "wallTint": [
+   0.05,
+   0.05,
+   0.95
+  ],
+  "debris": 13197374,
+  "bound": "strataDark",
+  "boundCap": 12607807,
+  "boundTint": [
+   0.05,
+   0.05,
+   0.85
+  ],
+  "bush": [
+   0.1,
+   0.1,
+   0.95
+  ],
+  "bushStyle": "grass",
+  "trees": {
+   "cliff": 0.7,
+   "cactus": 0.3
+  },
+  "water": "water",
+  "obstacle": "cactus",
+  "vision": 0,
   "grid": [
    "XXXXXXXXXXXXXXXXXXXXXXXXX",
    "X...BBB...........BBB...X",
@@ -47,17 +75,44 @@
  "dunes": {
   "key": "dunes",
   "name": "Dune Storm",
-  "tag": "Sandstorm",
   "weather": "sandstorm",
+  "tag": "Sandstorm",
   "swatch": [
    "#e88a4a",
    "#a8532a"
   ],
-  "vision": 0,
+  "ground": "clay",
+  "checker": "rgba(110,40,15,0.12)",
+  "outer": "sand",
+  "wall": "strata",
   "wallCap": 14709322,
-  "boundCap": 11557436,
+  "wallTint": [
+   0.04,
+   0.1,
+   0.9
+  ],
   "debris": 13198394,
-  "groundTones": null,
+  "bound": "strataDark",
+  "boundCap": 11557436,
+  "boundTint": [
+   0.05,
+   0.1,
+   0.8
+  ],
+  "bush": [
+   0.1,
+   0.1,
+   0.92
+  ],
+  "bushStyle": "grass",
+  "trees": {
+   "cliff": 0.55,
+   "cactus": 0.3,
+   "dead": 0.15
+  },
+  "water": "none",
+  "obstacle": "cactus",
+  "vision": 0,
   "grid": [
    "XXXXXXXXXXXXXXXXXXXXXXXXX",
    "X.......................X",
@@ -89,17 +144,43 @@
  "grove": {
   "key": "grove",
   "name": "Rainy Grove",
-  "tag": "Rain & thunder",
   "weather": "rain",
+  "tag": "Rain & thunder",
   "swatch": [
    "#3d6b4a",
    "#4a6f9a"
   ],
-  "vision": 0,
+  "ground": "forest",
+  "checker": "rgba(0,0,0,0.12)",
+  "outer": "grass",
+  "wet": true,
+  "wall": "mossbrick",
   "wallCap": 10134931,
-  "boundCap": 6052454,
+  "wallTint": [
+   0.3,
+   0.05,
+   0.85
+  ],
   "debris": 9080710,
-  "groundTones": null,
+  "bound": "stone",
+  "boundCap": 6052454,
+  "boundTint": [
+   0.62,
+   0.06,
+   0.7
+  ],
+  "bush": [
+   0.3,
+   0.45,
+   0.72
+  ],
+  "trees": {
+   "round": 0.8,
+   "pine": 0.2
+  },
+  "water": "water",
+  "obstacle": "stump",
+  "vision": 0,
   "grid": [
    "XXXXXXXXXXXXXXXXXXXXXXXXX",
    "X.BBB....BBB.BBB....BBB.X",
@@ -131,17 +212,42 @@
  "frost": {
   "key": "frost",
   "name": "Frost Peak",
-  "tag": "Snowfall · slippery ice",
   "weather": "snow",
+  "tag": "Snowfall · slippery ice",
   "swatch": [
    "#eef4ff",
    "#7fb0e6"
   ],
-  "vision": 0,
+  "ground": "snow",
+  "checker": "rgba(90,120,180,0.08)",
+  "outer": "snow",
+  "snow": true,
+  "wall": "icestone",
   "wallCap": 16185855,
-  "boundCap": 15791615,
+  "wallTint": [
+   0.6,
+   0.12,
+   0.92
+  ],
   "debris": 13622512,
-  "groundTones": null,
+  "bound": "icestone",
+  "boundCap": 15791615,
+  "boundTint": [
+   0.62,
+   0.18,
+   0.7
+  ],
+  "bush": [
+   0.36,
+   0.25,
+   0.95
+  ],
+  "trees": {
+   "pine": 1
+  },
+  "water": "none",
+  "obstacle": "boulder",
+  "vision": 0,
   "grid": [
    "XXXXXXXXXXXXXXXXXXXXXXXXX",
    "X......BB.......BB......X",
@@ -173,20 +279,47 @@
  "isles": {
   "key": "isles",
   "name": "Windmill Isles",
-  "tag": "Sky islands · ring-outs",
   "weather": "clear",
+  "tag": "Sky islands · ring-outs",
   "swatch": [
    "#8fd16a",
    "#6fb6ff"
   ],
-  "vision": 0,
-  "wallCap": 12108960,
-  "boundCap": 6052454,
-  "debris": 10133640,
+  "sky": true,
+  "crumble": true,
+  "ground": "cartoon",
   "groundTones": [
    "#94d36c",
    "#86c862"
   ],
+  "checker": "",
+  "outer": "grass",
+  "wall": "mossbrick",
+  "wallCap": 12108960,
+  "wallTint": [
+   0.28,
+   0.08,
+   0.9
+  ],
+  "debris": 10133640,
+  "bound": "stone",
+  "boundCap": 6052454,
+  "boundTint": [
+   0.62,
+   0.06,
+   0.7
+  ],
+  "bush": [
+   0.28,
+   0.5,
+   0.62
+  ],
+  "trees": {
+   "round": 1
+  },
+  "water": "none",
+  "obstacle": "stump",
+  "vision": 0,
   "grid": [
    "VVVVVVVVVVVVVVVVVVVVVVVVV",
    "VVVVVVVVVVBB.VVVVVVBB..VV",
@@ -218,17 +351,43 @@
  "marsh": {
   "key": "marsh",
   "name": "Misty Marsh",
-  "tag": "Fog · limited vision",
   "weather": "fog",
+  "tag": "Fog · limited vision",
+  "vision": 8.5,
   "swatch": [
    "#5f6b4a",
    "#9fb3a4"
   ],
-  "vision": 8.5,
+  "ground": "mud",
+  "checker": "rgba(0,0,0,0.1)",
+  "outer": "grass",
+  "wet": true,
+  "wall": "mossbrick",
   "wallCap": 8226418,
-  "boundCap": 4999765,
+  "wallTint": [
+   0.25,
+   0.08,
+   0.75
+  ],
   "debris": 8028016,
-  "groundTones": null,
+  "bound": "stone",
+  "boundCap": 4999765,
+  "boundTint": [
+   0.6,
+   0.05,
+   0.62
+  ],
+  "bush": [
+   0.22,
+   0.35,
+   0.62
+  ],
+  "trees": {
+   "dead": 0.5,
+   "round": 0.5
+  },
+  "water": "swamp",
+  "obstacle": "stump",
   "grid": [
    "XXXXXXXXXXXXXXXXXXXXXXXXX",
    "X.BB......BB.BB......BB.X",
