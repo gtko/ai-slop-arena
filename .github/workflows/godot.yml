@@ -27,6 +27,8 @@ jobs:
         run: |
           mkdir -p ~/.local/share/godot/export_templates ~/.config/godot
           mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable ~/.local/share/godot/export_templates/ 2>/dev/null || true
+          # the image's editor settings carry the Java / Android SDK paths; Actions runs with HOME=/github/home
+          cp -r /root/.config/godot/. ~/.config/godot/ 2>/dev/null || true
       - name: Import
         run: godot --headless --path godot --import || true
       - name: Web
