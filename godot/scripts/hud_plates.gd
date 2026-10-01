@@ -266,7 +266,28 @@ func _draw_floats(k: float) -> void:
 			dy = lerpf(-0.3, -2.1, u2)
 			sc = lerpf(1.15, 0.95, u2)
 		col.a = op
-		D.text_xf(self, f.p + Vector2(0, dy * h), f.text, disp, size, col, 3.0 * k, sc)
+		if f.cls == "immune":   # .floater.immune: letter-spacing 1px
+			_spaced(f.p + Vector2(0, dy * h), f.text, disp, size, col, 3.0 * k, sc, 1.0 * k)
+		else:
+			D.text_xf(self, f.p + Vector2(0, dy * h), f.text, disp, size, col, 3.0 * k, sc)
+
+# Text centred on c with extra space between letters, scaled around its centre.
+func _spaced(c: Vector2, s: String, font: Font, size: float, col: Color, stroke: float, sc: float, spacing: float) -> void:
+	var w := 0.0
+	for ch in s:
+		w += D.width(font, ch, size) + spacing
+	w -= spacing
+	var ink := Color(D.INK.r, D.INK.g, D.INK.b, col.a)
+	draw_set_transform(c, 0.0, Vector2(sc, sc))
+	var y := -D.line_h(font, size) * 0.5
+	for pass_ in 2:   # all strokes first, then the fills (paint-order: stroke fill)
+		var x := -w * 0.5
+		for ch in s:
+			if pass_ == 0:
+				x += D.text(self, Vector2(x, y), ch, font, size, ink, stroke, ink) + spacing
+			else:
+				x += D.text(self, Vector2(x, y), ch, font, size, col) + spacing
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 # ---------------------------------------------------------------- K.O. stamp (koStamp 1.1 s)
 

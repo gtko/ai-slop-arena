@@ -386,6 +386,12 @@ func on_event(e: Dictionary) -> void:
 			if f and f.visible:
 				var a := float(e.get("a", 0))
 				_plates.floater(f.position + Vector3(0, 2.9, 0), a, "heal", "heal>" + f.id, "+%d" % int(round(a)))
+		"miss":   # combat.js missFx: a whiffed bite
+			if f and f.visible:
+				_plates.floater(f.position + Vector3(0, 3.0, 0), 0.0, "immune", "", I18n.t("hud.miss"))
+		"imm":    # game.js: a hit on an untouchable brawler
+			if f and f.visible:
+				_plates.floater(f.position + Vector3(0, 3.1, 0), 0.0, "immune", "", I18n.t("hud.immune"))
 		"atk":
 			if f and f == me and bool(e.get("s", false)):
 				var key := str(me.type.get("key", ""))
@@ -646,6 +652,18 @@ func _hud_test(delta: float) -> void:
 		gad_cd = 3.0
 	if tick.call(1.0, 0.5):
 		_plates.ko_stamp(me.position + Vector3(3, 1.6, 2))
+	if tick.call(0.6, 0.2):
+		on_event({"e": "miss", "id": me.id})
+		on_event({"e": "imm", "id": a.id})
+	# a K.O. in progress: the fighter falls for ~1.25 s (fighter.gd die_fx) but its plate is gone at once
+	if tick.call(2.0, 1.9):
+		b.alive = true
+	if tick.call(2.0):
+		b.alive = false
+		if b.has_method("die_fx"):
+			b.call("die_fx", me.position, false, true)
+	if tick.call(2.0, 0.3):
+		print("HUDTEST dying fighter: visible=%s alive=%s plate_drawn=%s" % [b.visible, b.alive, b.visible and b.alive])
 	if tick.call(0.7):
 		_plates.floater(me.position + Vector3(2.5, 2.6, 0), 320, "dmg-out", "")
 		_plates.floater(me.position + Vector3(0, 2.6, 0), 450, "dmg-in", "")
