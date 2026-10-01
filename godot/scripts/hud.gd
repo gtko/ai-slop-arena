@@ -11,14 +11,16 @@ extends Control
 #   result_open                     set by main.gd while its result screen (result_view.gd) is up
 #   end_match()                     frees the match visuals (main calls it from _clear_match)
 # Signals: play_again, menu_requested.
-# Keys (same defaults as the web game): Space super (main.gd), E gadget, B emote wheel,
-# G ping, M mute, Esc pause.
+# Keys (same defaults as the web game, rebindable: controls.gd): Space / right click super (main.gd),
+# E gadget, B emote wheel, G ping, M mute (main.gd), Esc pause; gamepad LB gadget, R3 wheel, X ping,
+# Start pause. main.gd calls shortcuts() every frame of a match.
 # Layers (bottom to top, like the web DOM): plates + numbers (hud_plates.gd), screen-edge
 # vignettes (shader), then the HUD itself (_front), the emote wheel, pause and result boxes.
 # All sizes are the web's CSS px times HudDraw.css_scale().
 
 signal play_again
 signal menu_requested
+signal options_requested         # the pause card's OPTIONS (main.gd opens settings_view.gd)
 
 const D := preload("res://scripts/hud_draw.gd")
 const GADGET_LOCKOUT := 5.0
@@ -187,6 +189,7 @@ func setup(net_: NetClient, cam_: Camera3D, world_: Node3D, touch_: TouchControl
 func _build_pause() -> void:
 	var pv := PauseView.new()   # the web's #pause card (pause_view.gd)
 	pv.quit.connect(func(): menu_requested.emit())
+	pv.options.connect(func(): options_requested.emit())
 	add_child(pv)
 	_pause_box = pv
 
@@ -374,11 +377,8 @@ func fill_input(msg: Dictionary) -> Dictionary:
 
 func _walk_dir() -> Vector2:
 	var mv := touch.move if touch and touch.visible else Vector2.ZERO
-	if Input.is_key_pressed(KEY_A): mv.x -= 1
-	if Input.is_key_pressed(KEY_D): mv.x += 1
-	if Input.is_key_pressed(KEY_W): mv.y -= 1
-	if Input.is_key_pressed(KEY_S): mv.y += 1
-	return mv
+	var kb := Controls.move()
+	return kb if kb != Vector2.ZERO else mv
 
 func use_gadget() -> void:
 	if not playing or me == null or not me.alive or gad_charges <= 0 or gad_cd > 0.0 or _dash_t > 0.0:
@@ -408,12 +408,15 @@ func _on_emote_picked(i: int) -> void:
 	emote_seq += 1
 	emote_idx = i
 
-func send_ping() -> void:
+# at: where (the gamepad's aim point); null = under the mouse, or 8 m ahead on a touch screen.
+func send_ping(at: Variant = null) -> void:
 	if not playing or me == null or not me.alive or _ping_cd > 0.0:
 		return
 	_ping_cd = 1.0
 	var p := me.position + Vector3(sin(me.rotation.y), 0, cos(me.rotation.y)) * 8.0
-	if not (touch and touch.visible):
+	if at is Vector3:
+		p = at
+	elif not (touch and touch.visible):
 		var mp := get_viewport().get_mouse_position()
 		var from := cam.project_ray_origin(mp)
 		var dir := cam.project_ray_normal(mp)
@@ -426,6 +429,16 @@ func send_ping() -> void:
 func _toggle_pause() -> void:
 	if playing and not result_open:
 		_pause_box.visible = not _pause_box.visible
+
+func pause_view() -> Control:
+	return _pause_box
+
+func pause_open() -> bool:
+	return _pause_box != null and _pause_box.visible
+
+func close_pause() -> void:
+	if _pause_box:
+		_pause_box.visible = false
 
 func _toggle_mute() -> void:
 	var a := _audio_mgr()
@@ -443,22 +456,27 @@ func _audio_mgr() -> Node:
 		_audio = v if v is Node else null
 	return _audio
 
-func _unhandled_key_input(ev: InputEvent) -> void:
-	if not (ev is InputEventKey) or not ev.pressed or ev.echo:
+# The match shortcuts (bound keys + gamepad), polled by main.gd every frame of a match while no
+# options screen is open. ping_at: the gamepad's aim point (null = under the mouse).
+func shortcuts(ping_at: Variant = null) -> void:
+	if wheel.visible:
+		wheel.pad_update()
+	if pause_open():
+		if Controls.just("pause") or Controls.pad_hit(JOY_BUTTON_B):
+			close_pause()
 		return
-	match (ev as InputEventKey).keycode:
-		KEY_E:
-			use_gadget()
-		KEY_B:
-			if playing and me and me.alive:
-				wheel.toggle()
-		KEY_G:
-			send_ping()
-		KEY_M:
-			if visible:
-				_toggle_mute()
-		KEY_ESCAPE, KEY_P:
+	if Controls.just("pause"):
+		if wheel.visible:
+			wheel.close()
+		else:
 			_toggle_pause()
+		return
+	if Controls.just("gadget"):
+		use_gadget()
+	if Controls.just("emote") and playing and me and me.alive:
+		wheel.toggle_or_pick()
+	if Controls.just("ping"):
+		send_ping(ping_at if Controls.using_pad else null)
 
 # the sound button (top left): a click mutes / unmutes (the web opens its volume panel)
 func _input(ev: InputEvent) -> void:
@@ -778,9 +796,19 @@ func _draw_super(c: Control, k: float, vs: Vector2) -> void:
 	D.arc(c, Vector2.ZERO, r, sf, D.YELLOW, sw)
 	D.text_c(c, Vector2.ZERO, I18n.t("hud.super"), Fonts.display(), 20.0 * k, D.YELLOW if ready else Color("9b93b8"), 3.0 * k)
 	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	_small_hint(c, Vector2(ctr.x, vs.y - 30.0 * k + 18.0 * k), I18n.t("hud.superKeys"), k)
+	_small_hint(c, Vector2(ctr.x, vs.y - 30.0 * k + 18.0 * k), _super_hint(), k)
 
-# #gadget (desktop): icon, 3 charge pips, the lockout ring, "E" under it
+# The key hints under the super / gadget buttons: the bound keys ("RMB · SPACE", "E"), or the pad's.
+func _super_hint() -> String:
+	if Controls.using_pad:
+		return "RB · LT"
+	var k := Controls.action_label("super").to_upper()
+	return I18n.t("hud.superKeys") if k == "SPACE" else "RMB · " + k
+
+func _gadget_hint() -> String:
+	return "LB" if Controls.using_pad else Controls.action_label("gadget")
+
+# #gadget (desktop): icon, 3 charge pips, the lockout ring, its key ("E") under it
 func _draw_gadget(c: Control, k: float, vs: Vector2) -> void:
 	var ctr := Vector2(vs.x - 152.0 * k - 35.0 * k, vs.y - 30.0 * k - 35.0 * k)
 	var cd := gad_cd / GADGET_LOCKOUT
@@ -812,7 +840,7 @@ func _draw_gadget(c: Control, k: float, vs: Vector2) -> void:
 		c.draw_circle(pc, 5.0 * k, _ink(a))
 		c.draw_circle(pc, 3.0 * k, _al(Color("7de3ff"), a) if i < gad_charges else Color(20 / 255.0, 16 / 255.0, 30 / 255.0, 0.8 * a))
 	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	_small_hint(c, Vector2(ctr.x, vs.y - 30.0 * k + 18.0 * k), "E", k, a)
+	_small_hint(c, Vector2(ctr.x, vs.y - 30.0 * k + 18.0 * k), _gadget_hint(), k, a)
 
 # a key hint under a round button: Nunito 800 11px, muted, its bottom edge at `bottom_c.y`
 func _small_hint(c: Control, bottom_c: Vector2, s: String, k: float, a := 1.0) -> void:

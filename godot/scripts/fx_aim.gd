@@ -2,8 +2,8 @@ class_name FxAim
 extends Node3D
 # The aim indicator under your brawler (game.js buildAim / updateAim): a translucent white shape on
 # the ground showing what the attack covers (Blaster: a fan; the others: a lane; lobbers: a lane and
-# a landing disc), gold and stronger while the super is aimed (right mouse / Space held with a full
-# super). Faint when out of ammo. On touch it only shows while the aim stick is dragged.
+# a landing disc), gold and stronger while the super is aimed (right mouse / the super key / LT held
+# with a full super: main.gd super_aiming). Faint when out of ammo. On touch it only shows while the aim stick is dragged.
 
 var _mat: ShaderMaterial
 var _fan: MeshInstance3D
@@ -59,7 +59,7 @@ func _process(_dt: float) -> void:
 	var dir := Vector3(a2.x, 0, a2.y).normalized()
 	var T := String(me.type.key)
 	var R := float(me.type.range)
-	var sup := me.super_charge >= 0.999 and not on_touch and (Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) or Input.is_key_pressed(KEY_SPACE))
+	var sup := not on_touch and bool(m.get("super_aiming"))
 	var aim_dist := _aim_dist(m, me, R)
 	visible = true
 	position = Vector3(me.position.x, 0.06, me.position.z)
@@ -107,8 +107,11 @@ func _process(_dt: float) -> void:
 		_target.position = Vector3(me.position.x + dir.x * tgt_d, 0.065, me.position.z + dir.z * tgt_d)
 		_target.scale = Vector3.ONE * tgt_s
 
-# How far the mouse points on the ground (touch / pad: the full range).
+# How far the attack is aimed: main.gd's aim_dist (mouse distance, stick tilt), else the mouse here.
 func _aim_dist(m: Node, me: Fighter, R: float) -> float:
+	var ad: Variant = m.get("aim_dist")
+	if ad != null and float(ad) > 0.0:
+		return float(ad)
 	var touch = m.get("touch")
 	if touch != null and touch.visible:
 		return R * clampf((touch.aim as Vector2).length(), 0.0, 1.0)

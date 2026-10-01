@@ -36,8 +36,16 @@ Everything is a client of the existing server (protocol v6, cross-play with the 
 - **Combat feedback:** HUD (HP, ammo, super, gadget, cubes, alive, kill feed, damage numbers, hit flash,
   vignette), gas ring, fog of war visuals, emotes, pings, pause, result overlay.
 - **Audio:** the web game's SFX and music (OGG), pooled voices, ducking, per-map ambience.
-- **Input:** touch sticks + buttons, keyboard/mouse, gamepad via the default ui actions.
-- **Power:** Low/Medium/High (`Quality`), battery saver (30 fps, 0.7 render scale, no shadow map, 25 % particles),
+- **Input:** touch sticks + buttons; keyboard/mouse with the web's rebindable keys (`controls.gd`: InputMap
+  actions `game_*`, physical keys so W A S D is Z Q S D on AZERTY); gamepad like the web (left stick walks, right
+  stick aims, RT attack, RB / LT super, LB gadget, R3 emotes, X ping, Y time of day, Start pause, rumble) and
+  console-like menu navigation (arrows / D-pad, Enter / A, Esc / B, focus ring).
+- **Options** (`settings_view.gd`, the web's #options): General, Graphics (preset + custom values, window mode,
+  vsync, fps cap, render scale, MSAA / FXAA, brightness, time of day, shadows, bloom, dynamic lights, weather),
+  Audio, Controls (key rebinding), Gamepad (dead zone, vibration, aim assist). Shots: `--menushot=<png>
+  --overlay=settings --tab=graphics [--capture] [--padnav=rb,down,right]`; `--autotest ... --keytest` presses
+  every shortcut and prints KEYTEST lines.
+- **Power:** Low/Medium/High/Ultra (`Quality`), battery saver (30 fps, 0.7 render scale, no shadow map, 25 % particles),
   5 fps in the background, menus stop 3D rendering.
 
 ## Verified vs not

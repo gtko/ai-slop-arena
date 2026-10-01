@@ -73,10 +73,13 @@ func _gui_input(ev: InputEvent) -> void:
 			close()   # a tap outside the buttons closes the wheel
 		accept_event()
 
+# Number keys (physical, like the web's Digit1..: the top row of any layout) pick, Esc closes.
 func _unhandled_key_input(ev: InputEvent) -> void:
 	if not visible or not (ev is InputEventKey) or not ev.pressed or ev.echo:
 		return
-	var k := (ev as InputEventKey).keycode
+	var k := (ev as InputEventKey).physical_keycode
+	if k == KEY_NONE:
+		k = (ev as InputEventKey).keycode
 	if k >= KEY_1 and k <= KEY_9:
 		pick(k - KEY_1)
 		get_viewport().set_input_as_handled()
@@ -86,6 +89,33 @@ func _unhandled_key_input(ev: InputEvent) -> void:
 	elif k == KEY_ESCAPE:
 		close()
 		get_viewport().set_input_as_handled()
+		Controls.eat()
+
+# Gamepad (emotewheel.js update): the right stick points at an emote, A sends it, B closes.
+# Called every frame by the HUD while the wheel is open.
+func pad_update() -> void:
+	if not visible:
+		return
+	if Controls.pad_hit(JOY_BUTTON_B):
+		close()
+		return
+	var s := Controls.stick_r()
+	if s.length() > 0.6:
+		var n := ICONS.size()
+		var a := atan2(s.y, s.x) + PI / 2.0
+		var i := (roundi(a / TAU * n) % n + n) % n
+		if i != _hover:
+			_hover = i
+			queue_redraw()
+	if _hover >= 0 and Controls.pad_hit(JOY_BUTTON_A):
+		pick(_hover)
+
+# The emote key / R3 again: send the one the stick points at, else close.
+func toggle_or_pick() -> void:
+	if visible and _hover >= 0 and Controls.using_pad:
+		pick(_hover)
+	else:
+		toggle()
 
 func _draw() -> void:
 	var k := _k()

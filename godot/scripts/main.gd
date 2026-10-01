@@ -42,6 +42,7 @@ var result: ResultView
 var matchload: MatchLoad           # pre-match loading screen + 3-2-1 (match_load.gd)
 var showcase: MenuShowcase          # MENU hook: the live arena behind the home screen (menu_showcase.gd)
 var _auto_start := false          # SOLO: start the new room as soon as we lead it
+var _vs_bots := false             # this room is a SOLO one (bots only): its matches count for the Bot League
 var projectiles: Array = []       # [{node, dir, speed, left}]
 var send_t := 0.0
 var super_seq := 0
@@ -49,6 +50,11 @@ var fix_seen := -1
 var count_left := 0.0
 var aim_dir := Vector2(0, 1)
 var aim_point := Vector3.ZERO
+var aim_dist := 0.0               # how far the attack is aimed (mouse distance / stick tilt; lobbed attacks land there)
+var super_aiming := false         # the super is being aimed (right click / LT / super key held, charged): fx_aim.gd
+var settings_view: SettingsView   # the options screen (settings_view.gd), over everything
+var _fps_label: Label             # the web's #fpsBadge (options: FPS counter)
+var _fps_t := 0.0
 var last_move := Vector2.ZERO
 var _room_code := ""
 var _room_matchmade := false
@@ -67,6 +73,9 @@ var _final_music := false
 
 func _ready() -> void:
 	Settings.load_all()
+	Controls.setup()   # the rebindable keys + gamepad buttons in the InputMap (controls.gd)
+	if not DebugArgs.has("autotest") and not Array(DebugArgs.list()).any(func(a): return String(a).begins_with("--menushot")):
+		Settings.apply_display()   # window mode + vsync (desktop)
 	for a in DebugArgs.list():
 		if a.begins_with("--lang="):
 			Settings.lang = a.substr(7)      # (not saved) for screenshots
@@ -105,9 +114,17 @@ func _menushot(path: String, args: PackedStringArray) -> void:
 	for a in args:
 		if a.begins_with("--brawler="):
 			menu._select_brawler(a.substr(10), false)
+			showcase.refresh()   # the backdrop stars it too
 		if a.begins_with("--overlay="):
 			match a.substr(10):
-				"settings": menu._settings.visible = true
+				"settings":
+					var tab := ""
+					for b in args:
+						if b.begins_with("--tab="):
+							tab = b.substr(6)
+					settings_view.open(tab)
+					if args.has("--capture"):   # the "press a key" state of the first key row
+						settings_view.call("_activate", 0)
 				"room": menu._room_dialog.visible = true
 				"maps": menu._maps_pop.visible = true; menu._refresh_map()
 				"quests", "collection", "shop", "road": menu._open_page(a.substr(10))
@@ -127,10 +144,34 @@ func _menushot(path: String, args: PackedStringArray) -> void:
 		if a.begins_with("--resize="):
 			var wh := a.substr(9).split("x")
 			resize = Vector2i(int(wh[0]), int(wh[1]))
+		if a.begins_with("--shotsecs="):   # --shotsecs=2,6,10: one shot at each time, <path>_<s>s.png (the live backdrop)
+			var t0 := Time.get_ticks_msec()
+			for v in a.substr(11).split(","):
+				while Time.get_ticks_msec() - t0 < float(v) * 1000.0:
+					await get_tree().process_frame
+				await RenderingServer.frame_post_draw
+				get_viewport().get_texture().get_image().save_png("%s_%ss.png" % [path.get_basename(), v])
+				print("MENUSHOT saved %s_%ss.png" % [path.get_basename(), v])
+			get_tree().quit(0)
+			return
 	for i in 90:
 		if i == 30 and resize != Vector2i.ZERO:
 			DisplayServer.window_set_size(resize)
 		await get_tree().process_frame
+	for a in args:   # --padnav=down,right,a: gamepad presses (D-pad, A, B...) before the shot (focus checks)
+		if a.begins_with("--padnav="):
+			var btns := {"up": JOY_BUTTON_DPAD_UP, "down": JOY_BUTTON_DPAD_DOWN, "left": JOY_BUTTON_DPAD_LEFT,
+				"right": JOY_BUTTON_DPAD_RIGHT, "a": JOY_BUTTON_A, "b": JOY_BUTTON_B, "lb": JOY_BUTTON_LEFT_SHOULDER, "rb": JOY_BUTTON_RIGHT_SHOULDER}
+			for step in a.substr(9).split(","):
+				for down in [true, false]:
+					var e := InputEventJoypadButton.new()
+					e.button_index = btns.get(step, JOY_BUTTON_A)
+					e.pressed = down
+					Input.parse_input_event(e)
+					for f in 3:
+						await get_tree().process_frame
+			for i in 20:
+				await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(path)
 	print("MENUSHOT saved %s size=%s window=%s" % [path, get_viewport().get_visible_rect().size, DisplayServer.window_get_size()])
@@ -226,8 +267,13 @@ func _autotest() -> void:
 				if a.begins_with("--map="):
 					net.send({"t": "map", "map": a.substr(6)})
 			net.send({"t": "start"})
+		if state == State.PLAYING and me and DebugArgs.has("keytest") and not stats.has("keys"):
+			stats["keys"] = true
+			await _key_test()
 		if state == State.PLAYING and me:
-			if DebugArgs.has("realinput"):   # real touch / mouse events drive the player (mobile emulation test)
+			if DebugArgs.has("keytest"):
+				pass
+			elif DebugArgs.has("realinput"):   # real touch / mouse events drive the player (mobile emulation test)
 				if touch.move != Vector2.ZERO:
 					stats["touch_moved"] = true
 				if touch.firing:
@@ -264,8 +310,8 @@ func _notification(what: int) -> void:
 
 func _apply_power_profile() -> void:
 	# fps cap here; render scale / MSAA / shadows / particle density live in Quality (world agent)
-	Engine.max_fps = int(Settings.gfx_profile().fps)
-	if Settings.gfx != "auto":
+	Engine.max_fps = Settings.max_fps()
+	if Settings.gfx != "auto" and Settings.gfx != "custom":
 		Quality.set_level(Settings.gfx)
 	Quality.set_saver(Settings.saver)  # WORLD hook
 
@@ -308,6 +354,7 @@ func _build_ui() -> void:
 	ui.add_child(hud_ui)
 	hud_ui.setup(net, cam, self, touch)
 	hud_ui.menu_requested.connect(_result_menu)
+	hud_ui.options_requested.connect(func(): settings_view.open())
 	hud_ui.play_again.connect(_result_again)
 	hud = Label.new()
 	hud.visible = false   # HUD hook: replaced by hud_ui
@@ -343,6 +390,19 @@ func _build_ui() -> void:
 	add_child(showcase)
 	showcase.setup(cam, env, sun)
 	_build_screens()
+	# the options screen and the FPS badge sit over every screen (a layer above the menus, which are
+	# rebuilt when the language changes)
+	var top := CanvasLayer.new()
+	top.layer = 5
+	add_child(top)
+	_fps_label = Label.new()
+	_fps_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fps_label.visible = false
+	top.add_child(_fps_label)
+	settings_view = SettingsView.new()
+	settings_view.changed.connect(_on_setting)
+	settings_view.closed.connect(func(): _nav_restore())
+	top.add_child(settings_view)
 
 # The three full screens; rebuilt when the language changes.
 func _build_screens() -> void:
@@ -357,6 +417,7 @@ func _build_screens() -> void:
 	menu.queue_bots.connect(func(): mm.bots())
 	menu.queue_cancel.connect(_cancel_queue)
 	menu.settings_changed.connect(_on_settings_changed)
+	menu.open_settings.connect(func(): settings_view.open())
 	menu.profile_changed.connect(_send_pick)
 	menu.solo_play.connect(func(): UiKit.click(); _auto_start = true; _open_room(_random_code(), false))
 	menu.training.connect(func(): UiKit.click(); _open_room(_random_code(), false))
@@ -389,11 +450,27 @@ func _on_settings_changed() -> void:
 	var want := Settings.lang if Settings.lang != "" else I18n.detect()
 	if want != I18n.lang:
 		I18n.use(want)
-		var was_open: bool = menu._settings.visible
 		_build_screens()
-		if was_open:
-			menu._settings.visible = true
+		if settings_view:
+			settings_view.rebuild()
 	profile.fetch()
+
+# A change made on the options screen (settings_view.gd) that main.gd applies.
+func _on_setting(key: String) -> void:
+	match key:
+		"lang":
+			var want := Settings.lang if Settings.lang != "" else I18n.detect()
+			if want != I18n.lang:
+				I18n.use(want)
+				_build_screens()
+				settings_view.rebuild()
+		"gfx", "saver", "fps_cap":
+			_apply_power_profile()
+			_show_screen()   # the battery saver turns the menu's live arena off / on
+		"icon":
+			_send_pick()
+		"server":
+			profile.fetch()
 
 func _random_code() -> String:
 	var a := "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -461,6 +538,7 @@ func _on_mm_failed(msg: String, code: String) -> void:
 
 func _open_room(code: String, matchmade: bool) -> void:
 	_room_code = code
+	_vs_bots = _auto_start
 	_room_matchmade = matchmade
 	_room_msg = {}
 	_retries = 0
@@ -560,6 +638,10 @@ func _show_result() -> void:
 	var won := me != null and _winner == me.id
 	# HUD hook: the Hud draws the K.O. / victory overlay (with Play again / Menu); the ranked-points
 	# text goes under it. result_view.gd is no longer shown at the end of a match.
+	if not _result_shown and me != null:
+		# XP, Slop Coins and Bot League trophies of this match (the web's awardMatch, meta_profile.gd)
+		var st: Dictionary = result._stats.get(String(me.id), {})
+		MetaProfile.award_match(1 if won else maxi(_my_place, 1), int(st.get("kos", 0)), won, Settings.brawler, _vs_bots)
 	_result_shown = true
 	# the web's #result: SPECTATE while the others still fight, PLAY AGAIN / MENU once it is over
 	var over := _winner != "" or _match_done
@@ -610,9 +692,10 @@ func _result_again() -> void:
 func _result_menu() -> void:
 	_leave_room()
 
-# Escape: back out of the lobby / queue / settings, or leave a match (asks once).
+# Escape / gamepad B: back out of the lobby (the menu closes its own overlays; in a match the Hud's
+# pause card answers the pause key).
 func _unhandled_input(ev: InputEvent) -> void:
-	if not (ev is InputEventKey and ev.pressed and (ev as InputEventKey).keycode == KEY_ESCAPE):
+	if not ev.is_action_pressed("ui_cancel"):
 		return
 	match state:
 		State.LOBBY:
@@ -888,6 +971,10 @@ func _apply_event(e: Dictionary) -> void:
 # ---------------------------------------------------------------- frame
 
 func _process(delta: float) -> void:
+	Controls.poll(delta)
+	_global_keys()
+	_pad_menus()
+	_update_fps(delta)
 	_update_projectiles(delta)
 	if arena:
 		arena.update(delta)
@@ -910,18 +997,22 @@ func _process(delta: float) -> void:
 	feel.playing = state == State.PLAYING
 	if state == State.PLAYING and me.alive:
 		_control(delta)
+	else:
+		super_aiming = false
+	if (state == State.COUNTDOWN or state == State.PLAYING or state == State.OVER) and not settings_view.visible:
+		hud_ui.shortcuts(aim_point)   # gadget, emote wheel, ping, pause (bound keys + gamepad)
 	_follow_camera(delta)   # also sets audio.listener (the camera focus, like the web)
 	_heartbeat(delta)
 
 func _control(delta: float) -> void:
+	# a menu over the match (pause card, options) takes the keys / pad: stand still, hold fire
+	var blocked := result.visible or hud_ui.pause_open() or settings_view.visible
 	var mv := touch.move if touch.visible else Vector2.ZERO
-	var kb := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
-	if Input.is_key_pressed(KEY_A): kb.x -= 1
-	if Input.is_key_pressed(KEY_D): kb.x += 1
-	if Input.is_key_pressed(KEY_W): kb.y -= 1
-	if Input.is_key_pressed(KEY_S): kb.y += 1
+	var kb := Controls.move()   # bound keys (W A S D = Z Q S D on AZERTY), arrows, D-pad, left stick
 	if kb != Vector2.ZERO:
-		mv = kb.limit_length(1.0)
+		mv = kb
+	if blocked:
+		mv = Vector2.ZERO
 	last_move = mv
 	# FEEL: walking like brawler.js on the client (the server checks every step: game.js checkMove).
 	# Frozen / rooted / stunned stand still and slowed walks at 55 %, or the server refuses the moves
@@ -938,7 +1029,21 @@ func _control(delta: float) -> void:
 	if step.length_squared() > 1e-6:
 		me.position = arena.collide_circle(me.position + Vector3(step.x, 0, step.y) * delta, me.radius)
 	var firing := false
-	if touch.visible:
+	var R := float(me.type.range)
+	if Controls.using_pad:
+		# twin-stick (game.js controlPlayer): the right stick aims and its tilt sets the throw
+		# distance; without it the aim follows the walk, or (aim assist) the nearest foe in reach
+		firing = Controls.attack_held() and not blocked
+		var r := Controls.stick_r()
+		if r.length_squared() > 0.09:
+			aim_dir = r.normalized()
+			aim_dist = 2.0 + minf(1.0, r.length()) * (R - 2.0)
+		elif firing and Settings.aim_assist and _assist_aim(R):
+			pass
+		elif mv.length_squared() > 0.05 and not firing:
+			aim_dir = mv.normalized()
+			aim_dist = R * 0.7
+	elif touch.visible:
 		# touch.js / game.js: a dragged stick aims; a quick tap aims at the nearest enemy you can see;
 		# otherwise the aim follows the walk (so a released stick never leaves you facing backwards)
 		if touch.auto_aim:
@@ -947,23 +1052,33 @@ func _control(delta: float) -> void:
 			if foe:
 				var d := Vector2(foe.position.x - me.position.x, foe.position.z - me.position.z)
 				aim_dir = d.normalized() if d.length() > 1e-3 else aim_dir
+				aim_dist = minf(d.length(), R)
 		elif touch.aim.length() > 0.25:
 			aim_dir = touch.aim.normalized()
+			aim_dist = 2.0 + minf(1.0, touch.aim.length()) * (R - 2.0)
 		elif mv.length_squared() > 0.05 and not touch.firing:
 			aim_dir = mv.normalized()
-		firing = touch.firing
+			aim_dist = R * 0.7
+		firing = touch.firing and not blocked
 	else:
 		var hit = _mouse_ground()
 		if hit != null:
 			var d: Vector3 = hit - me.position
-			if Vector2(d.x, d.z).length() > 0.3:
+			var l := Vector2(d.x, d.z).length()
+			if l > 0.3:
 				aim_dir = Vector2(d.x, d.z).normalized()
-		firing = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not result.visible
-		if Input.is_action_just_pressed("ui_accept"):
-			super_seq += 1
+			aim_dist = l
+		firing = Controls.attack_held() and not blocked
+	# the super (input.js superFired): its key / RB, or a released right click / LT, once it is charged
+	var charged := me.super_charge >= 0.999
+	if charged and not blocked and Controls.super_fired():
+		super_seq += 1
+	super_aiming = charged and not blocked and not touch.visible and Controls.super_aim_held()
 	if aim_dir != Vector2.ZERO and firing:
 		me.face(aim_dir.x, aim_dir.y)   # fighter.gd turns to it (the server's attack echo comes later)
-	aim_point = me.position + Vector3(aim_dir.x, 0, aim_dir.y) * float(me.type.range)
+	if aim_dist <= 0.0:
+		aim_dist = R
+	aim_point = me.position + Vector3(aim_dir.x, 0, aim_dir.y) * aim_dist
 	send_t -= delta
 	if send_t <= 0.0:
 		send_t = 1.0 / SEND_HZ
@@ -972,6 +1087,19 @@ func _control(delta: float) -> void:
 			"px": snappedf(aim_point.x, 0.01), "pz": snappedf(aim_point.z, 0.01),
 			"f": 1 if firing else 0, "s": super_seq, "g": 0, "gx": snappedf(aim_dir.x, 0.01), "gz": snappedf(aim_dir.y, 0.01),
 			"em": 0, "ei": -1}))   # HUD hook (g/em/ei/ping come from hud_ui)
+
+# Gamepad aim assist: firing without the right stick aims at the nearest foe you can see within reach
+# (what a tap does on a touch screen). Help on the client side only: the server checks every attack.
+func _assist_aim(R: float) -> bool:
+	var foe := _nearest_foe()
+	if foe == null:
+		return false
+	var d := Vector2(foe.position.x - me.position.x, foe.position.z - me.position.z)
+	if d.length() < 1e-3 or d.length() > R + 1.0:
+		return false
+	aim_dir = d.normalized()
+	aim_dist = minf(d.length(), R)
+	return true
 
 func _mouse_ground() -> Variant:
 	var mp := get_viewport().get_mouse_position()
@@ -1161,3 +1289,285 @@ func _audio_snap() -> void:
 
 func _tile_world(i: int, j: int) -> Vector3:   # AUDIO HOOK
 	return Vector3((i + 0.5) * GameData.TILE - GameData.HALF, 0.0, (j + 0.5) * GameData.TILE - GameData.HALF)
+
+# ---------------------------------------------------------------- keys, gamepad and menus
+
+# --keytest (with --autotest): real key / gamepad events through Input.parse_input_event, as a player
+# would press them (walking stays the normal walk: the server checks it like any other), and what
+# each shortcut did. Prints KEYTEST lines.
+func _key_test() -> void:
+	var press := func(phys: int, hold: float) -> void:
+		for down in [true, false]:
+			var e := InputEventKey.new()
+			e.physical_keycode = phys
+			e.keycode = DisplayServer.keyboard_get_keycode_from_physical(phys)
+			e.pressed = down
+			Input.parse_input_event(e)
+			if down:
+				await get_tree().create_timer(hold).timeout
+		await get_tree().create_timer(0.15).timeout
+	var pad := func(btn: int) -> void:
+		for down in [true, false]:
+			var e := InputEventJoypadButton.new()
+			e.button_index = btn
+			e.pressed = down
+			e.device = 0
+			Input.parse_input_event(e)
+			await get_tree().process_frame
+			await get_tree().process_frame
+		await get_tree().create_timer(0.15).timeout
+	var p0 := me.position
+	await press.call(Controls.key_of("right"), 0.5)
+	print("KEYTEST move right(%s) dx=%.2f" % [Controls.action_label("right"), me.position.x - p0.x])
+	p0 = me.position
+	await press.call(Controls.key_of("up"), 0.5)
+	print("KEYTEST move up(%s) dz=%.2f" % [Controls.action_label("up"), me.position.z - p0.z])
+	var g0 := hud_ui.gad_seq
+	await press.call(Controls.key_of("gadget"), 0.05)
+	print("KEYTEST gadget(%s) seq %d -> %d" % [Controls.action_label("gadget"), g0, hud_ui.gad_seq])
+	await press.call(Controls.key_of("emote"), 0.05)
+	print("KEYTEST emote(%s) wheel=%s" % [Controls.action_label("emote"), hud_ui.wheel.visible])
+	var e0 := hud_ui.emote_seq
+	await press.call(KEY_2, 0.05)
+	print("KEYTEST emote pick 2 seq %d -> %d wheel=%s" % [e0, hud_ui.emote_seq, hud_ui.wheel.visible])
+	var pg := hud_ui.ping_seq
+	await press.call(Controls.key_of("ping"), 0.05)
+	print("KEYTEST ping(%s) seq %d -> %d" % [Controls.action_label("ping"), pg, hud_ui.ping_seq])
+	var m0 := audio.muted
+	await press.call(Controls.key_of("mute"), 0.05)
+	print("KEYTEST mute(%s) %s -> %s" % [Controls.action_label("mute"), m0, audio.muted])
+	await press.call(Controls.key_of("mute"), 0.05)
+	var t0 := Lighting.tod
+	await press.call(Controls.key_of("tod"), 0.05)
+	print("KEYTEST tod(%s) %.0f -> %.0f" % [Controls.action_label("tod"), t0, Lighting.tod])
+	Settings.tod = str(roundi(t0))   # (leave the player's time of day as it was)
+	Settings.save()
+	await press.call(KEY_ESCAPE, 0.05)
+	print("KEYTEST pause(Esc) open=%s" % hud_ui.pause_open())
+	await press.call(KEY_ESCAPE, 0.05)
+	print("KEYTEST pause(Esc) again open=%s" % hud_ui.pause_open())
+	await pad.call(JOY_BUTTON_START)
+	print("KEYTEST pad Start open=%s using_pad=%s" % [hud_ui.pause_open(), Controls.using_pad])
+	await pad.call(JOY_BUTTON_B)
+	print("KEYTEST pad B open=%s" % hud_ui.pause_open())
+	g0 = hud_ui.gad_seq
+	await pad.call(JOY_BUTTON_LEFT_SHOULDER)
+	print("KEYTEST pad LB gadget seq %d -> %d" % [g0, hud_ui.gad_seq])
+	pg = hud_ui.ping_seq
+	await pad.call(JOY_BUTTON_X)
+	print("KEYTEST pad X ping seq %d -> %d" % [pg, hud_ui.ping_seq])
+	# options from the pause card, a rebind (gadget -> F), the new key, then the default back
+	await press.call(KEY_ESCAPE, 0.05)
+	settings_view.open("controls")
+	await get_tree().process_frame
+	settings_view.call("_activate", 5)   # the gadget row
+	await press.call(KEY_F, 0.05)
+	print("KEYTEST rebind gadget -> %s (capturing=%s)" % [Controls.action_label("gadget"), Controls.capturing])
+	await press.call(KEY_ESCAPE, 0.05)
+	print("KEYTEST options closed=%s pause open=%s" % [not settings_view.visible, hud_ui.pause_open()])
+	await press.call(KEY_ESCAPE, 0.05)
+	await get_tree().create_timer(4.0).timeout   # the gadget lockout
+	g0 = hud_ui.gad_seq
+	await press.call(KEY_F, 0.05)
+	print("KEYTEST gadget(F) seq %d -> %d" % [g0, hud_ui.gad_seq])
+	Controls.reset_binds()
+	print("KEYTEST reset gadget=%s" % Controls.action_label("gadget"))
+
+# Shortcuts that work on every screen (main.js keydown): M mutes, T (pad Y) changes the time of day.
+func _global_keys() -> void:
+	if settings_view == null or settings_view.visible or Controls.eaten():
+		return
+	var f := get_viewport().gui_get_focus_owner()
+	if f is LineEdit or f is TextEdit:   # typing a nickname / room code
+		return
+	if Controls.just("mute"):
+		audio.toggle_mute()
+	if Controls.just("tod"):
+		Settings.tod = str((roundi(Lighting.tod) + 1) % 4)   # main.js nextTimeOfDay
+		Settings.save()
+
+func _update_fps(delta: float) -> void:
+	if _fps_label == null:
+		return
+	_fps_label.visible = Settings.show_fps
+	if not Settings.show_fps:
+		return
+	_fps_t -= delta
+	if _fps_t > 0.0:
+		return
+	_fps_t = 0.5
+	var k := UiKit.css_scale(get_viewport())
+	_fps_label.text = "%d FPS" % roundi(Engine.get_frames_per_second())
+	_fps_label.add_theme_font_override("font", Fonts.display())
+	_fps_label.add_theme_font_size_override("font_size", roundi(14.0 * k))
+	_fps_label.add_theme_color_override("font_color", Color("4bff86"))
+	_fps_label.add_theme_stylebox_override("normal", UiKit.pads(UiKit.sbox(Color(10 / 255.0, 8 / 255.0, 20 / 255.0, 0.6), roundi(8.0 * k)), 8.0 * k, 3.0 * k, 8.0 * k, 3.0 * k))
+	_fps_label.position = Vector2(64.0, 18.0) * k
+	_fps_label.reset_size()
+
+# The screen the keyboard arrows / gamepad drive (menu.js activeOverlay), or null in play.
+func _nav_root() -> Control:
+	var root: Control = null
+	if hud_ui.pause_open():
+		root = hud_ui.pause_view()
+	else:
+		match state:
+			State.MENU, State.QUEUE:
+				root = menu
+			State.LOBBY:
+				root = lobby
+			State.OVER:
+				root = result if result.visible else null
+	if root == null or not root.is_visible_in_tree():
+		return null
+	return _top_modal(root)
+
+# The last full-screen blocker with something to focus (a dialog over the menu), else root itself.
+func _top_modal(root: Control) -> Control:
+	var area := get_viewport().get_visible_rect().get_area()
+	var best: Control = root
+	var stack: Array = [root]
+	var order: Array = []
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		order.append(n)
+		var kids := n.get_children()
+		kids.reverse()
+		for c in kids:
+			if c is CanvasItem and not (c as CanvasItem).visible:
+				continue
+			stack.append(c)
+	for n in order:
+		if n != root and n is Control and (n as Control).mouse_filter == Control.MOUSE_FILTER_STOP \
+				and (n as Control).get_global_rect().get_area() >= area * 0.85 and not _focusables(n).is_empty():
+			best = n
+	return best
+
+func _focusables(root: Node) -> Array:
+	var out: Array = []
+	var vr := get_viewport().get_visible_rect()
+	var stack: Array = [root]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		var kids := n.get_children()
+		kids.reverse()
+		for c in kids:
+			if c is CanvasItem and not (c as CanvasItem).visible:
+				continue
+			stack.append(c)
+		if n != root and n is Control:
+			var c := n as Control
+			if c.focus_mode == Control.FOCUS_ALL and not (c is BaseButton and (c as BaseButton).disabled):
+				var r := c.get_global_rect()
+				if r.size.x > 2.0 and r.size.y > 2.0 and vr.intersects(r):
+					out.append(c)
+	return out
+
+func _nav_focus(c: Control) -> void:
+	c.grab_focus()
+	var p := c.get_parent()
+	while p:
+		if p is ScrollContainer:
+			(p as ScrollContainer).ensure_control_visible(c)
+		p = p.get_parent()
+
+# Spatial navigation (menu.js move): the nearest focusable in that direction, the sideways distance
+# counting 2.5 times.
+func _nav_move(root: Control, dir: String) -> void:
+	var items := _focusables(root)
+	if items.is_empty():
+		return
+	var cur := get_viewport().gui_get_focus_owner()
+	if cur == null or not items.has(cur):
+		_nav_focus(items[0])
+		return
+	var dv: Vector2 = {"up": Vector2(0, -1), "down": Vector2(0, 1), "left": Vector2(-1, 0), "right": Vector2(1, 0)}[dir]
+	var a := cur.get_global_rect().get_center()
+	var best: Control = null
+	var best_s := INF
+	var k := UiKit.css_scale(get_viewport())
+	for it in items:
+		if it == cur:
+			continue
+		var d: Vector2 = (it as Control).get_global_rect().get_center() - a
+		var along := d.dot(dv)
+		if along <= 4.0 * k:
+			continue
+		var across := absf(d.x * dv.y) + absf(d.y * dv.x)
+		var sc := along + across * 2.5
+		if sc < best_s:
+			best_s = sc
+			best = it
+	if best:
+		_nav_focus(best)
+		UiKit.click()
+
+func _nav_confirm(root: Control) -> void:
+	var f := get_viewport().gui_get_focus_owner()
+	if f == null or not root.is_ancestor_of(f):
+		var items := _focusables(root)
+		if not items.is_empty():
+			_nav_focus(items[0])
+		return
+	if f.has_method("activate"):
+		f.call("activate")
+	elif f is OptionButton:
+		(f as OptionButton).show_popup()
+	elif f is BaseButton:
+		var b := f as BaseButton
+		if b.toggle_mode:
+			b.button_pressed = not b.button_pressed
+		b.pressed.emit()
+
+# Back on the screen under the options (pause card / menu): the focus on its first button when the
+# keyboard or a pad drives it.
+func _nav_restore() -> void:
+	if not Controls.focus_visible:
+		return
+	var root := _nav_root()
+	if root:
+		var items := _focusables(root)
+		if not items.is_empty():
+			_nav_focus(items[0])
+
+# Gamepad in the menus (menu.js update): D-pad / left stick move the focus (with repeat), A presses,
+# B goes back (as Escape), Start plays from the home screen. The options screen runs its own.
+func _pad_menus() -> void:
+	if settings_view == null or settings_view.visible:
+		return
+	var root := _nav_root()
+	if root == null:
+		return
+	var d := Controls.nav_step()
+	if d != "":
+		_nav_move(root, d)
+	if Controls.pad_hit(JOY_BUTTON_A):
+		_nav_confirm(root)
+	if Controls.pad_hit(JOY_BUTTON_B) and not hud_ui.pause_open():
+		for pressed in [true, false]:
+			var e := InputEventAction.new()
+			e.action = "ui_cancel"
+			e.pressed = pressed
+			Input.parse_input_event(e)
+	if Controls.pad_hit(JOY_BUTTON_START) and state == State.MENU and not menu.is_overlay_open():
+		UiKit.click()
+		_quick_play()
+
+# Keyboard arrows in the menus: the same spatial navigation (a text field or a slider keeps them).
+func _input(ev: InputEvent) -> void:
+	Controls.note(ev)
+	if settings_view == null or settings_view.visible:
+		return
+	if not (ev is InputEventKey) or not ev.pressed:
+		return
+	var dir: String = {KEY_UP: "up", KEY_DOWN: "down", KEY_LEFT: "left", KEY_RIGHT: "right"}.get((ev as InputEventKey).physical_keycode, "")
+	if dir == "":
+		return
+	var f := get_viewport().gui_get_focus_owner()
+	if f is LineEdit or f is TextEdit or f is Range:
+		return
+	var root := _nav_root()
+	if root == null:
+		return
+	_nav_move(root, dir)
+	get_viewport().set_input_as_handled()

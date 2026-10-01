@@ -28,6 +28,7 @@ const ENV_FILL := 6.0
 
 static var tod := 2.0          # 0 Morning, 1 Noon, 2 Sunset (default), 3 Night; the settings menu may set it
 static var cycle := false      # slow day/night cycle (25 s per phase)
+static var brightness := 1.0   # the options' brightness (settings.js exposure), on top of the tone mapping
 
 var sun: DirectionalLight3D
 var env: Environment
@@ -160,7 +161,7 @@ func apply() -> void:
 	env.fog_depth_begin = (float(S.fogNear) + fog_shift) * 1.04
 	env.fog_depth_end = (float(S.fogFar) + fog_shift) * 1.04
 	env.background_color = _sky_override if _sky_override.a > 0.0 else fog
-	env.tonemap_exposure = float(S.exposure) * STYLE.exposure * (LUT_SCALE if env.adjustment_enabled and _use_lut() else COMPAT_EXPOSURE)
+	env.tonemap_exposure = brightness * float(S.exposure) * STYLE.exposure * (LUT_SCALE if env.adjustment_enabled and _use_lut() else COMPAT_EXPOSURE)
 	env.glow_enabled = bool(q.glow)
 	env.glow_intensity = float(S.bloom)
 	var rim: Color = (S.rimC as Color).srgb_to_linear()

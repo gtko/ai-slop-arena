@@ -43,7 +43,7 @@ var amb := 0.8: set = _set_amb
 var muted := false: set = _set_muted
 var track := "auto"                # "auto" follows the game, "off", or a fixed playlist name
 var listener := Vector3.ZERO       # the local player's position (distances are measured from it)
-var attract := false               # menu / background use: everything is quieter
+var attract := false               # the menu's backdrop match (menu_showcase.gd): its sounds are quieter (game.js volumeAt)
 
 static var current: AudioManager   # the game's (fighters and effects play through it)
 
@@ -218,7 +218,7 @@ func play(sound: String, world_pos: Variant = null, vol: float = 1.0, rate: floa
 	if world_pos is Vector3:
 		var d := Vector3(world_pos) - listener
 		gain *= 1.0 / (1.0 + (d.x * d.x + d.z * d.z) / 150.0)
-	if attract:
+	if attract and world_pos is Vector3:   # only the world's sounds: the menu's clicks stay as loud
 		gain *= 0.35
 	if gain < 0.03:
 		return

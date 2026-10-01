@@ -5,6 +5,9 @@ extends PanelContainer
 # translateY(-2..-3px)) and sinks `sink` px while held (.big:active translateY(4px), its hard ink shadow
 # shrinking by as much so its bottom stays put), both eased over `ease_s` (transition: transform 0.08s).
 # A press plays the web's sfx('click') unless `silent`.
+# Keyboard / gamepad (menu.js navigation): it takes the focus, Enter / Space / A press it, and the
+# focused box looks hovered with a white ring (the web's :focus-visible outline) while the keyboard
+# or a pad drives the menus (Controls.focus_visible).
 
 signal pressed
 signal moved(dy: float)         # the hover / press offset changed (for drawn shadows that must stay put)
@@ -26,6 +29,9 @@ func _init(n: StyleBox, h: StyleBox = null) -> void:
 	hover = h if h else n
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	focus_mode = Control.FOCUS_ALL
+	focus_entered.connect(func(): _restyle(); queue_redraw())
+	focus_exited.connect(func(): _restyle(); queue_redraw())
 	add_theme_stylebox_override("panel", normal)
 	mouse_entered.connect(func(): _in = true; _restyle(); _go())
 	mouse_exited.connect(func(): _in = false; _down = false; _restyle(); _go())
@@ -47,7 +53,7 @@ func _sink_px() -> float:
 
 # The style for the current state, moved down by _dy (and its hard shadow shortened by as much).
 func _restyle() -> void:
-	var base: StyleBox = hover if _in else normal
+	var base: StyleBox = hover if (_in or _ring()) else normal
 	if absf(_dy) < 0.01 or not (base is StyleBoxFlat):
 		add_theme_stylebox_override("panel", base)
 		return
@@ -90,7 +96,34 @@ func _quiet(n: Node) -> void:
 	if not n.child_entered_tree.is_connected(_quiet):
 		n.child_entered_tree.connect(_quiet)
 
+func _ring() -> bool:
+	return has_focus() and Controls.focus_visible
+
+func _draw() -> void:
+	if not _ring():
+		return
+	var s := StyleBoxFlat.new()
+	s.draw_center = false
+	s.set_border_width_all(4)
+	s.border_color = Color.WHITE
+	var r := 14
+	if normal is StyleBoxFlat:
+		r = (normal as StyleBoxFlat).corner_radius_top_left + 6
+	s.set_corner_radius_all(r)
+	s.anti_aliasing = true
+	draw_style_box(s, Rect2(Vector2(-6, -6 + _dy), size + Vector2(12, 12)))
+
+# Enter / Space / gamepad A on the focused box (main.gd sends A as ui_accept).
+func activate() -> void:
+	if not silent:
+		UiKit.click()
+	pressed.emit()
+
 func _gui_input(ev: InputEvent) -> void:
+	if ev.is_action_pressed("ui_accept", false, true) and not ev.is_echo():
+		accept_event()
+		activate()
+		return
 	if ev is InputEventMouseButton and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 		var mb := ev as InputEventMouseButton
 		if mb.pressed:

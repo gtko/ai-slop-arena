@@ -63,8 +63,9 @@ static var _ice_mat: StandardMaterial3D
 # fighter.gdshader, its own so the hit flash and the frost tint stay per brawler), the inverted-hull
 # outline and the ring under the feet in the team colour.
 const GAIN := {"blaster": 1.518, "bomber": 1.633, "frostbite": 1.213}   # figurines.js textureGain of each texture
-const LINE := {"me": Color("19b6ff"), "foe": Color("5c0d14")}            # brawler.js LINE (outline)
-const RING := {"me": Vector3(0.3, 1.6, 2.0), "foe": Vector3(1.8, 0.25, 0.2)} # brawler.js RING (linear, blooms)
+# brawler.js LINE (outline) and RING (linear, blooms); "Cb": the colour-blind option (blue against orange)
+const LINE := {"me": Color("19b6ff"), "foe": Color("5c0d14"), "meCb": Color("3a8dff"), "foeCb": Color("8a4400")}
+const RING := {"me": Vector3(0.3, 1.6, 2.0), "foe": Vector3(1.8, 0.25, 0.2), "meCb": Vector3(0.35, 0.9, 2.4), "foeCb": Vector3(2.2, 1.0, 0.05)}
 static var _ring_mesh: Mesh
 var _mats: Array[ShaderMaterial] = []
 var _lines: Array[MeshInstance3D] = []
@@ -174,9 +175,12 @@ func _add_ring() -> void:
 	add_child(_ring)
 	_team_colours()
 
+func _team_key() -> String:
+	return ("me" if is_local else "foe") + ("Cb" if Settings.colorblind else "")
+
 # You (and the menu's star) wear the bright cyan outline and ring, everybody else the dark red one.
 func _team_colours() -> void:
-	_team = "me" if is_local else "foe"
+	_team = _team_key()
 	if _line_mat:
 		_line_mat.set_shader_parameter("color", LINE[_team])
 	if _ring_mat:
@@ -821,7 +825,7 @@ func motion_stats() -> Dictionary:
 func _process(delta: float) -> void:
 	if _dbg_cam.size() > 0 or _dbg_fx != "":
 		_debug()
-	if _team != ("me" if is_local else "foe"):
+	if _team != _team_key():
 		_team_colours()
 	if _flash_t > 0.0:
 		_flash_t = maxf(0.0, _flash_t - delta * 7.0)

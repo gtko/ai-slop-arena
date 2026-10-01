@@ -1,17 +1,19 @@
 class_name PauseView
 extends CssView
 # The in-match pause box, a port of the web's #pause .pause-card (play.html, src/style.css): the dark
-# blurred-looking veil, PAUSED in the display face, RESUME (.big) and QUIT TO MENU (.ghost) stretched
-# to 360 px, the online note under them. The match keeps running (online): it only covers the screen.
+# blurred-looking veil, PAUSED in the display face, RESUME (.big), OPTIONS and QUIT TO MENU (.ghost)
+# stretched to 360 px, the online note under them. With a keyboard / pad driving the menus the focus
+# starts on RESUME. The match keeps running (online): it only covers the screen.
 
 signal resume
 signal quit
+signal options
 
 func _ready() -> void:
 	super._ready()
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
-	visibility_changed.connect(func(): if visible: _animate = true; rebuild())
+	visibility_changed.connect(func(): if visible: _animate = true; rebuild(); _focus_first())
 
 func _build() -> void:
 	var bg := ColorRect.new()
@@ -29,6 +31,10 @@ func _build() -> void:
 	var r := _big(I18n.t("pause.resume"), 21 if phone else 30, 8 if phone else 12, 18, 4 if phone else 6)
 	r.pressed.connect(func(): visible = false; resume.emit())
 	col.add_child(r)
+	_first = r
+	var o := _ghost(I18n.t("pause.options"), 15 if phone else 22, 7 if phone else 12, 14, 4 if phone else 6)
+	o.pressed.connect(func(): options.emit())
+	col.add_child(o)
 	var q := _ghost(I18n.t("pause.quit"), 15 if phone else 22, 7 if phone else 12, 14, 4 if phone else 6)
 	q.pressed.connect(func(): visible = false; quit.emit())
 	col.add_child(q)
@@ -49,6 +55,12 @@ func _build() -> void:
 		var tw := col.create_tween().set_parallel(true)
 		tw.tween_property(col, "modulate:a", 1.0, 0.18)
 		tw.tween_property(col, "position:y", col.position.y + 14.0, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+var _first: Control
+
+func _focus_first() -> void:
+	if Controls.focus_visible and is_instance_valid(_first):
+		_first.grab_focus()
 
 func _gap(h: float) -> Control:
 	var c := Control.new()
