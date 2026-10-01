@@ -15,6 +15,9 @@ window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation=6
 
+[gui]
+theme/custom_font="res://assets/fonts/nunito_800.tres"
+
 [physics]
 common/physics_ticks_per_second=60
 
