@@ -25,7 +25,6 @@ var _bar: MeshInstance3D
 var _bar_mat: StandardMaterial3D
 var _label: Label3D
 var _meshes: Array[MeshInstance3D] = []
-var _flash_mat: StandardMaterial3D
 var _flash_t := 0.0
 var _faded := false
 var _emote: Label3D
@@ -42,11 +41,25 @@ var _die_t := 0.0
 var _launch := Vector3.ZERO
 var _fell := false
 var _ice: MeshInstance3D
-var _cold_mat: StandardMaterial3D
 var _cold_shown := -1.0
 var _was_frozen := false
 var _stun_fx := 0.0
 static var _ice_mat: StandardMaterial3D
+# Figurine look (figurines.js / brawler.js): one cartoon material per fighter (assets/shaders/
+# fighter.gdshader, its own so the hit flash and the frost tint stay per brawler), the inverted-hull
+# outline and the ring under the feet in the team colour.
+const GAIN := {"blaster": 1.518, "bomber": 1.633, "frostbite": 1.213}   # figurines.js textureGain of each texture
+const LINE := {"me": Color("19b6ff"), "foe": Color("5c0d14")}            # brawler.js LINE (outline)
+const RING := {"me": Vector3(0.3, 1.6, 2.0), "foe": Vector3(1.8, 0.25, 0.2)} # brawler.js RING (linear, blooms)
+static var _ring_mesh: Mesh
+var _mats: Array[ShaderMaterial] = []
+var _lines: Array[MeshInstance3D] = []
+var _line_mat: ShaderMaterial
+var _ring: MeshInstance3D
+var _ring_mat: ShaderMaterial
+var _team := ""
+var _dbg_cam: PackedFloat32Array = []   # --fightercam=zoom,facing (screenshots, see _debug)
+var _dbg_fx := ""                        # --fighterfx=hurt|slow|freeze|stun|bush
 
 var radius: float:
 	get: return float(type.get("radius", 0.62))
@@ -72,25 +85,111 @@ func setup(row: Dictionary, brawlers: Dictionary) -> void:
 		_capsule(mat)
 	for mi in find_children("*", "MeshInstance3D", true, false):
 		_meshes.append(mi as MeshInstance3D)
+	if _model:
+		_look(key)
+	_add_ring()
 	Skins.apply(self, row)  # WORLD hook
 	if _model:
 		_base_scale = _model.scale
 		_base_y = _model.position.y
 	_hud()
+	for a in DebugArgs.list():
+		if a.begins_with("--fightercam="):
+			for v in a.substr(13).split(","):
+				_dbg_cam.append(float(v))
+		elif a.begins_with("--fighterfx="):
+			_dbg_fx = a.substr(12)
 
-# The sculpted GLB, scaled to a 1.9 m tall brawler standing on the ground (models differ in size).
+# The GLB's materials become the cartoon figurine material (same texture and colour), shared by the
+# surfaces of this fighter; every mesh gets its outline hull: a second MeshInstance3D with the same
+# mesh, skin and skeleton, drawn back faces only, pushed out along the normals (fighter_outline).
+func _look(key: String) -> void:
+	Foliage.ensure_globals()   # g_rim (lighting.gd sets it; the menu may draw a figure first)
+	_line_mat = ShaderMaterial.new()
+	_line_mat.shader = preload("res://assets/shaders/fighter_outline.gdshader")
+	var shader: Shader = preload("res://assets/shaders/fighter.gdshader")
+	var cache := {}
+	for mi in _meshes:
+		if mi.mesh == null:
+			continue
+		for s in mi.mesh.get_surface_count():
+			var src := mi.get_active_material(s) as BaseMaterial3D
+			if src == null:
+				continue
+			if not cache.has(src):
+				var m := ShaderMaterial.new()
+				m.shader = shader
+				m.set_shader_parameter("albedo", src.albedo_color)
+				if src.albedo_texture:
+					m.set_shader_parameter("albedo_tex", src.albedo_texture)
+				m.set_shader_parameter("gain", float(GAIN.get(key, 1.0)))
+				cache[src] = m
+				_mats.append(m)
+			mi.set_surface_override_material(s, cache[src])
+		var line := MeshInstance3D.new()
+		line.mesh = mi.mesh
+		line.skin = mi.skin
+		line.material_override = _line_mat
+		line.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		line.transform = mi.transform
+		mi.get_parent().add_child(line)
+		line.skeleton = mi.skeleton   # a sibling: the same relative path
+		_lines.append(line)
+	_team_colours()
+
+func _add_ring() -> void:
+	if _ring_mesh == null:
+		var r := TorusMesh.new()   # RingGeometry(0.78, 0.98): a torus squashed flat
+		r.inner_radius = 0.78
+		r.outer_radius = 0.98
+		r.rings = 48
+		r.ring_segments = 4
+		_ring_mesh = r
+	_ring = MeshInstance3D.new()
+	_ring.mesh = _ring_mesh
+	_ring.scale = Vector3(1, 0.02, 1)
+	_ring.position.y = 0.045
+	_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_ring_mat = ShaderMaterial.new()
+	_ring_mat.shader = preload("res://assets/shaders/fighter_ring.gdshader")
+	_ring.material_override = _ring_mat
+	add_child(_ring)
+	_team_colours()
+
+# You (and the menu's star) wear the bright cyan outline and ring, everybody else the dark red one.
+func _team_colours() -> void:
+	_team = "me" if is_local else "foe"
+	if _line_mat:
+		_line_mat.set_shader_parameter("color", LINE[_team])
+	if _ring_mat:
+		_ring_mat.set_shader_parameter("color", RING[_team])
+
+# Skins.apply: hue turn / saturation / brightness of the painted texture, or the golden figurine.
+func set_skin(rc: Vector3, gold: bool) -> void:
+	for m in _mats:
+		m.set_shader_parameter("recol", rc)
+		m.set_shader_parameter("gold", 1.0 if gold else 0.0)
+
+# brawler.js drives the figurine's emissive: white for the hit flash, icy blue for slow / freeze.
+func _set_tint(v: Vector3) -> void:
+	for m in _mats:
+		m.set_shader_parameter("tint", v)
+	if _body:
+		var bm := _body.material_override as StandardMaterial3D
+		bm.emission_enabled = v != Vector3.ZERO
+		bm.emission = Color(v.x, v.y, v.z)
+
+# The rigged figurine as authored (figurines.js: 2.5 m tall, feet on the ground, root scale 1; the
+# skinned mesh's own AABB is a bogus -1..1 box, so it is not used), weapons scaled up around the grip
+# to read from the high camera (figurines.js WEAPON_SCALE).
+const WEAPON_SCALE := {"blaster": 1.25, "gunslinger": 1.3, "bomber": 1.2, "frostbite": 1.1}
 func _load_model(path: String) -> void:
 	var inst: Node3D = (load(path) as PackedScene).instantiate()
 	add_child(inst)
-	var box := AABB()
-	var first := true
+	var ws := float(WEAPON_SCALE.get(path.get_file().get_basename(), 1.0))
 	for mi in inst.find_children("*", "MeshInstance3D", true, false):
-		var a: AABB = (mi as MeshInstance3D).global_transform * (mi as MeshInstance3D).get_aabb()
-		box = a if first else box.merge(a)
-		first = false
-	var k := 1.9 / maxf(box.size.y, 0.01)
-	inst.scale = Vector3.ONE * k
-	inst.position.y = -box.position.y * k
+		if (mi as MeshInstance3D).skin == null and mi.get_parent() is BoneAttachment3D:
+			(mi as Node3D).scale *= ws
 	_model = inst
 	for ap in inst.find_children("*", "AnimationPlayer", true, false):
 		_anim = ap
@@ -162,12 +261,7 @@ func _hud() -> void:
 
 # Hit (brawler.js hurt()): white flash, two frames at full then fading in 1/7 s, and a jelly squash.
 func hurt() -> void:
-	if _flash_mat == null:
-		_flash_mat = StandardMaterial3D.new()
-		_flash_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_flash_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_flash_mat.albedo_color = Color(1, 1, 1, 1)
-	_set_overlay(_flash_mat)
+	_set_tint(Vector3.ONE)
 	_flash_t = 1.0
 	_squash = 1.0
 	_squash_v = 0.0
@@ -175,18 +269,13 @@ func hurt() -> void:
 func flash() -> void:
 	hurt()
 
-func _set_overlay(m: Material) -> void:
-	for mi in _meshes:
-		if is_instance_valid(mi):
-			mi.material_overlay = m
-
 # K.O. (game.js killFx + brawler.js die()): the body holds 150 ms, flies off away from the killer
 # (a ring-out falls into the void), plays its Death clip, then vanishes in a puff after 1.25 s.
 func die_fx(killer_pos: Vector3, fell: bool, seen: bool) -> void:
 	_flash_t = 0.0
 	_squash = 0.0
 	_squash_v = 0.0
-	_set_overlay(null)
+	_set_tint(Vector3.ZERO)
 	_cold_shown = -1.0
 	if _ice:
 		_ice.visible = false
@@ -275,15 +364,7 @@ func _update_status(delta: float) -> void:
 	var cold := 0.5 if frozen else (0.28 if (flags & 4) != 0 else 0.0)
 	if cold != _cold_shown and _flash_t <= 0.0:
 		_cold_shown = cold
-		if cold <= 0.0:
-			_set_overlay(null)
-		else:
-			if _cold_mat == null:
-				_cold_mat = StandardMaterial3D.new()
-				_cold_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-				_cold_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-			_cold_mat.albedo_color = Color(cold * 0.2, cold * 0.55, cold).linear_to_srgb()
-			_set_overlay(_cold_mat)
+		_set_tint(Vector3(cold * 0.2, cold * 0.55, cold))
 
 # Spawn pop + hit squash (a spring k 320, damping 18 that overshoots once, like jelly) + power cubes
 # make you visibly bigger (the hitbox stays).
@@ -303,13 +384,16 @@ func _update_scale(delta: float) -> void:
 	_model.scale = _base_scale * Vector3(grow * pop * (1.0 + 0.1 * sq), grow * _spawn_t * pop * (1.0 - 0.14 * sq), grow * pop * (1.0 + 0.1 * sq))
 	_model.position.y = _base_y * _model.scale.y / maxf(_base_scale.y, 1e-4)
 
-# The local brawler fades while it hides in a bush (the server hides it from everyone else).
+# The local brawler fades while it hides in a bush (the server hides it from everyone else): half
+# see-through (brawler.js hiddenLook), the outline hull off (it would show through as a solid blob).
 func set_faded(on: bool) -> void:
 	if on == _faded:
 		return
 	_faded = on
 	for mi in _meshes:
-		mi.transparency = 0.55 if on else 0.0
+		mi.transparency = 0.5 if on else 0.0
+	for l in _lines:
+		l.visible = not on
 
 # Emote sticker above the head for 2 s.
 func show_emote(text: String, col: Color) -> void:
@@ -333,19 +417,26 @@ func apply_row(x: float, z: float, f: float, h: float, mh: float, am: float, sup
 	hp = h; max_hp = mh; ammo = am; super_charge = sup; cubes = cb; flags = fl
 
 func _process(delta: float) -> void:
+	if _dbg_cam.size() > 0 or _dbg_fx != "":
+		_debug()
+	if _team != ("me" if is_local else "foe"):
+		_team_colours()
 	if _flash_t > 0.0:
 		_flash_t = maxf(0.0, _flash_t - delta * 7.0)
 		if _flash_t <= 0.0:
-			_set_overlay(null)
+			_set_tint(Vector3.ZERO)
 			_cold_shown = -1.0   # let the frost tint repaint
 		else:
-			_flash_mat.albedo_color.a = 1.0 if _flash_t > 0.75 else _flash_t * 0.9
+			var f := 1.0 if _flash_t > 0.75 else _flash_t * 0.9   # white, two frames at full
+			_set_tint(Vector3(f, f, f))
 	if _emote_t > 0.0:
 		_emote_t -= delta
 		_emote.position.y = 3.5 + 0.1 * sin(_emote_t * 6.0)
 		if _emote_t <= 0.0:
 			_emote.visible = false
 	visible = (alive and not hidden_by_server) or _die_t > 0.0
+	if _ring:
+		_ring.visible = alive
 	if not visible:
 		return
 	if not alive:
@@ -359,12 +450,43 @@ func _process(delta: float) -> void:
 	var frac := clampf(hp / maxf(max_hp, 1.0), 0.0, 1.0)
 	_bar.scale.x = maxf(frac, 0.001)
 	_bar_mat.albedo_color = Color(0.9, 0.2, 0.2).lerp(Color(0.3, 0.9, 0.3), frac)
-	# a frozen / rooted / stunned brawler turns bluish, cheap status read without particles
 	var moving := position.distance_to(_last_pos) > 0.01
 	_last_pos = position
 	if _anim == null or not _anim.is_playing() or _cur_anim != "once":
 		_play("run" if moving else "idle")
-	if _body:
-		var m := _body.material_override as StandardMaterial3D
-		m.emission_enabled = (flags & (8 | 16 | 32)) != 0
-		m.emission = Color(0.3, 0.6, 1.0)
+
+# Screenshots side by side with the web build (devtools.js pose / close), your own brawler only:
+#   --fightercam=zoom,facing   stand still (Idle frame 0), the game camera on you at that zoom; the
+#                              position is never touched (the server kicks a teleporting client)
+#   --fightercam=dist,yaw,h,facing   the close-up of devtools.js pose() instead
+#   --fighterfx=hurt|slow|freeze|stun|bush   hold that look
+func _debug() -> void:
+	if not is_local:
+		return
+	if _dbg_cam.size() >= 1:
+		var m := Quality.main_node()
+		var touch = m.get("touch") if m else null
+		if touch != null:
+			touch.move = Vector2.ZERO
+		rotation.y = _dbg_cam[_dbg_cam.size() - 1] if _dbg_cam.size() in [2, 4] else rotation.y
+		var cam := get_viewport().get_camera_3d()
+		if cam and _dbg_cam.size() >= 3:   # devtools.js close(dist, yaw, h)
+			var d := _dbg_cam[0]
+			cam.position = position + Vector3(sin(_dbg_cam[1]) * d, d * _dbg_cam[2] + 1.1, cos(_dbg_cam[1]) * d)
+			cam.look_at(position + Vector3(0, 1.1, 0))
+		elif cam:
+			cam.position = position + Lighting.CAM_OFFSET * _dbg_cam[0]
+			cam.look_at(position + Vector3(0, 0.5, 0))
+		if not has_meta("dbg_said"):
+			set_meta("dbg_said", true)
+			print("FIGHTERCAM at ", position, " map ", get_parent().get("_map"))
+		if _anim and _cur_anim != "once":
+			_play("idle")
+			_anim.seek(0.0, true)
+			_anim.speed_scale = 0.0
+	match _dbg_fx:
+		"hurt": _flash_t = 0.9
+		"slow": flags |= 4
+		"freeze": flags |= 8
+		"stun": flags |= 32
+		"bush": set_faded(true)

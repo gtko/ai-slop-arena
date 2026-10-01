@@ -2,7 +2,7 @@ class_name Skins
 extends Node3D
 # Brawler cosmetics (src/cosmetics.js, figurines.js): the `cos` string of a roster row
 # ('skin.trail.ko.frame.title.icon', e.g. '2.1.0.3.4.7') turned into looks. Skins re-colour the painted
-# texture on the GLB (assets/shaders/skin.gdshader), trails are a small CPU particle pool behind a
+# texture on the GLB (the recol / gold of assets/shaders/fighter.gdshader), trails are a small CPU particle pool behind a
 # running brawler, K.O. effects burst when someone is knocked out. Looks only, never a rule.
 #
 #   Skins.apply(fighter, row)      once, when the fighter is created (hook in fighter.gd setup)
@@ -61,27 +61,8 @@ static func apply(f: Fighter, row: Dictionary) -> void:
 			m.albedo_color = Color(1.0, 0.74, 0.22) if gold else Color.from_hsv(fposmod(0.6 + float(rc[0]) / TAU, 1.0), 0.6, 0.8)
 			(body as MeshInstance3D).material_override = m
 		return
-	var shader: Shader = load("res://assets/shaders/skin.gdshader")
-	var cache := {}
-	for mi in (model as Node3D).find_children("*", "MeshInstance3D", true, false):
-		var mesh := (mi as MeshInstance3D).mesh
-		if mesh == null:
-			continue
-		for s in mesh.get_surface_count():
-			var src := (mi as MeshInstance3D).get_active_material(s) as BaseMaterial3D
-			if src == null:
-				continue
-			if not cache.has(src):
-				var sm := ShaderMaterial.new()
-				sm.shader = shader
-				sm.set_shader_parameter("albedo", src.albedo_color)
-				if src.albedo_texture:
-					sm.set_shader_parameter("albedo_tex", src.albedo_texture)
-				sm.set_shader_parameter("recol", Vector3(float(rc[0]), float(rc[1]), float(rc[2])))
-				sm.set_shader_parameter("gold", 1.0 if gold else 0.0)
-				sm.set_shader_parameter("roughness", src.roughness)
-				cache[src] = sm
-			(mi as MeshInstance3D).set_surface_override_material(s, cache[src])
+	# the figurine material (assets/shaders/fighter.gdshader, set up by fighter.gd) carries the skin
+	f.set_skin(Vector3(float(rc[0]), float(rc[1]), float(rc[2])), gold)
 
 # ------------------------------------------------------------------ trails
 
