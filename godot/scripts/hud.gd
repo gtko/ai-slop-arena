@@ -101,6 +101,8 @@ var wheel: EmoteWheel
 var playing := false
 var alive_n := 0
 var vision := 0.0
+var night_hunt := false     # read by sight.gd (Night Hunt: you see 9 m)
+const MOON_MIST := Color(0.1, 0.13, 0.13)   # visionfog.js, linear
 var last_pt := -1.0
 var _gas_debug := false
 var _dbg_desktop := false
@@ -290,6 +292,7 @@ func begin_match(start_msg: Dictionary, arena_: Arena, fighters_: Dictionary) ->
 	if _gas_debug:
 		gas.set_timer(45.0)
 	vision = float(arena.map.get("vision", 0.0))
+	night_hunt = mut == "nightHunt"
 	if mut == "nightHunt":
 		vision = vision * 0.8
 	_screen_mat.set_shader_parameter("fog_on", 1.0 if vision > 0.0 else 0.0)
@@ -709,6 +712,15 @@ func _update_screen(delta: float) -> void:
 		var rz := absf(cam.unproject_position(me.position + Vector3(0, 1.0, vision)).y - c.y)
 		_screen_mat.set_shader_parameter("fog_c", c / vs)
 		_screen_mat.set_shader_parameter("fog_r", Vector2(rx / vs.x, rz / vs.y))
+		# visionfog.js: the scene fog colour; at night (near-black) a faint moonlit grey-green.
+		# The web mixes it in linear HDR before its grade and tone mapping: redo those for this overlay.
+		var w3 := cam.get_world_3d()
+		if w3 and w3.environment:
+			var fc := w3.environment.fog_light_color.srgb_to_linear()
+			if fc.r + fc.g + fc.b < 0.35:
+				fc = fc.lerp(MOON_MIST, 0.55)
+			fc = Sight.to_display(fc, w3.environment)   # as the web's linear HDR pass would show it
+			_screen_mat.set_shader_parameter("fog_col", Vector3(fc.r, fc.g, fc.b))
 
 # piecewise keyframes [[t, v]...], ease-out between keys
 static func _keys(t: float, keys: Array) -> float:

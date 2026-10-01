@@ -224,6 +224,7 @@ func _build_scene() -> void:
 	e.ambient_light_energy = 0.7
 	env.environment = e
 	add_child(env)
+	add_child(Sight.new(self))   # line-of-sight dimming (sight.gd, src/sight.js)
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
