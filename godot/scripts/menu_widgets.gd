@@ -67,15 +67,30 @@ class Ring extends Control:
 				pts.append(c + Vector2(cos(a), sin(a)) * r)
 			draw_colored_polygon(pts, UiKit.VIOLET)
 
-# The Weekly Chaos switch (38x22 track, 16 px knob)
+# The Weekly Chaos switch (38x22 track, 16 px knob). Flipping `on` in the tree slides the knob like the
+# web's `transition: transform 0.18s cubic-bezier(.3, 1.4, .5, 1)` (a little overshoot) and blends the
+# track colour (background 0.15s).
 class Switch extends Control:
-	var on := false
+	var knob := 0.0:
+		set(v):
+			knob = v
+			queue_redraw()
+	var on := false:
+		set(v):
+			if v != on and is_inside_tree():
+				var tw := create_tween()
+				tw.tween_property(self, "knob", 1.0 if v else 0.0, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			else:
+				knob = 1.0 if v else 0.0
+			on = v
+			queue_redraw()
 	func _init() -> void:
 		custom_minimum_size = Vector2(38, 22)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 	func _draw() -> void:
-		draw_style_box(UiKit.sbox(Color("ff4bd8") if on else Color(1, 1, 1, 0.15), 11), Rect2(Vector2.ZERO, size))
-		draw_circle(Vector2(11 + (16 if on else 0), 11), 8, Color.WHITE)
+		var c := Color(1, 1, 1, 0.15).lerp(Color("ff4bd8"), clampf(knob, 0.0, 1.0))
+		draw_style_box(UiKit.sbox(c, 11), Rect2(Vector2.ZERO, size))
+		draw_circle(Vector2(11 + 16.0 * knob, 11), 8, Color.WHITE)
 
 # .q-spin: three yellow dots bouncing
 class Dots extends Control:

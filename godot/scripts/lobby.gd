@@ -48,19 +48,29 @@ var _toast_t := 0.0
 var _last: Dictionary = {}
 var _last_code := ""
 var _built_for := Vector2.ZERO
+var _built_over := 0.0
+var _rz := 0
 static var _font_cache: Dictionary = {}
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	get_viewport().size_changed.connect(func(): call_deferred("_rebuild_if_needed"))
+	get_viewport().size_changed.connect(_on_resize)
 	_build()
+
+# Window resized: relayout once it settles (a drag-resize sends many events).
+func _on_resize() -> void:
+	if not is_inside_tree():
+		return
+	_rz += 1
+	var n := _rz
+	get_tree().create_timer(0.12).timeout.connect(func(): if n == _rz and is_inside_tree(): _rebuild_if_needed())
 
 func _rebuild_if_needed() -> void:
 	if not is_inside_tree():
 		return
 	_measure()
-	if Vector2(W, H) != _built_for:
+	if Vector2(W, H) != _built_for or absf(_over() - _built_over) > 0.02:
 		_build()
 		if not _last.is_empty() or _last_code != "":
 			show_room(_last_code, _last)
@@ -156,6 +166,7 @@ func _build() -> void:
 	_modes.clear()
 	_measure()
 	_built_for = Vector2(W, H)
+	_built_over = _over()
 	_page = Control.new()
 	_page.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_page.size = Vector2(W, H)

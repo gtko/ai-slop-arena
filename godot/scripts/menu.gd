@@ -57,6 +57,8 @@ var _nav := 64.0
 var _g := 32.0
 var _ins := Vector4.ZERO          # safe-area insets (left, top, right, bottom), CSS px
 var _built_for := Vector2.ZERO
+var _built_over := 0.0            # font oversampling it was built with (sharp text after a resize)
+var _rz := 0
 var _page: Control
 var _home: Control
 
@@ -79,6 +81,7 @@ var _map_btn: Control
 var _maps_pop: Control
 var _map_tiles: Dictionary = {}
 var _chaos_btn: Control
+var _chaos_prev := -1
 var _tabs: Dictionary = {}
 var _page_view: Control
 var _speaker: MenuW.Speaker
@@ -107,13 +110,17 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_on_resize)
 	build()
 
+# Window resized: relayout once it settles (a drag-resize sends many events).
 func _on_resize() -> void:
-	if is_inside_tree():
-		call_deferred("_rebuild_if_needed")
+	if not is_inside_tree():
+		return
+	_rz += 1
+	var n := _rz
+	get_tree().create_timer(0.12).timeout.connect(func(): if n == _rz and is_inside_tree(): _rebuild_if_needed())
 
 func _rebuild_if_needed() -> void:
 	_measure()
-	if Vector2(W, H) != _built_for:
+	if Vector2(W, H) != _built_for or absf(_over() - _built_over) > 0.02:
 		var open := [_settings.visible, _room_dialog.visible, _queue.visible]
 		build()
 		_settings.visible = open[0]
@@ -145,6 +152,7 @@ func build() -> void:
 	_fit = 0
 	_measure()
 	_built_for = Vector2(W, H)
+	_built_over = _over()
 	_page = Control.new()
 	_page.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_page.size = Vector2(W, H)
@@ -559,16 +567,42 @@ func _refresh_tabs() -> void:
 		var lb: Label = _tabs[k][1]
 		lb.add_theme_color_override("font_color", Color.WHITE if on else UiKit.WMUTED)
 		(_tabs[k][2] as Label).modulate = Color.WHITE if on else Color(0.82, 0.82, 0.82, 1.0)
-		(_tabs[k][3] as Panel).visible = on
+		var under := _tabs[k][3] as Panel
+		if on and not under.visible and is_inside_tree():
+			under.pivot_offset = Vector2(under.size.x / 2.0, 0)
+			under.scale = Vector2(0, 1)
+			under.create_tween().tween_property(under, "scale:x", 1.0, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		under.visible = on
 
 func _open_page(key: String) -> void:
 	_page_key = key
 	_maps_pop.visible = false
 	_refresh_tabs()
 	_fill_page(key)
+	var was_page := _page_view.visible
 	_page_view.visible = key != "play"
 	for c in [_hero, _picker, _play_col]:
 		(c as Control).visible = key == "play"
+	if not is_inside_tree():
+		return
+	if key != "play":
+		_fade_in(_page_view, 12.0, 0.22)
+	elif was_page:
+		for c in [_hero, _picker, _play_col]:
+			_fade_in(c, 8.0, 0.2)
+
+# A panel appearing: fades in while rising `dy` px (ease-out), from where it was laid out.
+func _fade_in(c: Control, dy: float, dur: float) -> void:
+	if c.has_meta("fade_y"):
+		c.position.y = float(c.get_meta("fade_y"))
+	var y := c.position.y
+	c.set_meta("fade_y", y)
+	c.modulate.a = 0.0
+	c.position.y = y + dy
+	var tw := c.create_tween().set_parallel(true)
+	tw.tween_property(c, "modulate:a", 1.0, dur)
+	tw.tween_property(c, "position:y", y, dur).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.chain().tween_callback(func(): c.remove_meta("fade_y"))
 
 # ---------------------------------------------------------------- left: the brawler on show
 
@@ -1009,8 +1043,16 @@ func _build_play_panel() -> void:
 	om.add_child(ov)
 	online.add_child(om)
 	online.pressed.connect(func(): _room_dialog.visible = true)
-	online.mouse_entered.connect(func(): online.modulate = Color(1.06, 1.06, 1.06))
-	online.mouse_exited.connect(func(): online.modulate = Color.WHITE)
+	online.lift = 2.0
+	online.sink = 4.0
+	var sh0 := 4.0 if phone else 6.0
+	online.moved.connect(func(dy: float):
+		var gs := UiKit.sbox(ink, r, Color(0, 0, 0, 0), 0, ink, maxf(sh0 - dy, 0.0), 1)
+		glow.add_theme_stylebox_override("panel", gs)
+		var hot := clampf(-dy / 2.0, 0.0, 1.0)   # .pp-play:hover glow 30px .35 -> 40px .55
+		halo.add_theme_stylebox_override("panel", UiKit.sbox(Color(0, 0, 0, 0), r, Color(0, 0, 0, 0), 0, Color(1, 0.745, 0.157, lerpf(0.3, 0.55, hot)), 0, int(lerpf(18, 26, hot)))))
+	online.mouse_entered.connect(func(): online.create_tween().tween_property(online, "modulate", Color(1.06, 1.06, 1.06), 0.15))
+	online.mouse_exited.connect(func(): online.create_tween().tween_property(online, "modulate", Color.WHITE, 0.15))
 	var opad := MarginContainer.new()   # room for the 6 px ink shadow under the button
 	opad.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	opad.add_theme_constant_override("margin_bottom", 4 if phone else 6)
@@ -1160,6 +1202,14 @@ func _build_maps_pop(pw: float) -> Control:
 	p.custom_minimum_size.x = pop_w
 	_corner(p, "r", "b", ((10.0 + _ins.z + 10.0) if phone else (_g + 14.0)) + pw, (8.0 + _ins.w) if phone else _g)
 	p.visible = false
+	p.visibility_changed.connect(func():
+		if p.visible and p.is_inside_tree():
+			p.pivot_offset = Vector2(p.size.x, p.size.y)   # it grows out of the map button (bottom right)
+			p.scale = Vector2(0.4, 0.4)
+			p.modulate.a = 0.0
+			var tw := p.create_tween().set_parallel(true)
+			tw.tween_property(p, "scale", Vector2.ONE, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			tw.tween_property(p, "modulate:a", 1.0, 0.15))
 	var v := _vbox(5 if phone else 8)
 	p.add_child(v)
 	v.add_child(_disp(I18n.t("menu.pickMap"), 13 if phone else 16, Color.WHITE, 0, 0.6))
@@ -1271,9 +1321,12 @@ func _refresh_chaos() -> void:
 	l.add_child(_body("%s %s" % [MUT_ICONS[m], I18n.t("mut." + m)], 11 if phone else 13, UiKit.WTEXT))
 	row.add_child(l)
 	var sw := MenuW.Switch.new()
-	sw.on = on
+	sw.on = (not on) if _chaos_prev == int(not on) else on   # just flipped: slide from the old side
 	sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(sw)
+	_chaos_prev = int(on)
+	if sw.on != on:
+		sw.set_deferred("on", on)
 	_chaos_btn.add_child(mc)
 
 # ---------------------------------------------------------------- selection
@@ -1297,12 +1350,30 @@ func _select_brawler(key: String, user: bool) -> void:
 		profile_changed.emit()
 		if changed:
 			showcase_changed.emit()
+			_hero_in()
 		if _fit > 0:
 			_fit = 0
 			_desc.visible = H > 780 and not phone and not touch
 			_stats.visible = H > 640 and not phone
 			_render_loadout()
 		call_deferred("_fit_hero")
+
+func _hero_in() -> void:
+	if _hero == null or not is_inside_tree():
+		return
+	if _hero.has_meta("hero_y"):
+		_hero.position.y = float(_hero.get_meta("hero_y"))
+	var y := _hero.position.y
+	_hero.set_meta("hero_y", y)
+	_hero.pivot_offset = Vector2(0, _hero.size.y / 2.0)
+	_hero.position.y = y + 24.0
+	_hero.scale = Vector2(0.92, 0.92)
+	_hero.modulate.a = 0.0
+	var tw := _hero.create_tween().set_parallel(true)
+	tw.tween_property(_hero, "position:y", y, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_hero, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_hero, "modulate:a", 1.0, 0.25)
+	tw.chain().tween_callback(func(): _hero.remove_meta("hero_y"))
 
 func _commit_name() -> void:
 	if _nick:

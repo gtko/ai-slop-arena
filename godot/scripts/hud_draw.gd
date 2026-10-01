@@ -19,28 +19,27 @@ static var _emoji_ok := -1
 static var _css_h := -1.0
 static var _css_t := -1.0
 
-# Logical px per CSS px: the web HUD is laid out in CSS px, which do not scale with the window,
-# while the Godot canvas is stretched to a 720 px tall logical viewport (canvas_items / expand).
+# Logical px per CSS px, the same as the menus (UiKit.css_scale): the HUD is laid out like the web's
+# in a window at most UiKit.REF_H CSS px high, so it grows with big windows instead of staying tiny.
 static func css_scale(ci: CanvasItem) -> float:
 	var vs := ci.get_viewport_rect().size
 	return vs.y / maxf(css_height(ci), 1.0)
 
-# The window height in CSS px (cached, re-read twice a second: rotation, resizes).
+# The window height in CSS px as the layout sees it (UiKit.css_view_h), cached a quarter second.
 static func css_height(ci: CanvasItem) -> float:
 	var now := Time.get_ticks_msec() / 1000.0
-	if _css_h > 0.0 and now - _css_t < 0.5:
+	if _css_h > 0.0 and now - _css_t < 0.25:
 		return _css_h
 	_css_t = now
-	var h := float(DisplayServer.window_get_size().y)
-	var os := OS.get_name()
-	if os == "Android":
-		h = h * 160.0 / maxf(float(DisplayServer.screen_get_dpi()), 160.0)
-	elif os in ["iOS", "macOS", "Web"]:
-		h = h / maxf(DisplayServer.screen_get_scale(), 1.0)
+	var h := UiKit.css_view_h()
 	if h <= 0.0:
 		h = ci.get_viewport_rect().size.y
 	_css_h = h
 	return h
+
+# Forget the cached height (the window was resized: relayout this frame).
+static func invalidate() -> void:
+	_css_h = -1.0
 
 # Phones held sideways: the web's `@media (max-height: 520px)` rules.
 static func short_screen(ci: CanvasItem) -> bool:

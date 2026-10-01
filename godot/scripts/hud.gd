@@ -8,7 +8,7 @@ extends Control
 #   set_local(fighter)              the local brawler (begin_match does it too, from net.id)
 #   on_snapshot(msg) / on_event(e)  every "snap" / every entry of an "ev" list
 #   fill_input(msg) -> msg          adds g/gx/gz/em/ei/pg... to the outgoing "in" message
-#   show_result(rank, won)          the result screen (also triggered by kill/win events)
+#   result_open                     set by main.gd while its result screen (result_view.gd) is up
 #   end_match()                     frees the match visuals (main calls it from _clear_match)
 # Signals: play_again, menu_requested.
 # Keys (same defaults as the web game): Space super (main.gd), E gadget, B emote wheel,
@@ -149,12 +149,7 @@ var _screen: ColorRect
 var _screen_mat: ShaderMaterial
 var _front: Control
 var _pause_box: Control
-var _result_box: Control
-var _result_title: Label
-var _result_sub: Label
-var _result_left := -1.0
-var _result_rank := 0
-var _result_won := false
+var result_open := false        # main.gd's result screen (result_view.gd) is up: no pause box
 
 func setup(net_: NetClient, cam_: Camera3D, world_: Node3D, touch_: TouchControls) -> void:
 	net = net_
@@ -186,79 +181,14 @@ func setup(net_: NetClient, cam_: Camera3D, world_: Node3D, touch_: TouchControl
 	touch.emote_pressed.connect(func(): if playing and me and me.alive: wheel.toggle())
 	touch.pause_pressed.connect(_toggle_pause)
 	_build_pause()
-	_build_result()
+	get_viewport().size_changed.connect(func(): D.invalidate(); _front.queue_redraw())
 	visible = false
 
 func _build_pause() -> void:
-	_pause_box = ColorRect.new()
-	(_pause_box as ColorRect).color = Color(8 / 255.0, 6 / 255.0, 18 / 255.0, 0.72)
-	_pause_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_pause_box.visible = false
-	add_child(_pause_box)
-	var v := VBoxContainer.new()
-	v.set_anchors_preset(Control.PRESET_CENTER)
-	v.custom_minimum_size = Vector2(360, 0)
-	v.position = Vector2(-180, -130)
-	v.add_theme_constant_override("separation", 12)
-	_pause_box.add_child(v)
-	var t := Label.new()
-	t.text = I18n.t("pause.title")
-	Fonts.use_display(t, 72)
-	t.add_theme_constant_override("outline_size", 10)
-	t.add_theme_color_override("font_outline_color", D.INK)
-	t.add_theme_constant_override("shadow_offset_y", 6)
-	t.add_theme_constant_override("shadow_offset_x", 0)
-	t.add_theme_color_override("font_shadow_color", D.INK)
-	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(t)
-	var note := Label.new()
-	note.text = I18n.t("pause.online")
-	note.add_theme_color_override("font_color", D.MUTED)
-	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(note)
-	var r := Button.new()
-	r.text = I18n.t("pause.resume")
-	r.custom_minimum_size.y = 56
-	r.pressed.connect(func(): _pause_box.visible = false)
-	v.add_child(r)
-	var l := Button.new()
-	l.text = I18n.t("pause.quit")
-	l.custom_minimum_size.y = 56
-	l.pressed.connect(func(): _pause_box.visible = false; menu_requested.emit())
-	v.add_child(l)
-
-func _build_result() -> void:
-	_result_box = ColorRect.new()
-	(_result_box as ColorRect).color = Color(0, 0, 0, 0.55)
-	_result_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_result_box.visible = false
-	add_child(_result_box)
-	var v := VBoxContainer.new()
-	v.set_anchors_preset(Control.PRESET_CENTER)
-	v.custom_minimum_size = Vector2(380, 0)
-	v.position = Vector2(-190, -150)
-	v.add_theme_constant_override("separation", 12)
-	_result_box.add_child(v)
-	_result_title = Label.new()
-	Fonts.use_display(_result_title, 72)
-	_result_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_result_title.add_theme_constant_override("outline_size", 12)
-	_result_title.add_theme_color_override("font_outline_color", D.INK)
-	v.add_child(_result_title)
-	_result_sub = Label.new()
-	_result_sub.add_theme_font_size_override("font_size", 26)
-	_result_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(_result_sub)
-	var again := Button.new()
-	again.text = "Play again"
-	again.custom_minimum_size.y = 60
-	again.pressed.connect(func(): _result_box.visible = false; play_again.emit())
-	v.add_child(again)
-	var menu := Button.new()
-	menu.text = "Menu"
-	menu.custom_minimum_size.y = 60
-	menu.pressed.connect(func(): _result_box.visible = false; menu_requested.emit())
-	v.add_child(menu)
+	var pv := PauseView.new()   # the web's #pause card (pause_view.gd)
+	pv.quit.connect(func(): menu_requested.emit())
+	add_child(pv)
+	_pause_box = pv
 
 # ---------------------------------------------------------------- match lifecycle
 
@@ -309,9 +239,8 @@ func begin_match(start_msg: Dictionary, arena_: Arena, fighters_: Dictionary) ->
 	_hurt_age = 9.0
 	_poison_v = 0.0
 	_bush_v = 0.0
-	_result_box.visible = false
+	result_open = false
 	_pause_box.visible = false
-	_result_left = -1.0
 	_plates.begin(cam, fighters, me, arena)
 	_plates.visible = true
 	visible = true
@@ -330,8 +259,7 @@ func end_match() -> void:
 		_plates.clear()
 	if wheel:
 		wheel.close()
-	if _result_box:
-		_result_box.visible = false
+	result_open = false
 	if _pause_box:
 		_pause_box.visible = false
 
@@ -339,26 +267,6 @@ func set_local(f: Fighter) -> void:
 	me = f
 	if _plates:
 		_plates.me = f
-
-func show_result(rank: int, won: bool) -> void:
-	_result_rank = rank
-	_result_won = won
-	_result_left = 0.0
-	_result_title.text = "VICTORY!" if won else "#%d" % rank
-	_result_title.add_theme_color_override("font_color", Color("ffd24a") if won else Color("ff8a6a"))
-	_result_sub.text = "You are the last brawler standing" if won else "%s  |  %d brawlers left" % [_ordinal(rank), maxi(alive_n, 0)]
-	_result_box.visible = true
-
-static func _ordinal(n: int) -> String:
-	var s := "th"
-	if n % 100 < 11 or n % 100 > 13:
-		match n % 10:
-			1: s = "st"
-			2: s = "nd"
-			3: s = "rd"
-	return "%d%s place" % [n, s]
-
-# ---------------------------------------------------------------- data in
 
 func on_snapshot(m: Dictionary) -> void:
 	if gas and m.has("pt") and not _gas_debug:
@@ -419,16 +327,12 @@ func on_event(e: Dictionary) -> void:
 			_feed.push_front(row)
 			while _feed.size() > FEED_MAX:
 				_feed.pop_back()
-			if me and alive_n < before and _result_left < 0.0 and not _result_box.visible:
+			if me and alive_n < before and not result_open:
 				if alive_n == 3:
 					_show_banner(I18n.t("hud.threeLeft"), "three")
 				elif alive_n == 2:
 					_show_banner(I18n.t("hud.finalDuel"), "duel")
-			if f == me and me:
-				show_result_later(int(e.get("rank", 0)), false)
-		"win":
-			if f == me and me:
-				show_result_later(1, true)
+		# (the result screen itself: main.gd + result_view.gd, after the web's 1.2 s beat)
 		"gad":
 			if f == me and f and e.has("c"):
 				gad_charges = int(e.c)
@@ -445,11 +349,6 @@ func on_event(e: Dictionary) -> void:
 
 func _show_banner(text: String, kind: String) -> void:
 	_banner = {"text": text, "kind": kind, "age": 0.0}
-
-func show_result_later(rank: int, won: bool) -> void:
-	_result_rank = rank
-	_result_won = won
-	_result_left = 1.4      # a beat to see the last moments, like the web result delay
 
 func _add_ping(p: Vector3, k: String) -> void:
 	_pings.append({"p": p, "kind": k, "t": 4.0, "age": 0.0})
@@ -525,7 +424,7 @@ func send_ping() -> void:
 	_has_ping = true
 
 func _toggle_pause() -> void:
-	if playing and not _result_box.visible:
+	if playing and not result_open:
 		_pause_box.visible = not _pause_box.visible
 
 func _toggle_mute() -> void:
@@ -586,12 +485,10 @@ func _process(delta: float) -> void:
 	if me == null and net:
 		me = fighters.get(net.id)
 		_plates.me = me
+	# the web hides the in-match HUD under #result: no plates or counters through the result card
+	_plates.visible = not result_open
+	_front.visible = not result_open
 	playing = me != null and me.alive and arena != null
-	# result delay
-	if _result_left > 0.0:
-		_result_left -= delta
-		if _result_left <= 0.0:
-			show_result(_result_rank, _result_won)
 	_emote_cd = maxf(_emote_cd - delta, 0.0)
 	_ping_cd = maxf(_ping_cd - delta, 0.0)
 	gad_cd = maxf(gad_cd - delta, 0.0)

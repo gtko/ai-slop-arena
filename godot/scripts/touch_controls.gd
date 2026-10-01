@@ -29,6 +29,7 @@ var buttons_on := true       # false while the brawler is out
 var move := Vector2.ZERO
 var aim := Vector2.ZERO
 var firing := false
+var auto_aim := false        # touch.js autoAim: a quick tap aims at the nearest enemy (main.gd _control)
 var _touch_move := -1
 var _touch_aim := -1
 var _aim_mode := ""          # "attack" | "super" | "free" (right-half floating stick)
@@ -120,6 +121,8 @@ func _start_aim(index: int, origin: Vector2, pos: Vector2, mode: String) -> void
 func _end_aim(cancel: bool) -> void:
 	var tap := not _aim_dragged and Time.get_ticks_msec() - _aim_t0 < TAP_MS
 	if not cancel and (_aim_dragged or tap):
+		if not _aim_dragged and _aim_mode != "free":
+			auto_aim = true
 		if _aim_mode == "super":
 			super_pressed.emit()
 		elif _aim_mode == "attack":

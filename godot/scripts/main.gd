@@ -3,7 +3,8 @@ extends Node3D
 # -> back to the menu / lobby. Everything is built from code (no hand-edited scenes) so the port
 # stays easy to diff. Rules run on the server; this is the renderer + input.
 #
-# Screens (all built from code): MainMenu (menu.gd), Lobby (lobby.gd), ResultView (result_view.gd).
+# Screens (all built from code): MainMenu (menu.gd), Lobby (lobby.gd), MatchLoad (match_load.gd: loading +
+# 3-2-1), ResultView (result_view.gd), all laid out in the web's CSS px (UiKit.css_scale, css_view.gd).
 # Network: NetClient (room socket), MatchmakingClient (quick play queue, /mm), Profile (rank).
 #   MENU     main menu. QUICK PLAY -> QUEUE; PRIVATE ROOM create / join -> LOBBY.
 #   QUEUE    matchmaking overlay on the menu; "matched" -> room socket -> LOBBY (a matchmade room
@@ -38,6 +39,7 @@ var audio: AudioManager           # AUDIO HOOK: pooled SFX + music (scripts/audi
 var menu: MainMenu
 var lobby: Lobby
 var result: ResultView
+var matchload: MatchLoad           # pre-match loading screen + 3-2-1 (match_load.gd)
 var showcase: MenuShowcase          # MENU hook: the live arena behind the home screen (menu_showcase.gd)
 var _auto_start := false          # SOLO: start the new room as soon as we lead it
 var projectiles: Array = []       # [{node, dir, speed, left}]
@@ -57,6 +59,7 @@ var _in_match_room := false       # the room socket is open (lobby or match)
 var _my_place := 0
 var _winner := ""
 var _ranked_text := ""
+var _match_done := false          # the room says the match is over (not only me)
 var _result_shown := false
 var _last_count := 0
 var _me_hp := -1.0
@@ -108,18 +111,74 @@ func _menushot(path: String, args: PackedStringArray) -> void:
 				"room": menu._room_dialog.visible = true
 				"maps": menu._maps_pop.visible = true; menu._refresh_map()
 				"quests", "collection", "shop", "road": menu._open_page(a.substr(10))
-				"result":
-					result.show_result("#3", I18n.t("g.ko", {"rank": 3}), true)
-					result.set_rank_text(I18n.t("rank.change", {"delta": "+12", "icon": "", "tier": I18n.t("rank.silver"), "rp": 212}))
+				"result", "result_win", "result_run":
+					_fake_result(a.substr(10))
+				"load", "count":
+					_fake_load(a.substr(10) == "count")
+				"pause":
+					var pv := PauseView.new()
+					ui.add_child(pv)
+					pv.visible = true
 				"queue":
 					menu.show_queue(true)
 					menu.update_queue({"n": 3, "need": 8, "waited": 12000, "botsIn": 18000, "plats": {"web": 2, "steam": 1}})
+	var resize := Vector2i.ZERO   # --resize=WxH: resize the window mid-way (relayout check)
+	for a in args:
+		if a.begins_with("--resize="):
+			var wh := a.substr(9).split("x")
+			resize = Vector2i(int(wh[0]), int(wh[1]))
 	for i in 90:
+		if i == 30 and resize != Vector2i.ZERO:
+			DisplayServer.window_set_size(resize)
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(path)
-	print("MENUSHOT saved %s size=%s" % [path, get_viewport().get_visible_rect().size])
+	print("MENUSHOT saved %s size=%s window=%s" % [path, get_viewport().get_visible_rect().size, DisplayServer.window_get_size()])
 	get_tree().quit(0)
+
+# Screenshot data for the result / loading screens (local only, nothing is sent to any server).
+func _fake_roster() -> Array:
+	var keys: Array = GameData.brawlers.keys()
+	var names := ["You", "Zorglub", "Mia", "Tanuki", "Rex", "Pixel", "Nova", "Bobo"]
+	var pers := ["hunter", "camper", "looter", "vulture", "coward", "showoff", "hunter"]
+	var rows: Array = []
+	for i in 8:
+		rows.append({"id": "me" if i == 0 else "bot%d" % i, "name": names[i], "type": "%s:A1" % keys[i % keys.size()],
+			"human": i < 2, "per": "" if i < 2 else pers[i - 1], "plat": "steam" if i == 1 else "web", "cos": "%d.0.0.0.1.0" % (i % 3)})
+	return rows
+
+func _fake_result(kind: String) -> void:
+	menu.visible = false
+	var rows := _fake_roster()
+	result.begin_match(rows, "me")
+	var evs := [{"e": "dmg", "id": "bot3", "a": 3400, "s": "me"}, {"e": "kill", "id": "bot3", "by": "me", "rank": 8},
+		{"e": "kill", "id": "bot4", "by": "me", "rank": 7}, {"e": "pick", "by": "me"}, {"e": "pick", "by": "me"}, {"e": "pick", "by": "me"},
+		{"e": "gad", "id": "me"}, {"e": "atk", "id": "bot1", "s": 1}, {"e": "atk", "id": "bot1", "s": 1}, {"e": "dmg", "id": "me", "a": 4100, "s": "bot1"},
+		{"e": "emo", "id": "bot2"}, {"e": "emo", "id": "bot2"}, {"e": "kill", "id": "bot5", "by": "bot1", "rank": 6}, {"e": "kill", "id": "bot6", "by": "bot2", "rank": 5},
+		{"e": "kill", "id": "bot7", "by": "bot1", "rank": 4}]
+	if kind == "result_win":
+		evs += [{"e": "kill", "id": "bot2", "by": "me", "rank": 3}, {"e": "kill", "id": "bot1", "by": "me", "rank": 2}, {"e": "win", "id": "me"}]
+	elif kind == "result":
+		evs += [{"e": "kill", "id": "me", "by": "bot1", "rank": 3}, {"e": "kill", "id": "bot2", "by": "bot1", "rank": 2}, {"e": "win", "id": "bot1"}]
+	else:
+		evs += [{"e": "kill", "id": "me", "by": "bot1", "rank": 3}]
+	for e in evs:
+		result.track(e)
+	var won := kind == "result_win"
+	result.show_result(1 if won else 3, won, kind != "result_run")
+	if kind != "result_run":
+		result.set_rank_text(I18n.t("rank.change", {"delta": "+12" if won else "-4", "icon": "🥈", "tier": I18n.t("rank.silver"), "rp": 212}))
+
+func _fake_load(counting: bool) -> void:
+	menu.visible = false
+	var rows := _fake_roster()
+	matchload.show_load("grove", rows, "me")
+	matchload.set_progress("me", 60)
+	if counting:
+		matchload.set_progress("me", 100)
+		matchload.set_progress("bot1", 100)
+		await get_tree().create_timer(0.5).timeout
+		matchload.count(3)
 
 # Headless end-to-end check against a local server:
 #   godot --headless --path godot -- --autotest ws://localhost:8787 [--quick] [--map=grove] [--shot=/tmp/x.png] [--lobbyshot=/tmp/l.png]
@@ -183,6 +242,15 @@ func _autotest() -> void:
 		if a.begins_with("--shot="):
 			await RenderingServer.frame_post_draw
 			get_viewport().get_texture().get_image().save_png(a.substr(7))
+	if DebugArgs.has("feellog"):   # FEEL: smoothness of the remote fighters (fighter.gd _log_motion)
+		var tot := {"n": 0, "cv": 0.0, "stall": 0, "mean": 0.0, "jerk": 0.0}
+		for f in fighters.values():
+			if f != me:
+				var st: Dictionary = f.motion_stats()
+				tot.n += int(st.n); tot.stall += int(st.stall)
+				tot.cv += float(st.cv) * int(st.n); tot.mean += float(st.mean) * int(st.n); tot.jerk += float(st.jerk) * int(st.n)
+		print("FEELLOG interp=%s moving_frames=%d speed_mean=%.2f speed_cv=%.3f jerk=%.3f stalls=%d fps=%d" % ["glide" if Fighter.interp_glide else "buffer",
+			tot.n, tot.mean / maxf(1, tot.n), tot.cv / maxf(1, tot.n), tot.jerk / maxf(1, tot.n), tot.stall, Engine.get_frames_per_second()])
 	print("AUTOTEST-INPUT touchsize=%s touchscreen=%s touch_visible=%s touch_moved=%s touch_fired=%s start=%s end=%s" % [touch.size, DisplayServer.is_touchscreen_available(), touch.visible, stats.get("touch_moved", false), stats.get("touch_fired", false), stats.get("start_pos", Vector3.ZERO), me.position if me else Vector3.ZERO])
 	print("AUTOTEST state=%d snaps=%d me=%s hp=%s pos=%s fighters=%d arena=%s matchmade=%s" % [state, stats.snaps, me != null, me.hp if me else -1, me.position if me else Vector3.ZERO, fighters.size(), arena != null, net.matchmade])
 	get_tree().quit(0 if stats.snaps > 20 and me != null else 1)
@@ -247,9 +315,19 @@ func _build_ui() -> void:
 	hud.add_theme_font_size_override("font_size", 22)
 	ui.add_child(hud)
 	status = Label.new()
-	status.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	status.position.y = 60
-	status.add_theme_font_size_override("font_size", 40)
+	status.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	status.offset_top = 70
+	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	Fonts.use_display(status, 44)
+	status.add_theme_color_override("font_color", Color.WHITE)
+	status.add_theme_constant_override("outline_size", 10)
+	status.add_theme_color_override("font_outline_color", UiKit.INK)
+	status.add_theme_color_override("font_shadow_color", UiKit.INK)
+	status.add_theme_constant_override("shadow_offset_x", 0)
+	status.add_theme_constant_override("shadow_offset_y", 5)
+	status.add_theme_constant_override("shadow_outline_size", 10)
 	ui.add_child(status)
 	rank_label = Label.new()
 	rank_label.set_anchors_preset(Control.PRESET_CENTER)
@@ -268,25 +346,25 @@ func _build_ui() -> void:
 
 # The three full screens; rebuilt when the language changes.
 func _build_screens() -> void:
-	for n in [menu, lobby, result]:
+	for n in [menu, lobby, result, matchload]:
 		if n != null:
 			(n as Node).queue_free()
 	menu = MainMenu.new()
 	menu.profile = profile
-	menu.quick_play.connect(func(): audio.play("click"); _quick_play())
-	menu.create_room.connect(func(): audio.play("click"); _open_room(_random_code(), false))
-	menu.join_room.connect(func(code: String): audio.play("click"); _open_room(code, false))
+	menu.quick_play.connect(func(): UiKit.click(); _quick_play())   # (MenuTap presses click once)
+	menu.create_room.connect(func(): UiKit.click(); _open_room(_random_code(), false))
+	menu.join_room.connect(func(code: String): UiKit.click(); _open_room(code, false))
 	menu.queue_bots.connect(func(): mm.bots())
 	menu.queue_cancel.connect(_cancel_queue)
 	menu.settings_changed.connect(_on_settings_changed)
 	menu.profile_changed.connect(_send_pick)
-	menu.solo_play.connect(func(): audio.play("click"); _auto_start = true; _open_room(_random_code(), false))
-	menu.training.connect(func(): audio.play("click"); _open_room(_random_code(), false))
+	menu.solo_play.connect(func(): UiKit.click(); _auto_start = true; _open_room(_random_code(), false))
+	menu.training.connect(func(): UiKit.click(); _open_room(_random_code(), false))
 	menu.showcase_changed.connect(func(): showcase.refresh())
 	ui.add_child(menu)
 	lobby = Lobby.new()
 	lobby.leave.connect(_leave_room)
-	lobby.start.connect(func(): audio.play("click"); net.send({"t": "start"}))
+	lobby.start.connect(func(): UiKit.click(); net.send({"t": "start"}))
 	lobby.map_picked.connect(func(m: String): net.send({"t": "map", "map": m}))
 	lobby.mode_picked.connect(func(m: String): net.send({"t": "mode", "mode": m}))
 	lobby.chaos_toggled.connect(func(on: bool): net.send({"t": "chaos", "on": on}))
@@ -298,8 +376,10 @@ func _build_screens() -> void:
 	result = ResultView.new()
 	result.again.connect(_result_again)
 	result.menu.connect(_result_menu)
-	result.spectate.connect(func(): result.visible = false)
+	result.spectate.connect(func(): result.hide_result(); hud_ui.result_open = false)
 	ui.add_child(result)
+	matchload = MatchLoad.new()
+	ui.add_child(matchload)
 	_show_screen()
 
 func _on_settings_changed() -> void:
@@ -335,13 +415,16 @@ func _show_screen() -> void:
 	menu.visible = in_menu
 	lobby.visible = state == State.LOBBY
 	if state != State.OVER and state != State.LOBBY:
-		result.visible = false
+		result.hide_result()
+		hud_ui.result_open = false
+	if not (state == State.LOADING or state == State.COUNTDOWN or state == State.PLAYING):
+		matchload.hide_load()
 	var in_match := state == State.LOADING or state == State.COUNTDOWN or state == State.PLAYING or state == State.OVER
 	touch.visible = in_match and DisplayServer.is_touchscreen_available()
 	hud.visible = false   # HUD hook: hud_ui draws the in-match HUD
 	if state != State.OVER:
 		rank_label.visible = false
-	status.visible = in_match or state == State.LOBBY
+	status.visible = (in_match or state == State.LOBBY) and state != State.LOADING and state != State.COUNTDOWN   # the loading screen says it
 	showcase.set_active((in_menu or state == State.LOBBY) and not Settings.saver)   # MENU hook: the arena behind the home screen and the room
 	menu.set_backdrop(showcase.active)
 	get_viewport().disable_3d = not in_match and not showcase.active   # nothing to draw behind the lobby: save the battery
@@ -452,6 +535,7 @@ func _clear_match() -> void:
 	_my_place = 0
 	_winner = ""
 	_ranked_text = ""
+	_match_done = false
 	_result_shown = false
 	hud_ui.end_match()   # HUD hook
 	rank_label.visible = false
@@ -477,23 +561,40 @@ func _show_result() -> void:
 	# HUD hook: the Hud draws the K.O. / victory overlay (with Play again / Menu); the ranked-points
 	# text goes under it. result_view.gd is no longer shown at the end of a match.
 	_result_shown = true
-	hud_ui.show_result(1 if won else maxi(_my_place, 1), won)
-	result.visible = false
+	# the web's #result: SPECTATE while the others still fight, PLAY AGAIN / MENU once it is over
+	var over := _winner != "" or _match_done
+	if over:
+		result.match_ended()
+	status.text = ""
+	result.show_result(1 if won else maxi(_my_place, 1), won, over)
+	hud_ui.result_open = true
 	_update_rank_label()
+	_debug_shot("resultshot", 1.6)
 
+# Screenshot checks of the real flow: --resultshot=<png> / --countshot=<png> (saved once, after `wait` s).
+var _shots_done: Dictionary = {}
+func _debug_shot(flag: String, wait: float) -> void:
+	for a in DebugArgs.list():
+		if a.begins_with("--%s=" % flag) and not _shots_done.has(flag):
+			_shots_done[flag] = true
+			await get_tree().create_timer(wait).timeout
+			await RenderingServer.frame_post_draw
+			get_viewport().get_texture().get_image().save_png(a.substr(flag.length() + 3))
+			print("DEBUGSHOT %s" % flag)
+
+# The ranked line of the result screen (matchmade matches): pending until {t:"ranked"} arrives.
 func _update_rank_label() -> void:
-	rank_label.text = _ranked_text
-	rank_label.add_theme_color_override("font_color", UiKit.GOOD if profile.last_visible else UiKit.MUTED)
-	rank_label.visible = _ranked_text != "" and state == State.OVER
+	rank_label.visible = false   # (old label, replaced by the result screen's .res-rank line)
+	result.set_rank_text(_ranked_text if _ranked_text != "" else (I18n.t("rank.pending") if _room_matchmade else ""))
 
 func _winner_name() -> String:
 	var f: Fighter = fighters.get(_winner)
 	return f.fname if f else "?"
 
 func _result_again() -> void:
-	result.visible = false
+	result.hide_result()
+	hud_ui.result_open = false
 	rank_label.visible = false
-	audio.play("click")
 	if _room_matchmade:
 		# a matchmade room is over: queue again with the same choices
 		_leave_room()
@@ -548,6 +649,10 @@ func _on_message(m: Dictionary) -> void:
 				_match_over()
 		"start":
 			_start_match(m)
+			result.begin_match(m.get("roster", []), net.id)
+			matchload.show_load(String(m.get("map", "")), m.get("roster", []), net.id)
+		"lprog":
+			matchload.set_progress(String(m.get("id", "")), float(m.get("p", 0)))
 		"go":
 			_last_count = 0   # AUDIO HOOK
 			count_left = float(m.get("in", 3000)) / 1000.0
@@ -557,6 +662,9 @@ func _on_message(m: Dictionary) -> void:
 			hud_ui.on_snapshot(m)   # HUD hook
 		"ev":
 			for e in m.list:
+				result.track(e)   # the result screen's stats / podium
+				if _hold_attack(e):
+					continue
 				_apply_event(e)
 				hud_ui.on_event(e)   # HUD hook
 		"ranked":
@@ -582,6 +690,10 @@ func _on_message(m: Dictionary) -> void:
 
 # The server ended the match (someone won, or the time ran out): show the result once.
 func _match_over() -> void:
+	_match_done = true
+	if state == State.OVER and _result_shown:
+		_show_result()   # now PLAY AGAIN / MENU (and the podium)
+		return
 	if state == State.OVER:
 		if not _result_shown and me != null and _winner != "":
 			_show_result()
@@ -608,6 +720,11 @@ func _start_match(m: Dictionary) -> void:
 		fighters[row.id] = f
 		if f.is_local:
 			me = f
+	_held_atk.clear()
+	feel.reset()   # FEEL
+	Feel.current = feel
+	_cam_target = null
+	_knock = Vector2.ZERO
 	hud_ui.begin_match(m, arena, fighters)   # HUD hook
 	_final_music = false   # AUDIO HOOK: the map theme (+ weather bed) starts with the match
 	_me_hp = -1.0
@@ -616,6 +733,83 @@ func _start_match(m: Dictionary) -> void:
 	net.send({"t": "lprog", "p": 100})
 	net.send({"t": "loaded"})
 
+var _vislog := DebugArgs.has("vislog")   # debug: print who the server shows / hides, attacks from hidden shooters
+# 'atk' events from brawlers the server hides from us [{e, at}]. The server sends each player only
+# the brawlers it can see (game.js netTick: a bush, a wall or prop tile, the fog, sight range), but
+# every attack to everyone; a hidden shooter's position here is where it was last seen (or its spawn),
+# so replaying its attack at once draws shots out of empty ground, all over the map (bots fighting
+# far away) and gives away roughly where a hidden enemy is. So the attack waits for the next snapshot:
+# a shooter revealed by its own shot (out of a bush) is replayed from where it really is, the bullets
+# that much further along; one still hidden after HOLD_ATK shows only what lands where it aimed
+# (fx.gd late_attack), and makes no sound (combat.js: what you cannot see you do not hear).
+const HOLD_ATK := 0.25
+var _held_atk: Array = []
+
+func _hold_attack(e: Dictionary) -> bool:
+	if e.get("e", "") != "atk":
+		return false
+	var f: Fighter = fighters.get(e.get("id", ""))
+	if f == null or f == me or not f.alive or not f.hidden_by_server:
+		return false
+	if _vislog:
+		print("VIS t=%.2f atk-held %s d_me=%.1f" % [Time.get_ticks_msec() / 1000.0, f.id, me.position.distance_to(f.position) if me else -1.0])
+	_held_atk.append({"e": e, "at": Time.get_ticks_msec() / 1000.0})
+	return true
+
+# After each snapshot: replay the held attacks whose shooter now shows, give up on the others.
+func _flush_attacks() -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	var k := 0
+	while k < _held_atk.size():
+		var h: Dictionary = _held_atk[k]
+		var e: Dictionary = h.e
+		var f: Fighter = fighters.get(e.get("id", ""))
+		var age: float = now - float(h.at)
+		if f == null or not f.alive:
+			_held_atk.remove_at(k)
+		elif not f.hidden_by_server:
+			_held_atk.remove_at(k)
+			if _vislog:
+				print("VIS t=%.2f atk-late %s lead=%.2f" % [now, f.id, age])
+			_apply_event(e)
+			if hud_ui.fx:
+				hud_ui.fx.late_attack(e, age, false)
+		elif age >= HOLD_ATK:
+			_held_atk.remove_at(k)
+			if _vislog:
+				print("VIS t=%.2f atk-blind %s" % [now, f.id])
+			if hud_ui.fx:
+				hud_ui.fx.late_attack(e, age, true)
+		else:
+			k += 1
+
+# --vislog: why the server probably hid that brawler from us (game.js canSee, from our own position).
+func _vis_why(f: Fighter) -> String:
+	if me == null or arena == null:
+		return "?"
+	var a := me.position
+	var b := f.position
+	if a.distance_to(b) > 14.0:
+		return "range"
+	var dx := b.x - a.x
+	var dz := b.z - a.z
+	var l := maxf(Vector2(dx, dz).length(), 1e-4)
+	var out := ""
+	for side in [0.0, 0.5, -0.5]:
+		var tx: float = b.x - dz / l * side
+		var tz: float = b.z + dx / l * side
+		var n := ceili(Vector2(tx - a.x, tz - a.z).length() / 0.45)
+		var hit := "-"
+		for k in range(1, n):
+			var c := arena.char_at(a.x + (tx - a.x) * k / n, a.z + (tz - a.z) * k / n)
+			if GameData.SHOT_BLOCK.contains(c):
+				hit = c
+				break
+		out += hit
+	if not out.contains("-"):
+		return "los:" + out
+	return "bush" if arena.is_bush(b.x, b.z) else "open:" + out
+
 func _apply_snap(m: Dictionary) -> void:
 	var seen := {}
 	for r in m.b:
@@ -623,11 +817,16 @@ func _apply_snap(m: Dictionary) -> void:
 		if f == null:
 			continue
 		seen[r[0]] = true
+		if _vislog and f.hidden_by_server and f != me:
+			print("VIS t=%.2f show %s jump=%.2f d_me=%.1f" % [Time.get_ticks_msec() / 1000.0, f.id, f.position.distance_to(Vector3(r[1], 0, r[2])), me.position.distance_to(Vector3(r[1], 0, r[2])) if me else -1.0])
+		f.apply_row(r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9])   # before the flag: a reappearing brawler snaps
 		f.hidden_by_server = false
-		f.apply_row(r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9])
 	for id in fighters:
 		if not seen.has(id) and fighters[id] != me:
+			if _vislog and not fighters[id].hidden_by_server and fighters[id].alive:
+				print("VIS t=%.2f hide %s d_me=%.1f why=%s" % [Time.get_ticks_msec() / 1000.0, id, me.position.distance_to(fighters[id].position) if me else -1.0, _vis_why(fighters[id])])
 			fighters[id].hidden_by_server = true   # in a bush / fog: the server does not tell us
+	_flush_attacks()
 	_audio_snap()   # AUDIO HOOK
 	if me and m.has("me") and int(m.me[2]) != fix_seen:
 		# the server refused one of our moves: snap back to where it says
@@ -638,17 +837,18 @@ func _apply_event(e: Dictionary) -> void:
 	if arena:
 		arena.on_event(e)  # WORLD hook
 	var f: Fighter = fighters.get(e.get("id", ""))
+	_feel_event(e)   # FEEL: turning, Shoot / Super clips, kicks, punches, hit ladder, K.O. beat
 	match e.get("e", ""):
 		"atk":
 			if f:
 				audio.play(("super_" if e.get("s", false) else "atk_") + String(f.type.key), f.position)   # AUDIO HOOK
 				if e.get("s", false) and f == me:
 					audio.duck()
-				f.play_once("super" if e.get("s", false) else "shoot")   # projectiles: fx_combat.gd (Fx, via hud_ui.on_event)
 		"kill":
 			if f:
+				if f.visible or f == me:   # game.js killFx: no sound for a K.O. you cannot see
+					audio.play("death", f.position)   # AUDIO HOOK
 				f.alive = false
-				audio.play("death", f.position)   # AUDIO HOOK
 				if fighters.get(e.get("by", "")) == me and f != me:
 					audio.play("kill")
 					audio.duck()
@@ -681,11 +881,6 @@ func _apply_event(e: Dictionary) -> void:
 			if arena:
 				arena.break_tile(int(e.i), int(e.j))
 				audio.play("crate", _tile_world(int(e.i), int(e.j)))   # AUDIO HOOK
-		"dmg":   # AUDIO HOOK
-			if f == me:
-				audio.play("damage")
-			elif fighters.get(e.get("s", "")) == me:
-				audio.play("hit")
 		"pick":   # AUDIO HOOK
 			if fighters.get(e.get("by", "")) == me:
 				audio.play("pickup")
@@ -698,22 +893,25 @@ func _process(delta: float) -> void:
 		arena.update(delta)
 	if state == State.COUNTDOWN:
 		count_left -= delta
-		status.text = str(ceili(maxf(count_left, 0.0)))
 		if ceili(maxf(count_left, 0.0)) != _last_count and count_left > 0.0:   # AUDIO HOOK
 			_last_count = ceili(count_left)
+			matchload.count(_last_count)   # 3-2-1 popping on the loading screen
+			_debug_shot("countshot", 0.3)
 			audio.play("tick")
 		if count_left <= 0.0:
 			audio.play("go")   # AUDIO HOOK
 			if DebugArgs.has("realinput"):
 				print("AUTOTEST-PLAYING")
+			matchload.finish()   # FIGHT!, then the loading screen fades out
 			_set_state(State.PLAYING)
 			status.text = ""
 	if me == null or arena == null:
 		return
-	audio.listener = me.position   # AUDIO HOOK
+	feel.playing = state == State.PLAYING
 	if state == State.PLAYING and me.alive:
 		_control(delta)
-	_follow_camera(delta)
+	_follow_camera(delta)   # also sets audio.listener (the camera focus, like the web)
+	_heartbeat(delta)
 
 func _control(delta: float) -> void:
 	var mv := touch.move if touch.visible else Vector2.ZERO
@@ -725,16 +923,34 @@ func _control(delta: float) -> void:
 	if kb != Vector2.ZERO:
 		mv = kb.limit_length(1.0)
 	last_move = mv
-	if arena.world_step(me, mv, delta):  # WORLD hook (ice, jump pads: it moved me)
-		mv = Vector2.ZERO
-	if mv != Vector2.ZERO:
-		var p := me.position + Vector3(mv.x, 0, mv.y) * float(me.type.speed) * delta
-		me.position = arena.collide_circle(p, me.radius)
-		me.rotation.y = lerp_angle(me.rotation.y, atan2(mv.x, mv.y), clampf(delta * 14.0, 0, 1))
+	# FEEL: walking like brawler.js on the client (the server checks every step: game.js checkMove).
+	# Frozen / rooted / stunned stand still and slowed walks at 55 %, or the server refuses the moves
+	# (and kicks after 25); kit.step_local eases the speed in and out (acceleration 16 /s, 2.4 on ice)
+	# and moves us itself until we are at speed; a push from the server ('knock' event) slides us and
+	# fades (e^-7t), the server allowing for it.
+	var mul := 0.0 if (me.flags & (8 | 16 | 32)) != 0 else (0.55 if (me.flags & 4) != 0 else 1.0)
+	var step := _knock
+	if not arena.world_step(me, mv, delta):  # WORLD hook (ice, jump pads, easing: it moved me)
+		step += mv * float(me.type.speed) * mul
+	_knock *= exp(-7.0 * delta)
+	if _knock.length_squared() < 0.01:
+		_knock = Vector2.ZERO
+	if step.length_squared() > 1e-6:
+		me.position = arena.collide_circle(me.position + Vector3(step.x, 0, step.y) * delta, me.radius)
 	var firing := false
 	if touch.visible:
-		if touch.aim.length() > 0.25:
+		# touch.js / game.js: a dragged stick aims; a quick tap aims at the nearest enemy you can see;
+		# otherwise the aim follows the walk (so a released stick never leaves you facing backwards)
+		if touch.auto_aim:
+			touch.auto_aim = false
+			var foe := _nearest_foe()
+			if foe:
+				var d := Vector2(foe.position.x - me.position.x, foe.position.z - me.position.z)
+				aim_dir = d.normalized() if d.length() > 1e-3 else aim_dir
+		elif touch.aim.length() > 0.25:
 			aim_dir = touch.aim.normalized()
+		elif mv.length_squared() > 0.05 and not touch.firing:
+			aim_dir = mv.normalized()
 		firing = touch.firing
 	else:
 		var hit = _mouse_ground()
@@ -745,8 +961,8 @@ func _control(delta: float) -> void:
 		firing = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not result.visible
 		if Input.is_action_just_pressed("ui_accept"):
 			super_seq += 1
-	if aim_dir != Vector2.ZERO and (firing or touch.visible):
-		me.rotation.y = lerp_angle(me.rotation.y, atan2(aim_dir.x, aim_dir.y), clampf(delta * 20.0, 0, 1))
+	if aim_dir != Vector2.ZERO and firing:
+		me.face(aim_dir.x, aim_dir.y)   # fighter.gd turns to it (the server's attack echo comes later)
 	aim_point = me.position + Vector3(aim_dir.x, 0, aim_dir.y) * float(me.type.range)
 	send_t -= delta
 	if send_t <= 0.0:
@@ -770,38 +986,151 @@ func _mouse_ground() -> Variant:
 # the walk), kept off the outer walls; the camera sits at Lighting.CAM_OFFSET from it (fov 40, ~47
 # degree pitch), zoomed out a little for the last three and in while lurking in a bush.
 var cam_focus := Vector3(0, 0, 4)
-var _cam_look := Vector2.ZERO
-var _cam_zoom := 1.0
 var _bush_idle := 0.0
+# FEEL (feel.js + game.js updateCamera): trauma shake, zoom punches, the final-K.O. orbit; once you
+# are out the camera follows your killer (else anyone still standing), slower (2.2 /s instead of 6).
+var feel := Feel.new()
+var _cam_target: Fighter
+var _knock := Vector2.ZERO         # a push from the server ('knock' event), fading
+var _heart_t := 0.0
 
 func _follow_camera(delta: float) -> void:
+	var F := feel
+	var tgt: Fighter = me
+	if not me.alive:
+		if _cam_target == null or not is_instance_valid(_cam_target) or not _cam_target.alive:
+			_cam_target = null
+			for f in fighters.values():
+				if f.alive and f.visible:
+					_cam_target = f
+					break
+		if _cam_target:
+			tgt = _cam_target
 	var look := Vector2.ZERO
-	if me.alive:
+	if tgt == me and me.alive:
 		var aiming := not touch.visible or touch.aim.length() > 0.3
 		if aiming and aim_dir != Vector2.ZERO:
 			look = aim_dir.normalized() * minf(2.6, 0.18 * float(me.type.range))
 		elif last_move.length_squared() > 0.05:
 			look = last_move.normalized() * 1.2
-	_cam_look += (look - _cam_look) * (1.0 - exp(-delta / 0.25))
+	F.look += (look - F.look) * (1.0 - exp(-delta / 0.25))
 	var lim := GameData.HALF
-	var want := Vector3(clampf(me.position.x + _cam_look.x, -(lim - 9.0), lim - 9.0), 0.0,
-		clampf(me.position.z + _cam_look.y, -(lim - 11.0), lim - 6.0))
-	cam_focus = want if cam_focus.distance_to(want) > 30.0 else cam_focus.lerp(want, 1.0 - exp(-6.0 * delta)) # (a new match: cut)
-	var alive := 0
-	for id in fighters:
-		alive += 1 if fighters[id].alive else 0
-	var zoom := 1.1 if alive == 2 else (1.06 if alive == 3 else 1.0)
+	var want := Vector3(clampf(tgt.position.x + F.look.x, -(lim - 9.0), lim - 9.0), 0.0,
+		clampf(tgt.position.z + F.look.y, -(lim - 11.0), lim - 6.0))
+	var speed := 6.0 if tgt == me else 2.2
+	cam_focus = want if cam_focus.distance_to(want) > 30.0 else cam_focus.lerp(want, 1.0 - exp(-speed * delta)) # (a new match: cut)
+	F.focus = cam_focus
+	var zoom := 1.0
+	if state == State.PLAYING or (state == State.OVER and _winner == ""):
+		var alive := 0
+		for id in fighters:
+			alive += 1 if fighters[id].alive else 0
+		zoom = 1.1 if alive == 2 else (1.06 if alive == 3 else 1.0)
 	_bush_idle = _bush_idle + delta if me.alive and arena.is_bush(me.position.x, me.position.z) and last_move.length_squared() < 0.02 else 0.0
 	if _bush_idle > 1.5:
 		zoom *= 0.94
-	_cam_zoom += (zoom - _cam_zoom) * (1.0 - exp(-3.0 * delta))
+	F.update(delta, zoom)
+	var dist := F.zoom * F.punch
 	for a in DebugArgs.list():   # screenshots side by side with the web build: --camfocus=x,z[,zoom]
 		if a.begins_with("--camfocus="):
 			var v := a.substr(11).split(",")
 			cam_focus = Vector3(float(v[0]), 0.0, float(v[1]))
-			_cam_zoom = float(v[2]) if v.size() > 2 else 1.0
-	cam.position = cam_focus + Lighting.CAM_OFFSET * _cam_zoom
+			dist = float(v[2]) if v.size() > 2 else 1.0
+			F.trauma = 0.0
+	var o := Lighting.CAM_OFFSET
+	var ca := cos(F.orbit)
+	var sa := sin(F.orbit)
+	var sh := F.shake()
+	cam.position = cam_focus + Vector3((o.x * ca + o.z * sa) * dist + sh.x, o.y * dist + sh.y, (o.z * ca - o.x * sa) * dist + sh.z)
 	cam.look_at(Vector3(cam_focus.x, 0.5, cam_focus.z))
+	if sh.w != 0.0:
+		cam.rotate_object_local(Vector3(0, 0, 1), sh.w)
+	audio.listener = cam_focus   # game.js volumeAt: distances from the camera focus
+
+# game.js nearestFoe: the closest enemy you can see (touch tap auto-aim).
+func _nearest_foe() -> Fighter:
+	var best: Fighter = null
+	var bd := INF
+	for f in fighters.values():
+		if f == me or not f.alive or not f.visible:
+			continue
+		var d := Vector2(f.position.x - me.position.x, f.position.z - me.position.z).length()
+		if d < bd:
+			bd = d
+			best = f
+	return best
+
+# FEEL: game feel of the server's events (game.js damageFx / killFx / applyEvents, combat.js attack):
+# turning to the attack, the camera kick when you fire, the punch-in of your super, the hit-confirm
+# pitch ladder, trauma when you land / take a hit, the K.O. beat, the cheer, the final-K.O. orbit.
+func _feel_event(e: Dictionary) -> void:
+	var f: Fighter = fighters.get(e.get("id", ""))
+	var sup: bool = e.get("e", "") == "atk" and bool(e.get("s", false))   # (in "dmg", "s" is the source id)
+	match e.get("e", ""):
+		"atk":
+			if f == null or not f.alive:
+				return
+			f.face(float(e.get("dx", 0.0)), float(e.get("dz", 0.0)))
+			f.attacked(sup)
+			if f == me:
+				Feel.kick(float(Feel.FIRE_KICK.get(String(f.type.key) + ("S" if sup else ""), 0.05)))
+				if sup:
+					feel.punch_to(0.92, 0.3)
+				if String(f.type.key) == "blaster" and sup:
+					Feel.shake_at(f.position.x, f.position.z, 0.35)
+		"dmg":
+			if f == null:
+				return
+			var src: Fighter = fighters.get(e.get("s", ""))
+			var w := Feel.weapon(String(src.type.key) if src else "", bool(e.get("u", false)))
+			if f == me:
+				audio.play("hurt")
+				feel.add(float(w[2]))
+				Feel.rumble(0.55, 0.35, 140)
+			elif src == me and f.visible:
+				audio.play("hit_confirm", null, 1.0, 1.0 + feel.next_hit() * 0.07)
+				feel.add(float(w[1]))
+				Feel.rumble(0.15, 0.3, 40, 80)
+		"kill":
+			if f == null:
+				return
+			var by: Fighter = fighters.get(e.get("by", ""))
+			if by and by != f and by.alive:
+				by.cheer()
+				if by.visible:
+					audio.play("bark_%s_cheer" % String(by.type.key), by.position, 0.8)
+			if f.visible or f == me:
+				Feel.shake_at(f.position.x, f.position.z, 0.3)
+				if bool(e.get("f", false)):
+					audio.play("fall", f.position)
+			if by == me and f != me:
+				feel.add(0.25)
+				feel.punch_to(0.94, 0.25)
+				Feel.rumble(0.9, 0.6, 180)
+			if f == me:
+				feel.add(0.4)
+				if by and by != f:
+					_cam_target = by
+		"win":
+			if f:
+				f.won = true
+			if feel.orbit_want == 0.0:
+				audio.play("sting_finalko")
+			feel.final_ko()
+		"knock":
+			if f == me and me.alive:
+				_knock = Vector2(float(e.get("x", 0.0)), float(e.get("z", 0.0)))
+
+# game.js lowHealth: under 30 % a heartbeat, faster under 15 % (the music low-pass is _audio_snap's).
+func _heartbeat(delta: float) -> void:
+	var frac := me.hp / maxf(me.max_hp, 1.0) if me.alive and state == State.PLAYING else 1.0
+	if frac >= 0.3:
+		_heart_t = 0.0
+		return
+	_heart_t -= delta
+	if _heart_t <= 0.0:
+		audio.play("heartbeat", null, 0.8)
+		_heart_t = 0.6 if frac < 0.15 else 0.85
 
 func _update_projectiles(delta: float) -> void:
 	for k in range(projectiles.size() - 1, -1, -1):
@@ -820,8 +1149,6 @@ func _audio_snap() -> void:
 	var frac := clampf(me.hp / maxf(me.max_hp, 1.0), 0.0, 1.0)
 	var low := clampf((0.35 - frac) / 0.35, 0.0, 1.0) if me.alive else 0.0
 	audio.set_danger(low)
-	if low > 0.0 and _me_hp != me.hp:
-		audio.play("low_health")
 	_me_hp = me.hp
 	if not _final_music:
 		var alive := 0

@@ -122,12 +122,26 @@ static func mix(a: Color, b: Color, wa: float) -> Color:
 static func bright(c: Color, k: float) -> Color:
 	return Color(minf(c.r * k, 1.0), minf(c.g * k, 1.0), minf(c.b * k, 1.0), c.a)
 
-# CSS pixels: the menus are laid out like the web page (1 unit = 1 CSS px). The returned factor maps
-# CSS px to this viewport's canvas units (1 on a 1280x720 desktop window; ~1.85 on a 844x390 phone).
-static func css_scale(vp: Viewport) -> float:
-	var win := Vector2(DisplayServer.window_get_size())
-	if win.y <= 0.0:
-		return 1.0
+# CSS pixels: the menus and the HUD are laid out like the web page (1 unit = 1 CSS px), at the size
+# the web would use in a window REF_H CSS px high: taller windows (1080p, 1440p, 4K desktops, tablets)
+# scale the whole layout up uniformly (the web page would stay tiny there), shorter ones (phones held
+# sideways, a 1600x700 window) keep the web's real CSS px so its small-height breakpoints apply.
+# css_scale() maps CSS px to this viewport's canvas units; canvas_items stretch then maps those to the
+# window, so on screen 1 CSS px = window_h / css_view_h() physical px whatever the stretch does.
+const REF_H := 720.0
+
+# The window height in CSS px as the layout sees it: window / devicePixelRatio, capped at REF_H.
+static func css_view_h() -> float:
+	var h := float(DisplayServer.window_get_size().y)
+	if h <= 0.0:
+		return REF_H
+	return minf(h / device_ratio(), REF_H)
+
+# Physical px per CSS px of the platform (devicePixelRatio on web, DPI on Android, backing scale on Apple).
+static var _dpr := -1.0
+static func device_ratio() -> float:
+	if _dpr > 0.0:
+		return _dpr
 	var dpr := 1.0
 	if OS.get_name() == "Android":
 		dpr = maxf(DisplayServer.screen_get_dpi() / 160.0, 1.0)
@@ -136,8 +150,11 @@ static func css_scale(vp: Viewport) -> float:
 	elif OS.has_feature("web"):
 		var r = JavaScriptBridge.eval("window.devicePixelRatio || 1")
 		dpr = maxf(float(r) if r != null else 1.0, 1.0)
-	var css_h := win.y / dpr
-	return clampf(vp.get_visible_rect().size.y / css_h, 0.4, 4.0)
+	_dpr = dpr
+	return dpr
+
+static func css_scale(vp: Viewport) -> float:
+	return clampf(vp.get_visible_rect().size.y / css_view_h(), 0.25, 8.0)
 
 static func box(bg: Color, radius: int = 14, border: Color = Color(0, 0, 0, 0), bw: int = 0, pad: int = 0) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
@@ -240,3 +257,70 @@ static func tier_badge(tier: String, size: float = 56.0) -> Control:
 static func portrait(key: String) -> Texture2D:
 	var path := "res://assets/ui/%s.png" % key
 	return load(path) as Texture2D if ResourceLoader.exists(path) else null
+
+# The web's sfx('click') for any UI press (menu_tap.gd, result / loading buttons). Through main.gd's
+# AudioManager; two presses in the same 60 ms make one click (a tap that also fires a signal handler).
+static var _click_t := -1.0
+static func click(sound: String = "click") -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - _click_t < 0.06:
+		return
+	_click_t = now
+	var tree := Engine.get_main_loop() as SceneTree
+	var s := tree.current_scene if tree else null
+	var a: Variant = s.get("audio") if s else null
+	if a is Node and (a as Node).has_method("play"):
+		(a as Node).call("play", sound)
+
+# A container that lays its children out like a plain box, then moves / scales them: CSS transforms
+# for keyframe animations inside containers (a container resets its children's position and scale on
+# every sort, so the motion lives here). dy: translateY in px, s: scale around the centre.
+class Anim extends Container:
+	var dy := 0.0:
+		set(v):
+			dy = v
+			queue_sort()
+	var s := 1.0:
+		set(v):
+			s = v
+			queue_sort()
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _get_minimum_size() -> Vector2:
+		var m := Vector2.ZERO
+		for c in get_children():
+			if c is Control and (c as Control).visible:
+				m = m.max((c as Control).get_combined_minimum_size())
+		return m
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_SORT_CHILDREN:
+			for c in get_children():
+				if c is Control:
+					fit_child_in_rect(c, Rect2(Vector2(0, dy), size))
+					(c as Control).pivot_offset = size / 2.0
+					(c as Control).scale = Vector2(s, s)
+
+# Wraps c in an Anim (returns the Anim).
+static func anim(c: Control) -> Anim:
+	var a := Anim.new()
+	a.add_child(c)
+	return a
+
+# CSS keyframes on an Anim: `podiumIn` (from translateY(30px), opacity 0) and `masteryPop`
+# (scale 0.4 / opacity 0 -> 1.15 at 60 % -> 1), with the web's durations, delays and bezier feel.
+static func play_in(a: Anim, dur: float = 0.5, delay: float = 0.0, from_dy: float = 30.0) -> void:
+	a.dy = from_dy
+	a.modulate.a = 0.0
+	var tw := a.create_tween().set_parallel(true)
+	tw.tween_property(a, "dy", 0.0, dur).set_delay(delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(a, "modulate:a", 1.0, dur * 0.6).set_delay(delay)
+
+static func pop_in(a: Anim, dur: float = 0.9, delay: float = 0.0, from_s: float = 0.4) -> void:
+	a.s = from_s
+	a.modulate.a = 0.0
+	var tw := a.create_tween()
+	if delay > 0.0:
+		tw.tween_interval(delay)
+	tw.tween_property(a, "s", 1.15, dur * 0.6).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(a, "modulate:a", 1.0, dur * 0.3)
+	tw.tween_property(a, "s", 1.0, dur * 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
