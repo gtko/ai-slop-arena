@@ -3,7 +3,18 @@ extends RefCounted
 # Command-line user args (`-- --autotest`) on native builds, URL query on web (`?autotest&map=grove`),
 # so the same end-to-end check runs everywhere.
 
+static var _cache: PackedStringArray
+static var _read := false
+
+# Read once: the args never change during a run, and on web each read is a JavaScript eval
+# (some callers ask every frame).
 static func list() -> PackedStringArray:
+	if not _read:
+		_cache = _parse()
+		_read = true
+	return _cache
+
+static func _parse() -> PackedStringArray:
 	var out := OS.get_cmdline_user_args()
 	if OS.has_feature("web"):
 		var q = JavaScriptBridge.eval("location.search")

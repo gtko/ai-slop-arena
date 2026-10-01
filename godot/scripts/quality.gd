@@ -68,6 +68,9 @@ static func apply() -> void:
 	vp.msaa_3d = Viewport.MSAA_2X if int(p.msaa) == 2 else Viewport.MSAA_DISABLED
 	RenderingServer.directional_shadow_atlas_set_size(int(p.atlas), true)
 	var arena = m.get("arena")
+	var showcase = m.get("showcase")   # the menu's live arena (menu_showcase.gd) is a separate Arena
+	if arena == null and showcase != null and is_instance_valid(showcase.get("_arena")):
+		arena = showcase.get("_arena")
 	if arena != null and arena.has_method("apply_quality"):
 		arena.apply_quality()
 	else:

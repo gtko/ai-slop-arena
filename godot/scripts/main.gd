@@ -533,13 +533,17 @@ func _on_message(m: Dictionary) -> void:
 			if state == State.LOBBY:
 				lobby.my_id = net.id
 				lobby.show_room(net.code, m)
-				if _auto_start and lobby.is_leader and not net.matchmade:
-					_auto_start = false   # SOLO: your picks, then go (bots fill the room)
-					if Settings.map != "random":
-						net.send({"t": "map", "map": Settings.map})
-					net.send({"t": "mode", "mode": Settings.mode})
-					net.send({"t": "chaos", "on": Settings.chaos})
-					net.send({"t": "start"})
+				# SOLO: decide once, on the first room message after welcome. Not the leader (the code
+				# was taken): stay as a normal lobby, never start someone else's room later on.
+				if _auto_start and net.id != "":
+					var go := lobby.is_leader and not net.matchmade
+					_auto_start = false
+					if go:   # your picks, then go (bots fill the room)
+						if Settings.map != "random":
+							net.send({"t": "map", "map": Settings.map})
+						net.send({"t": "mode", "mode": Settings.mode})
+						net.send({"t": "chaos", "on": Settings.chaos})
+						net.send({"t": "start"})
 			elif in_match_now and not bool(m.get("inMatch", true)):
 				_match_over()
 		"start":

@@ -73,6 +73,10 @@ func _process(delta: float) -> void:
 	var key := parts[0]
 	if not _fixed_dir:
 		dir = _open_dir(me.position)
+	# the demo brawler's look only while its event spawns: main._control sends moves at me.type's
+	# speed, so the real type must be back before the next frame
+	var real_type = me.type
+	var real_gadget := me.gadget
 	me.type = GameData.brawlers.get(key, me.type)
 	m.set("aim_dir", Vector2(dir.x, dir.z))
 	if touch != null:
@@ -85,6 +89,8 @@ func _process(delta: float) -> void:
 		var e := {"e": "atk", "id": me.id, "dx": dir.x, "dz": dir.z, "px": me.position.x + dir.x * 7.0, "pz": me.position.z + dir.z * 7.0, "s": 1 if sup else 0}
 		fx.on_event(e)
 		me.play_once("super" if sup else "shoot")
+	me.type = real_type
+	me.gadget = real_gadget
 	await get_tree().create_timer(float(AT.get(item, 0.2)), true, false, true).timeout
 	if prefix != "":
 		await RenderingServer.frame_post_draw

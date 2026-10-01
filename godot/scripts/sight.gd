@@ -162,7 +162,7 @@ void fragment() {
 var main: Node
 var amount := 0.0
 var _dust_amt := 0.0
-var _key := ""
+var _key := Vector2i(1 << 30, 0)
 var _grid_sig := ""
 var _vp: SubViewport
 var _mask_mat: ShaderMaterial
@@ -219,6 +219,8 @@ func _process(delta: float) -> void:
 		viewer = me
 	var want := 1.0 if viewer and not _off else 0.0
 	amount += (want - amount) * (1.0 - exp(-4.0 * delta))
+	if arena == null:
+		amount = 0.0   # back to the menu: no stale mask over the showcase map
 	visible = amount > 0.005 and cam != null
 	if not visible:
 		return
@@ -286,10 +288,10 @@ func _sight_range(arena: Arena, vision: float, hud: Node) -> float:
 	return 11.0 if String(arena.map.get("weather", "")) == "sandstorm" else 14.0
 
 func _trace(A: Arena, x: float, z: float) -> void:
-	var sig := "".join(A.grid)
+	var sig := "%d:%d" % [A.get_instance_id(), A.rev]
 	if sig != _grid_sig:   # new map, or a tile opened up (arena.js rev)
 		_grid_sig = sig
-		_key = ""
+		_key = Vector2i(1 << 30, 0)
 		# what stops a bullet stops the eye (arena.js blocksSight); outside the grid counts as 'X'
 		var data := PackedByteArray()
 		data.resize(W * W)
@@ -304,7 +306,7 @@ func _trace(A: Arena, x: float, z: float) -> void:
 		else:
 			_grid_tex = ImageTexture.create_from_image(img)
 			_mask_mat.set_shader_parameter("blocked", _grid_tex)
-	var key := "%.2f,%.2f" % [x, z]
+	var key := Vector2i(roundi(x * 5.0), roundi(z * 5.0))   # 0.2 m steps, about one mask texel
 	if key == _key:
 		return  # nothing moved, nothing broke: the mask still holds
 	_key = key

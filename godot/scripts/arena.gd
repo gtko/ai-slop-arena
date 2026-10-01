@@ -796,7 +796,10 @@ func collide_circle(p: Vector3, r: float, void_ok := false) -> Vector3:
 					p.z += signf(p.z - c.z) * (ez + r)
 	return p
 
+var rev := 0                    # bumped on every tile change (arena.js rev): sight.gd rebuilds its mask
+
 func _put(i: int, j: int, ch: String) -> void:
+	rev += 1
 	grid[j] = String(grid[j]).substr(0, i) + ch + String(grid[j]).substr(i + 1)
 
 func _mat(col: Color, rough := 0.9) -> StandardMaterial3D:
