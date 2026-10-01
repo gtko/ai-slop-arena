@@ -15,6 +15,130 @@ const MUTED := Color("9aa6cf")
 const TIER_COLORS := {"bronze": Color("c98a4b"), "silver": Color("c5ccd6"), "gold": Color("ffc933"),
 	"diamond": Color("66d9ff"), "mythic": Color("c07bff"), "legend": Color("ff6b6b")}
 
+# The web menu's palette (src/style.css :root, src/home.css)
+const INK := Color("16121f")
+const YELLOW := Color("ffd23f")
+const WTEXT := Color("f4f1ff")
+const WMUTED := Color("b9b3d1")
+const NIGHT := Color(14 / 255.0, 11 / 255.0, 30 / 255.0)
+const VIOLET := Color("8f6bff")
+const TEAL := Color("15aabf")
+
+static var _spaced: Dictionary = {}
+
+# StyleBoxFlat from CSS-like values: background, radius, border, a hard drop shadow ("0 6px 0 ink").
+static func sbox(bg: Color, radius: int = 12, border: Color = Color(0, 0, 0, 0), bw: int = 0,
+		shadow: Color = Color(0, 0, 0, 0), shadow_y: float = 0.0, shadow_blur: int = 0) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = bg
+	s.set_corner_radius_all(radius)
+	s.set_border_width_all(bw)
+	s.border_color = border
+	s.anti_aliasing = true
+	s.corner_detail = 10
+	if shadow.a > 0.0:
+		s.shadow_color = shadow
+		s.shadow_offset = Vector2(0, shadow_y)
+		s.shadow_size = maxi(shadow_blur, 1)
+	return s
+
+static func pads(s: StyleBox, l: float, t: float, r: float, b: float) -> StyleBox:
+	s.content_margin_left = l
+	s.content_margin_top = t
+	s.content_margin_right = r
+	s.content_margin_bottom = b
+	return s
+
+# A label in CSS terms: font (null = Nunito 800), size, colour, -webkit-text-stroke (ink), letter-spacing.
+static func text(t: String, size: int, color: Color = WTEXT, font: Font = null, stroke: int = 0, spacing: float = 0.0) -> Label:
+	var l := Label.new()
+	l.text = t
+	var f: Font = font
+	if spacing != 0.0:
+		f = spaced(font if font else Fonts.body(800), spacing)
+	if f:
+		l.add_theme_font_override("font", f)
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", color)
+	if stroke > 0:
+		l.add_theme_constant_override("outline_size", stroke)
+		l.add_theme_color_override("font_outline_color", INK)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return l
+
+# A font with letter-spacing (CSS letter-spacing), cached.
+static func spaced(f: Font, px: float) -> Font:
+	var key := "%d:%.2f" % [f.get_instance_id(), px]
+	if not _spaced.has(key):
+		var v := FontVariation.new()
+		if f is FontVariation:   # keep the weight (a variation of a variation drops the inner axes)
+			v.base_font = (f as FontVariation).base_font
+			v.variation_opentype = (f as FontVariation).variation_opentype
+		else:
+			v.base_font = f
+		v.spacing_glyph = int(px)   # whole pixels only: sub-pixel CSS spacings (0.5) round to 0
+		_spaced[key] = v
+	return _spaced[key]
+
+# Linear (from -> to, 0..1 UV) or radial gradient texture from [[offset, Color], ...] stops.
+static func grad(stops: Array, from: Vector2 = Vector2(0, 0), to: Vector2 = Vector2(0, 1), radial: bool = false, res: int = 128) -> GradientTexture2D:
+	var gr := Gradient.new()
+	gr.offsets = PackedFloat32Array([])
+	gr.colors = PackedColorArray([])
+	for s in stops:
+		gr.add_point(float(s[0]), s[1])
+	var gt := GradientTexture2D.new()
+	gt.gradient = gr
+	gt.fill = GradientTexture2D.FILL_RADIAL if radial else GradientTexture2D.FILL_LINEAR
+	gt.fill_from = from
+	gt.fill_to = to
+	gt.width = res
+	gt.height = res
+	return gt
+
+static func grad_rect(tex: Texture2D) -> TextureRect:
+	var r := TextureRect.new()
+	r.texture = tex
+	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	r.stretch_mode = TextureRect.STRETCH_SCALE
+	r.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return r
+
+# A rounded shape whose children are clipped to it (gradients, portraits inside rounded tiles).
+static func clip_box(radius: int, size: Vector2 = Vector2.ZERO) -> Panel:
+	var p := Panel.new()
+	p.add_theme_stylebox_override("panel", sbox(Color.WHITE, radius))
+	p.clip_children = CanvasItem.CLIP_CHILDREN_ONLY
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if size != Vector2.ZERO:
+		p.custom_minimum_size = size
+	return p
+
+# CSS colour helpers (color-mix in srgb, brightness())
+static func mix(a: Color, b: Color, wa: float) -> Color:
+	return Color(a.r * wa + b.r * (1.0 - wa), a.g * wa + b.g * (1.0 - wa), a.b * wa + b.b * (1.0 - wa), a.a * wa + b.a * (1.0 - wa))
+
+static func bright(c: Color, k: float) -> Color:
+	return Color(minf(c.r * k, 1.0), minf(c.g * k, 1.0), minf(c.b * k, 1.0), c.a)
+
+# CSS pixels: the menus are laid out like the web page (1 unit = 1 CSS px). The returned factor maps
+# CSS px to this viewport's canvas units (1 on a 1280x720 desktop window; ~1.85 on a 844x390 phone).
+static func css_scale(vp: Viewport) -> float:
+	var win := Vector2(DisplayServer.window_get_size())
+	if win.y <= 0.0:
+		return 1.0
+	var dpr := 1.0
+	if OS.get_name() == "Android":
+		dpr = maxf(DisplayServer.screen_get_dpi() / 160.0, 1.0)
+	elif OS.get_name() == "iOS" or OS.get_name() == "macOS":
+		dpr = maxf(DisplayServer.screen_get_scale(), 1.0)
+	elif OS.has_feature("web"):
+		var r = JavaScriptBridge.eval("window.devicePixelRatio || 1")
+		dpr = maxf(float(r) if r != null else 1.0, 1.0)
+	var css_h := win.y / dpr
+	return clampf(vp.get_visible_rect().size.y / css_h, 0.4, 4.0)
+
 static func box(bg: Color, radius: int = 14, border: Color = Color(0, 0, 0, 0), bw: int = 0, pad: int = 0) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = bg
