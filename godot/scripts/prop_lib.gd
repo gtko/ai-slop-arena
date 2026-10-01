@@ -3,8 +3,13 @@ extends RefCounted
 # Sculpted decor GLBs (godot/assets/models/decor), fitted like src/props.js does: set on the
 # ground, centred on their footprint, scaled to a box / height / width. Instanced with MultiMesh
 # (one draw call per prop kind), which is what keeps trees, walls and bushes cheap on mobile.
+# They are drawn with assets/shaders/prop.gdshader (the web's prop material: cartoon light ramp, rim
+# light, wind bend for trees and cacti), see `material`.
+
+const SWAY := ["tree_round", "tree_pine", "tree_pine_snow", "tree_dead", "bush", "cactus"]
 
 static var _cache: Dictionary = {}
+static var _mats: Dictionary = {}
 
 static func has(prop: String) -> bool:
 	return ResourceLoader.exists("res://assets/models/decor/%s.glb" % prop)
@@ -69,9 +74,32 @@ static func multi(prop_name: String, fit: Dictionary, placements: Array, shadows
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	if mat:
-		mmi.material_override = mat # foliage: sway + bush reveal (foliage.gd)
+	mmi.material_override = mat if mat else material(prop_name) # foliage: sway + bush reveal (foliage.gd)
 	return mmi
+
+# The prop's shader material (src/props.js `prepare`): its GLB texture, roughness 0.78, no metal,
+# rim light, the wind bend for trees and cacti.
+static func material(prop_name: String) -> Material:
+	if _mats.has(prop_name):
+		return _mats[prop_name]
+	Foliage.ensure_globals()
+	var p := info(prop_name)
+	var m := ShaderMaterial.new()
+	m.shader = load("res://assets/shaders/prop.gdshader")
+	m.set_shader_parameter("sway", 1.0 if SWAY.has(prop_name) else 0.0)
+	var src: BaseMaterial3D = null
+	var mesh: Mesh = p.get("mesh")
+	if mesh and mesh.get_surface_count() > 0:
+		src = mesh.surface_get_material(0) as BaseMaterial3D
+	if src and src.albedo_texture:
+		m.set_shader_parameter("albedo_tex", src.albedo_texture)
+		m.set_shader_parameter("use_tex", 1.0)
+	else:
+		m.set_shader_parameter("use_tex", 0.0)
+	if src:
+		m.set_shader_parameter("albedo", src.albedo_color)
+	_mats[prop_name] = m
+	return m
 
 # Single (non-instanced) prop, for the windmill and its sails.
 static func single(prop_name: String, fit: Dictionary) -> Node3D:
@@ -84,6 +112,7 @@ static func single(prop_name: String, fit: Dictionary) -> Node3D:
 	var off: Vector3 = p.offset
 	var xf: Transform3D = p.xf
 	mi.transform = Transform3D(Basis.from_scale(scale_for(sz, fit)), Vector3.ZERO) * Transform3D(Basis.IDENTITY, off) * xf
+	mi.material_override = material(prop_name)
 	var root := Node3D.new()
 	root.add_child(mi)
 	return root

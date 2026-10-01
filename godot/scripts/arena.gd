@@ -32,6 +32,7 @@ var _ground_slots: Dictionary = {}   # tile key -> [MultiMesh, index]
 
 func build(map_data: Dictionary) -> void:
 	map = map_data
+	Foliage.ensure_globals() # the world shaders read global parameters (wind, reveal, rim, sky)
 	rng.seed = 1337
 	for row in map.grid:
 		grid.append(String(row))
@@ -92,6 +93,18 @@ func _wall_kind(tiles: Array, prop: String, box: Vector3, col: Color, bound: boo
 		for t in tiles:
 			list.append({"pos": center(t.x, t.y), "yaw": floorf(rng.randf() * 4.0) * PI / 2.0})
 		var mmi := PropLib.multi(prop, {"box": box}, list)
+		# arena.js buildWalls: each block a slightly different grey, the outer ring reads darker
+		var mm := mmi.multimesh
+		var xfs: Array = []
+		for k in tiles.size():
+			xfs.append(mm.get_instance_transform(k))
+		mm.instance_count = 0
+		mm.use_colors = true
+		mm.instance_count = tiles.size()
+		for k in tiles.size():
+			mm.set_instance_transform(k, xfs[k])
+			var v := (0.62 + rng.randf() * 0.08) if bound else (0.9 + rng.randf() * 0.12)
+			mm.set_instance_color(k, Color(v, v, v).srgb_to_linear())
 		add_child(mmi)
 		for k in tiles.size():
 			_reg(tiles[k], mmi.multimesh, k)
@@ -119,19 +132,71 @@ func _multi_box(tiles: Array, size: Vector3, col: Color) -> void:
 	mmi.multimesh = mm
 	add_child(mmi)
 
+# arena.js buildBushes: tall grass tufts on the maps with bushStyle "grass" (Dune Storm, Oasis),
+# else the sculpted leaf ball. Tinted per instance like the web (HSL), swaying, dissolving around the
+# player hidden inside (foliage.gd).
 func _bushes(tiles: Array) -> void:
 	if tiles.is_empty():
 		return
-	if PropLib.has("bush"):
-		var list: Array = []
-		for t in tiles:
-			list.append({"pos": center(t.x, t.y), "yaw": rng.randf() * TAU, "mul": 1.0 + rng.randf() * 0.12})
-		var mmi := PropLib.multi("bush", {"width": 1.95}, list, false, Foliage.material_for("bush", 0.05))
-		add_child(mmi)
-		for k in tiles.size():
-			_reg(tiles[k], mmi.multimesh, k)
+	var grass: bool = String(map.get("bushStyle", "")) == "grass"
+	var hsl: Array = map.get("bush", [0.3, 0.45, 0.72])
+	var mesh: Mesh = null
+	var mat: Material = null
+	var list: Array = []
+	if grass:
+		mesh = Foliage.grass_tuft_mesh(3)
+		mat = Foliage.grass_material()
+	elif PropLib.has("bush"):
+		mesh = PropLib.info("bush").mesh
+		mat = Foliage.material_for("bush", 1.0, true, map.get("snow", false))
 	else:
 		_multi_box(tiles, Vector3(1.9, 1.4, 1.9), Color("4f9a2e"))
+		return
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = mesh
+	mm.instance_count = tiles.size()
+	var info := PropLib.info("bush") if not grass else {}
+	for k in tiles.size():
+		var t: Vector2i = tiles[k]
+		var yaw := rng.randf() * TAU
+		var sc := 1.0 + rng.randf() * 0.12
+		var ysc := 0.92 + rng.randf() * 0.16
+		var xf: Transform3D
+		if grass:
+			xf = Transform3D(Basis(Vector3.UP, yaw) * Basis.from_scale(Vector3(sc, sc * ysc, sc)), center(t.x, t.y))
+		else:
+			xf = PropLib.placement(info, {"width": 1.95}, center(t.x, t.y), yaw, sc, ysc)
+		mm.set_instance_transform(k, xf)
+		var c := Color.from_hsv(0.0, 0.0, 0.88 + rng.randf() * 0.14) if not grass else _hsl(float(hsl[0]) + rng.randf() * 0.04, float(hsl[1]), float(hsl[2]) + rng.randf() * 0.2)
+		mm.set_instance_color(k, c.srgb_to_linear())
+		_reg(t, mm, k)
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.material_override = mat
+	add_child(mmi)
+
+# three's Color.setHSL (lightness clamped to 1)
+static func _hsl(h: float, s: float, l: float) -> Color:
+	h = fposmod(h, 1.0)
+	l = clampf(l, 0.0, 1.0)
+	s = clampf(s, 0.0, 1.0)
+	if s == 0.0:
+		return Color(l, l, l)
+	var q := l * (1.0 + s) if l <= 0.5 else l + s - l * s
+	var p := 2.0 * l - q
+	return Color(_hue(p, q, h + 1.0 / 3.0), _hue(p, q, h), _hue(p, q, h - 1.0 / 3.0))
+
+static func _hue(p: float, q: float, t: float) -> float:
+	t = fposmod(t, 1.0)
+	if t < 1.0 / 6.0:
+		return p + (q - p) * 6.0 * t
+	if t < 0.5:
+		return q
+	if t < 2.0 / 3.0:
+		return p + (q - p) * 6.0 * (2.0 / 3.0 - t)
+	return p
 
 func _obstacles(tiles: Array) -> void:
 	if tiles.is_empty():
@@ -149,6 +214,7 @@ func _crates(crates: Array, barrels: Array) -> void:
 			_place("crate", {"width": 1.75}, crates)
 		else:
 			_multi_box(crates, Vector3(1.7, 1.45, 1.7), Color("d9a441"))
+		_crate_gems(crates)
 	if not barrels.is_empty():
 		var mesh := CylinderMesh.new()
 		mesh.top_radius = 0.6; mesh.bottom_radius = 0.6; mesh.height = 1.4
@@ -164,21 +230,172 @@ func _crates(crates: Array, barrels: Array) -> void:
 		mmi.multimesh = mm
 		add_child(mmi)
 
+# arena.js buildTorches: a tall lantern on each 'T' tile, small ones on top of the outer walls (3 per
+# side), each with an orange point light and a soft additive halo. Lights: see _glow.
 func _lanterns(tiles: Array) -> void:
+	var tall: Array = []
 	for t in tiles:
 		var pos := center(t.x, t.y)
-		if PropLib.has("lantern"):
-			var mmi := PropLib.multi("lantern", {"height": 2.4}, [{"pos": pos, "yaw": rng.randf() * TAU}], false)
-			add_child(mmi)
-			_reg(t, mmi.multimesh, 0)
-		var light := OmniLight3D.new()
-		light.position = pos + Vector3(0, 2.0, 0)
-		light.light_color = Color(1.0, 0.75, 0.4)
-		light.omni_range = 6.0
-		light.light_energy = 1.2
-		light.shadow_enabled = false
-		if not DebugArgs.has("nolight"):
-			add_child(light)
+		tall.append({"pos": pos, "yaw": rng.randf() * TAU})
+		_torch(pos + Vector3(0, 2.4 * 0.72, 0), t)
+	var small: Array = []
+	if not map.get("sky", false):
+		for k in [6, 12, 18]:
+			for ij in [[0, k], [GameData.N - 1, k], [k, 0], [k, GameData.N - 1]]:
+				var pos := center(ij[0], ij[1]) + Vector3(0, BOUND_H, 0)
+				small.append({"pos": pos, "yaw": rng.randf() * TAU})
+				_torch(pos + Vector3(0, 1.3 * 0.72, 0), Vector2i(ij[0], ij[1]))
+	if not PropLib.has("lantern"):
+		return
+	if not tall.is_empty():
+		var mmi := PropLib.multi("lantern", {"height": 2.4}, tall)
+		add_child(mmi)
+		for k in tiles.size():
+			_reg(tiles[k], mmi.multimesh, k)
+	if not small.is_empty():
+		var mmi := PropLib.multi("lantern", {"height": 1.3}, small, Quality.preset().ring >= 1.0)
+		add_child(mmi)
+
+# Point lights of the world, lit by the nearest-first budget of _glow (the web's LightPool):
+# [light, base intensity, + at night, flicker phase or -1, tile key]
+var _lights: Array = []
+var _halos: Array = []        # [MeshInstance3D, StandardMaterial3D, flicker phase]
+var _gems: MultiMesh
+var _gem_xf: Array = []        # [position, tile key]
+var _glow_t := 0.0
+static var _halo_tex: Texture2D
+
+func _point_light(pos: Vector3, col: Color, rng_m: float, base: float, night: float, ph: float, t: Vector2i) -> void:
+	if DebugArgs.has("nolight"):
+		return
+	var light := OmniLight3D.new()
+	light.position = pos
+	light.light_color = col.linear_to_srgb()
+	light.omni_range = rng_m
+	light.omni_attenuation = 2.0 # three's decay 2
+	light.light_energy = 0.0
+	light.shadow_enabled = false
+	light.visible = false
+	add_child(light)
+	_lights.append([light, base, night, ph, t.y * GameData.N + t.x])
+
+# A lantern: its light (three intensity 22 * (0.03 + 0.97 night), range 10) and its halo sprite.
+func _torch(pos: Vector3, t: Vector2i) -> void:
+	var ph := rng.randf() * 10.0
+	_point_light(pos, Color(1.0, 0.5, 0.18), 10.0, 22.0 * 0.03, 22.0 * 0.97, ph, t)
+	if _halo_tex == null:
+		var g := Gradient.new()
+		g.set_color(0, Color(1.0, 190.0 / 255.0, 110.0 / 255.0, 0.85))
+		g.add_point(0.55, Color(1.0, 165.0 / 255.0, 80.0 / 255.0, 0.51))
+		g.set_color(g.get_point_count() - 1, Color(1.0, 140.0 / 255.0, 50.0 / 255.0, 0.0))
+		var gt := GradientTexture2D.new()
+		gt.gradient = g
+		gt.fill = GradientTexture2D.FILL_RADIAL
+		gt.fill_from = Vector2(0.5, 0.5)
+		gt.fill_to = Vector2(1.0, 0.5)
+		gt.width = 64
+		gt.height = 64
+		_halo_tex = gt
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	m.albedo_texture = _halo_tex
+	m.albedo_color = Color("ffb070")
+	m.no_depth_test = false
+	var q := QuadMesh.new()
+	q.size = Vector2.ONE
+	var mi := MeshInstance3D.new()
+	mi.mesh = q
+	mi.material_override = m
+	mi.position = pos
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mi)
+	_halos.append([mi, m, ph])
+
+# The power cube floating over each crate (arena.js makeCrate): a glowing green gem, spinning, with
+# a green light (0.8 + 2.5 night, range 5).
+func _crate_gems(crates: Array) -> void:
+	if crates.is_empty():
+		return
+	var top := 1.5
+	if PropLib.has("crate"):
+		var info := PropLib.info("crate")
+		top = float(info.size.y) * PropLib.scale_for(info.size, {"width": 1.75}).y
+	var box := BoxMesh.new()
+	box.size = Vector3(0.5, 0.5, 0.5)
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color("3dff7a")
+	m.emission_enabled = true
+	m.emission = Color("22ff66")
+	m.emission_energy_multiplier = 1.1
+	m.roughness = 0.3
+	box.material = m
+	_gems = MultiMesh.new()
+	_gems.transform_format = MultiMesh.TRANSFORM_3D
+	_gems.mesh = box
+	_gems.instance_count = crates.size()
+	for k in crates.size():
+		var t: Vector2i = crates[k]
+		var pos := center(t.x, t.y) + Vector3(0, top + 0.1, 0)
+		_gem_xf.append(pos)
+		_gems.set_instance_transform(k, Transform3D(Basis.IDENTITY, pos))
+		_reg(t, _gems, k)
+		_point_light(Vector3(pos.x, 2.6, pos.z), Color(0.3, 1.0, 0.45), 5.0, 0.8, 2.5, -1.0, t)
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = _gems
+	add_child(mmi)
+
+# Lantern flicker, halos, spinning gems and the light budget (arena.js update / emit, effects.js
+# LightPool): every light is scored by intensity * range / (6 + distance to the camera focus), fading
+# out from 22 to 30 m, and only the best few are on (see budget).
+func _glow(delta: float) -> void:
+	_glow_t += delta
+	var t := _glow_t
+	var night := float(lighting.state.get("night", 0.0)) if lighting else 0.0
+	var m := get_parent()
+	var focus: Vector3 = m.get("cam_focus") if m and m.get("cam_focus") != null else Vector3.ZERO
+	var q := Quality.preset()
+	# the Mobile renderer lights a mesh (the whole floor is one) with 8 omni lights at most, and
+	# fx.gd keeps a pool of its own (4 on High, 2 on Medium, none on Low)
+	var budget := 4 if float(q.ring) >= 1.0 else (4 if int(q.shadow) > 0 else 3)
+	var ranked: Array = []
+	for e in _lights:
+		if not is_instance_valid(e[0]):
+			continue
+		var l: OmniLight3D = e[0]
+		var ph: float = e[3]
+		var f := 0.85 + 0.15 * sin(t * 13.0 + ph) * sin(t * 7.3 + ph * 2.0) if ph >= 0.0 else 1.0
+		var i := (float(e[1]) + float(e[2]) * night) * f
+		var p := l.position
+		var d := Vector2(p.x - focus.x, (p.z - focus.z) * 1.2).length()
+		i *= 1.0 - smoothstep(22.0, 30.0, d)
+		ranked.append([i * l.omni_range / (6.0 + d), l, i])
+	ranked.sort_custom(func(a, b): return a[0] > b[0])
+	for k in ranked.size():
+		var l: OmniLight3D = ranked[k][1]
+		var i: float = ranked[k][2]
+		l.visible = k < budget and i > 0.02
+		l.light_energy = i / PI
+	var glow := 0.25 + 0.75 * night
+	for h in _halos:
+		var ph: float = h[2]
+		var f := 0.85 + 0.15 * sin(t * 13.0 + ph) * sin(t * 7.3 + ph * 2.0)
+		(h[0] as MeshInstance3D).scale = Vector3.ONE * (1.6 + glow * 1.2 * f)
+		(h[1] as StandardMaterial3D).albedo_color.a = glow * (0.7 + 0.3 * f)
+	if _gems:
+		var b := Basis(Vector3.UP, t * 1.2) * Basis.from_euler(Vector3(PI / 4.0, PI / 4.0, 0.0))
+		for k in _gem_xf.size():
+			if _gems.get_instance_transform(k).basis.get_scale().x > 0.01:
+				_gems.set_instance_transform(k, Transform3D(b, _gem_xf[k]))
+
+# A crate or lantern that breaks takes its light with it.
+func _drop_lights(key: int) -> void:
+	for e in _lights.filter(func(x): return int(x[4]) == key):
+		if is_instance_valid(e[0]):
+			(e[0] as OmniLight3D).queue_free()
+		_lights.erase(e)
 
 # Map kit (v0.15): bridges, jump pads, healing mushrooms, sky islands (kit.gd).
 func _kit(kinds: Dictionary) -> void:
@@ -204,6 +421,8 @@ func _world() -> void:
 	add_child(skins)
 	if map.get("wet", false):
 		_puddles()
+	if map.get("stones", false):
+		_stones()
 	Quality.apply()
 
 func apply_quality() -> void:
@@ -219,7 +438,48 @@ func apply_quality() -> void:
 	for d in _decor:
 		var mmi: MultiMeshInstance3D = d[0]
 		mmi.multimesh.visible_instance_count = int(ceilf(int(d[1]) * float(q.ring)))
+		# the web's ring casts shadows down to detail 0.6 (desktop and mobile high)
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if float(q.ring) >= 1.0 else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+# Flat pentagon stepping stones with a darker rim on the open floor (arena.js buildStones, Oasis).
+func _stones() -> void:
+	var spots: Array = []
+	for k in 400:
+		if spots.size() >= 70:
+			break
+		var i := rng.randi_range(1, GameData.N - 2)
+		var j := rng.randi_range(1, GameData.N - 2)
+		if tile(i, j) != ".":
+			continue
+		var c := center(i, j)
+		spots.append([c.x + (rng.randf() - 0.5) * 1.4, c.z + (rng.randf() - 0.5) * 1.4, 0.28 + rng.randf() * 0.3, rng.randf() * TAU])
+	if spots.is_empty():
+		return
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for k in 5:
+		var a0 := TAU * k / 5.0
+		var a1 := TAU * (k + 1) / 5.0
+		for v in [Vector3.ZERO, Vector3(cos(a1), 0, -sin(a1)), Vector3(cos(a0), 0, -sin(a0))]:
+			st.set_normal(Vector3.UP)
+			st.add_vertex(v)
+	var plate := st.commit()
+	for layer in [[Color("c8704a"), 0.008, 1.18], [Color(map.get("stoneColor", "#f7c48e")), 0.014, 1.0]]:
+		var m := _mat(layer[0], 0.9)
+		m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = plate
+		mm.instance_count = spots.size()
+		for k in spots.size():
+			var sp: Array = spots[k]
+			var r: float = sp[2] * layer[2]
+			mm.set_instance_transform(k, Transform3D(Basis(Vector3.UP, sp[3]) * Basis.from_scale(Vector3(r, 1.0, r * 0.85)), Vector3(sp[0], layer[1] - 0.02, sp[1])))
+		var mmi := MultiMeshInstance3D.new()
+		mmi.multimesh = mm
+		mmi.material_override = m
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(mmi)
 
 # Glossy dark puddles on wet maps (arena.js buildPuddles): mirrors for lanterns, projectiles, lightning.
 func _puddles() -> void:
@@ -305,6 +565,7 @@ func update(delta: float) -> void:
 		kit.update(delta, fighters, me)
 	if lighting:
 		lighting.update(delta)
+		_glow(delta)
 		for id in fighters:
 			lighting.attach_blob(fighters[id])
 	if weather:
@@ -436,8 +697,7 @@ func _decor_ring() -> void:
 		var prop := _snowy(TREE_PROP.get(kind, "tree_round"))
 		var list: Array = by_kind[kind]
 		list.shuffle() # the quality preset hides the tail of the list: keep the thinning even
-		var soft: bool = kind == "round" or kind == "pine" or kind == "dead"
-		var mmi := PropLib.multi(prop, TREE_FIT.get(kind, {"height": 4.6}), list, false, Foliage.material_for(prop, 0.06, true) if soft else null)
+		var mmi := PropLib.multi(prop, TREE_FIT.get(kind, {"height": 4.6}), list, false)
 		if mmi:
 			add_child(mmi)
 			_decor.append([mmi, list.size()])
@@ -462,12 +722,19 @@ func blocks_move(i: int, j: int) -> bool:
 func is_bush(x: float, z: float) -> bool:
 	return char_at(x, z) == "B"
 
+# arena.js isLand: not a basin, ice, the void or a bridge (the outside counts as land, except on sky maps)
+func is_land(i: int, j: int) -> bool:
+	if i < 0 or j < 0 or i >= GameData.N or j >= GameData.N:
+		return not map.get("sky", false)
+	return not "WIV=".contains(tile(i, j))
+
 func is_ice(x: float, z: float) -> bool:
 	return char_at(x, z) == "I"
 
 func break_tile(i: int, j: int) -> void:
 	_put(i, j, ".")
 	_hide_props(i, j)
+	_drop_lights(j * GameData.N + i)
 
 func _hide_props(i: int, j: int) -> void:
 	var key := j * GameData.N + i
@@ -482,6 +749,7 @@ func set_tile(i: int, j: int, ch: String) -> void:
 # A tile that falls away (crumbling island): whatever stood on it goes, it becomes void.
 func remove_tile(i: int, j: int) -> void:
 	_hide_props(i, j)
+	_drop_lights(j * GameData.N + i)
 	_put(i, j, "V")
 
 # Take the floor quad of a tile out of the shared floor (it moved to its own piece, or fell).
@@ -538,45 +806,104 @@ func _mat(col: Color, rough := 0.9) -> StandardMaterial3D:
 	return m
 
 func _ground(kinds: Dictionary) -> void:
-	var swatch: Array = map.get("swatch", ["#cccccc", "#88aa88"])
-	var tones: Array = map.get("groundTones", null) if map.get("groundTones", null) else [swatch[0], Color(swatch[0]).darkened(0.06).to_html()]
 	var solid: Array = []
-	var alt: Array = []
 	var water: Array = kinds.get("W", [])
 	var ice: Array = kinds.get("I", [])
 	for j in GameData.N:
 		for i in GameData.N:
 			var ch := tile(i, j)
-			if ch == "V" or ch == "W" or ch == "S":
+			if ch == "V" or ch == "S":
 				continue
-			((alt) if (i + j) % 2 == 1 else solid).append(Vector2i(i, j))
-	var wet: bool = map.get("wet", false)
-	var m0 := _mat(Color(tones[0]), 0.45 if wet else 0.9)
-	var m1 := _mat(Color(tones[1]), 0.45 if wet else 0.9)
-	ground_mats = [m0, m1]
-	_flat_tiles(solid, Color(tones[0]), -0.02, m0, true)
-	_flat_tiles(alt, Color(tones[1]), -0.02, m1, true)
-	_flat_tiles(ice, Color(0.7, 0.88, 1.0), 0.0, _mat(Color(0.7, 0.88, 1.0), 0.12))
-	if not water.is_empty():
+			solid.append(Vector2i(i, j))
+	var m0 := _ground_material()
+	ground_mats = [m0, m0]
+	_flat_tiles(solid, Color.WHITE, -0.02, m0, true)
+	# ponds and frozen ponds follow a rounded outline (water.gd): the floor is cut along it
+	if not water.is_empty() or not ice.is_empty():
 		self.water = Water.new()
 		add_child(self.water)
+		self.water.setup(self)
+		m0.shader = load("res://assets/shaders/ground_field.gdshader")
+		self.water.bind(m0)
+		m0.set_shader_parameter("field_lip", Water.SHORE_LIP if not water.is_empty() else 0.5)
 		self.water.build(self, water, String(map.get("water", "water")))
+		self.water.build_ice(self, ice)
 	if not map.get("sky", false):
 		# the land around the arena (maps.js `outer`: sand, grass, snow), as a frame: the water basins
 		# and their banks sit inside the arena, a full plane would cover them
-		var oc := {"sand": Color("e0b98a"), "snow": Color("eef4ff"), "grass": Color("5a9a3e")}.get(String(map.get("outer", "grass")), Color("5a9a3e")) as Color
-		var om := _mat(oc, 1.0)
+		var outer_name := String(map.get("outer", "grass"))
+		var om := _outer_material(outer_name)
 		var e := GameData.HALF
-		for r in [[Vector2(320, 150 - e), Vector3(0, 0, -(e + (150 - e) / 2.0))], [Vector2(320, 150 - e), Vector3(0, 0, e + (150 - e) / 2.0)],
-				[Vector2(150 - e, e * 2.0), Vector3(-(e + (150 - e) / 2.0), 0, 0)], [Vector2(150 - e, e * 2.0), Vector3(e + (150 - e) / 2.0, 0, 0)]]:
+		for r in [[Vector2(260, 130 - e), Vector3(0, 0, -(e + (130 - e) / 2.0))], [Vector2(260, 130 - e), Vector3(0, 0, e + (130 - e) / 2.0)],
+				[Vector2(130 - e, e * 2.0), Vector3(-(e + (130 - e) / 2.0), 0, 0)], [Vector2(130 - e, e * 2.0), Vector3(e + (130 - e) / 2.0, 0, 0)]]:
 			var outer := MeshInstance3D.new()
 			var op := PlaneMesh.new()
 			op.size = r[0]
 			outer.mesh = op
-			outer.position = (r[1] as Vector3) + Vector3(0, -0.08, 0)
+			outer.position = (r[1] as Vector3) + Vector3(0, -0.02, 0)
 			outer.material_override = om
 			outer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			add_child(outer)
+
+const TEX_DIR := "res://assets/tex/%s.jpg"
+
+# sRGB values as they are (a Color shader parameter would be converted to linear)
+static func _v4(c: Color) -> Vector4:
+	return Vector4(c.r, c.g, c.b, c.a)
+
+const NORMAL_DIR := "res://assets/tex/%s_n.png"
+
+# 'rgba(110,40,15,0.12)' (maps.js `checker`) -> Color in sRGB with that alpha
+static func _css_rgba(css: String, fallback := Color(0, 0, 0, 0)) -> Color:
+	var a := css.find("(")
+	var b := css.find(")")
+	if a < 0 or b < a:
+		return fallback
+	var parts := css.substr(a + 1, b - a - 1).split(",")
+	if parts.size() < 3:
+		return fallback
+	return Color(float(parts[0]) / 255.0, float(parts[1]) / 255.0, float(parts[2]) / 255.0, float(parts[3]) if parts.size() > 3 else 1.0)
+
+# The arena floor (arena.js buildGround): the painted ground picture per tile with the map's checker
+# tint and thin seams, or the two flat tones of the cartoon maps. Wet maps: darker and glossier.
+func _ground_material() -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = load("res://assets/shaders/ground.gdshader")
+	var gname := String(map.get("ground", "sand"))
+	var wet: bool = map.get("wet", false)
+	m.set_shader_parameter("origin", GameData.HALF)
+	m.set_shader_parameter("period", GameData.TILE)
+	m.set_shader_parameter("roughness", 0.42 if wet else 0.93)
+	m.set_shader_parameter("tint", _v4(Color("b4b4b4") if wet else Color.WHITE))
+	if gname == "cartoon":
+		var tones: Array = map.get("groundTones", ["#f0ad7e", "#eba272"])
+		m.set_shader_parameter("use_tex", 0.0)
+		m.set_shader_parameter("use_normal", 0.0)
+		m.set_shader_parameter("tone_a", _v4(Color(tones[0])))
+		m.set_shader_parameter("tone_b", _v4(Color(tones[1])))
+		m.set_shader_parameter("speckles", 1.0)
+		return m
+	if not ResourceLoader.exists(TEX_DIR % gname):
+		gname = "sand"
+	m.set_shader_parameter("albedo_tex", load(TEX_DIR % gname))
+	m.set_shader_parameter("normal_tex", load(NORMAL_DIR % gname))
+	m.set_shader_parameter("checker", _v4(_css_rgba(String(map.get("checker", "rgba(150,92,38,0.14)")))))
+	return m
+
+# The land around the arena: its picture every 5.2 m (arena.js: repeat 50/260 per metre).
+func _outer_material(outer_name: String) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = load("res://assets/shaders/ground.gdshader")
+	var oname := outer_name if ResourceLoader.exists(TEX_DIR % outer_name) else "grass"
+	m.set_shader_parameter("albedo_tex", load(TEX_DIR % oname))
+	m.set_shader_parameter("normal_tex", load(NORMAL_DIR % oname))
+	m.set_shader_parameter("normal_scale", 1.0)
+	m.set_shader_parameter("period", 260.0 / 50.0)
+	m.set_shader_parameter("origin", 130.0)
+	m.set_shader_parameter("seam", Vector4.ZERO)
+	m.set_shader_parameter("roughness", 1.0)
+	m.set_shader_parameter("tint", _v4(Color("e0b98a") if outer_name == "sand" else Color.WHITE))
+	return m
 
 func _flat_tiles(tiles: Array, col: Color, y: float, mat: Material = null, register := false) -> void:
 	if tiles.is_empty():

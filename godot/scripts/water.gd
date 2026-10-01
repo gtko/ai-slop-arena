@@ -1,97 +1,268 @@
 class_name Water
 extends Node3D
-# Water in a sunken basin (src/water.js, shore.js, cheap version): the floor has holes over the 'W'
-# tiles; a sand bed 0.85 m down, four bank walls and one transparent animated surface (MultiMesh, one
-# draw call, assets/shaders/water.gdshader). The swamp variant of Misty Marsh is olive and murky.
+# Ponds ('W' tiles) and frozen ponds ('I'), drawn along the rounded outline of the web build
+# (src/shore.js TileField, src/water.js): the land/water tile set is blurred into a soft field (exact
+# Gaussian blur of the tile squares, plus a little wobble), whose level 0.5 is the shore. The floor
+# (ground.gdshader) is cut where the field drops under the shore lip, a sandy bank slopes from there
+# down to the bed, and an animated transparent surface (water.gdshader) fills the outline. Frozen
+# ponds get a cracked ice sheet (ice.gdshader) inside the outline. The swamp of Misty Marsh is olive
+# and murky. The field is a small texture (6 samples per tile) shared by those shaders.
 
 const WATER_Y := -0.16
 const BED_Y := -0.85
+const SHORE_LIP := 0.62        # arena.js: where the floor ends on the dry side of a pond
+const RES := 6                 # field samples per tile
+const SIGMA := 0.5
+const LEVEL := 0.5
+const WOBBLE := 0.07
 
 var mat: ShaderMaterial
+var field := PackedFloat32Array()
+var field_tex: ImageTexture
+var S := 0
+var h := 0.0
+var half := 0.0
+var arena: Arena
 
-func build(arena: Arena, tiles: Array, style: String) -> void:
+# ------------------------------------------------------------------ the land field
+
+static func _erf(x: float) -> float:
+	var s := -1.0 if x < 0.0 else 1.0
+	var a := absf(x)
+	var t := 1.0 / (1.0 + 0.3275911 * a)
+	return s * (1.0 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * exp(-a * a))
+
+static func probit(p: float) -> float:
+	var x := clampf(2.0 * p - 1.0, -0.9999, 0.9999)
+	var l := log(1.0 - x * x)
+	var a := 0.147
+	var b := 2.0 / (PI * a) + l / 2.0
+	return sqrt(2.0) * signf(x) * sqrt(sqrt(b * b - l / a) - b)
+
+static func _imul(a: int, b: int) -> int:
+	return (a * b) & 0xFFFFFFFF
+
+static func _hash(i: int, j: int, s: int) -> float:
+	var x := (_imul(i & 0xFFFFFFFF, 374761393) + _imul(j & 0xFFFFFFFF, 668265263) + _imul(s, 982451653)) & 0xFFFFFFFF
+	x = _imul(x ^ (x >> 13), 1274126177)
+	return float((x ^ (x >> 16)) & 0xFFFFFFFF) / 4294967296.0
+
+static func noise2(x: float, z: float, s := 0) -> float:
+	var i := floori(x)
+	var j := floori(z)
+	var fx := x - i
+	var fz := z - j
+	var u := fx * fx * (3.0 - 2.0 * fx)
+	var v := fz * fz * (3.0 - 2.0 * fz)
+	var a := _hash(i, j, s)
+	var b := _hash(i + 1, j, s)
+	var c := _hash(i, j + 1, s)
+	var d := _hash(i + 1, j + 1, s)
+	return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v
+
+# shore.js TileField (sigma 0.5 m, level 0.5, seed 7), built from arena.is_land
+func _build_field() -> void:
+	var N := GameData.N
+	var TILE := GameData.TILE
+	S = N * RES + 1
+	h = TILE / RES
+	half = N * TILE / 2.0
+	var pad := 3
+	var T := N + 2 * pad
+	var k := 1.0 / (SIGMA * sqrt(2.0))
+	var g := PackedFloat32Array()
+	g.resize(T * S)
+	for t in T:
+		var a := (t - pad) * TILE - half
+		var b := a + TILE
+		for s in S:
+			var x := s * h - half
+			g[t * S + s] = 0.5 * (_erf((b - x) * k) - _erf((a - x) * k))
+	var ind := PackedByteArray()
+	ind.resize(T * T)
+	for tj in T:
+		for ti in T:
+			ind[tj * T + ti] = 1 if arena.is_land(ti - pad, tj - pad) else 0
+	field.resize(S * S)
+	var reach := mini(pad, ceili(3.0 * SIGMA / TILE))
+	for sz in S:
+		var cj := int(sz / RES) + pad
+		for sx in S:
+			var ci := int(sx / RES) + pad
+			var v := 0.0
+			for tj in range(cj - reach, cj + reach + 1):
+				if tj < 0 or tj >= T:
+					continue
+				var gz := g[tj * S + sz]
+				if gz < 1e-5:
+					continue
+				for ti in range(ci - reach, ci + reach + 1):
+					if ti >= 0 and ti < T and ind[tj * T + ti] == 1:
+						v += g[ti * S + sx] * gz
+			var x := sx * h - half
+			var z := sz * h - half
+			var n := noise2(x * 0.45, z * 0.45, 7) * 0.7 + noise2(x * 1.1, z * 1.1, 8) * 0.3 - 0.5
+			v = clampf(v + n * WOBBLE * 2.0 * maxf(0.0, 1.0 - absf(v - LEVEL) * 2.0), 0.0, 1.0)
+			field[sz * S + sx] = 0.5 * v / LEVEL if v < LEVEL else 0.5 + 0.5 * (v - LEVEL) / (1.0 - LEVEL)
+	# R: the field, G: distance to the waterline in tiles / 1.5 (water.js shoreTexture)
+	var img := Image.create(S, S, false, Image.FORMAT_RGF)
+	for sz in S:
+		for sx in S:
+			var f := field[sz * S + sx]
+			var d := -SIGMA * probit(f) / TILE if f < 0.5 else 0.0
+			img.set_pixel(sx, sz, Color(f, clampf(d / 1.5, 0.0, 1.0), 0.0))
+	field_tex = ImageTexture.create_from_image(img)
+
+# field value at a world point (bilinear)
+func at(x: float, z: float) -> float:
+	var u := clampf((x + half) / h, 0.0, S - 1.001)
+	var v := clampf((z + half) / h, 0.0, S - 1.001)
+	var a := int(u)
+	var b := int(v)
+	var fu := u - a
+	var fv := v - b
+	var o := b * S + a
+	return (field[o] * (1.0 - fu) + field[o + 1] * fu) * (1.0 - fv) + (field[o + S] * (1.0 - fu) + field[o + S + 1] * fu) * fv
+
+# Shader parameters that let a material sample the field (ground, water, ice).
+func bind(m: ShaderMaterial) -> void:
+	m.set_shader_parameter("field_tex", field_tex)
+	m.set_shader_parameter("field_half", half)
+	m.set_shader_parameter("field_step", h)
+	m.set_shader_parameter("field_size", float(S))
+
+# ------------------------------------------------------------------ build
+
+func setup(a: Arena) -> void:
+	arena = a
+	_build_field()
+
+func build(a: Arena, tiles: Array, style: String) -> void:
+	if arena == null:
+		setup(a)
+	if tiles.is_empty():
+		return
 	var swamp := style == "swamp"
-	var dry := Color("6e6248") if swamp else (Color("e6b98c") if arena.map.get("ground", "") == "cartoon" else Color("8a7458"))
-	var wet := Color("4a4234") if swamp else (Color("8a7458") if arena.map.get("ground", "") == "cartoon" else Color("62563f"))
-	var set := {}
-	for t in tiles:
-		set[t.y * GameData.N + t.x] = true
-	# bed
-	var bed := PlaneMesh.new()
-	bed.size = Vector2(GameData.TILE, GameData.TILE)
-	var bm := StandardMaterial3D.new()
-	bm.albedo_color = wet.lerp(dry, 0.25)
-	bm.roughness = 1.0
-	bed.material = bm
-	var bmm := MultiMesh.new()
-	bmm.transform_format = MultiMesh.TRANSFORM_3D
-	bmm.mesh = bed
-	bmm.instance_count = tiles.size()
-	# surface
+	var cartoon: bool = a.map.get("ground", "") == "cartoon"
+	var dry := Color("6e6248") if swamp else (Color("e6b98c") if cartoon else Color("8a7458"))
+	var wet := Color("4a4234") if swamp else (Color("8a7458") if cartoon else Color("62563f"))
+	var near := _near(tiles)
+	_basin(near, dry.srgb_to_linear(), wet.srgb_to_linear())
+	# surface: one quad per tile near the water, under the floor where the floor stays
 	var surf := PlaneMesh.new()
 	surf.size = Vector2(GameData.TILE, GameData.TILE)
 	mat = ShaderMaterial.new()
 	mat.shader = load("res://assets/shaders/water.gdshader")
+	bind(mat)
 	mat.set_shader_parameter("shallow", Color("5a7a3a") if swamp else Color("1fb8d8"))
 	mat.set_shader_parameter("deep", Color("1e3a22") if swamp else Color("0a4c96"))
 	mat.set_shader_parameter("murk", 1.0 if swamp else 0.0)
-	mat.set_shader_parameter("sky_col", Color("b8c8b0") if swamp else Color("c6e1ff"))
 	surf.material = mat
 	var smm := MultiMesh.new()
 	smm.transform_format = MultiMesh.TRANSFORM_3D
-	smm.use_custom_data = true
 	smm.mesh = surf
-	smm.instance_count = tiles.size()
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var h := GameData.TILE / 2.0
-	for k in tiles.size():
-		var t: Vector2i = tiles[k]
-		var c := arena.center(t.x, t.y)
-		bmm.set_instance_transform(k, Transform3D(Basis.IDENTITY, c + Vector3(0, BED_Y, 0)))
-		smm.set_instance_transform(k, Transform3D(Basis.IDENTITY, c + Vector3(0, WATER_Y, 0)))
-		# edge flags: land on -x, +x, -z, +z
-		var land := [not set.has(t.y * GameData.N + t.x - 1) and arena.tile(t.x - 1, t.y) != "V", not set.has(t.y * GameData.N + t.x + 1) and arena.tile(t.x + 1, t.y) != "V",
-			not set.has((t.y - 1) * GameData.N + t.x) and arena.tile(t.x, t.y - 1) != "V", not set.has((t.y + 1) * GameData.N + t.x) and arena.tile(t.x, t.y + 1) != "V"]
-		smm.set_instance_custom_data(k, Color(1.0 if land[0] else 0.0, 1.0 if land[1] else 0.0, 1.0 if land[2] else 0.0, 1.0 if land[3] else 0.0))
-		# bank walls (facing the water)
-		var corners := [
-			[land[0], Vector3(-h, 0, h), Vector3(-h, 0, -h), Vector3(1, 0, 0)],
-			[land[1], Vector3(h, 0, -h), Vector3(h, 0, h), Vector3(-1, 0, 0)],
-			[land[2], Vector3(-h, 0, -h), Vector3(h, 0, -h), Vector3(0, 0, 1)],
-			[land[3], Vector3(h, 0, h), Vector3(-h, 0, h), Vector3(0, 0, -1)]]
-		for w in corners:
-			if not w[0]:
-				continue
-			var a: Vector3 = c + w[1]
-			var b: Vector3 = c + w[2]
-			var n: Vector3 = w[3]
-			var top := -0.02
-			var pts := [Vector3(a.x, top, a.z), Vector3(b.x, top, b.z), Vector3(b.x, BED_Y, b.z), Vector3(a.x, BED_Y, a.z)]
-			var cols := [dry, dry, wet, wet]
-			for q in [0, 1, 2, 0, 2, 3]:
-				st.set_color(cols[q])
-				st.set_normal(n)
-				st.add_vertex(pts[q])
-	var bmi := MultiMeshInstance3D.new()
-	bmi.multimesh = bmm
-	bmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(bmi)
+	smm.instance_count = near.size()
+	for k in near.size():
+		smm.set_instance_transform(k, Transform3D(Basis.IDENTITY, a.center(near[k].x, near[k].y) + Vector3(0, WATER_Y, 0)))
 	var smi := MultiMeshInstance3D.new()
 	smi.multimesh = smm
 	smi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(smi)
-	var banks := st.commit()
-	var bkm := StandardMaterial3D.new()
-	bkm.vertex_color_use_as_albedo = true
-	bkm.roughness = 1.0
-	bkm.cull_mode = BaseMaterial3D.CULL_DISABLED
-	banks.surface_set_material(0, bkm)
-	var kmi := MeshInstance3D.new()
-	kmi.mesh = banks
-	kmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(kmi)
 	apply_quality()
+
+# the tiles of the set and the ring around it
+func _near(tiles: Array) -> Array:
+	var keys := {}
+	var out: Array = []
+	for t in tiles:
+		for dj in range(-1, 2):
+			for di in range(-1, 2):
+				var i: int = t.x + di
+				var j: int = t.y + dj
+				var key := j * GameData.N + i
+				if i < 0 or j < 0 or i >= GameData.N or j >= GameData.N or keys.has(key):
+					continue
+				keys[key] = true
+				out.append(Vector2i(i, j))
+	return out
+
+# water.js bankY: a sandy beach from the floor's edge (f = lip) down to the surface at the outline
+# (f = 0.5), then a slope to the bed. 2.5 cm lower than the web's so the floor (at -0.02) covers it.
+static func bank_y(f: float) -> float:
+	var y := 0.0
+	if f >= 0.5:
+		y = WATER_Y * (1.0 - smoothstep(0.0, 1.0, (f - 0.5) / (SHORE_LIP - 0.5)))
+	else:
+		y = WATER_Y + (BED_Y - WATER_Y) * smoothstep(0.0, 1.0, (0.5 - f) / 0.3)
+	return y - 0.025
+
+# The basin: a grid over the tiles near the water (one vertex per field sample), the bank profile
+# as its height, sun-dried sand on the lip and dark wet sand under the waterline.
+func _basin(near: Array, dry: Color, wet: Color) -> void:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var TILE := GameData.TILE
+	var nv := 0
+	for t in near:
+		var x0: float = t.x * TILE - half
+		var z0: float = t.y * TILE - half
+		for b in RES:
+			for a in RES:
+				var o: int = (t.y * RES + b) * S + t.x * RES + a
+				var fs := [field[o], field[o + 1], field[o + S + 1], field[o + S]]
+				if fs.min() >= SHORE_LIP:
+					continue # dry: the floor is there
+				nv += 6
+				var ps := [Vector2(x0 + a * h, z0 + b * h), Vector2(x0 + (a + 1) * h, z0 + b * h), Vector2(x0 + (a + 1) * h, z0 + (b + 1) * h), Vector2(x0 + a * h, z0 + (b + 1) * h)]
+				for q in [0, 1, 2, 0, 2, 3]:
+					var f: float = fs[q]
+					var p: Vector2 = ps[q]
+					st.set_color(wet.lerp(dry, smoothstep(0.0, 1.0, (f - 0.5 + 0.02) / 0.12)))
+					st.set_uv(Vector2(p.x / TILE, -p.y / TILE) * 0.5)
+					var e := h * 0.5
+					st.set_normal(Vector3(bank_y(at(p.x - e, p.y)) - bank_y(at(p.x + e, p.y)), 2.0 * e, bank_y(at(p.x, p.y - e)) - bank_y(at(p.x, p.y + e))).normalized())
+					st.add_vertex(Vector3(p.x, bank_y(f), p.y))
+	if nv == 0:
+		return
+	st.generate_tangents()
+	var mesh := st.commit()
+	var m := StandardMaterial3D.new()
+	m.vertex_color_use_as_albedo = true
+	m.roughness = 0.6
+	if ResourceLoader.exists("res://assets/tex/sand.jpg"):
+		m.albedo_texture = load("res://assets/tex/sand.jpg")
+		m.normal_enabled = true
+		m.normal_texture = load("res://assets/tex/sand_n.png")
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mesh.surface_set_material(0, m)
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	add_child(mi)
+
+# Frozen ponds (water.js IceField): a sheet of cracked ice filling the rounded outline of the 'I'
+# tiles, just above the floor.
+func build_ice(a: Arena, tiles: Array) -> void:
+	if arena == null:
+		setup(a)
+	if tiles.is_empty():
+		return
+	var near := _near(tiles)
+	var q := PlaneMesh.new()
+	q.size = Vector2(GameData.TILE, GameData.TILE)
+	var m := ShaderMaterial.new()
+	m.shader = load("res://assets/shaders/ice.gdshader")
+	bind(m)
+	q.material = m
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = q
+	mm.instance_count = near.size()
+	for k in near.size():
+		mm.set_instance_transform(k, Transform3D(Basis.IDENTITY, a.center(near[k].x, near[k].y) + Vector3(0, 0.012, 0)))
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mmi)
 
 func apply_quality() -> void:
 	if mat:

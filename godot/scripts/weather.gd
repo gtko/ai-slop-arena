@@ -75,12 +75,13 @@ func _field(mesh: Mesh, pm: ParticleProcessMaterial, amount: int, life: float, y
 	fields.append(p)
 	return p
 
+# col: linear like the web's colours (some are over 1: they glow); the distance fog applies, as on the web
 func _unshaded(col: Color, billboard := false) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.albedo_color = col
-	m.disable_fog = true
+	var c := col.linear_to_srgb()
+	m.albedo_color = Color(c.r, c.g, c.b, col.a)
 	if billboard:
 		m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
 		m.billboard_keep_scale = true
@@ -128,8 +129,8 @@ func _build_rain() -> void:
 
 func _build_snow() -> void:
 	var flake := QuadMesh.new()
-	flake.size = Vector2(0.15, 0.15)
-	flake.material = _unshaded(Color(1.0, 1.0, 1.0, 0.9), true)
+	flake.size = Vector2(0.1, 0.1) # the web's 0.075 m octahedron reads smaller than a square
+	flake.material = _unshaded(Color(1.25, 1.3, 1.4, 0.9), true)
 	var pm := _pmat(Vector3(0.45, -1, 0.1), 1.2, 2.2, 12.0)
 	pm.angle_min = 0.0
 	pm.angle_max = 360.0
@@ -140,7 +141,7 @@ func _build_snow() -> void:
 func _build_storm() -> void:
 	var grain := BoxMesh.new()
 	grain.size = Vector3(0.7, 0.02, 0.02)
-	grain.material = _unshaded(Color(1.0, 0.72, 0.42, 0.5))
+	grain.material = _unshaded(Color(1.3, 0.85, 0.5, 0.5))
 	var pm := _pmat(Vector3(1, 0, 0.05), 18.0, 32.0, 4.0)
 	pm.emission_box_extents = Vector3(2.0, 2.5, BOX_Z)
 	pm.particle_flag_align_y = false
@@ -181,9 +182,9 @@ func _build_fog() -> void:
 	nt.height = 256
 	var ramp := Gradient.new()
 	ramp.set_color(0, Color(1, 1, 1, 0))
-	ramp.set_color(1, Color(1, 1, 1, 1))
-	ramp.set_offset(0, 0.42)
-	ramp.set_offset(1, 0.78)
+	ramp.set_color(1, Color(1, 1, 1, 0.4)) # the web's soft blobs: alpha 0.05..0.17 at their centres
+	ramp.set_offset(0, 0.4)
+	ramp.set_offset(1, 0.85)
 	nt.color_ramp = ramp
 	for k in 3:
 		var pm := PlaneMesh.new()
@@ -251,7 +252,8 @@ func apply_quality() -> void:
 
 func _mix(S: Dictionary, key: String, r: float, g: float, b: float, amt: float) -> void:
 	var k := 1.0 - 0.85 * float(S.night) if (key == "fog" or key == "sky") else 1.0
-	S[key] = (S[key] as Color).lerp(Color(r * k, g * k, b * k), amt)
+	# the tints are linear values blended in linear space (three's Color.setRGB / lerp)
+	S[key] = (S[key] as Color).srgb_to_linear().lerp(Color(r * k, g * k, b * k), amt).linear_to_srgb()
 
 # Weather bends the time-of-day look (src/weather.js modify).
 func modify(S: Dictionary) -> void:

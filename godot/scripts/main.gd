@@ -14,6 +14,7 @@ extends Node3D
 # Errors (outdated, full, banned, kicked) and lost connections return to the menu with a message.
 
 const SEND_HZ := 20.0
+const MenuShowcase := preload("res://scripts/menu_showcase.gd")
 # QUEUE is last so the numbers of the older states stay the same (the autotest prints them)
 enum State { MENU, LOBBY, LOADING, COUNTDOWN, PLAYING, OVER, QUEUE }
 
@@ -37,6 +38,8 @@ var audio: AudioManager           # AUDIO HOOK: pooled SFX + music (scripts/audi
 var menu: MainMenu
 var lobby: Lobby
 var result: ResultView
+var showcase: MenuShowcase          # MENU hook: the live arena behind the home screen (menu_showcase.gd)
+var _auto_start := false          # SOLO: start the new room as soon as we lead it
 var projectiles: Array = []       # [{node, dir, speed, left}]
 var send_t := 0.0
 var super_seq := 0
@@ -103,6 +106,8 @@ func _menushot(path: String, args: PackedStringArray) -> void:
 			match a.substr(10):
 				"settings": menu._settings.visible = true
 				"room": menu._room_dialog.visible = true
+				"maps": menu._maps_pop.visible = true; menu._refresh_map()
+				"quests", "collection", "shop", "road": menu._open_page(a.substr(10))
 				"result":
 					result.show_result("#3", I18n.t("g.ko", {"rank": 3}), true)
 					result.set_rank_text(I18n.t("rank.change", {"delta": "+12", "icon": "", "tier": I18n.t("rank.silver"), "rp": 212}))
@@ -198,11 +203,13 @@ func _apply_power_profile() -> void:
 
 func _build_scene() -> void:
 	cam = Camera3D.new()
-	cam.fov = 42
+	cam.fov = 40      # src/main.js PerspectiveCamera(40, aspect, 0.5, 260), vertical like three's
+	cam.near = 0.5
+	cam.far = 260.0
 	cam.current = true
 	add_child(cam)
-	cam.position = Vector3(0, 18, 13)
-	cam.look_at(Vector3.ZERO)
+	cam.position = Lighting.CAM_OFFSET
+	cam.look_at(Vector3(0, 0.5, 0))
 	sun = DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-55, -30, 0)
 	sun.shadow_enabled = true
@@ -253,6 +260,9 @@ func _build_ui() -> void:
 	rank_label.add_theme_constant_override("outline_size", 6)
 	rank_label.visible = false
 	ui.add_child(rank_label)
+	showcase = MenuShowcase.new()
+	add_child(showcase)
+	showcase.setup(cam, env, sun)
 	_build_screens()
 
 # The three full screens; rebuilt when the language changes.
@@ -269,6 +279,9 @@ func _build_screens() -> void:
 	menu.queue_cancel.connect(_cancel_queue)
 	menu.settings_changed.connect(_on_settings_changed)
 	menu.profile_changed.connect(_send_pick)
+	menu.solo_play.connect(func(): audio.play("click"); _auto_start = true; _open_room(_random_code(), false))
+	menu.training.connect(func(): audio.play("click"); _open_room(_random_code(), false))
+	menu.showcase_changed.connect(func(): showcase.refresh())
 	ui.add_child(menu)
 	lobby = Lobby.new()
 	lobby.leave.connect(_leave_room)
@@ -291,6 +304,7 @@ func _build_screens() -> void:
 func _on_settings_changed() -> void:
 	_apply_power_profile()
 	Settings.apply_audio()
+	_show_screen()   # the battery saver turns the menu's live arena off / on
 	var want := Settings.lang if Settings.lang != "" else I18n.detect()
 	if want != I18n.lang:
 		I18n.use(want)
@@ -327,7 +341,9 @@ func _show_screen() -> void:
 	if state != State.OVER:
 		rank_label.visible = false
 	status.visible = in_match or state == State.LOBBY
-	get_viewport().disable_3d = not in_match   # nothing to draw behind the menus: save the battery
+	showcase.set_active((in_menu or state == State.LOBBY) and not Settings.saver)   # MENU hook: the arena behind the home screen and the room
+	menu.set_backdrop(showcase.active)
+	get_viewport().disable_3d = not in_match and not showcase.active   # nothing to draw behind the lobby: save the battery
 
 # ---------------------------------------------------------------- quick play (matchmaking)
 
@@ -408,6 +424,7 @@ func _on_net_closed() -> void:
 	_to_menu(I18n.t("g.connLost"))
 
 func _to_menu(msg: String) -> void:
+	_auto_start = false
 	_clear_match()
 	audio.stop_jingle()   # AUDIO HOOK
 	audio.set_danger(0.0)
@@ -515,6 +532,13 @@ func _on_message(m: Dictionary) -> void:
 			if state == State.LOBBY:
 				lobby.my_id = net.id
 				lobby.show_room(net.code, m)
+				if _auto_start and lobby.is_leader and not net.matchmade:
+					_auto_start = false   # SOLO: your picks, then go (bots fill the room)
+					if Settings.map != "random":
+						net.send({"t": "map", "map": Settings.map})
+					net.send({"t": "mode", "mode": Settings.mode})
+					net.send({"t": "chaos", "on": Settings.chaos})
+					net.send({"t": "start"})
 			elif in_match_now and not bool(m.get("inMatch", true)):
 				_match_over()
 		"start":
@@ -615,8 +639,7 @@ func _apply_event(e: Dictionary) -> void:
 				audio.play(("super_" if e.get("s", false) else "atk_") + String(f.type.key), f.position)   # AUDIO HOOK
 				if e.get("s", false) and f == me:
 					audio.duck()
-				f.play_once("super" if e.get("s", false) else "shoot")
-				_spawn_projectile(f, e)
+				f.play_once("super" if e.get("s", false) else "shoot")   # projectiles: fx_combat.gd (Fx, via hud_ui.on_event)
 		"kill":
 			if f:
 				f.alive = false
@@ -661,23 +684,6 @@ func _apply_event(e: Dictionary) -> void:
 		"pick":   # AUDIO HOOK
 			if fighters.get(e.get("by", "")) == me:
 				audio.play("pickup")
-
-func _spawn_projectile(f: Fighter, e: Dictionary) -> void:
-	var mi := MeshInstance3D.new()
-	var s := SphereMesh.new()
-	s.radius = 0.22 if not e.get("s", false) else 0.45
-	s.height = s.radius * 2
-	s.radial_segments = 8
-	s.rings = 4
-	mi.mesh = s
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = GameData.color_of(f.type.palette.accent)
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mi.material_override = mat
-	add_child(mi)
-	mi.position = f.position + Vector3(0, 1.1, 0)
-	projectiles.append({"node": mi, "dir": Vector3(e.dx, 0, e.dz).normalized(),
-		"speed": float(f.type.projSpeed), "left": float(f.type.range)})
 
 # ---------------------------------------------------------------- frame
 
@@ -755,10 +761,42 @@ func _mouse_ground() -> Variant:
 	var t := -from.y / dir.y
 	return from + dir * t if t > 0 else null
 
+# src/game.js updateCamera: the focus glides to the player plus a look-ahead (toward the aim, else
+# the walk), kept off the outer walls; the camera sits at Lighting.CAM_OFFSET from it (fov 40, ~47
+# degree pitch), zoomed out a little for the last three and in while lurking in a bush.
+var cam_focus := Vector3(0, 0, 4)
+var _cam_look := Vector2.ZERO
+var _cam_zoom := 1.0
+var _bush_idle := 0.0
+
 func _follow_camera(delta: float) -> void:
-	var want := me.position + Vector3(0, 18, 13)
-	cam.position = cam.position.lerp(want, clampf(delta * 6.0, 0.0, 1.0))
-	cam.look_at(cam.position - Vector3(0, 18, 13) + Vector3(0, 0, 0))
+	var look := Vector2.ZERO
+	if me.alive:
+		var aiming := not touch.visible or touch.aim.length() > 0.3
+		if aiming and aim_dir != Vector2.ZERO:
+			look = aim_dir.normalized() * minf(2.6, 0.18 * float(me.type.range))
+		elif last_move.length_squared() > 0.05:
+			look = last_move.normalized() * 1.2
+	_cam_look += (look - _cam_look) * (1.0 - exp(-delta / 0.25))
+	var lim := GameData.HALF
+	var want := Vector3(clampf(me.position.x + _cam_look.x, -(lim - 9.0), lim - 9.0), 0.0,
+		clampf(me.position.z + _cam_look.y, -(lim - 11.0), lim - 6.0))
+	cam_focus = want if cam_focus.distance_to(want) > 30.0 else cam_focus.lerp(want, 1.0 - exp(-6.0 * delta)) # (a new match: cut)
+	var alive := 0
+	for id in fighters:
+		alive += 1 if fighters[id].alive else 0
+	var zoom := 1.1 if alive == 2 else (1.06 if alive == 3 else 1.0)
+	_bush_idle = _bush_idle + delta if me.alive and arena.is_bush(me.position.x, me.position.z) and last_move.length_squared() < 0.02 else 0.0
+	if _bush_idle > 1.5:
+		zoom *= 0.94
+	_cam_zoom += (zoom - _cam_zoom) * (1.0 - exp(-3.0 * delta))
+	for a in DebugArgs.list():   # screenshots side by side with the web build: --camfocus=x,z[,zoom]
+		if a.begins_with("--camfocus="):
+			var v := a.substr(11).split(",")
+			cam_focus = Vector3(float(v[0]), 0.0, float(v[1]))
+			_cam_zoom = float(v[2]) if v.size() > 2 else 1.0
+	cam.position = cam_focus + Lighting.CAM_OFFSET * _cam_zoom
+	cam.look_at(Vector3(cam_focus.x, 0.5, cam_focus.z))
 
 func _update_projectiles(delta: float) -> void:
 	for k in range(projectiles.size() - 1, -1, -1):
