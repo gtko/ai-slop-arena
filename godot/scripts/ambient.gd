@@ -68,6 +68,7 @@ var walkers: Array = []
 var flocks: Array = []
 var swarms: Array = []
 var rng := RandomNumberGenerator.new()
+var pond: PondLife   # Misty Marsh: lily pads, bubbles, dragonflies (pond_life.gd)
 
 func setup(a: Arena) -> void:
 	arena = a
@@ -82,6 +83,10 @@ func setup(a: Arena) -> void:
 				_flock(spec)
 			"swarm":
 				_swarm(spec)
+	if String(a.map.get("key", "")) == "marsh":
+		pond = PondLife.new()
+		add_child(pond)
+		pond.setup(a, float(Quality.preset().fauna))
 	apply_quality()
 
 # ------------------------------------------------------------------ helpers
@@ -432,6 +437,8 @@ func update(delta: float, fighters: Dictionary) -> void:
 	_step_walkers(delta, fighters)
 	_step_flocks(delta)
 	_step_swarms()
+	if pond:
+		pond.update(delta)
 
 func apply_quality() -> void:
 	var k := float(Quality.preset().fauna)

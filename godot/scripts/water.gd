@@ -5,8 +5,9 @@ extends Node3D
 # Gaussian blur of the tile squares, plus a little wobble), whose level 0.5 is the shore. The floor
 # (ground.gdshader) is cut where the field drops under the shore lip, a sandy bank slopes from there
 # down to the bed, and an animated transparent surface (water.gdshader) fills the outline. Frozen
-# ponds get a cracked ice sheet (ice.gdshader) inside the outline. The swamp of Misty Marsh is olive
-# and murky. The field is a small texture (6 samples per tile) shared by those shaders.
+# ponds get a cracked ice sheet (ice.gdshader) inside the outline. The swamp of Misty Marsh is olive.
+# The field is a small texture (6 samples per tile) shared by those shaders. Shots, blasts and idle
+# plops send ripple rings across the surface (ripple). Pebbles, reeds and the snow bank: shore.gd.
 
 const WATER_Y := -0.16
 const BED_Y := -0.85
@@ -16,7 +17,16 @@ const SIGMA := 0.5
 const LEVEL := 0.5
 const WOBBLE := 0.07
 
+const MAX_RIPPLES := 8
+
 var mat: ShaderMaterial
+var bed_mat: ShaderMaterial
+var water_tiles: Array = []
+var ripples := PackedVector4Array()
+var next_ripple := 0
+var idle_t := 1.0
+var now := 0.0
+var _rng := RandomNumberGenerator.new()
 var field := PackedFloat32Array()
 var field_tex: ImageTexture
 var S := 0
@@ -156,7 +166,12 @@ func build(a: Arena, tiles: Array, style: String) -> void:
 	bind(mat)
 	mat.set_shader_parameter("shallow", Color("5a7a3a") if swamp else Color("1fb8d8"))
 	mat.set_shader_parameter("deep", Color("1e3a22") if swamp else Color("0a4c96"))
-	mat.set_shader_parameter("murk", 1.0 if swamp else 0.0)
+	mat.set_shader_parameter("water_n", load("res://assets/tex/water_n.png"))
+	water_tiles = tiles
+	ripples.resize(MAX_RIPPLES)
+	for k in MAX_RIPPLES:
+		ripples[k] = Vector4(0, 0, -99, 0)
+	mat.set_shader_parameter("rip", ripples)
 	surf.material = mat
 	var smm := MultiMesh.new()
 	smm.transform_format = MultiMesh.TRANSFORM_3D
@@ -226,17 +241,19 @@ func _basin(near: Array, dry: Color, wet: Color) -> void:
 		return
 	st.generate_tangents()
 	var mesh := st.commit()
-	var m := StandardMaterial3D.new()
-	m.vertex_color_use_as_albedo = true
-	m.roughness = 0.6
+	var m := ShaderMaterial.new()
+	m.shader = load("res://assets/shaders/water_bed.gdshader")
+	m.set_shader_parameter("water_y", WATER_Y)
 	if ResourceLoader.exists("res://assets/tex/sand.jpg"):
-		m.albedo_texture = load("res://assets/tex/sand.jpg")
-		m.normal_enabled = true
-		m.normal_texture = load("res://assets/tex/sand_n.png")
-	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		m.set_shader_parameter("albedo_tex", load("res://assets/tex/sand.jpg"))
+		m.set_shader_parameter("normal_tex", load("res://assets/tex/sand_n.png"))
+	else:
+		m.set_shader_parameter("use_tex", 0.0)
+	bed_mat = m
 	mesh.surface_set_material(0, m)
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED   # banks shade the pool when the sun is low
 	add_child(mi)
 
 # Frozen ponds (water.js IceField): a sheet of cracked ice filling the rounded outline of the 'I'
@@ -264,9 +281,51 @@ func build_ice(a: Arena, tiles: Array) -> void:
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mmi)
 
+# arena.js: pebbles and reeds along the rounded shores, the snow bank around frozen ponds (shore.gd).
+# floor_mat: the floor's material, for the bank.
+func shores(a: Arena, floor_mat: ShaderMaterial) -> void:
+	var has_w := false
+	var has_i := false
+	for j in GameData.N:
+		for i in GameData.N:
+			var c := a.tile(i, j)
+			has_w = has_w or c == "W"
+			has_i = has_i or c == "I"
+	if not has_w and not has_i:
+		return
+	var style := "ice" if has_i else ("marsh" if String(a.map.get("water", "")) == "swamp" else ("oasis" if String(a.map.get("ground", "")) == "cartoon" else "grove"))
+	Shore.decor(self, self, a, style, 0.45 if has_i else 0.35)
+	if has_i and not has_w and floor_mat:
+		var bm: ShaderMaterial = floor_mat.duplicate()
+		bm.shader = load("res://assets/shaders/ground_bank.gdshader")
+		Shore.snow_bank(self, self, bm)
+
+# water.js ripple: a ring spreading from (x, z), amp 1 for a bubble pop, 0.55 for a spent bullet
+func ripple(x: float, z: float, amp := 1.0) -> void:
+	if mat == null:
+		return
+	ripples[next_ripple] = Vector4(x, z, now, amp)
+	next_ripple = (next_ripple + 1) % MAX_RIPPLES
+	mat.set_shader_parameter("rip", ripples)
+
 func apply_quality() -> void:
 	if mat:
 		mat.set_shader_parameter("detail", 1.0 if int(Quality.preset().water) > 0 else 0.0)
+	if bed_mat:
+		bed_mat.set_shader_parameter("caustics_on", 1.0 if int(Quality.preset().water) > 0 else 0.0)
 
-func update(_delta: float) -> void:
-	pass
+func update(delta: float) -> void:
+	if mat == null:
+		return
+	now += delta
+	mat.set_shader_parameter("now", now)
+	if bed_mat:
+		bed_mat.set_shader_parameter("now", now)
+	# occasional idle ripples keep the pools alive
+	idle_t -= delta
+	if idle_t <= 0.0 and not water_tiles.is_empty():
+		idle_t = 0.6 + _rng.randf() * 1.4
+		var t: Vector2i = water_tiles[_rng.randi() % water_tiles.size()]
+		var x := (t.x - GameData.N / 2.0 + 0.2 + _rng.randf() * 0.6) * GameData.TILE
+		var z := (t.y - GameData.N / 2.0 + 0.2 + _rng.randf() * 0.6) * GameData.TILE
+		ripple(x, z, 0.25 + _rng.randf() * 0.2)

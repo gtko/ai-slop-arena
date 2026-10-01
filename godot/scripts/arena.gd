@@ -831,6 +831,7 @@ func _ground(kinds: Dictionary) -> void:
 		m0.set_shader_parameter("field_lip", Water.SHORE_LIP if not water.is_empty() else 0.5)
 		self.water.build(self, water, String(map.get("water", "water")))
 		self.water.build_ice(self, ice)
+		self.water.shores(self, m0)   # pebbles, reeds, the snow bank (shore.gd)
 	if not map.get("sky", false):
 		# the land around the arena (maps.js `outer`: sand, grass, snow), as a frame: the water basins
 		# and their banks sit inside the arena, a full plane would cover them

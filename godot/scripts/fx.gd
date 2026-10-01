@@ -61,7 +61,7 @@ func setup(arena_: Arena, fighters_: Dictionary, local_id_: String) -> void:
 	fire = FxLayer.new(self, FxLib.ico(1, 0.5), FxLib.layer_material("fire"), 260)
 	# the web keeps 12 point lights on desktop; fewer here: forward renderers pay per light, and the
 	# Mobile renderer lights a mesh with 8 omni lights at most, shared with the arena's lanterns
-	var nl: int = {"low": 0, "medium": 2, "high": 4}.get(Quality.name_now(), 2)
+	var nl: int = int(Quality.preset().get("lights", 2))   # 4 on High, 2 on Medium, none on Low or "dynamic lights" off
 	for k in nl:
 		var l := OmniLight3D.new()
 		l.shadow_enabled = false
@@ -213,6 +213,8 @@ func scorch(x: float, z: float, radius: float) -> void:
 
 # Water splash: droplets arcing out and falling back, plus a burst of white spray.
 func splash(x: float, z: float, size := 1.0) -> void:
+	if arena and arena.water and arena.char_at(x, z) == "W":   # combat.js: the pool ripples too
+		arena.water.ripple(x, z, clampf(size, 0.55, 1.6))
 	var white := Color(0.82, 0.93, 1.0)
 	for k in FxLib.n(int(round(16 * size))):
 		var a := _rng.randf() * TAU

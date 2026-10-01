@@ -88,6 +88,10 @@ void fragment() {
 		vec2 nn = textureGrad(normal_tex, f, gx, gy).rg * 2.0 - 1.0;
 		// picture right = +x, picture up = -z (the web's uv), z out of the floor
 		vec3 wn = normalize(vec3(nn.x * normal_scale, 1.0, -nn.y * normal_scale));
+#ifdef BANK
+		// a floor that is not flat (the snow bank around frozen ponds, shore.gd): bend its own normal
+		wn = normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz + vec3(nn.x * normal_scale, 0.0, -nn.y * normal_scale));
+#endif
 		NORMAL = normalize((VIEW_MATRIX * vec4(wn, 0.0)).xyz);
 	}
 }
