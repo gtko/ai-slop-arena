@@ -143,7 +143,10 @@ void fragment() {
 	else { c = hue_rot(c, hue); c = satur(c, sat); }
 	c = clamp(c * bri, 0.0, 1.0);
 	c = clamp((c - 0.5) * con + 0.5, 0.0, 1.0);
-	COLOR = vec4(c, t.a) * COLOR;
+	// COLOR already holds texture * modulate in Godot 4: take back the (grey) modulate only, so the
+	// texture is not applied twice (that darkened every recolour)
+	float k = dot(COLOR.rgb, vec3(1.0)) / max(dot(t.rgb, vec3(1.0)), 0.0001);
+	COLOR = vec4(c * k, COLOR.a);
 }
 """
 	var m := ShaderMaterial.new()

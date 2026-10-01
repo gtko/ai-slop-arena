@@ -3,6 +3,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { MAPS } from '../../src/maps.js';
 import * as COS from '../../src/cosmetics.js';
+import * as PR from '../../src/profile.js'; // its localStorage reads are wrapped in try: fine under node
 
 const N = 25;
 const out = {};
@@ -38,5 +39,10 @@ const fxEnd = fx.indexOf('\n};', fxStart);
 const trailFx = new Function(`return ${fx.slice(fxStart + 'const TRAIL_FX = '.length, fxEnd + 3)}`)();
 writeFileSync(new URL('../data/cosmetics.json', import.meta.url), JSON.stringify({
   skins: COS.SKINS, recolours: COS.RECOLOURS, goldAt: COS.GOLD_AT, trails: COS.TRAILS, trailFx, kofx: COS.KOFX, cosDefault: COS.COS_DEFAULT,
+  // the shop and the collection (metaui.js) and the profile's economy (profile.js)
+  trailIcons: COS.TRAIL_ICONS, kofxIcons: COS.KOFX_ICONS, emotes: COS.EMOTES, emoteIcons: COS.EMOTE_ICONS, emoteFree: COS.EMOTE_FREE,
+  frames: COS.FRAMES, titles: COS.TITLES, icons: COS.ICONS, free: COS.FREE, price: COS.PRICE, starters: COS.STARTERS,
+  brawlerPrice: COS.BRAWLER_PRICE, skinCoins: COS.SKIN_COINS, gemPacks: COS.GEM_PACKS, earned: [...COS.EARNED],
+  levelRewards: PR.LEVEL_REWARDS, road: PR.ROAD,
 }, null, 1));
 console.log(`maps: ${Object.keys(out).length}, brawlers: ${Object.keys(types).length}, cosmetics: ok`);

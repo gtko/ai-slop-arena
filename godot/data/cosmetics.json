@@ -208,5 +208,269 @@
   "slime",
   "stars"
  ],
- "cosDefault": "0.0.0.0.1.0"
+ "cosDefault": "0.0.0.0.1.0",
+ "trailIcons": [
+  "🚫",
+  "✨",
+  "🫧",
+  "🔥",
+  "💗",
+  "👾"
+ ],
+ "kofxIcons": [
+  "🚫",
+  "🎉",
+  "🟪",
+  "🎆",
+  "🟢",
+  "⭐"
+ ],
+ "emotes": [
+  "gg",
+  "thumbs",
+  "wave",
+  "lol",
+  "cool",
+  "angry",
+  "cry",
+  "love",
+  "shock",
+  "sleep",
+  "clown",
+  "skull"
+ ],
+ "emoteIcons": [
+  "🤝",
+  "👍",
+  "👋",
+  "😂",
+  "😎",
+  "😡",
+  "😭",
+  "😍",
+  "😱",
+  "😴",
+  "🤡",
+  "💀"
+ ],
+ "emoteFree": [
+  "gg",
+  "thumbs",
+  "wave",
+  "lol"
+ ],
+ "frames": [
+  "none",
+  "wood",
+  "silver",
+  "gold",
+  "slime",
+  "neon",
+  "frost",
+  "flame",
+  "royal",
+  "pixel",
+  "diamond"
+ ],
+ "titles": [
+  "none",
+  "rookie",
+  "brawler",
+  "bushGoblin",
+  "cubeHoarder",
+  "gasDodger",
+  "botBully",
+  "mvp",
+  "survivor",
+  "showoff",
+  "chaosAgent",
+  "quester",
+  "golden",
+  "legend",
+  "slopLord"
+ ],
+ "icons": [
+  "p:blaster",
+  "p:gunslinger",
+  "p:bomber",
+  "p:frostbite",
+  "p:volt",
+  "🦊",
+  "🐸",
+  "🐙",
+  "🦖",
+  "🐧",
+  "🦄",
+  "🐝",
+  "🍄",
+  "🌵",
+  "🍕",
+  "🍩",
+  "🎮",
+  "🎲",
+  "🧠",
+  "🤖",
+  "👽",
+  "👻",
+  "🎃",
+  "🌈",
+  "⚡",
+  "💎",
+  "🔥",
+  "🌙",
+  "🏆",
+  "👑"
+ ],
+ "free": [
+  "title:1",
+  "emote:gg",
+  "emote:thumbs",
+  "emote:wave",
+  "emote:lol",
+  "icon:0",
+  "icon:1",
+  "icon:2",
+  "icon:3",
+  "icon:4"
+ ],
+ "price": {
+  "skin": 290,
+  "trail": 150,
+  "ko": 190,
+  "emote": 60,
+  "frame": 120,
+  "title": 80,
+  "icon": 40
+ },
+ "starters": [
+  "blaster",
+  "gunslinger",
+  "bomber"
+ ],
+ "brawlerPrice": {
+  "coins": 1500,
+  "gems": 240
+ },
+ "skinCoins": 1000,
+ "gemPacks": [
+  [
+   100,
+   0.99
+  ],
+  [
+   550,
+   4.99
+  ],
+  [
+   1200,
+   9.99
+  ],
+  [
+   2600,
+   19.99
+  ],
+  [
+   7000,
+   49.99
+  ]
+ ],
+ "earned": [
+  "frame:3",
+  "frame:10",
+  "title:10",
+  "title:13",
+  "title:14",
+  "title:12",
+  "title:11",
+  "icon:29",
+  "icon:28"
+ ],
+ "levelRewards": {
+  "10": "frame:3",
+  "20": "title:13",
+  "25": "frame:10",
+  "30": "title:14"
+ },
+ "road": [
+  [
+   10,
+   "coins:100"
+  ],
+  [
+   25,
+   "coins:150"
+  ],
+  [
+   40,
+   "coins:150"
+  ],
+  [
+   60,
+   "icon:28"
+  ],
+  [
+   80,
+   "coins:200"
+  ],
+  [
+   100,
+   "coins:250"
+  ],
+  [
+   130,
+   "coins:250"
+  ],
+  [
+   160,
+   "coins:300"
+  ],
+  [
+   200,
+   "coins:300"
+  ],
+  [
+   240,
+   "coins:350"
+  ],
+  [
+   280,
+   "coins:350"
+  ],
+  [
+   330,
+   "coins:400"
+  ],
+  [
+   380,
+   "coins:400"
+  ],
+  [
+   440,
+   "coins:450"
+  ],
+  [
+   500,
+   "title:12"
+  ],
+  [
+   570,
+   "coins:500"
+  ],
+  [
+   650,
+   "coins:550"
+  ],
+  [
+   740,
+   "icon:29"
+  ],
+  [
+   850,
+   "coins:700"
+  ],
+  [
+   1000,
+   "title:14"
+  ]
+ ]
 }

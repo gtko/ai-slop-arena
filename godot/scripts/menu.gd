@@ -11,6 +11,8 @@ extends Control
 
 const MenuTap := preload("res://scripts/menu_tap.gd")
 const MenuW := preload("res://scripts/menu_widgets.gd")
+const MenuShop := preload("res://scripts/menu_shop.gd")
+const MenuCollection := preload("res://scripts/menu_collection.gd")
 
 signal quick_play
 signal create_room
@@ -20,6 +22,7 @@ signal training                  # TRAINING: a private room (no dojo in this cli
 signal queue_bots
 signal queue_cancel
 signal settings_changed          # language / graphics / saver / volumes / server changed
+signal open_settings             # the gear: main.gd opens the options screen (settings_view.gd)
 signal profile_changed           # brawler, loadout, nickname or looks changed (a room learns it via "pick")
 signal showcase_changed          # brawler or map changed: the arena behind the menu follows
 
@@ -89,7 +92,6 @@ var _muted := false
 var _toast: Label
 var _toast_t := 0.0
 # overlays
-var _settings: Control
 var _room_dialog: Control         # the online panel (find a match, create / join a room)
 var _nick: LineEdit
 var _code_edit: LineEdit
@@ -99,12 +101,26 @@ var _q_count: Label
 var _q_fill: Panel
 var _q_meta: Label
 var _q_plats: Label
+var _chip_coins: Label            # top bar: Slop Coins, Gems, trophies (metaui.js renderBar)
+var _chip_gems: Label
+var _chip_tr: Label
+var _me_ring: Control
+var _me_pf: Control              # the profile picture inside the ring
+var _me_lvl: Label
+var _me_who: Array = []          # [Level n, title] (wide windows)
+var _ward_badge: Label           # red count on COLLECTION: items unlocked, not looked at yet
+var _unlock: Control             # #heroUnlock: the price of a brawler you don't own
+var _online_btn: Control
+var _solo_btn: Control
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if not GameData.brawlers.has(Settings.brawler):
 		Settings.brawler = GameData.brawlers.keys()[0]
+	MetaProfile.load_all()
+	if not MetaProfile.owns_brawler(Settings.brawler):
+		Settings.brawler = "blaster"   # a brawler you own (the starters are free), like main.js at boot
 	if not MAP_ORDER.has(Settings.map):
 		Settings.map = "random"
 	get_viewport().size_changed.connect(_on_resize)
@@ -121,11 +137,10 @@ func _on_resize() -> void:
 func _rebuild_if_needed() -> void:
 	_measure()
 	if Vector2(W, H) != _built_for or absf(_over() - _built_over) > 0.02:
-		var open := [_settings.visible, _room_dialog.visible, _queue.visible]
+		var open := [_room_dialog.visible, _queue.visible]
 		build()
-		_settings.visible = open[0]
-		_room_dialog.visible = open[1]
-		_queue.visible = open[2]
+		_room_dialog.visible = open[0]
+		_queue.visible = open[1]
 
 func _measure() -> void:
 	_k = UiKit.css_scale(get_viewport())
@@ -184,8 +199,6 @@ func build() -> void:
 	_page.add_child(_room_dialog)
 	_queue = _build_queue()
 	_page.add_child(_queue)
-	_settings = _build_settings()
-	_page.add_child(_settings)
 	for o in [_room_dialog, _queue]:
 		(o as Control).visibility_changed.connect(func(): _home.visible = not (_room_dialog.visible or _queue.visible))
 	_select_brawler(Settings.brawler, false)
@@ -465,6 +478,23 @@ func _build_topnav() -> void:
 		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		holder.add_child(under)
 		b.add_child(holder)
+		if key == "collection":
+			var em := _body("", 11, Color.WHITE, 900)
+			em.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			em.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			em.add_theme_stylebox_override("normal", UiKit.pads(UiKit.sbox(Color("f03e3e"), 9), 5, 0, 5, 0))
+			em.custom_minimum_size = Vector2(18, 18)
+			em.visible = false
+			var eh := Control.new()
+			eh.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			eh.add_child(em)
+			em.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+			em.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+			em.offset_right = -4.0 if labels else -2.0
+			em.offset_left = em.offset_right - 18.0
+			em.offset_top = 12.0 * _nav / 64.0 - (2.0 if phone else 0.0)
+			b.add_child(eh)
+			_ward_badge = em
 		b.pressed.connect(func(): _open_page(key))
 		b.mouse_entered.connect(func(): lb.add_theme_color_override("font_color", Color.WHITE))
 		b.mouse_exited.connect(func(): _refresh_tabs())
@@ -493,12 +523,19 @@ func _build_topnav() -> void:
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		h.add_child(l)
 		p.add_child(h)
+		p.set_meta("label", l)
 		return p
 	var fs := 13.0 if phone else 16.0
-	right.add_child(chip.call(MenuW.Coin.new(fs), "0", Color("ffe27a")))
-	if not phone:
-		right.add_child(chip.call(MenuW.Gem.new(fs * 0.95), "0", Color("e6c4ff")))
-	right.add_child(chip.call(null, "🏆 0", UiKit.WTEXT))
+	var cp: Control = chip.call(MenuW.Coin.new(fs), "0", Color("ffe27a"))
+	_chip_coins = cp.get_meta("label")
+	right.add_child(cp)
+	var gp: Control = chip.call(MenuW.Gem.new(fs * 0.95), "0", Color("e6c4ff"))
+	_chip_gems = gp.get_meta("label")
+	gp.visible = not phone   # #pbGems: hidden on phones
+	right.add_child(gp)
+	var tp: Control = chip.call(null, "🏆 0", UiKit.WTEXT)
+	_chip_tr = tp.get_meta("label")
+	right.add_child(tp)
 	# me: level ring + portrait, "Level 1" / title
 	var me := _tap(UiKit.pads(UiKit.sbox(Color(1, 1, 1, 0.05), 26, Color(1, 1, 1, 0.1), 1), 4 if not phone else 3, 4 if not phone else 3, 13 if not phone else 3, 4 if not phone else 3),
 		UiKit.pads(UiKit.sbox(Color(1, 1, 1, 0.1), 26, Color(1, 1, 1, 0.1), 1), 4 if not phone else 3, 4 if not phone else 3, 13 if not phone else 3, 4 if not phone else 3))
@@ -513,14 +550,8 @@ func _build_topnav() -> void:
 	var pf := UiKit.clip_box(int(pf_d / 2), Vector2(pf_d, pf_d))
 	pf.position = Vector2((rd - pf_d) / 2.0, (rd - pf_d) / 2.0)
 	pf.size = Vector2(pf_d, pf_d)
-	var pf_bg := ColorRect.new()
-	pf_bg.color = Color("2b2540")
-	pf_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	pf_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pf.add_child(pf_bg)
-	var icon_key: String = ["blaster", "gunslinger", "bomber", "frostbite", "volt"][clampi(Settings.icon, 0, 4)]
-	var pimg := _portrait_rect(icon_key, pf_d * 1.18, pf_d, pf_d, -pf_d * 0.3)
-	pf.add_child(pimg)
+	_me_pf = pf
+	_me_ring = ring
 	ring.add_child(pf)
 	var pf_rim := Panel.new()
 	var rim := UiKit.sbox(Color(0, 0, 0, 0), int(pf_d / 2), UiKit.INK, 2)
@@ -538,14 +569,17 @@ func _build_topnav() -> void:
 	lvl.position = Vector2(rd - bd + 4, rd - bd + 4)
 	lvl.size = Vector2(bd, bd)
 	ring.add_child(lvl)
+	_me_lvl = lvl
 	mh.add_child(ring)
+	_me_who = []
 	if not phone and W >= 1250:
 		var who := _vbox(0)
 		who.alignment = BoxContainer.ALIGNMENT_CENTER
-		who.add_child(_disp(I18n.t("meta.level", {"n": 1}), 15))
-		who.add_child(_body(I18n.t("cos.title.rookie"), 11, UiKit.WMUTED))
+		_me_who = [_disp(I18n.t("meta.level", {"n": 1}), 15), _body(I18n.t("cos.title.rookie"), 11, UiKit.WMUTED)]
+		who.add_child(_me_who[0])
+		who.add_child(_me_who[1])
 		mh.add_child(who)
-	me.pressed.connect(func(): _settings.visible = true)
+	me.pressed.connect(func(): MenuCollection.tab = "icon"; _open_page("collection"))
 	right.add_child(me)
 	var gear := _tap(UiKit.sbox(Color(1, 1, 1, 0.05), 20, Color(1, 1, 1, 0.1), 1), UiKit.sbox(Color(1, 1, 1, 0.14), 20, Color(1, 1, 1, 0.1), 1))
 	var gd := 40.0 if phone else 38.0
@@ -555,9 +589,10 @@ func _build_topnav() -> void:
 	gc.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	gc.add_child(_emoji("⚙️", 16 if phone else 17))
 	gear.add_child(gc)
-	gear.pressed.connect(func(): _settings.visible = true)
+	gear.pressed.connect(func(): open_settings.emit())
 	right.add_child(gear)
 	_refresh_tabs()
+	_refresh_bar()
 
 var _page_key := "play"
 
@@ -575,6 +610,9 @@ func _refresh_tabs() -> void:
 		under.visible = on
 
 func _open_page(key: String) -> void:
+	if _page_key == "collection" and key != "collection":
+		MetaProfile.mark_seen()
+		_refresh_bar()
 	_page_key = key
 	_maps_pop.visible = false
 	_refresh_tabs()
@@ -640,6 +678,9 @@ func _build_hero() -> void:
 	mrow.add_child(bar)
 	mrow.add_child(_shadowed(_body("0 / %d" % MASTERY_LEVELS[1], 11, UiKit.WMUTED), 1))
 	_hero.add_child(mrow)
+	_unlock = _panel(UiKit.pads(UiKit.sbox(Color(16 / 255.0, 13 / 255.0, 32 / 255.0, 0.8), 14, Color(1, 0.824, 0.247, 0.4), 1), 8 if phone else 12, 5 if phone else 10, 8 if phone else 12, 5 if phone else 10))
+	_unlock.visible = false
+	_hero.add_child(_unlock)
 	_desc = _shadowed(_body("", 14, Color("d9d3f0"), 700), 1, 0.6)
 	_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_desc.custom_minimum_size.x = w
@@ -727,7 +768,7 @@ func _render_loadout() -> void:
 				b.pressed.connect(_on_star.bind(i))
 			opts.add_child(b)
 		grid.add_child(gv)
-	if not icons_only and not phone and _fit < 2:
+	if not icons_only and not phone and _fit < 2 and MetaProfile.owns_brawler(key):
 		var gi := "AB".find(lo[0])
 		var si := "12".find(lo[1])
 		var d := _body("%s %s\n%s %s" % [GADGET_ICONS.get(key + "AB"[gi], ""), I18n.t("gad.%s%s.desc" % [key, "AB"[gi]]),
@@ -872,7 +913,8 @@ func _roster_tile(key: String) -> Control:
 	var bg := UiKit.grad_rect(UiKit.grad([[0.0, UiKit.mix(c, Color.WHITE, 0.6)], [0.55, c], [1.0, UiKit.mix(c, Color.BLACK, 0.45)]],
 		Vector2(0.5, 0.3), Vector2(0.5 + 0.75, 0.3), true))
 	clip.add_child(bg)
-	clip.add_child(_portrait_rect(key, 66.0 if phone else 96.0, tw, th, -6.0))
+	var rimg := _portrait_rect(key, 66.0 if phone else 96.0, tw, th, -6.0)
+	clip.add_child(rimg)
 	var strip := UiKit.grad_rect(UiKit.grad([[0.0, Color(0, 0, 0, 0)], [1.0, Color(0, 0, 0, 0.8)]]))
 	strip.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	strip.offset_top = -(22.0 if phone else 30.0)
@@ -899,10 +941,18 @@ func _roster_tile(key: String) -> Control:
 	border.add_theme_stylebox_override("panel", bs)
 	border.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tile.add_child(border)
+	var rlock := _emoji("🔒", 16 if phone else 22)
+	rlock.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rlock.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	rlock.offset_bottom = -th * 0.2
+	rlock.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+	rlock.add_theme_constant_override("shadow_offset_y", 2)
+	rlock.visible = false
+	clip.add_child(rlock)
 	tile.pressed.connect(func(): _select_brawler(key, true))
 	tile.mouse_entered.connect(func(): if key != Settings.brawler: tile.modulate = Color.WHITE; tile.position.y = 1)
 	tile.mouse_exited.connect(func(): _mark_roster())
-	_roster_tiles[key] = [tile, ring, border]
+	_roster_tiles[key] = [tile, ring, border, rimg, rlock]
 	return wrap
 
 func _mark_roster() -> void:
@@ -916,25 +966,45 @@ func _mark_roster() -> void:
 		tile.position.y = 0.0 if on else 4.0
 		tile.modulate = Color.WHITE if on else Color(0.9, 0.9, 0.93, 1.0)
 
-# The chosen brawler's skins (only the classic one is free; the others are the web's shop / mastery).
+# The roster's looks: each portrait in the skin it wears; a brawler you don't own is greyed with a lock
+# (main.js renderHero / renderUnlock: .rt.locked img grayscale(0.7) brightness(0.6), .rt-lock).
+func _roster_looks() -> void:
+	for k in _roster_tiles:
+		var own := MetaProfile.owns_brawler(k)
+		var img: TextureRect = _roster_tiles[k][3]
+		var skin := int(Skins.parse(MetaProfile.cos_for(k)).skin)
+		img.material = MenuW.recolour("default", [0.0, 0.3, 1.0], 0.6) if not own else (MenuW.recolour(SKINS[skin], _skin_rec(k, SKINS[skin])) if skin > 0 else null)
+		(_roster_tiles[k][4] as Control).visible = not own
+
+# The chosen brawler's skins (main.js renderSkins): owned ones are one click away, locked ones show how to
+# get them and open the collection on them.
 func _render_skins() -> void:
 	for c in _skin_track.get_children():
 		c.queue_free()
 	var key := Settings.brawler
-	_skin_count.text = "1/%d" % SKINS.size()
+	var worn := int(Skins.parse(MetaProfile.cos_for(key)).skin)
+	var owned := 0
+	for n in SKINS.size():
+		if MetaProfile.can_wear("skin", n, key):
+			owned += 1
+	_skin_count.text = "%d/%d" % [owned, SKINS.size()]
 	var small := H <= 760
 	var tw := 46.0 if phone else (64.0 if small else 76.0)
 	var ah := 34.0 if phone else (50.0 if small else 62.0)
 	var ih := 40.0 if phone else (58.0 if small else 70.0)
 	var c := _color(key)
 	for n in SKINS.size():
-		var have := n == 0
-		var on := n == 0
+		var have := MetaProfile.can_wear("skin", n, key)
+		var on := n == worn
 		var bg := Color(1, 0.824, 0.247, 0.14) if on else Color(1, 1, 1, 0.04)
 		var bc := UiKit.YELLOW if on else Color(1, 1, 1, 0.1)
 		var s := UiKit.pads(UiKit.sbox(bg, 9 if phone else 12, bc, 2, Color(1, 0.824, 0.247, 0.35) if on else Color(0, 0, 0, 0), 0, 7 if on else 0), 2, 2, 2, 4 if phone else 5)
-		var b := _tap(s, s)
+		var hs := UiKit.pads(UiKit.sbox(bg, 9 if phone else 12, UiKit.YELLOW if on else Color(1, 1, 1, 0.35), 2, Color(1, 0.824, 0.247, 0.35) if on else Color(0, 0, 0, 0), 0, 7 if on else 0), 2, 2, 2, 4 if phone else 5)
+		var b := _tap(s, hs)
+		b.lift = 2.0   # .hs:hover translateY(-2px)
 		b.custom_minimum_size.x = tw
+		var how := I18n.t("col.gold", {"n": int(MetaProfile.D().get("goldAt", 10))}) if SKINS[n] == "gold" else I18n.t("col.inShop")
+		b.tooltip_text = I18n.t("cos.skin." + SKINS[n]) + ("" if have else " · 🔒 " + how)
 		var v := _vbox(3)
 		b.add_child(v)
 		var art := UiKit.clip_box(10)
@@ -945,7 +1015,10 @@ func _render_skins() -> void:
 		art.size = art.custom_minimum_size
 		art.add_child(UiKit.grad_rect(UiKit.grad([[0.0, UiKit.mix(c, Color.WHITE, 0.55)], [0.6, c], [1.0, UiKit.mix(c, Color.BLACK, 0.45)]],
 			Vector2(0.5, 0.35), Vector2(0.5 + 0.75, 0.35), true)))
-		art.add_child(_portrait_rect(key, ih, tw - 4, ah, -5.0, MenuW.recolour(SKINS[n], _skin_rec(key, SKINS[n])) if have else MenuW.recolour("default", [0.0, 0.8, 1.0], 0.55)))
+		var pr := _portrait_rect(key, ih, tw - 4, ah, -5.0, MenuW.recolour(SKINS[n], _skin_rec(key, SKINS[n])) if have else MenuW.recolour("default", [0.0, 0.8, 1.0], 0.55))
+		art.add_child(pr)
+		b.mouse_entered.connect(func(): pr.pivot_offset = Vector2(pr.size.x / 2.0, pr.size.y); pr.create_tween().tween_property(pr, "scale", Vector2(1.06, 1.06), 0.15))
+		b.mouse_exited.connect(func(): pr.create_tween().tween_property(pr, "scale", Vector2.ONE, 0.15))
 		if not have:
 			var lock := _emoji("🔒", 13 if phone else 18)
 			lock.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -961,7 +1034,130 @@ func _render_skins() -> void:
 		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		nm.clip_text = true
 		v.add_child(nm)
+		var nn := n
+		b.pressed.connect(func():
+			if not MetaProfile.can_wear("skin", nn, key):
+				MenuCollection.skin_of = key
+				MenuCollection.tab = "skin"
+				_open_page("collection")
+				return
+			if int(Skins.parse(MetaProfile.cos_for(key)).skin) == nn:
+				return
+			MetaProfile.wear("skin", nn, key)
+			_on_wear())
 		_skin_track.add_child(b)
+
+# The price of a brawler you don't own, under its name (main.js renderUnlock): Slop Coins or Gems; SOLO
+# and ONLINE wait, TRAINING lets you try it.
+func _render_unlock() -> void:
+	if _unlock == null:
+		return
+	var key := Settings.brawler
+	var own := MetaProfile.owns_brawler(key)
+	_unlock.visible = not own
+	for b in [_online_btn, _solo_btn]:
+		if b:
+			(b as Control).modulate = Color.WHITE if own else Color(0.62, 0.6, 0.62, 1.0)
+			(b as Control).mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if own else Control.CURSOR_FORBIDDEN
+			(b as Control).tooltip_text = "" if own else I18n.t("menu.unlockFirst")
+			(b as Control).set("silent", not own)
+	if _desc:
+		_desc.visible = own and H > 780 and not phone and not touch and _fit < 1
+	for c in _unlock.get_children():
+		c.queue_free()
+	if own:
+		return
+	var S := MenuShop.new(self)
+	var v := _vbox(3 if phone else 6)
+	_unlock.add_child(v)
+	v.add_child(_disp("🔒 " + I18n.t("menu.locked2"), 12 if phone else 15, UiKit.YELLOW))
+	var row := _hbox(8)
+	var bp: Dictionary = MetaProfile.D().get("brawlerPrice", {"coins": 1500, "gems": 240})
+	for i in 2:
+		var cur := "coins" if i == 0 else "gems"
+		var price := int(bp[cur])
+		var have := MetaProfile.coins() if i == 0 else MetaProfile.gems()
+		var btn := S.grad_button(S.money(cur, price, 12 if phone else 16, UiKit.INK),
+			MenuShop.GOLD_TOP if i == 0 else MenuShop.VIO_TOP, MenuShop.GOLD_BOT if i == 0 else MenuShop.VIO_BOT, 10, Vector2(8, 3) if phone else Vector2(14, 7), 3.0)
+		if have < price:
+			MenuShop.inert(btn, 0.5)
+		else:
+			btn.silent = true
+			btn.pressed.connect(func():
+				if not MetaProfile.buy("brawler:" + key, price, cur):
+					return
+				UiKit.click("buy")
+				_on_brawler_bought(key))
+		row.add_child(btn)
+		if i == 0:
+			var o := _body(I18n.t("shop.or"), 11, UiKit.WMUTED, 900)
+			o.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			row.add_child(o)
+	v.add_child(row)
+	if not phone:
+		v.add_child(_body(I18n.t("menu.tryDojo"), 11, UiKit.WMUTED))
+
+# metaui.js renderBar: the wallet, trophies, your level ring, icon and title, the COLLECTION badge.
+func _refresh_bar() -> void:
+	if _chip_coins == null or not is_instance_valid(_chip_coins):
+		return
+	_chip_coins.text = _num(MetaProfile.coins())
+	_chip_gems.text = _num(MetaProfile.gems())
+	_chip_tr.text = "🏆 " + _num(MetaProfile.total_trophies())
+	var L := MetaProfile.level_info()
+	var W := MetaProfile.wearing()
+	(_me_ring as MenuW.Ring).frac = float(L.frac)
+	_me_ring.queue_redraw()
+	_me_lvl.text = str(L.level)
+	if _me_who.size() == 2:
+		(_me_who[0] as Label).text = I18n.t("meta.level", {"n": L.level})
+		var titles: Array = MetaProfile.D().get("titles", [])
+		var tn := int(W.get("title", 1))
+		(_me_who[1] as Label).text = I18n.t("cos.title." + String(titles[tn])) if tn > 0 and tn < titles.size() else ""
+	for c in _me_pf.get_children():
+		c.queue_free()
+	var pf_d := _me_pf.custom_minimum_size.x
+	var pf_bg := ColorRect.new()
+	pf_bg.color = Color("2b2540")
+	pf_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pf_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_me_pf.add_child(pf_bg)
+	var icons: Array = MetaProfile.D().get("icons", [])
+	var I := String(icons[Settings.icon] if Settings.icon >= 0 and Settings.icon < icons.size() else icons[0])
+	if I.begins_with("p:"):
+		_me_pf.add_child(_portrait_rect(I.substr(2), pf_d * 1.18, pf_d, pf_d, -pf_d * 0.3))
+	else:
+		var e := _emoji(I, int(pf_d * 0.52))
+		e.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		e.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_me_pf.add_child(e)
+	if _ward_badge:
+		var n := MetaProfile.unseen().size()
+		_ward_badge.text = str(n)
+		_ward_badge.visible = n > 0
+
+# Anything of the profile changed (a purchase, an unlock): the bar, the hero, the roster, the skins.
+func _refresh_meta() -> void:
+	_refresh_bar()
+	_render_unlock()
+	_render_skins()
+	_roster_looks()
+	if _loadout:
+		_render_loadout()
+
+# What you wear changed (metaui.js onWear): the hero and the live arena show it, the room learns it.
+func _on_wear() -> void:
+	_refresh_meta()
+	showcase_changed.emit()
+	profile_changed.emit()
+
+# A brawler was just bought (metaui.js onBrawler).
+func _on_brawler_bought(key: String) -> void:
+	_refresh_meta()
+	if key == Settings.brawler:
+		showcase_changed.emit()
+		profile_changed.emit()
+		call_deferred("_fit_hero")
 
 # ---------------------------------------------------------------- right: quests + the PLAY panel
 
@@ -1042,7 +1238,8 @@ func _build_play_panel() -> void:
 	ov.add_child(os)
 	om.add_child(ov)
 	online.add_child(om)
-	online.pressed.connect(func(): _room_dialog.visible = true)
+	online.pressed.connect(func(): if MetaProfile.owns_brawler(Settings.brawler): _room_dialog.visible = true)
+	_online_btn = online
 	online.lift = 2.0
 	online.sink = 4.0
 	var sh0 := 4.0 if phone else 6.0
@@ -1073,7 +1270,8 @@ func _build_play_panel() -> void:
 		h.add_child(l)
 		b.add_child(h)
 		if spec[2] == "solo":
-			b.pressed.connect(func(): _commit_name(); solo_play.emit())
+			_solo_btn = b
+			b.pressed.connect(func(): if MetaProfile.owns_brawler(Settings.brawler): _commit_name(); solo_play.emit())
 		else:
 			b.pressed.connect(func(): _commit_name(); training.emit())
 		alt.add_child(b)
@@ -1343,8 +1541,10 @@ func _select_brawler(key: String, user: bool) -> void:
 	_desc.text = I18n.t("brawler.%s.desc" % key)
 	_render_stats(key)
 	_render_loadout()
+	_render_unlock()
 	_render_skins()
 	_mark_roster()
+	_roster_looks()
 	if user:
 		Settings.save()
 		profile_changed.emit()
@@ -1353,7 +1553,7 @@ func _select_brawler(key: String, user: bool) -> void:
 			_hero_in()
 		if _fit > 0:
 			_fit = 0
-			_desc.visible = H > 780 and not phone and not touch
+			_desc.visible = H > 780 and not phone and not touch and MetaProfile.owns_brawler(key)
 			_stats.visible = H > 640 and not phone
 			_render_loadout()
 		call_deferred("_fit_hero")
@@ -1415,6 +1615,13 @@ func _fill_page(key: String) -> void:
 	var titles := {"collection": "meta.collection", "shop": "meta.shop", "quests": "meta.quests", "road": "meta.road"}
 	head.add_child(_disp(I18n.t(titles[key]), 22 if phone else 40))
 	v.add_child(head)
+	var aw := W - 2.0 * px
+	if key == "shop":
+		MenuShop.new(self).build(head, v, aw)
+		return
+	if key == "collection":
+		MenuCollection.new(self).build(head, v, aw)
+		return
 	match key:
 		"quests":
 			var row := _hbox(14)
@@ -1831,215 +2038,6 @@ func _build_queue() -> Control:
 	c.add_child(rm)
 	return dim
 
-# Options (web #options .opt-card): sections of rows, label on the left, control on the right.
-func _build_settings() -> Control:
-	var dim := Control.new()
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	dim.visible = false
-	var shade := ColorRect.new()
-	shade.color = Color(8 / 255.0, 6 / 255.0, 18 / 255.0, 0.72)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dim.add_child(shade)
-	var cw := minf(880.0, W - 24.0)
-	var chh := minf(760.0, H - (16.0 if phone else 48.0))
-	var card := _panel(UiKit.sbox(Color(22 / 255.0, 18 / 255.0, 36 / 255.0, 0.96), 18, UiKit.INK, 3, UiKit.INK, 8, 1))
-	card.position = Vector2((W - cw) / 2.0, (H - chh) / 2.0)
-	card.size = Vector2(cw, chh)
-	card.custom_minimum_size = Vector2(cw, chh)
-	card.mouse_filter = Control.MOUSE_FILTER_STOP
-	dim.add_child(card)
-	var col := _vbox(0)
-	card.add_child(col)
-	var head := MarginContainer.new()
-	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	head.add_theme_constant_override("margin_left", 22)
-	head.add_theme_constant_override("margin_right", 22)
-	head.add_theme_constant_override("margin_top", 8 if phone else 18)
-	head.add_theme_constant_override("margin_bottom", 8 if phone else 12)
-	var title := _disp(I18n.t("opt.title"), 24 if phone else 40, UiKit.YELLOW, 6)
-	title.add_theme_color_override("font_shadow_color", UiKit.INK)
-	title.add_theme_constant_override("shadow_offset_y", 4)
-	title.add_theme_constant_override("shadow_offset_x", 0)
-	title.add_theme_constant_override("shadow_outline_size", 6)
-	head.add_child(title)
-	col.add_child(head)
-	var line := ColorRect.new()
-	line.color = UiKit.INK
-	line.custom_minimum_size.y = 3
-	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(line)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	col.add_child(scroll)
-	var bm := MarginContainer.new()
-	bm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bm.add_theme_constant_override("margin_left", 22)
-	bm.add_theme_constant_override("margin_right", 22)
-	bm.add_theme_constant_override("margin_top", 4)
-	bm.add_theme_constant_override("margin_bottom", 10)
-	scroll.add_child(bm)
-	var body := _vbox(2)
-	bm.add_child(body)
-	var section := func(t: String) -> void:
-		var l := _disp(t.to_upper(), 14, Color(UiKit.YELLOW, 0.85), 0, 1)
-		var m := MarginContainer.new()
-		m.add_theme_constant_override("margin_top", 14)
-		m.add_theme_constant_override("margin_bottom", 4)
-		m.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		m.add_child(l)
-		body.add_child(m)
-	var opt_row := func(label: String, ctrl: Control) -> void:
-		var p := _panel(UiKit.pads(UiKit.sbox(Color(0, 0, 0, 0), 10), 12, 7, 12, 7))
-		var h := _hbox(16)
-		var l := _body(label, 15, UiKit.WTEXT, 800)
-		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		h.add_child(l)
-		ctrl.custom_minimum_size.x = maxf(ctrl.custom_minimum_size.x, minf(300.0, cw * 0.45))
-		h.add_child(ctrl)
-		p.add_child(h)
-		body.add_child(p)
-	var seg_style := func(on: bool) -> StyleBox:
-		return UiKit.pads(UiKit.sbox(UiKit.YELLOW if on else Color("2d2742"), 8, UiKit.INK, 2), 6, 6, 6, 6)
-	# general
-	section.call(I18n.t("opt.tab.general"))
-	var lang := OptionButton.new()
-	lang.add_theme_font_override("font", _fd())
-	lang.add_theme_font_size_override("font_size", 17)
-	lang.add_theme_stylebox_override("normal", UiKit.pads(UiKit.sbox(Color("2d2742"), 8, UiKit.INK, 2), 10, 6, 10, 6))
-	lang.add_theme_stylebox_override("hover", UiKit.pads(UiKit.sbox(Color("3a3258"), 8, UiKit.INK, 2), 10, 6, 10, 6))
-	lang.add_theme_stylebox_override("pressed", UiKit.pads(UiKit.sbox(Color("3a3258"), 8, UiKit.YELLOW, 2), 10, 6, 10, 6))
-	lang.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	lang.add_item(I18n.t("opt.language.auto"))
-	lang.set_item_metadata(0, "")
-	var sel := 0
-	for l in I18n.languages():
-		var d: Dictionary = l
-		lang.add_item(String(d.name))
-		lang.set_item_metadata(lang.item_count - 1, String(d.code))
-		if String(d.code) == Settings.lang:
-			sel = lang.item_count - 1
-	lang.select(sel)
-	lang.item_selected.connect(func(i: int):
-		Settings.lang = String(lang.get_item_metadata(i))
-		Settings.save()
-		settings_changed.emit())
-	opt_row.call(I18n.t("g.language"), lang)
-	# graphics
-	section.call(I18n.t("opt.tab.graphics"))
-	var grow := _hbox(6)
-	var gbtns: Dictionary = {}
-	for gq in Settings.GFX:
-		var b := _tap(seg_style.call(gq == Settings.gfx))
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var gl := _disp(I18n.t("g.gfx." + String(gq)), 13, UiKit.INK if gq == Settings.gfx else UiKit.WTEXT)
-		gl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		b.add_child(gl)
-		b.pressed.connect(func():
-			Settings.gfx = String(gq)
-			Settings.save()
-			for k in gbtns:
-				(gbtns[k][0] as MenuTap).set_styles(seg_style.call(k == gq))
-				(gbtns[k][1] as Label).add_theme_color_override("font_color", UiKit.INK if k == gq else UiKit.WTEXT)
-			settings_changed.emit())
-		grow.add_child(b)
-		gbtns[gq] = [b, gl]
-	opt_row.call(I18n.t("g.gfx"), grow)
-	var saver := MenuW.Switch.new()
-	saver.on = Settings.saver
-	var saver_tap := _tap(StyleBoxEmpty.new())
-	var sc := _hbox(0)
-	sc.alignment = BoxContainer.ALIGNMENT_END
-	sc.add_child(saver)
-	saver_tap.add_child(sc)
-	saver_tap.pressed.connect(func():
-		Settings.saver = not Settings.saver
-		saver.on = Settings.saver
-		saver.queue_redraw()
-		Settings.save()
-		settings_changed.emit())
-	opt_row.call("%s  (%s)" % [I18n.t("g.saver"), I18n.t("g.saverDesc")], saver_tap)
-	# audio
-	section.call(I18n.t("opt.tab.audio"))
-	for spec in [["opt.vol.master", "master"], ["opt.vol.music", "music"], ["opt.vol.sfx", "sfx"]]:
-		var vrow := _hbox(12)
-		var sl := HSlider.new()
-		sl.min_value = 0.0
-		sl.max_value = 1.0
-		sl.step = 0.05
-		sl.value = Settings.volume(String(spec[1]))
-		sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		sl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		sl.custom_minimum_size.y = 24
-		sl.add_theme_stylebox_override("slider", UiKit.pads(UiKit.sbox(Color("2d2742"), 7, UiKit.INK, 2), 0, 7, 0, 7))
-		sl.add_theme_stylebox_override("grabber_area", UiKit.pads(UiKit.sbox(Color("ffbf1f"), 7, UiKit.INK, 2), 0, 7, 0, 7))
-		sl.add_theme_stylebox_override("grabber_area_highlight", UiKit.pads(UiKit.sbox(Color("ffe36b"), 7, UiKit.INK, 2), 0, 7, 0, 7))
-		var img := Image.create(4, 14, false, Image.FORMAT_RGBA8)   # the web's bar has no knob
-		img.fill(Color(0, 0, 0, 0))
-		var knob := ImageTexture.create_from_image(img)
-		sl.add_theme_icon_override("grabber", knob)
-		sl.add_theme_icon_override("grabber_highlight", knob)
-		var val := _disp("%d%%" % roundi(sl.value * 100), 15)
-		val.custom_minimum_size.x = 54
-		val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		sl.value_changed.connect(func(x: float):
-			Settings.set_volume(String(spec[1]), x)
-			val.text = "%d%%" % roundi(x * 100))
-		sl.drag_ended.connect(func(_c: bool): Settings.save())
-		vrow.add_child(sl)
-		vrow.add_child(val)
-		opt_row.call(I18n.t(String(spec[0])), vrow)
-	# profile icon
-	section.call(I18n.t("g.looks"))
-	var irow := _hbox(8)
-	var ibtns: Array = []
-	for i in 5:
-		var on := i == Settings.icon
-		var ib := _tap(UiKit.sbox(Color(1, 1, 1, 0.08), 12, UiKit.YELLOW if on else UiKit.INK, 3))
-		ib.custom_minimum_size = Vector2(52, 52)
-		var clip := UiKit.clip_box(10)
-		clip.add_child(_portrait_rect(String(["blaster", "gunslinger", "bomber", "frostbite", "volt"][i]), 60, 52, 52, -14))
-		ib.add_child(clip)
-		ib.pressed.connect(func():
-			Settings.icon = i
-			Settings.save()
-			for j in ibtns.size():
-				(ibtns[j] as MenuTap).set_styles(UiKit.sbox(Color(1, 1, 1, 0.08), 12, UiKit.YELLOW if j == i else UiKit.INK, 3))
-			profile_changed.emit())
-		irow.add_child(ib)
-		ibtns.append(ib)
-	opt_row.call(I18n.t("meta.profile"), irow)
-	# server
-	section.call(I18n.t("g.server"))
-	var srv := LineEdit.new()
-	srv.text = Settings.server
-	srv.placeholder_text = "wss://…"
-	_input_style(srv, 15)
-	srv.add_theme_font_override("font", _fb(800))
-	srv.text_changed.connect(func(s: String): Settings.server = s)
-	srv.focus_exited.connect(func(): Settings.save(); settings_changed.emit())
-	srv.text_submitted.connect(func(_s: String): Settings.save(); settings_changed.emit())
-	opt_row.call(I18n.t("g.serverHint"), srv)
-	# foot
-	var foot := MarginContainer.new()
-	foot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	foot.add_theme_constant_override("margin_left", 22)
-	foot.add_theme_constant_override("margin_right", 22)
-	foot.add_theme_constant_override("margin_top", 8)
-	foot.add_theme_constant_override("margin_bottom", 10 if phone else 16)
-	var fh := _hbox(10)
-	fh.alignment = BoxContainer.ALIGNMENT_END
-	var close := _big(I18n.t("g.close"), 16 if phone else 20, 6 if phone else 8)
-	close.pressed.connect(func(): dim.visible = false; Settings.save())
-	fh.add_child(close)
-	foot.add_child(fh)
-	col.add_child(foot)
-	return dim
-
 # ---------------------------------------------------------------- API used by main.gd
 
 func toast(msg: String, secs: float = 4.0) -> void:
@@ -2056,7 +2054,6 @@ func show_queue(on: bool) -> void:
 	_queue.visible = on
 	if on:
 		_room_dialog.visible = false
-		_settings.visible = false
 		_q_mode.text = I18n.t("menu.duo") if Settings.mode == "duo" else I18n.t("menu.mode")
 		_q_count.text = I18n.t("lobby.connecting")
 		_q_fill.anchor_right = 0.0
@@ -2077,13 +2074,12 @@ func update_queue(m: Dictionary) -> void:
 	_q_plats.text = "   ".join(parts)
 
 func close_overlays() -> void:
-	_settings.visible = false
 	_room_dialog.visible = false
 	_queue.visible = false
 	_maps_pop.visible = false
 
 func is_overlay_open() -> bool:
-	return _settings.visible or _room_dialog.visible or _queue.visible or _maps_pop.visible or _page_view.visible
+	return _room_dialog.visible or _queue.visible or _maps_pop.visible or _page_view.visible
 
 func set_backdrop(live: bool) -> void:
 	var s := _page.get_node_or_null("Solid") if _page else null
