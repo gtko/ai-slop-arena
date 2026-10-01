@@ -29,6 +29,8 @@ const ALIASES := {
 # Attack sound of each brawler (from combat.js).
 const ATTACK := {"blaster": "shotgun", "gunslinger": "shot_ray", "frostbite": "shot_ice", "volt": "shot_zap",
 	"bomber": "throw", "kappa": "bubble", "pipchomp": "lunge", "mochi": "bump"}
+# combat.js: what a super sounds like besides "super" + the brawler's bark.
+const SUPER_EXTRA := {"blaster": "shotgun", "bomber": "throw", "pipchomp": "trap_plant", "mochi": "pound_leap", "kappa": "wave"}
 const JINGLES := ["fanfare", "victory", "defeat"]
 const PLAYLISTS := {"menu": ["menu"], "lobby": ["lobby", "menu"], "battle": ["battle", "battle2"], "final": ["final"]}
 const BEDS := {"rain": "amb_rain", "sandstorm": "amb_storm", "snow": "amb_snow", "fog": "amb_marsh"}
@@ -42,6 +44,8 @@ var muted := false: set = _set_muted
 var track := "auto"                # "auto" follows the game, "off", or a fixed playlist name
 var listener := Vector3.ZERO       # the local player's position (distances are measured from it)
 var attract := false               # menu / background use: everything is quieter
+
+static var current: AudioManager   # the game's (fighters and effects play through it)
 
 var _voices: Array[AudioStreamPlayer] = []
 var _voice_t: Array[int] = []      # start time (ms) of each voice, to steal the oldest
@@ -72,6 +76,7 @@ var _bus_music := -1
 var _bus_amb := -1
 
 func _ready() -> void:
+	current = self
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_bus_sfx = _make_bus("SFX")
 	_bus_music = _make_bus("Music")
@@ -198,6 +203,8 @@ func play(sound: String, world_pos: Variant = null, vol: float = 1.0, rate: floa
 		var sup := sound.begins_with("super_")
 		if sup:
 			play("super", world_pos, vol)
+			if SUPER_EXTRA.has(key):
+				play(SUPER_EXTRA[key], world_pos, vol)
 			file = "bark_%s_super" % key
 			gain *= 0.9
 		else:

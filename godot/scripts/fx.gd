@@ -361,6 +361,22 @@ func burst(p: Vector3, col: Color, count: int, speed: float, size: float, life: 
 func seen(f: Fighter) -> bool:
 	return f != null and f.visible
 
+# An 'atk' main.gd held back while the server hid the shooter (main.gd _hold_attack): replayed `lead`
+# seconds late from where the shooter now shows, or (blind) with the shooter still hidden, only what
+# lands at the aim point (fx_combat.gd attack_blind).
+func late_attack(e: Dictionary, lead: float, blind: bool) -> void:
+	var f: Fighter = fighters.get(str(e.get("id", "")))
+	if f == null or not f.alive:
+		return
+	var d := Vector3(float(e.get("dx", 0.0)), 0, float(e.get("dz", 0.0)))
+	var p := Vector3(float(e.get("px", f.position.x)), 0, float(e.get("pz", f.position.z)))
+	if blind:
+		combat.attack_blind(f, d, p, bool(e.get("s", false)), lead)
+	else:
+		combat.lead = lead
+		combat.attack(f, d, p, bool(e.get("s", false)))
+		combat.lead = 0.0
+
 func on_event(e: Dictionary) -> void:
 	var f: Fighter = fighters.get(str(e.get("id", "")))
 	match str(e.get("e", "")):
@@ -375,7 +391,8 @@ func on_event(e: Dictionary) -> void:
 			var from_me := str(e.get("s", "")) == local_id
 			var col2 := Color(1.0, 0.3, 0.25) if mine else (Color(1.0, 0.95, 0.4) if from_me else Color(1, 1, 1))
 			number(f.position + Vector3(0, 2.8, 0), float(e.get("a", 0)), col2, "%s>%s" % [e.get("s", ""), f.id], bool(e.get("u", false)))
-			f.hurt()
+			var src: Fighter = fighters.get(str(e.get("s", "")))   # FEEL: the weapon's hit freeze (feel.js)
+			f.hurt(float(Feel.weapon(String(src.type.key) if src else "", bool(e.get("u", false)))[0]))
 		"kill":
 			if f == null:
 				return

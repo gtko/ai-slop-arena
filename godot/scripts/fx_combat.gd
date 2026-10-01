@@ -37,6 +37,9 @@ var marks: Array = []
 var bursts: Array = []     # Gunslinger volleys [{f, t, a, sup}]
 var later: Array = []      # [time, Callable]
 var fuse_next: Dictionary = {}   # Bomber's Fuse Cut: the next fireball flies 40 % faster
+# Seconds an attack is replayed late (fx.gd late_attack: main.gd held it while the server hid the
+# shooter): its bullets start that much further along, its fireball / volley / wind-up that far in.
+var lead := 0.0
 var _pool: Dictionary = {}       # shape -> spare bullet meshes
 var _mats: Dictionary = {}       # colour key -> bullet material
 var _rng := RandomNumberGenerator.new()
@@ -98,7 +101,7 @@ func attack(f: Fighter, d: Vector3, point: Vector3, sup: bool) -> void:
 	var col := color_for(f, sup)
 	var m := f.position + d * 0.9
 	var muzzle_p := Vector3(m.x, BULLET_Y, m.z)
-	var vis := f.visible
+	var vis := _shows(f)
 	match T:
 		"blaster":
 			var n := 9 if sup else 5
@@ -112,7 +115,7 @@ func attack(f: Fighter, d: Vector3, point: Vector3, sup: bool) -> void:
 		"gunslinger":
 			var n := 12 if sup else 6
 			for k in n:
-				bursts.append({"f": f, "t": k * (0.055 if sup else 0.075), "a": base, "sup": sup})
+				bursts.append({"f": f, "t": k * (0.055 if sup else 0.075) - lead, "a": base, "sup": sup})
 		"frostbite":
 			if sup:
 				_windup(f, 0.2, 5.0, COL.ice, func(): _nova(f))
@@ -144,7 +147,26 @@ func attack(f: Fighter, d: Vector3, point: Vector3, sup: bool) -> void:
 				return
 			_lob(f, d, point, sup, T == "kappa")
 
+# Is the shooter on screen: you, or a brawler the server shows us (up to date even before the
+# fighter's own _process refreshes `visible`).
+func _shows(f: Fighter) -> bool:
+	return f.is_local or (f.alive and not f.hidden_by_server)
+
 func _bullet(owner: Fighter, x: float, z: float, a: float, o: Dictionary) -> void:
+	var go := 0.0
+	if lead > 0.0:   # a late replay: the bullet is already that far along, unless a wall stopped it
+		go = minf(float(o.speed) * lead, float(o.range))
+		var A := fx.arena
+		var s := 0.0
+		while A and s < go:
+			s = minf(s + 0.35, go)
+			var ch := A.char_at(x + sin(a) * s, z + cos(a) * s)
+			if ch == "X" or ch == "T" or ch == "G" or (ch == "#" and not o.get("big", false)) or _is_crate(ch):
+				return
+		if go >= float(o.range):
+			return
+		x += sin(a) * go
+		z += cos(a) * go
 	var shape: String = o.get("shape", "ball")
 	var mi := _mesh_for(shape, o.col)
 	var r: float = o.r
@@ -156,7 +178,7 @@ func _bullet(owner: Fighter, x: float, z: float, a: float, o: Dictionary) -> voi
 	mi.position = Vector3(x, BULLET_Y, z)
 	var c: Color = o.col
 	var mx := maxf(c.r, maxf(c.g, c.b))
-	o.merge({"x": x, "z": z, "dx": sin(a), "dz": cos(a), "travel": 0.0, "owner": owner, "mesh": mi, "shape": shape,
+	o.merge({"x": x, "z": z, "dx": sin(a), "dz": cos(a), "travel": go, "owner": owner, "mesh": mi, "shape": shape,
 		"lcol": Color(c.r / mx, c.g / mx, c.b / mx)})
 	bullets.append(o)
 
@@ -184,22 +206,49 @@ func _release(B: Dictionary) -> void:
 		_pool[B.shape] = []
 	_pool[B.shape].append(mi)
 
-# Bomber fireball / meteor and Kappa's bubble: lobbed to the aim point (clamped 2 m .. range).
-func _lob(f: Fighter, d: Vector3, point: Vector3, sup: bool, bubble: bool) -> void:
+# An attack whose shooter the server still hides from us (fx.gd late_attack), `late` seconds after
+# it was thrown. Where the shooter stands is unknown here (its last seen spot, or its spawn), so its
+# bullets, volleys, bumps, bites, nova and wave are left out: drawn from that spot they would fly out
+# of empty ground, or give away a brawler hiding in a bush. What lands where it aimed still shows,
+# since that comes to you: the meteor and the storm, the Pound mark, and a fireball or bubble on its
+# way down (the aim point is the landing spot when it is in range, as the server's combat.js clamps).
+func attack_blind(f: Fighter, d: Vector3, point: Vector3, sup: bool, late: float) -> void:
+	if not f.alive:
+		return
+	if d.length() < 1e-4:
+		return
+	d = d.normalized()
+	var T := String(f.type.key)
+	var lob := T == "bomber" or (T == "kappa" and not sup)
+	if not (lob or (sup and (T == "volt" or T == "mochi"))):
+		return
 	var R := float(f.type.range)
-	var t := point - f.position
+	lead = late
+	if lob:   # thrown from 3/4 of its range back along the aim: the arc's way down lands on the point
+		_lob(f, d, point, sup, T == "kappa", point - d * clampf(R * 0.75, 2.0, R))
+	elif T == "volt":
+		_storm(f, point, point - d * 0.5)
+	else:
+		_pound(f, point, point - d * 0.5)
+	lead = 0.0
+
+# Bomber fireball / meteor and Kappa's bubble: lobbed to the aim point (clamped 2 m .. range).
+func _lob(f: Fighter, d: Vector3, point: Vector3, sup: bool, bubble: bool, at := Vector3.INF) -> void:
+	var o := f.position if at == Vector3.INF else at
+	var R := float(f.type.range)
+	var t := point - o
 	t.y = 0
 	var dist := t.length()
 	if dist < 1e-3:
 		t = d
 		dist = 1.0
 	var cd := clampf(dist, 2.0, R)
-	var tx := f.position.x + t.x / dist * cd
-	var tz := f.position.z + t.z / dist * cd
-	var ux := (tx - f.position.x) / cd
-	var uz := (tz - f.position.z) / cd
-	var mx := f.position.x + d.x * 0.9
-	var mz := f.position.z + d.z * 0.9
+	var tx := o.x + t.x / dist * cd
+	var tz := o.z + t.z / dist * cd
+	var ux := (tx - o.x) / cd
+	var uz := (tz - o.z) / cd
+	var mx := o.x + d.x * 0.9
+	var mz := o.z + d.z * 0.9
 	var g := Node3D.new()
 	var core := MeshInstance3D.new()
 	var flame: MeshInstance3D = null
@@ -231,8 +280,11 @@ func _lob(f: Fighter, d: Vector3, point: Vector3, sup: bool, bubble: bool) -> vo
 	var B := {"sx": tx - ux * 4.0 if sup else mx, "sz": tz - uz * 4.0 if sup else mz, "sy": 12.0 if sup else 1.6,
 		"tx": tx, "tz": tz, "t": 0.0, "dur": (0.5 + (cd / R) * 0.35) * (0.6 if fuse else 1.0), "h": 2.6 + cd * 0.22,
 		"radius": 1.6 if bubble else (3.6 if sup else 2.0), "owner": f, "sup": sup, "mesh": g, "core": core, "flame": flame,
-		"spin": 1.0 if bubble else rnd(6, 12), "fx": Vector3(mx, 1.6, mz), "bubble": bubble, "shadow": null}
+		"spin": 1.0 if bubble else rnd(6, 12), "fx": Vector3(mx, 1.6, mz), "bubble": bubble, "shadow": null,
+		"blind": at != Vector3.INF and not sup}
+	B.t = lead / B.dur
 	g.position = Vector3(B.sx, B.sy, B.sz)
+	g.visible = not B.blind
 	bombs.append(B)
 
 # ---------------------------------------------------------------- per frame
@@ -257,6 +309,8 @@ func _process(dt: float) -> void:
 		if B.emit:
 			fx.emit_light(Vector3(B.x, BULLET_Y + 0.2, B.z), B.lcol, 12.0 if B.big else 8.0, 6.5)
 	for B in bombs:
+		if not (B.mesh as Node3D).visible:
+			continue
 		fx.emit_light(B.fx, Color(0.4, 0.8, 1.0) if B.bubble else Color(1.0, 0.55, 0.2), 7.0 if B.sup else 5.0, 6.0 if B.sup else 5.0)
 
 func _update_bursts(dt: float) -> void:
@@ -278,7 +332,17 @@ func _update_bursts(dt: float) -> void:
 		var col := color_for(f, s.sup)
 		var mx := f.position.x + dx * 0.9
 		var mz := f.position.z + dz * 0.9
+		lead = -float(s.t)
 		_bullet(f, mx, mz, a, {"speed": 32.0, "range": 20.0 if s.sup else 16.0, "r": 0.17, "big": s.sup, "emit": true, "col": col, "shape": "ray"})
+		lead = 0.0
+		f.aim_facing = a   # FEEL (combat.js volley): each bolt turns the arms, kicks your camera, has its sound
+		f.aim_hold = 0.3
+		if not s.sup:
+			f.attacked(false)
+		if f.is_local:
+			Feel.kick(0.03)
+		if f.visible:
+			_sfx("shot_ray", f.position)
 		if f.visible:
 			fx.muzzle(Vector3(mx, BULLET_Y, mz), Vector3(dx, 0, dz), col)
 
@@ -358,6 +422,15 @@ func _update_bombs(dt: float) -> void:
 		var g: Node3D = B.mesh
 		g.position = Vector3(x, y, z)
 		B.fx = Vector3(x, y + 0.4, z)
+		if B.blind:   # thrown by a brawler we cannot see: only its way down shows, no trail before
+			g.visible = k >= 0.5
+			if not g.visible:
+				if B.t >= 1.0:
+					_explode(B)
+					g.queue_free()
+					bombs.remove_at(i)
+				i -= 1
+				continue
 		var core: MeshInstance3D = B.core
 		var size := 0.78 if B.sup else 0.4
 		if B.bubble:   # a wobbling bubble, no fire
@@ -407,8 +480,11 @@ func _explode(B: Dictionary) -> void:
 	if B.bubble:   # Kappa's bubble pops
 		fx.splash(x, z, 1.2)
 		fx.ring(Vector3(x, 0, z), COL.bubble, B.radius, 0, 0.4)
+		_sfx("bubble_pop", Vector3(x, 0, z))   # FEEL
 		return
 	fx.explosion(x, z, B.radius, B.sup, wet)
+	Feel.shake_at(x, z, 0.9 if B.sup else 0.5)   # FEEL (combat.js explode)
+	_sfx("boom_big" if B.sup else "boom", Vector3(x, 0, z))
 
 # ---------------------------------------------------------------- supers and melee
 
@@ -418,9 +494,9 @@ func _windup(f: Fighter, time: float, r: float, col: Color, fn: Callable) -> voi
 	mi.mesh = FxLib.disc_mesh()
 	mi.material_override = FxLib.glow(col, 0.0, "add", true, 1)
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mi.visible = f.visible
+	mi.visible = _shows(f)
 	add_child(mi)
-	windups.append({"f": f, "t": time, "T": time, "r": r, "mesh": mi, "fn": fn})
+	windups.append({"f": f, "t": time - lead, "T": time, "r": r, "mesh": mi, "fn": fn})
 
 func _update_windups(dt: float) -> void:
 	var i := windups.size() - 1
@@ -449,21 +525,25 @@ func _nova(f: Fighter) -> void:
 	fx.ring(p, Color(2, 3.4, 4), R * 0.6, 0, 0.4)
 	fx.spark_burst(p + Vector3(0, 1, 0), COL.ice, 60, 13, 0.7, 0.2)
 	fx.flash(p + Vector3(0, 2, 0), ICE_LIGHT, 220, 18, 0.5)
+	Feel.shake_at(p.x, p.z, 0.45)   # FEEL (combat.js nova)
+	_sfx("super", p)
+	_sfx("break", p, 0.6)
 
 # Volt super: 5 bolts on a deterministic spiral around the target point.
-func _storm(f: Fighter, point: Vector3) -> void:
+func _storm(f: Fighter, point: Vector3, at := Vector3.INF) -> void:
+	var o := f.position if at == Vector3.INF else at
 	var R := float(f.type.range)
-	var d := point - f.position
+	var d := point - o
 	d.y = 0
 	var dl := maxf(d.length(), 1e-3)
 	var cd := minf(dl, R)
-	var cx := f.position.x + d.x / dl * cd
-	var cz := f.position.z + d.z / dl * cd
+	var cx := o.x + d.x / dl * cd
+	var cz := o.z + d.z / dl * cd
 	var n := 5
 	for k in n:
 		var a := k * 2.39996
 		var r := 2.8 * sqrt((k + 0.5) / n)
-		strikes.append({"t": 0.18 + k * 0.2, "x": cx + cos(a) * r, "z": cz + sin(a) * r})
+		strikes.append({"t": 0.18 + k * 0.2 - lead, "x": cx + cos(a) * r, "z": cz + sin(a) * r})
 	fx.ring(Vector3(cx, 0, cz), Color(1.5, 3, 4), 3.2, 0, 1.1)
 
 func _update_strikes(dt: float) -> void:
@@ -479,6 +559,9 @@ func _update_strikes(dt: float) -> void:
 			fx.spark_burst(Vector3(x, 0.3, z), BOLT, 26, 9, 0.5, 0.16)
 			fx.flash(Vector3(x, 3, z), Color(0.75, 0.9, 1), 320, 16, 0.35)
 			fx.ring(Vector3(x, 0, z), Color(2, 3.5, 4.5), 1.8, 0, 0.35)
+			Feel.shake_at(x, z, 0.35)   # FEEL (combat.js storm strike)
+			_sfx("boom", Vector3(x, 0, z), 0.7)
+			_sfx("thunder2", Vector3(x, 0, z), 0.5)
 			if fx.arena and fx.arena.char_at(x, z) == "W":
 				fx.splash(x, z, 1.0)
 			else:
@@ -495,8 +578,9 @@ func _bump(f: Fighter, d: Vector3) -> void:
 		later.append([_now() + k * 0.12, cb])
 
 # Mochi Pound: a 4 m mark where it lands (up to 9 m, never on a wall / the void), the landing 1.1 s later.
-func _pound(f: Fighter, point: Vector3) -> void:
-	var t := point - f.position
+func _pound(f: Fighter, point: Vector3, at := Vector3.INF) -> void:
+	var o := f.position if at == Vector3.INF else at
+	var t := point - o
 	t.y = 0
 	var d := t.length()
 	if d > 9.0:
@@ -504,13 +588,13 @@ func _pound(f: Fighter, point: Vector3) -> void:
 		d = 9.0
 	var A := fx.arena
 	var guard := 0
-	while A and guard < 18 and d > 0.5 and A.blocks_move(A.to_tile(f.position.x + t.x), A.to_tile(f.position.z + t.z)):
+	while A and guard < 18 and d > 0.5 and A.blocks_move(A.to_tile(o.x + t.x), A.to_tile(o.z + t.z)):
 		var s := (d - 0.5) / d
 		t *= s
 		d -= 0.5
 		guard += 1
-	var x := f.position.x + t.x
-	var z := f.position.z + t.z
+	var x := o.x + t.x
+	var z := o.z + t.z
 	var mark := MeshInstance3D.new()
 	mark.mesh = FxLib.disc_mesh()
 	mark.material_override = FxLib.glow(Color(3.2, 1.2, 1.8), 0.3, "add", true, 1)
@@ -526,7 +610,9 @@ func _pound(f: Fighter, point: Vector3) -> void:
 			return
 		fx.ring(Vector3(x, 0, z), Color(3.4, 1.6, 2.4), 4.0, 0, 0.5)
 		fx.dust(x, z, 20, Color("ffd6e0"), 2.4)
-	later.append([_now() + 1.1, land])
+		Feel.shake_at(x, z, 0.8)   # FEEL (combat.js pound landing)
+		_sfx("pound_land", Vector3(x, 0, z))
+	later.append([_now() + maxf(0.0, 1.1 - lead), land])
 
 # Nurse Kappa's Tidal Wave: a crest 5 m wide rolls 10 m ahead in 0.6 s.
 func _wave(f: Fighter, d: Vector3) -> void:
@@ -555,6 +641,7 @@ func _wave(f: Fighter, d: Vector3) -> void:
 	g.position = Vector3(p.x, 0, p.z)
 	add_child(g)
 	waves.append({"x": p.x, "z": p.z, "dx": d.x, "dz": d.z, "t": 0.0, "T": 0.6, "len": 10.0, "mesh": g, "mats": [m0, m1]})
+	Feel.shake_at(p.x, p.z, 0.3)   # FEEL (combat.js wave)
 
 func _update_waves(dt: float) -> void:
 	var i := waves.size() - 1
@@ -653,3 +740,8 @@ func flare(x: float, z: float) -> void:
 func bite_fx(x: float, z: float) -> void:
 	fx.spark_burst(Vector3(x, 1.4, z), Color(3, 3, 3), 3, 5, 0.25, 0.14)       # teeth sparks
 	fx.spark_burst(Vector3(x, 1.2, z), Color(0.6, 2.4, 0.6), 10, 4, 0.4, 0.12)  # leaves
+
+# FEEL: a one-shot through the game's AudioManager (distance falloff from the camera focus).
+func _sfx(sound: String, at: Vector3, vol := 1.0) -> void:
+	if AudioManager.current:
+		AudioManager.current.play(sound, at, vol)
