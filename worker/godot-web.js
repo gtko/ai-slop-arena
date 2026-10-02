@@ -51,10 +51,19 @@ export async function serveGodot(request, env, url, deployVersion) {
 
   // HEAD first is not needed: R2 get() with onlyIf answers conditional requests (304) and range ones.
   // Ranges only make sense on objects stored as they are; a gzipped object is always sent whole.
-  let obj = await env.GODOT_WEB.get(key, { onlyIf: request.headers, range: request.headers });
+  const ranged = request.headers.has('range');
+  let obj;
+  try {
+    obj = await env.GODOT_WEB.get(key, { onlyIf: request.headers, range: request.headers });
+  } catch {
+    // an unsatisfiable or multi-part Range makes R2 throw: answer it instead of a 500
+    if (ranged) return new Response('Range not satisfiable', { status: 416 });
+    return new Response('Storage unavailable', { status: 503 });
+  }
   if (!obj) return notFound();
   const stored = obj.httpMetadata?.contentEncoding || '';
   if (stored && obj.range && 'body' in obj && (obj.range.offset || obj.range.length !== obj.size)) {
+    await obj.body.cancel();
     obj = await env.GODOT_WEB.get(key, { onlyIf: request.headers });
     if (!obj) return notFound();
   }
@@ -67,7 +76,10 @@ export async function serveGodot(request, env, url, deployVersion) {
   headers.set('vary', 'accept-encoding');
   if (!stored) headers.set('accept-ranges', 'bytes');
 
-  if (!('body' in obj)) return new Response(null, { status: 304, headers }); // If-None-Match matched
+  if (!('body' in obj)) { // a precondition failed: 304 for the cache revalidation ones, 412 otherwise
+    const revalidate = request.headers.has('if-none-match') || request.headers.has('if-modified-since');
+    return new Response(null, { status: revalidate ? 304 : 412, headers });
+  }
 
   const head = request.method === 'HEAD';
   if (head) await obj.body.cancel();

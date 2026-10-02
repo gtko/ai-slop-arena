@@ -37,8 +37,8 @@ const { version } = JSON.parse(readFileSync(new URL('../package.json', import.me
 const ota = await fetch(`${ORIGIN}/app/latest.json?nocache=${Date.now()}`).then(r => r.ok ? r.json() : null).catch(() => null);
 check(ota && ota.version === version && ota.url.endsWith(`/v${version}/AISlopArena-app-bundle.zip`) && !!ota.minNative,
   `app update manifest announces v${version}${ota ? ` (minNative ${ota.minNative})` : ''}`);
-const godot = await fetch(`${ORIGIN}/godot/`, { redirect: 'manual' });
-check(godot.status === 302 && godot.headers.get('location') === `/godot/${version}/`, `/godot/ points to the Godot web build v${version}`);
+const godot = await fetch(`${ORIGIN}/godot/`, { redirect: 'manual' }).catch(() => null);
+check(godot?.status === 302 && godot.headers.get('location') === `/godot/${version}/`, `/godot/ points to the Godot web build v${version}`);
 const head = f => fetch(`${ORIGIN}/godot/${version}/${f}`, { method: 'HEAD', headers: { 'accept-encoding': 'gzip' } }).catch(() => null);
 const want = { 'index.html': 'text/html', 'index.js': 'text/javascript', 'index.wasm': 'application/wasm', 'index.pck': 'application/octet-stream' };
 for (const [f, type] of Object.entries(want)) {

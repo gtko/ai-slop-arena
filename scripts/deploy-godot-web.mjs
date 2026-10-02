@@ -20,6 +20,7 @@ const flag = f => args.includes(f);
 const opt = (f, d) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : d; };
 const local = flag('--local');
 const version = opt('--version', JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version);
+if (!/^\d+\.\d+\.\d+([-+][\w.]+)?$/.test(version || '')) throw new Error(`bad version "${version}" (expected X.Y.Z)`);
 const GODOT = process.env.GODOT || join(process.env.LOCALAPPDATA || '', 'Microsoft', 'WinGet', 'Packages',
   'GodotEngine.GodotEngine_Microsoft.Winget.Source_8wekyb3d8bbwe', 'Godot_v4.4.1-stable_win64_console.exe');
 
@@ -58,6 +59,11 @@ if (!local && !flag('--force')) {
   const probe = wrangler(['r2', 'object', 'get', `${BUCKET}/${prefix}/index.html`, '--remote', '--pipe'], true);
   if (probe.status === 0 && probe.stdout.length > 0) {
     throw new Error(`${prefix}/ is already uploaded; bump the version, or pass --force (players may keep stale cached files)`);
+  }
+  // fail closed: only a clear "not found" means the version is new (a network or auth error must not
+  // let an upload overwrite files that browsers cache as immutable)
+  if (probe.status !== 0 && !/not found|does not exist|NoSuchKey|10007/i.test(`${probe.stderr}${probe.stdout}`)) {
+    throw new Error(`could not check whether ${prefix}/ exists (wrangler: ${(probe.stderr || '').trim().slice(0, 300)}); retry, or pass --force`);
   }
 }
 
