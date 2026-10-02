@@ -1,0 +1,419 @@
+{
+ "oasis": {
+  "key": "oasis",
+  "name": "Oasis",
+  "weather": "clear",
+  "tag": "Clear skies",
+  "swatch": [
+   "#f3cf8c",
+   "#3fae5a"
+  ],
+  "ground": "cartoon",
+  "groundTones": [
+   "#f0ad7e",
+   "#eaa272"
+  ],
+  "checker": "",
+  "outer": "sand",
+  "stones": true,
+  "wall": "strata",
+  "wallCap": 15628878,
+  "wallTint": [
+   0.05,
+   0.05,
+   0.95
+  ],
+  "debris": 13197374,
+  "bound": "strataDark",
+  "boundCap": 12607807,
+  "boundTint": [
+   0.05,
+   0.05,
+   0.85
+  ],
+  "bush": [
+   0.1,
+   0.1,
+   0.95
+  ],
+  "bushStyle": "grass",
+  "trees": {
+   "cliff": 0.7,
+   "cactus": 0.3
+  },
+  "water": "water",
+  "obstacle": "cactus",
+  "vision": 0,
+  "grid": [
+   "XXXXXXXXXXXXXXXXXXXXXXXXX",
+   "X...BBB...........BBB...X",
+   "X.S.BB...#..S..#...BB.S.X",
+   "X........#.....#........X",
+   "XBB..WWT....C....TWW..BBX",
+   "XBB..WW...........WW..BBX",
+   "X...C....BB...BB....C...X",
+   "X.##.....BB...BB.....##.X",
+   "X..#..##.........##..#..X",
+   "X...T.....BBBBB.....T...X",
+   "X.C...BB..BBBBB..BB...C.X",
+   "X.....BB..#...#..BB.....X",
+   "X.S....T.#..C..#.T....S.X",
+   "X.....BB..#...#..BB.....X",
+   "X.C...BB..BBBBB..BB...C.X",
+   "X...T.....BBBBB.....T...X",
+   "X..#..##.........##..#..X",
+   "X.##.....BB...BB.....##.X",
+   "X...C....BB...BB....C...X",
+   "XBB..WW...........WW..BBX",
+   "XBB..WWT....C....TWW..BBX",
+   "X........#.....#........X",
+   "X.S.BB...#..S..#...BB.S.X",
+   "X...BBB...........BBB...X",
+   "XXXXXXXXXXXXXXXXXXXXXXXXX"
+  ]
+ },
+ "dunes": {
+  "key": "dunes",
+  "name": "Dune Storm",
+  "weather": "sandstorm",
+  "tag": "Sandstorm",
+  "swatch": [
+   "#e88a4a",
+   "#a8532a"
+  ],
+  "ground": "clay",
+  "checker": "rgba(110,40,15,0.12)",
+  "outer": "sand",
+  "wall": "strata",
+  "wallCap": 14709322,
+  "wallTint": [
+   0.04,
+   0.1,
+   0.9
+  ],
+  "debris": 13198394,
+  "bound": "strataDark",
+  "boundCap": 11557436,
+  "boundTint": [
+   0.05,
+   0.1,
+   0.8
+  ],
+  "bush": [
+   0.1,
+   0.1,
+   0.92
+  ],
+  "bushStyle": "grass",
+  "trees": {
+   "cliff": 0.55,
+   "cactus": 0.3,
+   "dead": 0.15
+  },
+  "water": "none",
+  "obstacle": "cactus",
+  "vision": 0,
+  "grid": [
+   "XXXXXXXXXXXXXXXXXXXXXXXXX",
+   "X.......................X",
+   "X.S..K...#..S..#...K..S.X",
+   "X....##..#.....#..##....X",
+   "X.K...T...K...K...T...K.X",
+   "X...BB..##.....##..BB...X",
+   "X.#.BB.............BB.#.X",
+   "X.#....K...C.C...K....#.X",
+   "X.....###.E...E.###.....X",
+   "X.C.K......BBB......K.C.X",
+   "X......BB..BBB..BB......X",
+   "X..##..BB.......BB..##..X",
+   "X.S......K..C..K......S.X",
+   "X..##..BB.......BB..##..X",
+   "X......BB..BBB..BB......X",
+   "X.C.K......BBB......K.C.X",
+   "X.....###.E...E.###.....X",
+   "X.#....K...C.C...K....#.X",
+   "X.#.BB.............BB.#.X",
+   "X...BB..##.....##..BB...X",
+   "X.K...T...K...K...T...K.X",
+   "X....##..#.....#..##....X",
+   "X.S..K...#..S..#...K..S.X",
+   "X.......................X",
+   "XXXXXXXXXXXXXXXXXXXXXXXXX"
+  ]
+ },
+ "grove": {
+  "key": "grove",
+  "name": "Rainy Grove",
+  "weather": "rain",
+  "tag": "Rain & thunder",
+  "swatch": [
+   "#3d6b4a",
+   "#4a6f9a"
+  ],
+  "ground": "forest",
+  "checker": "rgba(0,0,0,0.12)",
+  "outer": "grass",
+  "wet": true,
+  "wall": "mossbrick",
+  "wallCap": 10134931,
+  "wallTint": [
+   0.3,
+   0.05,
+   0.85
+  ],
+  "debris": 9080710,
+  "bound": "stone",
+  "boundCap": 6052454,
+  "boundTint": [
+   0.62,
+   0.06,
+   0.7
+  ],
+  "bush": [
+   0.3,
+   0.45,
+   0.72
+  ],
+  "trees": {
+   "round": 0.8,
+   "pine": 0.2
+  },
+  "water": "water",
+  "obstacle": "stump",
+  "vision": 0,
+  "grid": [
+   "XXXXXXXXXXXXXXXXXXXXXXXXX",
+   "X.BBB....BBB.BBB....BBB.X",
+   "X.SBB..#...BSB...#..BBS.X",
+   "X..B...#.........#...B..X",
+   "X.....WWW..C.C..WWW.....X",
+   "XBB..WWW..BB.BB..WWW..BBX",
+   "XBB.WWT...BB.BB...TWW.BBX",
+   "X..........###..........X",
+   "X.C..##..B.....B..##..C.X",
+   "X....#..BBB...BBB..#....X",
+   "X.BB....BBB.C.BBB....BB.X",
+   "X.BB.T.............T.BB.X",
+   "X.S....##...C...##....S.X",
+   "X.BB.T.............T.BB.X",
+   "X.BB....BBB.C.BBB....BB.X",
+   "X....#..BBB...BBB..#....X",
+   "X.C..##..B.....B..##..C.X",
+   "X..........###..........X",
+   "XBB.WWT...BB.BB...TWW.BBX",
+   "XBB..WWW..BB.BB..WWW..BBX",
+   "X.....WWW..C.C..WWW.....X",
+   "X..B...#.........#...B..X",
+   "X.SBB..#...BSB...#..BBS.X",
+   "X.BBB....BBB.BBB....BBB.X",
+   "XXXXXXXXXXXXXXXXXXXXXXXXX"
+  ]
+ },
+ "frost": {
+  "key": "frost",
+  "name": "Frost Peak",
+  "weather": "snow",
+  "tag": "Snowfall · slippery ice",
+  "swatch": [
+   "#eef4ff",
+   "#7fb0e6"
+  ],
+  "ground": "snow",
+  "checker": "rgba(90,120,180,0.08)",
+  "outer": "snow",
+  "snow": true,
+  "wall": "icestone",
+  "wallCap": 16185855,
+  "wallTint": [
+   0.6,
+   0.12,
+   0.92
+  ],
+  "debris": 13622512,
+  "bound": "icestone",
+  "boundCap": 15791615,
+  "boundTint": [
+   0.62,
+   0.18,
+   0.7
+  ],
+  "bush": [
+   0.36,
+   0.25,
+   0.95
+  ],
+  "trees": {
+   "pine": 1
+  },
+  "water": "none",
+  "obstacle": "boulder",
+  "vision": 0,
+  "grid": [
+   "XXXXXXXXXXXXXXXXXXXXXXXXX",
+   "X......BB.......BB......X",
+   "X.S....BB...S...BB....S.X",
+   "X...K.......K.......K...X",
+   "X.##..IIII.....IIII..##.X",
+   "X.#..IIIIII...IIIIII..#.X",
+   "X...IIIIIII.C.IIIIIII...X",
+   "X.BB.IIIII.....IIIII.BB.X",
+   "X.BB..III..#.#..III..BB.X",
+   "X.......T..#.#..T.......X",
+   "X.C..K.............K..C.X",
+   "X......BB..###..BB......X",
+   "X.S....BB.......BB....S.X",
+   "X......BB..###..BB......X",
+   "X.C..K.............K..C.X",
+   "X.......T..#.#..T.......X",
+   "X.BB..III..#.#..III..BB.X",
+   "X.BB.IIIII.....IIIII.BB.X",
+   "X...IIIIIII.C.IIIIIII...X",
+   "X.#..IIIIII...IIIIII..#.X",
+   "X.##..IIII.....IIII..##.X",
+   "X...K.......K.......K...X",
+   "X.S....BB...S...BB....S.X",
+   "X......BB.......BB......X",
+   "XXXXXXXXXXXXXXXXXXXXXXXXX"
+  ]
+ },
+ "isles": {
+  "key": "isles",
+  "name": "Windmill Isles",
+  "weather": "clear",
+  "tag": "Sky islands · ring-outs",
+  "swatch": [
+   "#8fd16a",
+   "#6fb6ff"
+  ],
+  "sky": true,
+  "crumble": true,
+  "ground": "cartoon",
+  "groundTones": [
+   "#94d36c",
+   "#86c862"
+  ],
+  "checker": "",
+  "outer": "grass",
+  "wall": "mossbrick",
+  "wallCap": 12108960,
+  "wallTint": [
+   0.28,
+   0.08,
+   0.9
+  ],
+  "debris": 10133640,
+  "bound": "stone",
+  "boundCap": 6052454,
+  "boundTint": [
+   0.62,
+   0.06,
+   0.7
+  ],
+  "bush": [
+   0.28,
+   0.5,
+   0.62
+  ],
+  "trees": {
+   "round": 1
+  },
+  "water": "none",
+  "obstacle": "stump",
+  "vision": 0,
+  "grid": [
+   "VVVVVVVVVVVVVVVVVVVVVVVVV",
+   "VVVVVVVVVVBB.VVVVVVBB..VV",
+   "V...#..===...C.VVV..BS.VV",
+   "V.S.....VV.E...==.#....VV",
+   "VBB....CVVVV=VVVV.....#VV",
+   "VB....J.VVVV=VVVV.S....VV",
+   "VV.#.S..VVVV=VVVVB.J...VV",
+   "VVV...BBVVVV=VVVVB..C.=VV",
+   "VVV=VVVVVV.#.E.VVVVVVV=VV",
+   "VVV=VVVVVB..H..BVVVVVV=VV",
+   "VV..VVVV.........VVVV..BV",
+   "VVC.VVVVE..MMM..#VVVVE.BV",
+   "V...====.H.MMM.H.====...V",
+   "VB.EVVVV#..MMM..EVVVV.CVV",
+   "VB..VVVV.........VVVV..VV",
+   "VV=VVVVVVB..H..BVVVVV=VVV",
+   "VV=VVVVVVV.E.#.VVVVVV=VVV",
+   "VV=.C..BVVVV=VVVVBB...VVV",
+   "VV...J.BVVVV=VVVV..S.#.VV",
+   "VV....S.VVVV=VVVV.J....BV",
+   "VV#.....VVVV=VVVVC....BBV",
+   "VV....#.==...E.VV.....S.V",
+   "VV.SB..VVV.C...===..#...V",
+   "VV..BBVVVVVV.BBVVVVVVVVVV",
+   "VVVVVVVVVVVVVVVVVVVVVVVVV"
+  ]
+ },
+ "marsh": {
+  "key": "marsh",
+  "name": "Misty Marsh",
+  "weather": "fog",
+  "tag": "Fog · limited vision",
+  "vision": 8.5,
+  "swatch": [
+   "#5f6b4a",
+   "#9fb3a4"
+  ],
+  "ground": "mud",
+  "checker": "rgba(0,0,0,0.1)",
+  "outer": "grass",
+  "wet": true,
+  "wall": "mossbrick",
+  "wallCap": 8226418,
+  "wallTint": [
+   0.25,
+   0.08,
+   0.75
+  ],
+  "debris": 8028016,
+  "bound": "stone",
+  "boundCap": 4999765,
+  "boundTint": [
+   0.6,
+   0.05,
+   0.62
+  ],
+  "bush": [
+   0.22,
+   0.35,
+   0.62
+  ],
+  "trees": {
+   "dead": 0.5,
+   "round": 0.5
+  },
+  "water": "swamp",
+  "obstacle": "stump",
+  "grid": [
+   "XXXXXXXXXXXXXXXXXXXXXXXXX",
+   "X.BB......BB.BB......BB.X",
+   "X.SB..WW...BSB...WW..BS.X",
+   "X....WWW.T.....T.WWW....X",
+   "XBB..WW..##...##..WW..BBX",
+   "XBB.......#.C.#.......BBX",
+   "X...T..BB.......BB..T...X",
+   "X.C....BB.WW.WW.BB....C.X",
+   "X..##....WWW.WWW....##..X",
+   "X........WWB.BWW........X",
+   "X.BBB.K...........K.BBB.X",
+   "X.BBB.....T...T.....BBB.X",
+   "X.S.......BBBBB.......S.X",
+   "X.BBB.....T...T.....BBB.X",
+   "X.BBB.K...........K.BBB.X",
+   "X........WWB.BWW........X",
+   "X..##....WWW.WWW....##..X",
+   "X.C....BB.WW.WW.BB....C.X",
+   "X...T..BB.......BB..T...X",
+   "XBB.......#.C.#.......BBX",
+   "XBB..WW..##...##..WW..BBX",
+   "X....WWW.T.....T.WWW....X",
+   "X.SB..WW...BSB...WW..BS.X",
+   "X.BB......BB.BB......BB.X",
+   "XXXXXXXXXXXXXXXXXXXXXXXXX"
+  ]
+ }
+}

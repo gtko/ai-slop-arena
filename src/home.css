@@ -600,6 +600,7 @@ body.touch #touch .t-super b { top: 50%; margin-top: 12px; font-size: 9px; }
 .sh-two span { font-size: 11px; font-weight: 900; color: var(--muted); }
 .sh-two .sh-buy { margin: 0; padding: 6px 10px; font-size: 15px; }
 .sh-buy.by-coins { background: linear-gradient(#ffe36b, #ffbf1f); }
+.sh-buy.short.by-coins { background: rgba(255, 255, 255, 0.08); }   /* a price you can't pay: dark glass, readable */
 .sh-buy:not(.by-coins):not(.sh-wear):not([disabled]) { background: linear-gradient(#d9a8ff, #9a5cf0); color: var(--ink); }
 .sh-buy .gem-n { color: var(--ink); }
 .sh-buy.short .gem-n { color: #e6c4ff; }
@@ -626,7 +627,10 @@ body.touch #touch .t-super b { top: 50%; margin-top: 12px; font-size: 9px; }
 .hu-buy { padding: 7px 14px; border-radius: 10px; border: 2px solid var(--ink); box-shadow: 0 3px 0 var(--ink); font-family: var(--display); font-size: 16px; cursor: pointer; background: linear-gradient(#ffe36b, #ffbf1f); }
 .hu-buy[data-cur="gems"] { background: linear-gradient(#d9a8ff, #9a5cf0); }
 .hu-buy .coin-n, .hu-buy .gem-n { color: var(--ink); }
-.hu-buy.short { opacity: 0.5; cursor: default; }
+/* a price you can't pay: dark glass with the price in its currency colour (ink on a half-faded gradient was unreadable) */
+.hu-buy.short, .hu-buy.short[data-cur="gems"] { cursor: default; background: rgba(255, 255, 255, 0.08); }
+.hu-buy.short .coin-n { color: #ffe27a; }
+.hu-buy.short .gem-n { color: #e6c4ff; }
 #play.locked, #multi.locked { filter: grayscale(0.8) brightness(0.7); cursor: not-allowed; }
 @media (max-height: 520px) and (orientation: landscape) {
   .hero-unlock { padding: 5px 8px; gap: 3px; }

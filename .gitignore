@@ -18,3 +18,12 @@ art-src/fauna/work/
 art-src/fauna/out/
 __pycache__/
 *.blend1
+
+# Godot
+godot/.godot/
+godot/*.translation
+godot/tools/node_modules/
+godot/assets/models/**/*.webp
+godot/assets/models/**/*.webp.import
+godot/build/*
+!godot/build/.gdignore
