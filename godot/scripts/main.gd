@@ -108,6 +108,10 @@ func _ready() -> void:
 	_apply_power_profile()
 	_set_state(State.MENU)
 	profile.fetch()
+	# the boot intro (scripts/intro.gd) over the menu, once per launch; native builds only
+	var intro_script: GDScript = load("res://scripts/intro.gd")
+	if intro_script and intro_script.call("wanted"):
+		add_child(intro_script.new(audio))
 	var args := DebugArgs.list()
 	if args.has("--autotest"):
 		_autotest()
