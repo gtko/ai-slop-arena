@@ -10,6 +10,9 @@
   // The Vite build is served as static assets; /ws, /mm, /api and /admin reach the Worker code.
   // worker/build/sim.js (the headless game) comes from `vite build --mode server` (npm run build).
   "assets": { "directory": "./dist", "binding": "ASSETS" },
+  // The Godot client's web export (index.pck / index.wasm exceed the 25 MiB asset limit), served at
+  // /godot/ by worker/godot-web.js; uploaded by `npm run deploy:godot-web` under godot/<version>/.
+  "r2_buckets": [{ "binding": "GODOT_WEB", "bucket_name": "ai-slop-arena-godot-web" }],
   "durable_objects": {
     "bindings": [
       { "name": "ROOMS", "class_name": "Room" },
