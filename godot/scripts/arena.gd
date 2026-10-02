@@ -27,11 +27,14 @@ var weather: Weather
 var water: Water
 var ambient: Ambient
 var skins: Skins
+var items: Items
 var ground_mats: Array = []          # the two floor tones (crumbling islands reuse them)
 var _ground_slots: Dictionary = {}   # tile key -> [MultiMesh, index]
 
 func build(map_data: Dictionary) -> void:
 	map = map_data
+	items = Items.new()   # power cubes on the ground ('item' / 'pick' events)
+	add_child(items)
 	Foliage.ensure_globals() # the world shaders read global parameters (wind, reveal, rim, sky)
 	rng.seed = 1337
 	for row in map.grid:
@@ -653,8 +656,19 @@ func on_event(e: Dictionary) -> void:
 			var c := center(int(e.i), int(e.j))
 			if tile(int(e.i), int(e.j)) == "E":
 				kit.barrel_fx(int(e.i), int(e.j))
-			else:
+			else:   # game.js crateFx: wood, dust, green sparks and a flash on the freed cube
 				WorldFx.debris(self, Vector3(c.x, 0.8, c.z), Color("c98a2e"), 9, 0.26, 5.0)
+				WorldFx.dust(self, c.x, c.z, 8, Color("c9a070"), 1.2)
+				var fx := Fx.current
+				if fx and is_instance_valid(fx):
+					fx.spark_burst(Vector3(c.x, 1.2, c.z), Color(0.4, 2.2, 0.8), 18, 6.0, 0.6)
+					fx.flash(Vector3(c.x, 1.5, c.z), Color(0.3, 1.0, 0.45), 40.0, 8.0, 0.4)
+		"item":
+			if items:
+				items.spawn(int(e.id), float(e.x), float(e.z), float(e.tx), float(e.tz))
+		"pick":
+			if items:
+				items.pick(int(e.get("item", -1)))
 		"kill":
 			var f: Fighter = fighters.get(String(e.get("id", "")))
 			if f and int(e.get("f", 0)) == 1:
