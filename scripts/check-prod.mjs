@@ -2,7 +2,8 @@
 // - the site and the game page answer and serve the bundle just built (dist/play.html);
 // - a room accepts the current protocol and refuses an old one ("outdated");
 // - the matchmaking queue answers;
-// - the mobile apps' update manifest announces this version (docs/ota-updates.md).
+// - the mobile apps' update manifest announces this version (docs/ota-updates.md);
+// - /godot/ serves this version's Godot web export from R2 (npm run deploy:godot-web), with the right headers.
 import { readFileSync } from 'node:fs';
 
 const ORIGIN = process.argv[2] || 'https://ai-slop-arena.gtux-prog.workers.dev';
@@ -36,5 +37,15 @@ const { version } = JSON.parse(readFileSync(new URL('../package.json', import.me
 const ota = await fetch(`${ORIGIN}/app/latest.json?nocache=${Date.now()}`).then(r => r.ok ? r.json() : null).catch(() => null);
 check(ota && ota.version === version && ota.url.endsWith(`/v${version}/AISlopArena-app-bundle.zip`) && !!ota.minNative,
   `app update manifest announces v${version}${ota ? ` (minNative ${ota.minNative})` : ''}`);
+const godot = await fetch(`${ORIGIN}/godot/`, { redirect: 'manual' });
+check(godot.status === 302 && godot.headers.get('location') === `/godot/${version}/`, `/godot/ points to the Godot web build v${version}`);
+const head = f => fetch(`${ORIGIN}/godot/${version}/${f}`, { method: 'HEAD', headers: { 'accept-encoding': 'gzip' } }).catch(() => null);
+const want = { 'index.html': 'text/html', 'index.js': 'text/javascript', 'index.wasm': 'application/wasm', 'index.pck': 'application/octet-stream' };
+for (const [f, type] of Object.entries(want)) {
+  const r = await head(f);
+  const h = k => r?.headers.get(k) || '';
+  check(r?.ok && h('content-type').startsWith(type) && h('cache-control').includes('immutable') && (f === 'index.html' || h('content-encoding') === 'gzip'),
+    `Godot web ${f}: ${r ? `${r.status} ${h('content-type')}, ${h('content-encoding') || 'identity'}, ${h('cache-control')}` : 'no answer'}`);
+}
 if (failed) { console.error(`\n${failed} check(s) failed`); process.exit(1); }
 console.log('\nproduction looks good');
