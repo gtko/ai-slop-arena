@@ -136,7 +136,9 @@ func hide_result() -> void:
 func _build() -> void:
 	var podium := _ended and _ranks.size() > 0
 	var bg := ColorRect.new()
-	bg.color = Color(10 / 255.0, 8 / 255.0, 22 / 255.0, 0.55)
+	# home.css #result.overlay (it overrides style.css's 0.55, which left the text unreadable over snow and
+	# sand); the web also blurs the arena (backdrop-filter), here the loose text gets an ink rim instead
+	bg.color = Color(8 / 255.0, 6 / 255.0, 18 / 255.0, 0.72)
 	bg.size = Vector2(W, H)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_page.add_child(bg)
@@ -159,7 +161,7 @@ func _build() -> void:
 	if _animate:
 		UiKit.pop_in(ta, 0.6, 0.0, 0.5)
 	# the line under it (.result p)
-	var sub := _body(_sub_s, 13 if phone else 16, UiKit.WMUTED, 800)
+	var sub := _inked(_body(_sub_s, 13 if phone else 16, UiKit.WMUTED, 800), 3)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sub.custom_minimum_size.x = cw
@@ -204,32 +206,71 @@ func _build() -> void:
 		var s := _ghost(I18n.t("result.spectate"), 15 if phone else 22, 7 if phone else 12, 14 if phone else 26, 4 if phone else 6)
 		s.pressed.connect(func(): spectate.emit())
 		row.add_child(s)
-		var hint := _body(_hint_s, 12, UiKit.WMUTED, 700)
+		var hint := _inked(_body(_hint_s, 12, UiKit.WMUTED, 700), 3)
 		hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		row.add_child(hint)
 	var ra2 := UiKit.anim(row)
-	col.add_child(ra2)
 	if _animate:
 		UiKit.play_in(ra2, 0.4, 0.25, 16.0)
 
-	# centred, scaled down if it does not fit (the web's overlay scrolls instead)
+	# centred, scaled down a little if it does not fit, and past that it scrolls like the web's overlay
+	# (scaling it all into a phone's 390 px made the labels 6-8 px tall)
+	var scroll := ScrollContainer.new()
+	scroll.size = Vector2(W, H)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	_page.add_child(scroll)
 	var holder := Control.new()
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_page.add_child(holder)
+	scroll.add_child(holder)
 	holder.add_child(col)
-	_fit(holder, col, cw)
-	call_deferred("_fit", holder, col, cw)   # again once the wrapped lines know their width
+	var bar: Control = null
+	if phone:   # home.css #result .row-btns: the buttons stay at the bottom (sticky) over a dark fade
+		bar = Control.new()
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var rh := row.get_combined_minimum_size().y + 28.0
+		bar.position = Vector2(0, H - rh)
+		bar.size = Vector2(W, rh)
+		var fade := UiKit.grad_rect(UiKit.grad([[0.0, Color(8 / 255.0, 6 / 255.0, 18 / 255.0, 0.0)], [0.45, Color(8 / 255.0, 6 / 255.0, 18 / 255.0, 0.96)], [1.0, Color(8 / 255.0, 6 / 255.0, 18 / 255.0, 0.96)]]))
+		bar.add_child(fade)
+		var rc := CenterContainer.new()
+		rc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rc.position = Vector2(0, 16)
+		rc.size = Vector2(W, rh - 28.0)
+		rc.add_child(ra2)
+		bar.add_child(rc)
+		_page.add_child(bar)
+	else:
+		col.add_child(ra2)
+	_fit(holder, col, cw, bar)
+	call_deferred("_fit", holder, col, cw, bar)   # again once the wrapped lines know their width
 
-func _fit(holder: Control, col: Control, cw: float) -> void:
+func _fit(holder: Control, col: Control, cw: float, bar: Control = null) -> void:
 	if not is_instance_valid(col):
 		return
 	col.size = Vector2(cw, 0)
 	var ms := col.get_combined_minimum_size()
-	var avail := H - (16.0 if phone else 48.0)
-	var f := minf(1.0, avail / maxf(ms.y, 1.0))
+	if bar:   # the button row's height is only right once it is in the tree
+		var rc := bar.get_child(1) as Control
+		var rh := (rc.get_child(0) as Control).get_combined_minimum_size().y + 28.0
+		bar.position = Vector2(0, H - rh)
+		bar.size = Vector2(W, rh)
+		rc.size = Vector2(W, rh - 28.0)
+	var bh := bar.size.y - 12.0 if bar else 0.0
+	var pad := 16.0 if phone else 48.0
+	var avail := H - pad - bh
+	var f := clampf(avail / maxf(ms.y, 1.0), 0.85 if phone else 0.7, 1.0)
 	col.size = Vector2(cw, ms.y)
-	holder.scale = Vector2(f, f)
-	holder.position = Vector2((W - cw * f) / 2.0, (H - ms.y * f) / 2.0)
+	col.scale = Vector2(f, f)
+	col.position = Vector2((W - cw * f) / 2.0, maxf(pad * 0.5, (H - bh - ms.y * f) / 2.0))
+	holder.custom_minimum_size = Vector2(W, maxf(H, col.position.y + ms.y * f + pad * 0.5 + bh))
+
+# An ink rim for the small muted text lying straight on the arena (no card behind it, no blur here).
+func _inked(l: Label, size: int) -> Label:
+	l.add_theme_constant_override("outline_size", size)
+	l.add_theme_color_override("font_outline_color", UiKit.INK)
+	return l
 
 func _gap(h: float) -> Control:
 	var c := Control.new()
@@ -294,7 +335,7 @@ func _build_podium() -> Control:
 		v.add_child(_gap(3))
 		v.add_child(nm)
 		var per := String(r.get("per", ""))
-		var tl := _body((String(PERSONA_ICONS.get(per, "")) + " " + I18n.t("persona." + per)) if (per != "" and not r.get("human", false)) else "", 10, UiKit.WMUTED, 800)
+		var tl := _inked(_body((String(PERSONA_ICONS.get(per, "")) + " " + I18n.t("persona." + per)) if (per != "" and not r.get("human", false)) else "", 10, UiKit.WMUTED, 800), 3)
 		tl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		tl.custom_minimum_size.y = 12
 		tl.clip_text = true

@@ -136,6 +136,7 @@ static func pgrad(stops: Array, from: Vector2 = Vector2(0, 0), to: Vector2 = Vec
 static func inert(b: MenuTap, alpha: float = 1.0) -> void:
 	b.silent = true
 	b.sink = 0.0
+	b.focus_mode = Control.FOCUS_NONE   # a <button disabled>: the pad / keyboard focus skips it
 	b.mouse_default_cursor_shape = Control.CURSOR_ARROW
 	b.modulate.a = alpha
 

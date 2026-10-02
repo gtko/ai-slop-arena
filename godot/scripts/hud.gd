@@ -842,12 +842,13 @@ func _draw_gadget(c: Control, k: float, vs: Vector2) -> void:
 	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	_small_hint(c, Vector2(ctr.x, vs.y - 30.0 * k + 18.0 * k), _gadget_hint(), k, a)
 
-# a key hint under a round button: Nunito 800 11px, muted, its bottom edge at `bottom_c.y`
+# a key hint under a round button: Nunito 800 11px, muted, its bottom edge at `bottom_c.y`; with the
+# ink stroke of the other HUD text (it sits on the world: plain muted text vanished on sand and snow)
 func _small_hint(c: Control, bottom_c: Vector2, s: String, k: float, a := 1.0) -> void:
 	var f := Fonts.body(800)
 	var fs := 11.0 * k
 	var w := D.width(f, s, fs)
-	D.text(c, Vector2(bottom_c.x - w * 0.5, bottom_c.y - D.line_h(f, fs)), s, f, fs, _al(D.MUTED, a))
+	D.text(c, Vector2(bottom_c.x - w * 0.5, bottom_c.y - D.line_h(f, fs)), s, f, fs, _al(D.MUTED, a), 3.0 * k, _ink(a))
 
 # #killfeed (top right): newest on top, 4 rows, 4.5 s each
 func _draw_feed(c: Control, k: float, vs: Vector2, touch_mode: bool, short: bool) -> void:
