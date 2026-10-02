@@ -168,6 +168,8 @@ func _draw() -> void:
 
 func _stick(o: Vector2, cur: Vector2, k: float) -> void:
 	draw_circle(o, 62.0 * k, Color(1, 1, 1, 0.1))
+	# a thin ink ring outside the white one: the white ring alone disappeared over snow and sand
+	draw_arc(o, 62.0 * k + 1.0 * k, 0, TAU, 48, Color(D.INK.r, D.INK.g, D.INK.b, 0.35), 2.0 * k, true)
 	draw_arc(o, 62.0 * k - 1.5 * k, 0, TAU, 48, Color(1, 1, 1, 0.35), 3.0 * k, true)
 	var kp := o + (cur - o).limit_length(R * k)
 	_knob(kp, 27.0 * k, Color(1, 1, 1, 0.85), k)
@@ -209,7 +211,16 @@ func _attack(k: float) -> void:
 		var cq0 := c0.lerp(c1, f.distance_to(q0) / reach)
 		var cq1 := c0.lerp(c1, f.distance_to(q1) / reach)
 		draw_polygon(PackedVector2Array([f, q0, q1]), PackedColorArray([c0, cq0, cq1]))
-		draw_polygon(PackedVector2Array([q0, p0, p1, q1]), PackedColorArray([cq0, c1, c1, cq1]))
+		# the outer band, where the gradient reached its end colour: none where the rim is within reach
+		# (a zero-area quad: "triangulation failed" every frame on touch screens)
+		var band := PackedVector2Array([q0])
+		var band_c := PackedColorArray([cq0])
+		for e in [[p0, c1], [p1, c1], [q1, cq1]]:
+			if (e[0] as Vector2).distance_to(band[band.size() - 1]) > 0.5 and (e[0] as Vector2).distance_to(band[0]) > 0.5:
+				band.append(e[0])
+				band_c.append(e[1])
+		if band.size() >= 3:
+			draw_polygon(band, band_c)
 	_knob(_knob_pos(c, "attack", k), 27.0 * k, Color(22 / 255.0, 18 / 255.0, 31 / 255.0, 0.55), k)
 
 func _super(k: float) -> void:
@@ -231,18 +242,26 @@ func _super(k: float) -> void:
 		for i in steps + 1:
 			var ang := -PI / 2 + TAU * super_frac * i / steps
 			pts.append(c + Vector2(cos(ang), sin(ang)) * ir)
-		draw_colored_polygon(pts, _gray(Color(1.0, 210 / 255.0, 63 / 255.0, a), gray))
+		pts = D.clean_poly(pts)   # a sliver at a low charge: no triangulation error
+		if pts.size() >= 3:
+			draw_colored_polygon(pts, _gray(Color(1.0, 210 / 255.0, 63 / 255.0, a), gray))
 	_knob(_knob_pos(c, "super", k), 20.0 * k, Color(22 / 255.0, 18 / 255.0, 31 / 255.0, 0.6), k, a)
-	# label under it: 11 px, letter-spacing 1, white with a soft shadow
+	# the label, written inside the button (home.css `body.touch #touch .t-super b`: top 50 % + 12 px,
+	# 9 px; style.css's 11 px under the button sat on the world and vanished over snow and sand): white,
+	# letter-spacing 1, an ink stroke; all strokes first, then the fills (paint-order: stroke fill)
 	var f := Fonts.body(900)
-	var fs := 11.0 * k
+	var fs := 9.0 * k
 	var txt := I18n.t("hud.super")
 	var w := D.width(f, txt, fs) + (txt.length() - 1) * k
-	var x := c.x - w * 0.5
-	var y := c.y + 43.0 * k + 4.0 * k
-	for ch in txt:
-		D.text(self, Vector2(x, y + 1.0 * k), ch, f, fs, Color(0, 0, 0, 0.6 * a))
-		x += D.text(self, Vector2(x, y), ch, f, fs, Color(1, 1, 1, a)) + 1.0 * k
+	var y := c.y + 12.0 * k
+	var ink := Color(D.INK.r, D.INK.g, D.INK.b, a)
+	for pass_ in 2:
+		var x := c.x - w * 0.5
+		for ch in txt:
+			if pass_ == 0:
+				x += D.text(self, Vector2(x, y), ch, f, fs, ink, 3.0 * k, ink) + 1.0 * k
+			else:
+				x += D.text(self, Vector2(x, y), ch, f, fs, Color(1, 1, 1, a)) + 1.0 * k
 
 func _gadget(k: float) -> void:
 	var c := _gadget_c()

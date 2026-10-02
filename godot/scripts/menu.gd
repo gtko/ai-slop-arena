@@ -155,6 +155,8 @@ func _measure() -> void:
 		var s := UiKit.safe_insets(get_viewport())
 		_ins = Vector4(maxf(s.x - 16, 0), maxf(s.y - 12, 0), maxf(s.z - 16, 0), maxf(s.w - 12, 0)) / _k
 	_g = (12.0 + _ins.x) if phone else 32.0
+	if DebugArgs.has("menudump"):
+		print("MENUMEASURE W=%.0f H=%.0f k=%.3f window=%s dpr=%.2f touch=%s" % [W, H, _k, DisplayServer.window_get_size(), UiKit.device_ratio(), touch])
 
 # (Re)builds every control; called again when the language or the screen size changes.
 func build() -> void:
@@ -264,7 +266,7 @@ func _over() -> float:
 func _font_file(path: String) -> FontFile:
 	var key := "%s@%.3f" % [path, _over()]
 	if not _font_cache.has(key):
-		var ff := (load(path) as FontFile).duplicate() as FontFile
+		var ff := Fonts.file(path).duplicate() as FontFile   # (with the emoji fallback, fonts.gd)
 		ff.oversampling = _over()
 		_font_cache[key] = ff
 	return _font_cache[key]
@@ -1077,10 +1079,15 @@ func _render_unlock() -> void:
 		var cur := "coins" if i == 0 else "gems"
 		var price := int(bp[cur])
 		var have := MetaProfile.coins() if i == 0 else MetaProfile.gems()
-		var btn := S.grad_button(S.money(cur, price, 12 if phone else 16, UiKit.INK),
-			MenuShop.GOLD_TOP if i == 0 else MenuShop.VIO_TOP, MenuShop.GOLD_BOT if i == 0 else MenuShop.VIO_BOT, 10, Vector2(8, 3) if phone else Vector2(14, 7), 3.0)
-		if have < price:
-			MenuShop.inert(btn, 0.5)
+		var short := have < price
+		# a price you can't pay: dark glass, the price in its currency colour (home.css .hu-buy.short; ink
+		# on a half-faded gradient was unreadable)
+		var tc := (MenuShop.COIN_TXT if i == 0 else MenuShop.GEM_TXT) if short else UiKit.INK
+		var gt: Color = Color(1, 1, 1, 0.08) if short else (MenuShop.GOLD_TOP if i == 0 else MenuShop.VIO_TOP)
+		var gb: Color = Color(1, 1, 1, 0.08) if short else (MenuShop.GOLD_BOT if i == 0 else MenuShop.VIO_BOT)
+		var btn := S.grad_button(S.money(cur, price, 12 if phone else 16, tc), gt, gb, 10, Vector2(8, 3) if phone else Vector2(14, 7), 3.0)
+		if short:
+			MenuShop.inert(btn)
 		else:
 			btn.silent = true
 			btn.pressed.connect(func():
@@ -1470,6 +1477,8 @@ func _map_tile(key: String, sz: Vector2) -> Control:
 	v.add_child(_disp(I18n.t("map." + key), 11 if phone else 13, Color.WHITE, 5))
 	if not phone:
 		var tag := _shadowed(_body(I18n.t("map.%s.tag" % key), 9, Color.WHITE), 1, 1.0)
+		tag.add_theme_constant_override("outline_size", 3)   # a dark rim: the soft shadow alone was lost on snow / sand
+		tag.add_theme_color_override("font_outline_color", Color(UiKit.INK, 0.75))
 		tag.clip_text = true
 		tag.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		v.add_child(tag)
@@ -1634,7 +1643,7 @@ func _fill_page(key: String) -> void:
 				var tx := _body(_quest_text(q), 15, UiKit.INK, 900)
 				tx.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				cv.add_child(tx)
-				cv.add_child(_disp("0/%s" % _num(int(q.target)), 16, Color("9a6a00")))
+				cv.add_child(_disp("0/%s" % _num(int(q.target)), 16, Color("8a5c00")))   # 9a6a00 was 4.3:1 on the cream card
 				c.add_child(cv)
 				row.add_child(c)
 			v.add_child(row)

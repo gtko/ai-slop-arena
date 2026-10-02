@@ -130,7 +130,9 @@ vec3 grade_inv(vec3 v) {
 	float l = dot(v, LUM);
 	return max(vec3(l) + (v - vec3(l)) / 1.18, vec3(0.0));
 }
-uniform float graded = 0.0;   // 1: the frame went through the grade LUT
+uniform float graded = 0.0;   // 1: the frame went through the grade LUT; 2: it did not (Compatibility):
+                              // this pass grades every pixel itself (lighting.gd compat_grade)
+uniform float lut_scale = 0.5;
 void fragment() {
 	vec3 src = texture(screen_tex, SCREEN_UV).rgb;
 	vec2 ndc = vec2(SCREEN_UV.x * 2.0 - 1.0, 1.0 - SCREEN_UV.y * 2.0);
@@ -144,15 +146,18 @@ void fragment() {
 	float hide = 1.0 - v;
 	if (clear_r > 0.0) hide = max(hide, smoothstep(clear_r * 0.85, clear_r * 1.1, distance(hit, center)));
 	hide *= amount;
-	if (hide < 0.002) {
+	if (hide < 0.002 && graded < 1.5) {
 		COLOR = vec4(src, 1.0);
 	} else {
 		vec3 col = to_lin(src);
-		if (graded > 0.5) col = grade_inv(neutral_inv(col));
-		float l = dot(col, vec3(0.299, 0.587, 0.114));
-		vec3 shade = mix(col, vec3(l), 0.5) * vec3(0.58, 0.61, 0.7);
-		shade = mix(shade, dust * (0.85 + 0.3 * l), dust_amt);
-		col = mix(col, shade, hide);
+		if (graded > 1.5) col /= lut_scale;
+		else if (graded > 0.5) col = grade_inv(neutral_inv(col));
+		if (hide >= 0.002) {
+			float l = dot(col, vec3(0.299, 0.587, 0.114));
+			vec3 shade = mix(col, vec3(l), 0.5) * vec3(0.58, 0.61, 0.7);
+			shade = mix(shade, dust * (0.85 + 0.3 * l), dust_amt);
+			col = mix(col, shade, hide);
+		}
 		if (graded > 0.5) col = neutral(grade(col));
 		COLOR = vec4(to_srgb(col), 1.0);
 	}
@@ -221,12 +226,20 @@ func _process(delta: float) -> void:
 	amount += (want - amount) * (1.0 - exp(-4.0 * delta))
 	if arena == null:
 		amount = 0.0   # back to the menu: no stale mask over the showcase map
-	visible = amount > 0.005 and cam != null
+	var compat := Lighting.compat_grade()   # web: this pass is also the colour grade, menus included
+	visible = compat or (amount > 0.005 and cam != null)
 	if not visible:
+		return
+	if compat:
+		_mat.set_shader_parameter("graded", 2.0)
+		_mat.set_shader_parameter("lut_scale", 1.0)
+	if amount <= 0.005 or cam == null:
+		_mat.set_shader_parameter("amount", 0.0)
 		return
 	_mat.set_shader_parameter("amount", amount)
 	var env := cam.get_world_3d().environment if cam.get_world_3d() else null
-	_mat.set_shader_parameter("graded", 1.0 if graded(env) else 0.0)
+	if not compat:
+		_mat.set_shader_parameter("graded", 1.0 if graded(env) else 0.0)
 	var b := cam.global_transform.basis
 	_mat.set_shader_parameter("cam_pos", cam.global_position)
 	_mat.set_shader_parameter("cam_right", b.x)
@@ -254,16 +267,16 @@ func _process(delta: float) -> void:
 		_mat.set_shader_parameter("center", at)
 		_trace(arena, at.x, at.y)
 
-# The frame went through lighting.gd's grade LUT (Mobile / Forward+), not the plain Linear mapper.
+# The frame gets the web's grade: lighting.gd's LUT (Mobile / Forward+), or this pass (Compatibility).
 static func graded(env: Environment) -> bool:
-	return env != null and env.adjustment_enabled and env.adjustment_color_correction != null
+	return (env != null and env.adjustment_enabled and env.adjustment_color_correction != null) or Lighting.compat_grade()
 
 # The exposure the web applies in its output pass (Godot applies it first; with the LUT, half of it
 # is LUT_SCALE, which the LUT undoes).
 static func exposure(env: Environment) -> float:
 	if env == null:
 		return 1.0
-	return env.tonemap_exposure / (Lighting.LUT_SCALE if graded(env) else 1.0)
+	return env.tonemap_exposure / (Lighting.LUT_SCALE if graded(env) and not Lighting.compat_grade() else 1.0)
 
 # A scene-linear colour (three.js Color) as the screen shows it: exposure, then with the LUT the
 # web's cartoon grade + Neutral tone mapping, sRGB encoded. For 2D overlays that stand in for web

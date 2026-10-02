@@ -81,11 +81,14 @@ func setup(a: Node3D, map: Dictionary) -> void:
 	# Tone mapping: the web's cartoon grade (saturation 1.18, contrast 1.06) then three's
 	# NeutralToneMapping, baked into a colour-correction LUT (see _grade_lut). Godot's Linear tone
 	# mapper only scales by the exposure; half of it (LUT_SCALE) keeps highlights up to 2.0 inside
-	# the LUT's 0..1 input, which the LUT scales back. The Compatibility renderer (web) gets the
-	# plain Linear mapper and an approximate grade instead.
+	# the LUT's 0..1 input, which the LUT scales back. The Compatibility renderer (web) has no
+	# colour-correction LUT: sight.gd's full-screen pass runs the same grade + Neutral mapping on the
+	# frame (compat_grade()), at full exposure (Compatibility does not scale the background by the
+	# exposure: at half exposure the sky / fog came out twice too bright, and nothing above 1.0
+	# survives the 8-bit frame anyway).
 	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	env.tonemap_white = 1.0
-	env.adjustment_enabled = not DebugArgs.has("noadj")
+	env.adjustment_enabled = not DebugArgs.has("noadj") and not compat_grade()
 	env.adjustment_brightness = 1.0
 	if _use_lut():
 		env.adjustment_contrast = 1.0
@@ -161,7 +164,7 @@ func apply() -> void:
 	env.fog_depth_begin = (float(S.fogNear) + fog_shift) * 1.04
 	env.fog_depth_end = (float(S.fogFar) + fog_shift) * 1.04
 	env.background_color = _sky_override if _sky_override.a > 0.0 else fog
-	env.tonemap_exposure = brightness * float(S.exposure) * STYLE.exposure * (LUT_SCALE if env.adjustment_enabled and _use_lut() else COMPAT_EXPOSURE)
+	env.tonemap_exposure = brightness * float(S.exposure) * STYLE.exposure * (LUT_SCALE if env.adjustment_enabled and _use_lut() else 1.0 if compat_grade() else COMPAT_EXPOSURE)
 	env.glow_enabled = bool(q.glow)
 	env.glow_intensity = float(S.bloom)
 	var rim: Color = (S.rimC as Color).srgb_to_linear()
@@ -179,6 +182,10 @@ static func _compat() -> bool:
 
 static func _use_lut() -> bool:
 	return not _compat() and not DebugArgs.has("nolut")
+
+# Compatibility renderer (web export): the grade LUT's job is done by sight.gd's screen pass.
+static func compat_grade() -> bool:
+	return _compat() and not DebugArgs.has("nolut") and not DebugArgs.has("noadj")
 
 # The web's last steps as a 3D LUT over the (sRGB encoded) tone-mapper output: undo LUT_SCALE, the
 # cartoon grade pass (cartoon.js cartoonGradePass), three's NeutralToneMapping, back to sRGB.

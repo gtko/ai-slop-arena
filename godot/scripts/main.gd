@@ -72,6 +72,10 @@ var _me_hp := -1.0
 var _final_music := false
 
 func _ready() -> void:
+	Fonts.setup()   # the bundled emoji font as a fallback of every UI font (before any copy is made)
+	# the window / browser tab title (config/name keeps "(Godot)": it names the user:// folder). On the
+	# root Window, not DisplayServer: the Window rewrites its title on every locale change.
+	get_window().title = "AI SLOP ARENA"
 	Settings.load_all()
 	Controls.setup()   # the rebindable keys + gamepad buttons in the InputMap (controls.gd)
 	if not DebugArgs.has("autotest") and not Array(DebugArgs.list()).any(func(a): return String(a).begins_with("--menushot")):
@@ -79,6 +83,8 @@ func _ready() -> void:
 	for a in DebugArgs.list():
 		if a.begins_with("--lang="):
 			Settings.lang = a.substr(7)      # (not saved) for screenshots
+		elif a.begins_with("--server="):     # `-- --server=ws://...` / web `?server=ws://...`: a test server (not saved)
+			Settings.server = a.substr(9).uri_decode()
 	I18n.use(Settings.lang if Settings.lang != "" else I18n.detect())
 	Settings.apply_audio()
 	audio = AudioManager.new()   # AUDIO HOOK
@@ -307,6 +313,15 @@ func _notification(what: int) -> void:
 		Engine.max_fps = 5
 	elif what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
 		_apply_power_profile()
+	elif what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		# Android back (application/config/quit_on_go_back is off): Escape, so it closes the open
+		# overlay, leaves the lobby or opens the pause card in a match, like the web's history back
+		for pressed in [true, false]:
+			var e := InputEventKey.new()
+			e.keycode = KEY_ESCAPE
+			e.physical_keycode = KEY_ESCAPE
+			e.pressed = pressed
+			Input.parse_input_event(e)
 
 func _apply_power_profile() -> void:
 	# fps cap here; render scale / MSAA / shadows / particle density live in Quality (world agent)
@@ -1300,7 +1315,7 @@ func _key_test() -> void:
 		for down in [true, false]:
 			var e := InputEventKey.new()
 			e.physical_keycode = phys
-			e.keycode = DisplayServer.keyboard_get_keycode_from_physical(phys)
+			e.keycode = DisplayServer.keyboard_get_keycode_from_physical(phys) if Controls.keymap_known() else phys
 			e.pressed = down
 			Input.parse_input_event(e)
 			if down:

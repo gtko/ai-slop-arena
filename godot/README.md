@@ -75,6 +75,17 @@ static assets' 25 MiB per-file limit. Serve them from R2 or split the assets (Go
 packs) before deploying next to the current site. Web builds use the no-threads template so they work on
 iOS Safari without cross-origin isolation headers.
 
+## Fonts on phones and the web
+
+Android and the web export cannot use the OS fonts, so the client bundles what the OS used to supply,
+as fallbacks of Lilita One / Nunito (`scripts/fonts.gd`): Noto Color Emoji cut to the game's emoji
+(`tools/subset-emoji.py`, 1.5 MB instead of 25; re-run it after adding an emoji), Noto Sans Symbols
+1 + 2 (arrows, check marks), Inter (Greek, Cyrillic titles), Noto Sans Arabic and Thai (OFL, from
+Blender's `datafiles/fonts`), their line metrics cut to Lilita's by `tools/fit-font-metrics.mjs`
+(Godot sizes every line by the tallest font of the fallback chain). CJK is not bundled (Noto Sans CJK
+is 11 MB): desktop and Android take it from the OS, the web export shows boxes. `--nosysfont` /
+`?nosysfont` turns the OS fallback off on desktop to check a screen as a phone draws it.
+
 ## Export
 
 `export_presets.cfg` has Web, Android, iOS, Linux and Windows presets (install the matching Godot

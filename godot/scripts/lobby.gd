@@ -91,7 +91,7 @@ func _over() -> float:
 func _font_file(path: String) -> FontFile:
 	var key := "%s@%.3f" % [path, _over()]
 	if not _font_cache.has(key):
-		var ff := (load(path) as FontFile).duplicate() as FontFile
+		var ff := Fonts.file(path).duplicate() as FontFile   # (with the emoji fallback, fonts.gd)
 		ff.oversampling = _over()
 		_font_cache[key] = ff
 	return _font_cache[key]

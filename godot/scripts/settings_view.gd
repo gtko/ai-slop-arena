@@ -123,6 +123,9 @@ func _preset_row() -> Dictionary:
 		changed.emit("gfx"), I18n.t("opt.preset.hint"))
 
 func _fullscreen_row() -> Dictionary:
+	if OS.has_feature("web"):   # the page's fullscreen (the web game's option): asked from this tap, not saved
+		return _toggle(I18n.t("opt.fullscreen"), func(): return DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN, func(v):
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if v else DisplayServer.WINDOW_MODE_WINDOWED))
 	return _toggle(I18n.t("opt.fullscreen"), func(): return Settings.window != "windowed", func(v):
 		Settings.window = "fullscreen" if v else "windowed"
 		Settings.save()
@@ -138,7 +141,7 @@ func _rows_of(t: String) -> Array:
 			var rows := [
 				_choice(I18n.t("opt.language"), langs, func(): return Settings.lang, func(v): Settings.lang = String(v); _done("lang"), I18n.t("opt.language.hint")),
 			]
-			if desk:
+			if desk or OS.has_feature("web"):
 				rows.append(_fullscreen_row())
 			rows.append_array([
 				_toggle(I18n.t("opt.fps"), func(): return Settings.show_fps, func(v): Settings.show_fps = v; _done("show_fps")),

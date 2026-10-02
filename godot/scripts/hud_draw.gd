@@ -45,17 +45,13 @@ static func invalidate() -> void:
 static func short_screen(ci: CanvasItem) -> bool:
 	return css_height(ci) <= 520.0
 
-# A font for emoji (gadget icons, emotes): the OS colour-emoji font. Web exports have none; then
-# has_emoji() is false and callers draw a plain fallback.
+# A font for emoji (gadget icons, emotes): Lilita One with the bundled Noto Color Emoji as its
+# fallback (fonts.gd), the same on desktop, Android and web. has_emoji() is false only if the
+# emoji font file is missing; then callers draw a plain fallback.
 static func emoji_font() -> Font:
 	if _emoji == null:
-		var sf := SystemFont.new()
-		sf.font_names = PackedStringArray(["Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Twemoji", "EmojiOne Color"])
-		var fv := FontVariation.new()
-		fv.base_font = Fonts.display()
-		fv.fallbacks = [sf]
-		_emoji = fv
-		_emoji_ok = 1 if (OS.get_name() != "Web" and sf.has_char(0x1F600)) else 0
+		_emoji = Fonts.display()
+		_emoji_ok = 1 if (Fonts.emoji() != null and Fonts.emoji().has_char(0x1F600)) else 0
 	return _emoji
 
 static func has_emoji() -> bool:
@@ -111,6 +107,9 @@ static func grad_fill(ci: CanvasItem, r: Rect2, rad: float, top: Color, bot: Col
 			if cut.is_empty():
 				return
 			poly = cut[0]
+	poly = clean_poly(poly)
+	if poly.size() < 3:
+		return
 	var cols := PackedColorArray()
 	for p in poly:
 		var c := top.lerp(bot, clampf((p.y - r.position.y) / r.size.y, 0.0, 1.0))
@@ -118,6 +117,21 @@ static func grad_fill(ci: CanvasItem, r: Rect2, rad: float, top: Color, bot: Col
 			c = Color(c.r * mul, c.g * mul, c.b * mul, c.a)
 		cols.append(c)
 	ci.draw_polygon(poly, cols)
+
+# A polygon Godot can triangulate: points closer than 0.05 px merged, nothing for slivers under a
+# square pixel (small phone HUDs: a bar a few % full is cut into a near-flat polygon, and
+# draw_polygon then logs "triangulation failed" every frame).
+static func clean_poly(poly: PackedVector2Array) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for p in poly:
+		if out.is_empty() or p.distance_squared_to(out[out.size() - 1]) > 0.0025:
+			out.append(p)
+	if out.size() > 1 and out[0].distance_squared_to(out[out.size() - 1]) <= 0.0025:
+		out.remove_at(out.size() - 1)
+	var area := 0.0
+	for i in out.size():
+		area += out[i].cross(out[(i + 1) % out.size()])
+	return out if absf(area) * 0.5 >= 1.0 else PackedVector2Array()
 
 # A plain rounded fill cut at clip_w (no gradient).
 static func flat_fill(ci: CanvasItem, r: Rect2, rad: float, col: Color, clip_w := -1.0) -> void:

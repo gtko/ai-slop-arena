@@ -60,7 +60,7 @@ static func default_key(a: String) -> int:
 	return _physical_of_label(label)
 
 static func _physical_of_label(label: int) -> int:
-	if label == KEY_NONE or DisplayServer.get_name() == "headless":
+	if label == KEY_NONE or not keymap_known():
 		return label
 	if DisplayServer.keyboard_get_keycode_from_physical(label) == label:
 		return label
@@ -69,6 +69,12 @@ static func _physical_of_label(label: int) -> int:
 		if DisplayServer.keyboard_get_keycode_from_physical(k) == label:
 			return k
 	return label
+
+# The OS keyboard layout can be read (Windows, Linux, macOS): the web and Android display servers
+# have no layout API (each call logs "Not supported by this display server"); there the physical
+# key is shown under its QWERTY name.
+static func keymap_known() -> bool:
+	return DisplayServer.get_name() in ["Windows", "X11", "Wayland", "macOS"]
 
 static func key_of(a: String) -> int:
 	return int(Settings.binds.get(a, default_key(a)))
@@ -105,7 +111,7 @@ static func key_label(phys: int) -> String:
 	if names.has(phys):
 		return names[phys]
 	var shown := phys
-	if DisplayServer.get_name() != "headless":
+	if keymap_known():
 		shown = DisplayServer.keyboard_get_label_from_physical(phys)
 		if shown == KEY_NONE:
 			shown = phys
