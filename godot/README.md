@@ -70,10 +70,25 @@ the editor settings `export/android/android_sdk_path`, `java_sdk_path`, `debug_k
 
 ## Web hosting note
 
-The exported `index.pck` (about 58 MB) and `index.wasm` (44 MB, about 9 MB gzipped) exceed Cloudflare Workers
-static assets' 25 MiB per-file limit. Serve them from R2 or split the assets (Godot PCK patching / separate
-packs) before deploying next to the current site. Web builds use the no-threads template so they work on
-iOS Safari without cross-origin isolation headers.
+The exported `index.pck` (about 70 MB) and `index.wasm` (44 MB, 9 MB gzipped) exceed Cloudflare Workers
+static assets' 25 MiB per-file limit, so the web export lives in the R2 bucket `ai-slop-arena-godot-web`
+(binding `GODOT_WEB` in `wrangler.jsonc`) and the site's Worker serves it at **`/godot/`**
+(`worker/godot-web.js`):
+
+- every release uploads under its own prefix `godot/<version>/`, so a new release never mixes files;
+  `/godot/` redirects to `/godot/<version of the deployed worker>/` (query string kept), so the Godot
+  client always speaks the protocol of the rooms server it lands on (it connects to the page's own origin,
+  `net_client.gd` `default_origin()`). `GODOT_WEB_VERSION` (a wrangler var) can pin another version;
+- text and binary files are stored gzipped (`Content-Encoding` metadata) and sent as they are,
+  `index.wasm` as `application/wasm` (streaming compile); versioned files are cached for a year
+  (`immutable`), with ETag / 304 and ranges on the uncompressed files.
+
+`npm run deploy:godot-web` exports the Web preset (local Godot, or the `GODOT` env var), gzips and
+uploads to production R2 under the `package.json` version (it refuses to overwrite an uploaded version
+without `--force`). `-- --local` uploads to the local R2 of `wrangler dev` instead, to test:
+`npm run deploy:godot-web -- --local && npx wrangler dev --port 8789`, then open
+`http://localhost:8789/godot/`. Web builds use the no-threads template so they work on iOS Safari without
+cross-origin isolation headers.
 
 ## Fonts on phones and the web
 
