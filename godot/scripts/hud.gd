@@ -534,7 +534,7 @@ func _process(delta: float) -> void:
 		_mh_lag = maxf(f, _mh_lag - delta * 0.6)
 	_mh_alpha = move_toward(_mh_alpha, 1.0 if playing else 0.0, delta / 0.3)
 	touch.buttons_on = playing
-	touch.super_frac = clampf(me.super_charge / maxf(float(me.type.superCost), 1.0), 0.0, 1.0) if me else 0.0
+	touch.super_frac = clampf(me.super_charge, 0.0, 1.0) if me else 0.0   # the snapshot's charge is already 0..1 (game.js superCharge)
 	touch.gadget_cd = gad_cd / GADGET_LOCKOUT
 	touch.gadget_charges = gad_charges
 	touch.gadget_ready = gad_cd <= 0.0
@@ -780,7 +780,7 @@ func _draw_myhp(c: Control, k: float, vs: Vector2, touch_mode: bool, short: bool
 
 # #super (desktop): the ring that fills with your super charge, "RMB · SPACE" under it
 func _draw_super(c: Control, k: float, vs: Vector2) -> void:
-	var sf := clampf(me.super_charge / maxf(float(me.type.superCost), 1.0), 0.0, 1.0)
+	var sf := clampf(me.super_charge, 0.0, 1.0)   # already 0..1 in the snapshot (game.js superCharge)
 	var ready := sf >= 1.0 and playing
 	var ctr := Vector2(vs.x - 30.0 * k - 54.0 * k, vs.y - 30.0 * k - 54.0 * k)
 	var s := 1.0
