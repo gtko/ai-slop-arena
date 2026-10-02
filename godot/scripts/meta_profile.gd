@@ -38,15 +38,18 @@ static func load_all() -> void:
 		return
 	_loaded = true
 	P = _blank()
-	var raw: Variant = null
-	if FileAccess.file_exists(PATH):
-		var f := FileAccess.open(PATH, FileAccess.READ)
-		if f:
-			raw = JSON.parse_string(f.get_as_text())
+	_nosave = Settings.test_run()   # tests never write the player's coins / XP
+	var raw: Variant = _read(PATH)
+	if raw == null and FileAccess.file_exists(PATH):
+		# cut short (the app was killed mid-write): the previous good copy, and the broken one kept aside
+		raw = _read(PATH + ".bak")
+		DirAccess.copy_absolute(ProjectSettings.globalize_path(PATH), ProjectSettings.globalize_path(PATH + ".broken"))
 	if raw is Dictionary:
 		var r := raw as Dictionary
 		var wear: Dictionary = P.wear
 		for k in r:
+			if P.has(k) and typeof(r[k]) != typeof(P[k]) and not (r[k] is float and P[k] is int):
+				continue   # a value of the wrong type keeps the blank one (owned must stay an Array...)
 			P[k] = r[k]
 		if r.get("wear") is Dictionary:
 			for k in r.wear:
@@ -54,7 +57,7 @@ static func load_all() -> void:
 		P.wear = wear
 	# v0.13.1: brawlers are owned. Anyone who played before keeps the five of before (nothing is taken
 	# away): a profile from before then, or no profile yet but a player who already used this client.
-	var veteran := (not (raw as Dictionary).has("v")) if raw is Dictionary else FileAccess.file_exists("user://settings.cfg")
+	var veteran := (not (raw as Dictionary).has("v")) if raw is Dictionary else (FileAccess.file_exists("user://settings.cfg") and not FileAccess.file_exists(PATH))
 	if veteran:
 		for k in ["blaster", "gunslinger", "bomber", "frostbite", "volt"]:
 			if not owns("brawler:" + k):
@@ -83,9 +86,27 @@ static func save() -> void:
 	bus.changed.emit()
 	if _nosave:
 		return
-	var f := FileAccess.open(PATH, FileAccess.WRITE)
-	if f:
-		f.store_string(JSON.stringify(P))
+	# never truncate the only copy: write a temp file, keep the last good one as .bak, then swap
+	var tmp := PATH + ".tmp"
+	var f := FileAccess.open(tmp, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_string(JSON.stringify(P))
+	f.close()
+	var abs := ProjectSettings.globalize_path(PATH)
+	if FileAccess.file_exists(PATH):
+		DirAccess.remove_absolute(abs + ".bak")
+		DirAccess.rename_absolute(abs, abs + ".bak")
+	DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), abs)
+
+static func _read(path: String) -> Variant:
+	if not FileAccess.file_exists(path):
+		return null
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return null
+	var v: Variant = JSON.parse_string(f.get_as_text())
+	return v if v is Dictionary else null
 
 # ------------------------------------------------------------------ account level
 

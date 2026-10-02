@@ -16,7 +16,10 @@ static func list() -> PackedStringArray:
 
 static func _parse() -> PackedStringArray:
 	var out := OS.get_cmdline_user_args()
-	if OS.has_feature("web"):
+	# Web: only debug exports read the URL. On a release build anyone can craft a link, and flags such
+	# as `?server=` (where your identity goes) or `?autotest` / `?keytest` (they write your saves)
+	# must not be reachable from one.
+	if OS.has_feature("web") and OS.is_debug_build():
 		var q = JavaScriptBridge.eval("location.search")
 		if typeof(q) == TYPE_STRING:
 			for part in String(q).trim_prefix("?").split("&", false):

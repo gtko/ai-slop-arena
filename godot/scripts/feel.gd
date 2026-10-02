@@ -133,5 +133,5 @@ static func _can_buzz() -> bool:
 		if OS.has_feature("ios"):
 			_buzz = 1
 		elif OS.has_feature("android"):   # needs android.permission.VIBRATE in the export preset
-			_buzz = 1 if OS.get_granted_permissions().has("android.permission.VIBRATE") else 0
+			_buzz = 1   # a normal (install-time) permission: get_granted_permissions() lists only runtime ones
 	return _buzz == 1

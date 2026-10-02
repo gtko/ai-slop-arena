@@ -26,6 +26,7 @@ func _ready() -> void:
 	visible = false
 
 func show_load(map_key: String, roster: Array, me: String) -> void:
+	mouse_filter = Control.MOUSE_FILTER_STOP
 	_map = map_key
 	_roster = roster
 	_me = me
@@ -58,6 +59,7 @@ func count(n: int) -> void:
 func finish() -> void:
 	if not visible:
 		return
+	mouse_filter = Control.MOUSE_FILTER_IGNORE   # FIGHT! fades over the match: the first touches reach the sticks
 	count(0)
 	var tw := create_tween()
 	tw.tween_interval(0.45)

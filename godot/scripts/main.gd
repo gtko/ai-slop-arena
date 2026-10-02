@@ -83,8 +83,10 @@ func _ready() -> void:
 	for a in DebugArgs.list():
 		if a.begins_with("--lang="):
 			Settings.lang = a.substr(7)      # (not saved) for screenshots
-		elif a.begins_with("--server="):     # `-- --server=ws://...` / web `?server=ws://...`: a test server (not saved)
+			Settings.lang_override = true
+		elif a.begins_with("--server="):     # `-- --server=ws://...` / debug web `?server=ws://...`: a test server (not saved)
 			Settings.server = a.substr(9).uri_decode()
+			Settings.server_override = true
 	I18n.use(Settings.lang if Settings.lang != "" else I18n.detect())
 	Settings.apply_audio()
 	audio = AudioManager.new()   # AUDIO HOOK
@@ -651,6 +653,10 @@ func _show_result() -> void:
 	if state != State.OVER:
 		return
 	var won := me != null and _winner == me.id
+	if me != null and not won and _winner != "":   # Duo: the winner may be your partner (game.js ally())
+		var rows: Dictionary = result._rows
+		var mine = rows.get(String(me.id), {}).get("team", null)
+		won = mine != null and rows.get(_winner, {}).get("team", null) == mine
 	# HUD hook: the Hud draws the K.O. / victory overlay (with Play again / Menu); the ranked-points
 	# text goes under it. result_view.gd is no longer shown at the end of a match.
 	if not _result_shown and me != null:
@@ -1550,10 +1556,13 @@ func _nav_restore() -> void:
 func _pad_menus() -> void:
 	if settings_view == null or settings_view.visible:
 		return
+	var d := Controls.nav_step()
+	# nothing pressed this frame: skip the UI tree walk (_nav_root is two full walks, every frame)
+	if d == "" and not Controls.pad_hit(JOY_BUTTON_A) and not Controls.pad_hit(JOY_BUTTON_B) and not Controls.pad_hit(JOY_BUTTON_START):
+		return
 	var root := _nav_root()
 	if root == null:
 		return
-	var d := Controls.nav_step()
 	if d != "":
 		_nav_move(root, d)
 	if Controls.pad_hit(JOY_BUTTON_A):

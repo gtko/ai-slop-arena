@@ -328,7 +328,7 @@ func _server_field() -> Control:
 	e.add_theme_color_override("font_color", UiKit.WTEXT)
 	e.add_theme_stylebox_override("normal", UiKit.pads(UiKit.sbox(Color("2d2742"), 10, UiKit.INK, 2), 10, 6, 10, 6))
 	e.add_theme_stylebox_override("focus", UiKit.pads(UiKit.sbox(Color(0, 0, 0, 0), 10, UiKit.YELLOW, 2), 10, 6, 10, 6))
-	e.text_changed.connect(func(s: String): Settings.server = s)
+	e.text_changed.connect(func(s: String): Settings.server = s; Settings.server_override = false)   # typed here: saved
 	e.focus_exited.connect(func(): _done("server"))
 	e.text_submitted.connect(func(_s: String): e.release_focus())
 	return e

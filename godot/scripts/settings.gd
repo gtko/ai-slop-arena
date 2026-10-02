@@ -51,6 +51,17 @@ static var vibration := true
 static var aim_assist := true            # gamepad: firing without the right stick aims at the nearest foe
 static var _loaded := false
 static var _server_saved := ""          # the server on disk (the autotest points `server` at a test one, never saved)
+static var _lang_saved := ""
+static var server_override := false      # `--server=` gave this run's server: keep the saved one on disk
+static var lang_override := false        # `--lang=` (screenshots): idem
+
+# A test run (autotest, key test, screenshots): settings and the profile live in memory only, so a
+# test never rewrites the player's binds, time of day, server, coins or XP.
+static func test_run() -> bool:
+	for a in DebugArgs.list():
+		if a == "--autotest" or a == "--keytest" or a.begins_with("--menushot"):
+			return true
+	return false
 
 static func load_all() -> void:
 	if _loaded:
@@ -66,6 +77,7 @@ static func load_all() -> void:
 	loadouts = lo if lo is Dictionary else {}
 	icon = int(cf.get_value("player", "icon", icon))
 	lang = String(cf.get_value("ui", "lang", lang))
+	_lang_saved = lang
 	gfx = String(cf.get_value("ui", "gfx", gfx))
 	if not (GFX.has(gfx) or gfx == "custom"):
 		gfx = "auto"
@@ -104,7 +116,9 @@ static func save() -> void:
 	cf.set_value("player", "brawler", brawler)
 	cf.set_value("player", "loadouts", loadouts)
 	cf.set_value("player", "icon", icon)
-	cf.set_value("ui", "lang", lang)
+	if not lang_override:
+		_lang_saved = lang
+	cf.set_value("ui", "lang", _lang_saved)
 	cf.set_value("ui", "gfx", gfx)
 	cf.set_value("ui", "custom", custom)
 	cf.set_value("ui", "saver", saver)
@@ -126,13 +140,14 @@ static func save() -> void:
 	cf.set_value("audio", "master", vol_master)
 	cf.set_value("audio", "music", vol_music)
 	cf.set_value("audio", "sfx", vol_sfx)
-	if not DebugArgs.has("autotest"):
+	if not server_override and not DebugArgs.has("autotest"):
 		_server_saved = server
 	cf.set_value("net", "server", _server_saved)
 	cf.set_value("net", "mode", mode)
 	cf.set_value("net", "map", map)
 	cf.set_value("net", "chaos", chaos)
-	cf.save(PATH)
+	if not test_run():
+		cf.save(PATH)
 	_push()
 
 # The flags other scripts read as statics (feel.gd, lighting.gd, quality.gd).
