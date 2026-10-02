@@ -27,6 +27,8 @@ today works in Godot. The shared game rules stay in JavaScript: the server runs 
 
 ## Decisions
 
+Taken with the user on 2026-10-03: **D1 local simulation** (spike first), **D2 keep the home-made SSO** (merge its server part, login UI in Godot web; no Clerk), **D5 three.js frozen** (bug fixes only). D3 and D4 follow the recommendations below.
+
 | # | Question | Recommendation |
 |---|---|---|
 | D1 | Offline solo and dojo | Local simulation: run the same `ServerMatch` bundle inside the client (browser JS VM on web via `JavaScriptBridge`, an embedded JS engine such as QuickJS on native). 2-3 day spike first. Fallback: server-side dojo, offline accepted as a loss. |

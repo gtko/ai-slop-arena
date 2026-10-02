@@ -22,6 +22,12 @@ Every change goes through these five steps, in this order.
 
 Stop and tell the user when a step fails instead of pushing on.
 
+## three.js client frozen
+
+The Godot client (`godot/`) is replacing the three.js client (plan: `docs/godot-migration.md`). The
+three.js client only gets bug fixes; new gameplay goes into the shared rules (`src/game.js` and what
+the server bundles) and into Godot.
+
 ## Useful commands
 
 ```bash
