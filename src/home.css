@@ -600,6 +600,7 @@ body.touch #touch .t-super b { top: 50%; margin-top: 12px; font-size: 9px; }
 .sh-two span { font-size: 11px; font-weight: 900; color: var(--muted); }
 .sh-two .sh-buy { margin: 0; padding: 6px 10px; font-size: 15px; }
 .sh-buy.by-coins { background: linear-gradient(#ffe36b, #ffbf1f); }
+.sh-buy.short.by-coins { background: rgba(255, 255, 255, 0.08); }   /* a price you can't pay: dark glass, readable */
 .sh-buy:not(.by-coins):not(.sh-wear):not([disabled]) { background: linear-gradient(#d9a8ff, #9a5cf0); color: var(--ink); }
 .sh-buy .gem-n { color: var(--ink); }
 .sh-buy.short .gem-n { color: #e6c4ff; }

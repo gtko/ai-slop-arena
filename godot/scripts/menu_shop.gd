@@ -520,11 +520,13 @@ func buy_btn(id: String, price: int, cur: String, two: bool) -> Control:
 		var s := body(I18n.t("shop.missing", {"n": m._num(price - have)}), 11, SHORT_TXT, 900)
 		s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		inner.add_child(s)
-	var top := GOLD_TOP
-	var bot := GOLD_BOT
-	if cur != "coins":
-		top = Color(1, 1, 1, 0.08) if short else VIO_TOP
-		bot = Color(1, 1, 1, 0.08) if short else VIO_BOT
+	# a price you can't pay sits on the dark glass for both currencies (the pale yellow / pink text
+	# was unreadable on the gold gradient)
+	var top := GOLD_TOP if cur == "coins" else VIO_TOP
+	var bot := GOLD_BOT if cur == "coins" else VIO_BOT
+	if short:
+		top = Color(1, 1, 1, 0.08)
+		bot = Color(1, 1, 1, 0.08)
 	var b := grad_button(inner, top, bot, 12, Vector2(10, 6) if two else Vector2(18, 6), 3.0)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	if short:
