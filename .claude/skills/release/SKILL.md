@@ -72,13 +72,18 @@ notes must tell mobile players to install the new APK.
 ## 4. Deploy the website + server (Cloudflare)
 
 ```bash
+npm run deploy:godot-web                      # Godot web export -> R2 godot/<version>/ (before the worker deploy)
 op run --env-file=.env.op -- npm run deploy   # builds (source maps -> Sentry), then wrangler deploy
 # site serves this build, rooms accept the protocol, refuse old ones, queue answers, the mobile
-# update manifest (/app/latest.json) announces this version (retried while
+# update manifest (/app/latest.json) announces this version, /godot/ serves this version (retried while
 # the new version propagates; a plain `sleep 30` is blocked by the harness)
 for i in 1 2 3 4 5 6; do if npm run check:prod > "$TEMP/prod.log" 2>&1; then break; fi; sleep 10; done; tail -8 "$TEMP/prod.log"
 ```
 
+- The Godot web client (`/godot/`, godot/README.md "Web hosting note") is served from the R2 bucket
+  `ai-slop-arena-godot-web`; `/godot/` redirects to the deployed worker's version, so upload it first
+  (it takes ~5 minutes: export + ~70 MB). `check:prod` checks its files and headers. An upload of an
+  already published version is refused (browsers cache those files for a year): bump the version.
 - A Cloudflare `500 / code 10013` is transient: run `npx wrangler deploy` again.
 - The new version takes ~30 s to reach every edge: wait before `check:prod`, and re-run it once
   before investigating a failure (an old page bundle or a missing room welcome right after the

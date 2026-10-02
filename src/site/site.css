@@ -83,6 +83,13 @@ kbd { font-family: var(--display); }
 .title b { font-size: clamp(46px, 6.3vw, 98px); color: #fff; font-weight: 400; letter-spacing: 3px; }
 .lead { max-width: 520px; font-size: clamp(17px, 1.4vw, 20px); line-height: 1.55; color: var(--muted); }
 .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; margin: 28px 0 34px; }
+/* the Godot client's web build (/godot/, served from R2 by the Worker) */
+.preview-link { display: inline-flex; align-items: center; gap: 10px; margin: -12px 0 30px; padding: 6px 14px 6px 6px; border-radius: 99px;
+  color: var(--text); text-decoration: none; font-size: 15px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16); transition: background 0.2s, border-color 0.2s; }
+.preview-link b { padding: 3px 10px; border-radius: 99px; background: var(--yellow); color: var(--ink); font-family: var(--display); font-weight: 400; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+.preview-link i { font-style: normal; color: var(--yellow); transition: transform 0.2s; }
+.preview-link:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,210,63,0.5); }
+.preview-link:hover i { transform: translateX(3px); }
 .stats { display: flex; flex-wrap: wrap; gap: 28px; list-style: none; margin: 0; padding: 0; }
 .stats li { display: flex; flex-direction: column; }
 .stats b { font-family: var(--display); font-weight: 400; font-size: 38px; color: #fff; line-height: 1; }
