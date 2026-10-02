@@ -1238,6 +1238,31 @@ def v0161():
     img.convert('RGB').save(os.path.join(OUT, 'v0.16.1-changes.png'), optimize=True)
 
 
+def v0170():
+    banner('v0.17.0', 'GODOT PREVIEW', 'A native client, cross-play with the web.',
+           [('🧪', 'Godot client'), ('🔀', 'Cross-play'), ('📱', 'Android + web'), ('👀', 'Easier to read')],
+           'v0.17.0-banner.png', ('volt', 'kappa', 'mochi'))
+
+    # what changed (godot/, src/style.css, src/home.css): real numbers
+    W, H = 1600, 900
+    img = background(W, H, glow=(0.5, 0.35))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'A SECOND CLIENT, SAME ARENA', display(50), YELLOW, anchor='ma')
+    rows = [('🧪', 'Godot 4 client (preview)', 'renders the same server matches: plays with web, Steam and mobile players'),
+            ('🎨', 'Looks like the web game', 'same menu, lighting, water, projectiles, HUD, shop and options'),
+            ('🎬', 'A live match on the home screen', '96 bot matches recorded from the real server rules, replayed offline'),
+            ('🎮', 'Keyboard, gamepad, touch', 'rebindable keys (AZERTY works), full gamepad, phone controls'),
+            ('🌍', 'Android and web builds', 'emoji and symbols bundled: 1.5 MB instead of 25 MB'),
+            ('👀', 'Easier to read on the web', 'prices you cannot pay, key hints and the touch SUPER label stand out')]
+    for i, (icon, head, line) in enumerate(rows):
+        y = 120 + i * 124
+        card(img, (60, y, W - 60, y + 108), outline=(90, 150, 230), radius=20)
+        d.text((92, y + 26), icon, font=emoji(50), embedded_color=True)
+        d.text((175, y + 16), head, font=display(32), fill=YELLOW)
+        d.text((175, y + 62), line, font=body(23, 'Bold'), fill=TEXT)
+    img.convert('RGB').save(os.path.join(OUT, 'v0.17.0-changes.png'), optimize=True)
+
+
 if __name__ == '__main__':
     import sys
     os.makedirs(OUT, exist_ok=True)
@@ -1264,5 +1289,6 @@ if __name__ == '__main__':
     v0150()
     v0160()
     v0161()
+    v0170()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')

@@ -3,6 +3,14 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.17.0](docs/releases/v0.17.0.md): Godot preview
+
+<a href="docs/releases/v0.17.0.md"><img src="docs/releases/img/v0.17.0-banner.png" alt="v0.17.0: Godot preview" width="100%"></a>
+
+- 🧪 A native Godot 4 client (preview) that plays in the same matches as everyone, and looks like the web game.
+- 🎬 A live bot match behind its home screen; 🎮 rebindable keys, gamepad and touch; 🌍 Android and web builds.
+- 👀 Web: prices you can't pay, key hints and the touch SUPER label are easier to read.
+
 ## [v0.16.1](docs/releases/v0.16.1.md): Tablet ready
 
 <a href="docs/releases/v0.16.1.md"><img src="docs/releases/img/v0.16.1-banner.png" alt="v0.16.1: tablet ready" width="100%"></a>
