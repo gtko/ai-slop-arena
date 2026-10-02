@@ -1263,6 +1263,31 @@ def v0170():
     img.convert('RGB').save(os.path.join(OUT, 'v0.17.0-changes.png'), optimize=True)
 
 
+def v0171():
+    banner('v0.17.1', 'GODOT ON THE WEB', 'Play the Godot preview in your browser.',
+           [('🌐', 'Godot on the web'), ('🌱', 'Animated loader'), ('🔫', 'Letters knocked down'), ('🗺️', 'Migration plan')],
+           'v0.17.1-banner.png', ('blaster', 'gunslinger', 'volt'))
+
+    # what changed (worker/godot-web.js, godot/web_shell, godot/scripts/intro.gd): real numbers
+    W, H = 1600, 900
+    img = background(W, H, glow=(0.5, 0.35))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'THE GODOT PREVIEW GOES ONLINE', display(50), YELLOW, anchor='ma')
+    rows = [('🌐', 'Play it in your browser', 'the Godot client at /godot/, same matches as everyone'),
+            ('📦', 'Served from Cloudflare R2', 'engine 44 MB -> 9 MB gzipped, cached forever per version'),
+            ('🌱', 'A loader with a story', 'Blaster shoots the title down, one letter per 9 % of the download'),
+            ('🔫', 'Then Gunslinger shows up', 'two bolts later, Blaster runs away through the fallen letters'),
+            ('🎮', 'Same gag on PC and phones', 'a 3.6 s 3D intro with the real models, skip it with any key'),
+            ('🗺️', 'The road to Godot everywhere', 'a plan to switch every build once nothing is lost')]
+    for i, (icon, head, line) in enumerate(rows):
+        y = 120 + i * 124
+        card(img, (60, y, W - 60, y + 108), outline=(90, 150, 230), radius=20)
+        d.text((92, y + 26), icon, font=emoji(50), embedded_color=True)
+        d.text((175, y + 16), head, font=display(32), fill=YELLOW)
+        d.text((175, y + 62), line, font=body(23, 'Bold'), fill=TEXT)
+    img.convert('RGB').save(os.path.join(OUT, 'v0.17.1-changes.png'), optimize=True)
+
+
 if __name__ == '__main__':
     import sys
     os.makedirs(OUT, exist_ok=True)
@@ -1290,5 +1315,6 @@ if __name__ == '__main__':
     v0160()
     v0161()
     v0170()
+    v0171()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')

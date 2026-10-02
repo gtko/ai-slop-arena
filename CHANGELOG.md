@@ -3,6 +3,14 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.17.1](docs/releases/v0.17.1.md): Godot on the web
+
+<a href="docs/releases/v0.17.1.md"><img src="docs/releases/img/v0.17.1-banner.png" alt="v0.17.1: Godot on the web" width="100%"></a>
+
+- 🌐 The Godot preview plays in your browser at /godot/, served from Cloudflare R2.
+- 🌱 A loading screen with a story: Blaster shoots the title down while it loads, then Gunslinger chases him off.
+- 🗺️ The plan to switch every build to Godot.
+
 ## [v0.17.0](docs/releases/v0.17.0.md): Godot preview
 
 <a href="docs/releases/v0.17.0.md"><img src="docs/releases/img/v0.17.0-banner.png" alt="v0.17.0: Godot preview" width="100%"></a>
