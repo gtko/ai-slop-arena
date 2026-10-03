@@ -102,6 +102,8 @@ var wheel: EmoteWheel
 
 var playing := false
 var alive_n := 0
+var duo: Duo                # Duo: teams, partner card, ghosts (duo.gd; main.gd sets it)
+var _teams_n := 0           # Duo: teams still standing at the last K.O. (the banners)
 var vision := 0.0
 var night_hunt := false     # read by sight.gd (Night Hunt: you see 9 m)
 const MOON_MIST := Color(0.1, 0.13, 0.13)   # visionfog.js, linear
@@ -182,6 +184,7 @@ func setup(net_: NetClient, cam_: Camera3D, world_: Node3D, touch_: TouchControl
 	touch.gadget_pressed.connect(use_gadget)
 	touch.emote_pressed.connect(func(): if playing and me and me.alive: wheel.toggle())
 	touch.pause_pressed.connect(_toggle_pause)
+	touch.ping_pressed.connect(func(): send_ping())   # Duo (.t-ping)
 	_build_pause()
 	get_viewport().size_changed.connect(func(): D.invalidate(); _front.queue_redraw())
 	visible = false
@@ -200,6 +203,7 @@ func begin_match(start_msg: Dictionary, arena_: Arena, fighters_: Dictionary) ->
 	arena = arena_
 	fighters = fighters_
 	alive_n = fighters.size()
+	_teams_n = duo.teams_up() if duo and duo.on else 0   # (main.gd begins duo.gd first)
 	fx = Fx.new()
 	world.add_child(fx)
 	fx.setup(arena, fighters, net.id)
@@ -216,6 +220,8 @@ func begin_match(start_msg: Dictionary, arena_: Arena, fighters_: Dictionary) ->
 	var params := {"startAt": 28.0, "interval": 7.0}
 	if mut == "gasBreath":
 		params = {"startAt": 16.0, "interval": 4.5}
+	elif Duo.roster_is_duo(start_msg.get("roster", [])):   # Duo: the gas waits so partners can regroup
+		params = {"startAt": 35.0, "interval": 8.0}
 	if arena.map.get("crumble", false):
 		params = {"startAt": 1e9, "interval": 7.0}
 	gas.setup(params)
@@ -330,10 +336,15 @@ func on_event(e: Dictionary) -> void:
 			_feed.push_front(row)
 			while _feed.size() > FEED_MAX:
 				_feed.pop_back()
-			if me and alive_n < before and not result_open:
-				if alive_n == 3:
+			var now_n := alive_n
+			if duo and duo.on:   # Duo: teams left (hud.js update: game.teamsUp())
+				before = _teams_n
+				now_n = duo.teams_up()
+				_teams_n = now_n
+			if me and now_n < before and not result_open:
+				if now_n == 3:
 					_show_banner(I18n.t("hud.threeLeft"), "three")
-				elif alive_n == 2:
+				elif now_n == 2:
 					_show_banner(I18n.t("hud.finalDuel"), "duel")
 		# (the result screen itself: main.gd + result_view.gd, after the web's 1.2 s beat)
 		"gad":
@@ -555,7 +566,7 @@ func _front_sig() -> Array:
 	var k := D.css_scale(self)
 	var w := size.x
 	var sig: Array = [k, size, touch != null and touch.visible and not _dbg_desktop, D.short_screen(self), I18n.lang,
-		Controls.using_pad, _muted(), alive_n, gas != null and gas.enabled]
+		Controls.using_pad, _muted(), _left_n(), gas != null and gas.enabled]
 	var anim := not _cutin.is_empty() or not _pings.is_empty() or not _banner.is_empty() or _gad_bump < 0.35
 	if gas and gas.enabled:
 		var n := gas.next_in()
@@ -710,11 +721,15 @@ func _draw_front() -> void:
 			_draw_gadget(c, k, vs)
 	_draw_sound(c, k)
 
+# Brawlers left, or in Duo teams left (hud.js setLeftLabel / update).
+func _left_n() -> int:
+	return duo.teams_up() if duo and duo.on else alive_n
+
 # #top: "8 BRAWLERS LEFT" and the gas clock pills
 func _draw_top(c: Control, k: float, vs: Vector2, touch_mode: bool) -> void:
 	var disp := Fonts.display()
 	var pills: Array = []   # [[small, big, big colour, warn, small first]]
-	pills.append([I18n.t("hud.left"), str(alive_n), D.TEXT, false, false])
+	pills.append([I18n.t("hud.teamsLeft" if duo and duo.on else "hud.left"), str(_left_n()), D.TEXT, false, false])
 	if gas and gas.enabled and gas.next_in() < 1e8:
 		var n := gas.next_in()
 		var txt := ""
