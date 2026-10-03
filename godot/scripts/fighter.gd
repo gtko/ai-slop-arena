@@ -525,6 +525,7 @@ func _hud() -> void:
 	_bar_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
 	_bar.material_override = _bar_mat
 	_bar.position.y = 2.5
+	_bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_bar)
 	_label = Label3D.new()
 	_label.text = fname
@@ -675,8 +676,28 @@ func set_faded(on: bool) -> void:
 	_faded = on
 	for mi in _meshes:
 		mi.transparency = 0.5 if on else 0.0
+	_show_lines()
+
+# The outline hull is a second skinned draw of every mesh: the Low tier keeps it on your own brawler
+# only (Quality preset "outline": 0 none, 1 yours, 2 everybody); the ring under the feet still
+# carries everybody's team colour.
+var _outline_lvl := -1
+var _outline_check := 0
+
+func _show_lines() -> void:
+	var on := not _faded and (_outline_lvl >= 2 or (_outline_lvl == 1 and is_local))
 	for l in _lines:
-		l.visible = not on
+		l.visible = on
+
+func _check_outline() -> void:
+	_outline_check -= 1
+	if _outline_check > 0:
+		return
+	_outline_check = 30
+	var lvl := int(Quality.preset().get("outline", 2))
+	if lvl != _outline_lvl:
+		_outline_lvl = lvl
+		_show_lines()
 
 # Emote sticker above the head for 2 s.
 func show_emote(text: String, col: Color) -> void:
@@ -827,6 +848,8 @@ func _process(delta: float) -> void:
 		_debug()
 	if _team != _team_key():
 		_team_colours()
+		_show_lines()
+	_check_outline()
 	if _flash_t > 0.0:
 		_flash_t = maxf(0.0, _flash_t - delta * 7.0)
 		if _flash_t <= 0.0:

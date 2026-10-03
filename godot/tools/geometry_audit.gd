@@ -116,6 +116,10 @@ func _build(map_key: String) -> void:
 		host.add_child(f)
 		f.setup({"id": "f%d" % k, "name": "", "type": BRAWLERS[k]}, GameData.brawlers)
 		host.fighters[f.id] = f
+		for nn in ["_bar", "_label"]:   # the HUD's 2D plates replace them in a match and in the menu
+			var v: Variant = f.get(nn)
+			if v is Node3D:
+				(v as Node3D).visible = false
 		if k == 0:
 			f.is_local = true
 			host.me = f
@@ -165,15 +169,15 @@ func _category(n: Node) -> String:
 	elif n is MeshInstance3D:
 		mesh = (n as MeshInstance3D).mesh
 	var gi := n as GeometryInstance3D
-	if gi.material_override == Foliage._grass or (gi.material_override is ShaderMaterial and String((gi.material_override as ShaderMaterial).shader.resource_path).ends_with("foliage.gdshader")):
+	if (Foliage._grass != null and gi.material_override == Foliage._grass) or (gi.material_override is ShaderMaterial and String((gi.material_override as ShaderMaterial).shader.resource_path).ends_with("foliage.gdshader")):
 		return "bushes"
+	if mesh is QuadMesh:
+		return "lantern halos"
 	if mesh is PlaneMesh:
 		return "ground" if n is MultiMeshInstance3D else "outer ground"
 	for prop in PropLib._cache:
 		if PropLib._cache[prop].get("mesh") == mesh and mesh != null:
 			return "walls" if String(prop).begins_with("wall") else ("windmill" if String(prop).begins_with("windmill") else "props")
-	if mesh is QuadMesh:
-		return "lantern halos"
 	if mesh is BoxMesh or mesh is CylinderMesh:
 		return "props"
 	return "other world"
