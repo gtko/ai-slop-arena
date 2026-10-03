@@ -21,6 +21,7 @@ var _worst := 0.0
 var _proc := 0.0
 var _phys := 0.0
 var _rcpu := 0.0
+var _rgpu := 0.0
 var _dc := 0.0
 
 func _init() -> void:
@@ -105,6 +106,13 @@ static func end(key: String) -> void:
 
 func _process(delta: float) -> void:
 	_experiments()
+	# a run started from a terminal has no focus: main.gd's 5 fps background cap would be measured
+	if Engine.max_fps == 5 and not OS.has_feature("web"):
+		Engine.max_fps = Settings.max_fps()
+	# `--perfuncap`: no frame cap and no vsync, so the frame time shows the headroom (native)
+	if DebugArgs.has("perfuncap") and not OS.has_feature("web") and _frames == 0 and _t == 0.0:
+		Engine.max_fps = 0
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	_t += delta
 	_frames += 1
 	_worst = maxf(_worst, delta)
@@ -112,6 +120,7 @@ func _process(delta: float) -> void:
 	_phys += Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS)
 	_rcpu += RenderingServer.viewport_get_measured_render_time_cpu(get_viewport().get_viewport_rid()) \
 		+ RenderingServer.get_frame_setup_time_cpu()
+	_rgpu += RenderingServer.viewport_get_measured_render_time_gpu(get_viewport().get_viewport_rid())
 	_dc += Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
 	if _t < PERIOD:
 		return
@@ -119,8 +128,8 @@ func _process(delta: float) -> void:
 	var vp := get_viewport()
 	var size := vp.get_visible_rect().size
 	var win := DisplayServer.window_get_size()
-	var line := "PERF fps=%.1f worst=%.1fms process=%.2fms physics=%.2fms render_cpu=%.2fms draws=%d objects=%d prims=%dk nodes=%d q=%s scale=%.2f msaa=%d win=%dx%d vp=%dx%d 3d=%s" % [
-		n / _t, _worst * 1000.0, _proc / n * 1000.0, _phys / n * 1000.0, _rcpu / n, roundi(_dc / n),
+	var line := "PERF fps=%.1f worst=%.1fms frame=%.2fms process_max=%.2fms physics_max=%.2fms render_cpu=%.2fms gpu=%.2fms draws=%d objects=%d prims=%dk nodes=%d q=%s scale=%.2f msaa=%d win=%dx%d vp=%dx%d 3d=%s" % [
+		n / _t, _worst * 1000.0, _t / n * 1000.0, _proc / n * 1000.0, _phys / n * 1000.0, _rcpu / n, _rgpu / n, roundi(_dc / n),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME) / 1000.0),
 		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
@@ -128,7 +137,9 @@ func _process(delta: float) -> void:
 		"off" if vp.disable_3d else "on"]
 	if _sec and not _acc.is_empty():
 		var parts: PackedStringArray = []
-		for k in _acc:
+		var keys := _acc.keys()
+		keys.sort_custom(func(a, b): return int(_acc[a]) > int(_acc[b]))
+		for k in keys:
 			parts.append("%s=%.2f" % [k, float(_acc[k]) / n / 1000.0])
 		line += " | " + " ".join(parts)
 		_acc.clear()
@@ -142,4 +153,5 @@ func _process(delta: float) -> void:
 	_proc = 0.0
 	_phys = 0.0
 	_rcpu = 0.0
+	_rgpu = 0.0
 	_dc = 0.0
