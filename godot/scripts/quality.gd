@@ -113,3 +113,7 @@ static func apply() -> void:
 		arena.apply_quality()
 	elif sun is DirectionalLight3D:
 		sun.shadow_enabled = int(p.shadow) > 0
+
+# A short name of what runs now, for the perf probe (perf_probe.gd).
+static func step_name() -> String:
+	return "saver" if saver else level
