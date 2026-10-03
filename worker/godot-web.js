@@ -7,7 +7,8 @@
 // are to clients that accept gzip (every browser); the rare client that does not gets them inflated here.
 //
 // Routes:
-//   /godot, /godot/          302 to /godot/<current>/ (not cached), query string kept (?server=, ?lang=)
+//   /godot, /godot/          302 to /godot/<current>/ (not cached), query string kept (?room=, ?lang=)
+//   /play, /play.html, /play/...  the same 302: the game's URL (site buttons, invite links ?room=CODE)
 //   /godot/<version>/<file>  the file; versioned paths never change, so they are cached for a year.
 // <current> is env.GODOT_WEB_VERSION when set (to roll the Godot client back alone), else the version
 // of this deploy: the Godot client then always speaks the protocol of the rooms server it lands on.
@@ -30,18 +31,23 @@ export function isGodotPath(pathname) {
   return pathname === '/godot' || pathname.startsWith('/godot/');
 }
 
+// The game's public URLs from before the Godot client (the three.js page): /play, /play.html, /play/...
+// Invite links (/play?room=CODE) keep their query: the Godot web client reads ?room= and joins.
+export function isPlayPath(pathname) {
+  return pathname === '/play' || pathname === '/play.html' || pathname.startsWith('/play/');
+}
+
+export function redirectToGodot(env, url, deployVersion) {
+  const v = env.GODOT_WEB_VERSION || deployVersion;
+  return new Response(null, { status: 302, headers: { location: `/godot/${v}/${url.search}`, 'cache-control': 'no-store' } });
+}
+
 export async function serveGodot(request, env, url, deployVersion) {
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD' } });
   }
   if (!env.GODOT_WEB) return new Response('Godot web build not configured', { status: 503 });
-  if (url.pathname === '/godot' || url.pathname === '/godot/') {
-    const v = env.GODOT_WEB_VERSION || deployVersion;
-    return new Response(null, {
-      status: 302,
-      headers: { location: `/godot/${v}/${url.search}`, 'cache-control': 'no-store' },
-    });
-  }
+  if (url.pathname === '/godot' || url.pathname === '/godot/') return redirectToGodot(env, url, deployVersion);
   const m = url.pathname.match(FILE);
   if (!m) return notFound();
   const [, v, name] = m;

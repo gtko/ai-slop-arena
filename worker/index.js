@@ -4,7 +4,7 @@ import { version } from '../package.json';
 import { ServerMatch, makeRoster, randomMap, validBrawler, validLoadout, validCos, COS_DEFAULT, weeklyMutator, MAP_KEYS } from './build/sim.js';
 import { rate, tierOf, pickGroup, partyMmr, botLevelFor, START_MMR } from './ranking.js';
 import { manifestFor } from '../src/updates.js';
-import { isGodotPath, serveGodot } from './godot-web.js';
+import { isGodotPath, serveGodot, isPlayPath, redirectToGodot } from './godot-web.js';
 
 // AI SLOP ARENA — online server.
 //
@@ -17,7 +17,8 @@ import { isGodotPath, serveGodot } from './godot-web.js';
 //   /api/bug     bug reports from the in-game form (text, technical info, optional screenshot).
 //   /api/rank    a player's visible rank (tier + RP); the hidden MMR never leaves the server.
 //   /app/latest.json  the mobile apps' over-the-air update manifest (src/ota.js, docs/ota-updates.md).
-//   /godot/*     the Godot client's web export, from the GODOT_WEB R2 bucket (worker/godot-web.js).
+//   /godot/*     the Godot client's web export, from the GODOT_WEB R2 bucket (worker/godot-web.js);
+//   /play        the game's URL (and /play.html, invite links /play?room=CODE): a redirect to /godot/<v>/.
 //   /admin/*     moderation API (reports, bans), enabled once the ADMIN_TOKEN secret is set.
 // Steam friend lobbies (src/steamnet.js) stay peer-to-peer: a player hosts, with the same checks.
 // Errors of the Worker and of every Durable Object go to Sentry (SENTRY_DSN in wrangler.jsonc).
@@ -81,6 +82,8 @@ export default Sentry.withSentry(sentry, {
     }
     if (url.pathname.startsWith('/admin/')) return admin(request, env, url);
     if (isGodotPath(url.pathname)) return serveGodot(request, env, url, version);
+    // The game is the Godot client: the old three.js page's URLs (and invite links ?room=) land on it.
+    if (isPlayPath(url.pathname)) return redirectToGodot(env, url, version);
     // Everything else is a static asset (the Vite build); unknown paths get a 404 from the asset layer.
     return env.ASSETS.fetch(request);
   },
