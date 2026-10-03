@@ -1,8 +1,8 @@
 """App icon and splash screens from the menu portraits (public/assets/ui/<key>.png).
-  icon   : one brawler on the brand violet gradient -> assets/icon-only.png, icon-foreground.png (Capacitor sources),
-           google-play/icon-512.png, electron/icon.png + icon.ico
+  icon   : one brawler on the brand violet gradient -> assets/icon-only.png, icon-foreground.png,
+           google-play/icon-512.png, assets/app-icons/icon.png + icon.ico (desktop / Steam community icon)
   splash : the five brawlers in a row on the dark background -> assets/splash.png, splash-dark.png
-Then `npx capacitor-assets generate` spreads assets/ to the Android and iOS projects.
+(The Godot client's own icon is godot/icon.png, set in godot/project.godot and the export presets.)
 Usage: python art-src/make_app_art.py [icon_key]   (default gunslinger)"""
 import sys
 from PIL import Image
@@ -35,8 +35,8 @@ icon.save('assets/icon-only.png')
 icon.save('assets/icon-foreground.png')
 small = icon.resize((512, 512), Image.LANCZOS)
 small.save('google-play/icon-512.png')
-small.save('electron/icon.png')
-icon.save('electron/icon.ico', sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+small.save('assets/app-icons/icon.png')
+icon.save('assets/app-icons/icon.ico', sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
 
 # splash: the roster at the old scale (a 520 px tall row, centred) on the dark background
 splash = Image.new('RGBA', (2732, 2732), BOTTOM + (255,))
