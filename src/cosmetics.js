@@ -50,8 +50,8 @@ export const FREE = ['title:1', ...EMOTE_FREE.map(e => 'emote:' + e), 'icon:0', 
 // bought with real money, buy brawlers and every cosmetic. Cosmetics never make anyone stronger.
 // Cosmetic prices in Gems:
 export const PRICE = { skin: 290, trail: 150, ko: 190, emote: 60, frame: 120, title: 80, icon: 40 };
-// Brawlers: the 3 starters are free; the others cost Slop Coins or Gems.
-export const STARTERS = ['blaster', 'gunslinger', 'bomber'];
+// Brawlers: the eight of v0.18 are free for everyone; brawlers added later cost Slop Coins or Gems.
+export const STARTERS = ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt', 'kappa', 'pipchomp', 'mochi'];
 export const BRAWLER_PRICE = { coins: 1500, gems: 240 };
 // Skins can be earned by playing too: about 50 matches of Slop Coins (the other cosmetics stay Gems only).
 export const SKIN_COINS = 1000;

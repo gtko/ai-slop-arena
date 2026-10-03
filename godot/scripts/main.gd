@@ -53,6 +53,7 @@ var aim_point := Vector3.ZERO
 var aim_dist := 0.0               # how far the attack is aimed (mouse distance / stick tilt; lobbed attacks land there)
 var super_aiming := false         # the super is being aimed (right click / LT / super key held, charged): fx_aim.gd
 var settings_view: SettingsView   # the options screen (settings_view.gd), over everything
+var home_menu: PauseView          # Escape on the home screen (pause_view.gd in its home mode)
 var _fps_label: Label             # the web's #fpsBadge (options: FPS counter)
 var _fps_t := 0.0
 var last_move := Vector2.ZERO
@@ -159,6 +160,8 @@ func _menushot(path: String, args: PackedStringArray) -> void:
 					_fake_result(a.substr(10))
 				"load", "count":
 					_fake_load(a.substr(10) == "count")
+				"home":
+					home_menu.visible = true
 				"pause":
 					var pv := PauseView.new()
 					ui.add_child(pv)
@@ -439,6 +442,12 @@ func _build_ui() -> void:
 	settings_view = SettingsView.new()
 	settings_view.changed.connect(_on_setting)
 	settings_view.closed.connect(func(): _nav_restore())
+	# Escape on the home screen: resume, options, quit the game (native builds)
+	home_menu = PauseView.new()
+	home_menu.home = true
+	home_menu.options.connect(func(): settings_view.open())
+	home_menu.quit.connect(func(): get_tree().quit())
+	top.add_child(home_menu)
 	top.add_child(settings_view)
 
 # The three full screens; rebuilt when the language changes.
@@ -739,6 +748,11 @@ func _unhandled_input(ev: InputEvent) -> void:
 	if not ev.is_action_pressed("ui_cancel"):
 		return
 	match state:
+		State.MENU:   # the menu closed its own overlays first (it handles them before us)
+			if settings_view.visible:
+				return
+			home_menu.visible = not home_menu.visible
+			get_viewport().set_input_as_handled()
 		State.LOBBY:
 			_leave_room()
 		State.LOADING, State.COUNTDOWN, State.PLAYING:

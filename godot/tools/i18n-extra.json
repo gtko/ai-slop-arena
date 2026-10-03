@@ -64,7 +64,8 @@
     "g.opt.fxaa": "FXAA",
     "g.opt.fxaa.hint": "Fast anti-aliasing on the whole picture (a little blurrier, almost free).",
     "g.opt.aimAssist": "Aim assist",
-    "g.opt.aimAssist.hint": "Gamepad: attacking without the right stick aims at the nearest enemy in range."
+    "g.opt.aimAssist.hint": "Gamepad: attacking without the right stick aims at the nearest enemy in range.",
+    "home.quit": "QUIT GAME"
   },
   "fr": {
     "g.quick": "PARTIE RAPIDE",
@@ -131,6 +132,7 @@
     "g.opt.fxaa": "FXAA",
     "g.opt.fxaa.hint": "Anticrénelage rapide sur toute l'image (un peu plus flou, presque gratuit).",
     "g.opt.aimAssist": "Aide à la visée",
-    "g.opt.aimAssist.hint": "Manette : attaquer sans le stick droit vise l'ennemi le plus proche à portée."
+    "g.opt.aimAssist.hint": "Manette : attaquer sans le stick droit vise l'ennemi le plus proche à portée.",
+    "home.quit": "QUITTER LE JEU"
   }
 }

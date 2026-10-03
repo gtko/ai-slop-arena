@@ -345,7 +345,12 @@
  "starters": [
   "blaster",
   "gunslinger",
-  "bomber"
+  "bomber",
+  "frostbite",
+  "volt",
+  "kappa",
+  "pipchomp",
+  "mochi"
  ],
  "brawlerPrice": {
   "coins": 1500,
