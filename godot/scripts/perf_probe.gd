@@ -95,6 +95,40 @@ func _census() -> String:
 		parts.append("%s=%d" % [k, n[k]])
 	return " ".join(parts)
 
+# Where the triangles are (`?perf&perfmesh`): visible MeshInstance3D / MultiMeshInstance3D grouped by
+# their parent's name, triangles x instances (shadow and outline copies count as their own nodes).
+func _mesh_census() -> String:
+	var tri := {}
+	var cnt := {}
+	for c in get_tree().root.find_children("*", "GeometryInstance3D", true, false):
+		var g := c as GeometryInstance3D
+		if not g.is_visible_in_tree():
+			continue
+		var mesh: Mesh = null
+		var n := 1
+		if g is MeshInstance3D:
+			mesh = (g as MeshInstance3D).mesh
+		elif g is MultiMeshInstance3D and (g as MultiMeshInstance3D).multimesh:
+			var mm := (g as MultiMeshInstance3D).multimesh
+			mesh = mm.mesh
+			n = mm.visible_instance_count if mm.visible_instance_count >= 0 else mm.instance_count
+		if mesh == null:
+			continue
+		var t := 0
+		for s in mesh.get_surface_count():
+			var arr := mesh.surface_get_arrays(s)
+			var idx = arr[Mesh.ARRAY_INDEX]
+			t += (idx.size() if idx != null and idx.size() > 0 else (arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()) / 3
+		var key := "%s/%s" % [g.get_parent().name if g.get_parent() else "-", g.get_class()]
+		tri[key] = int(tri.get(key, 0)) + t * n
+		cnt[key] = int(cnt.get(key, 0)) + n
+	var keys := tri.keys()
+	keys.sort_custom(func(a, b): return int(tri[a]) > int(tri[b]))
+	var parts: PackedStringArray = []
+	for k in keys.slice(0, 25):
+		parts.append("%s=%dk(x%d)" % [k, int(tri[k]) / 1000, cnt[k]])
+	return " ".join(parts)
+
 # Per-system timing (only with ?perf=sec): PerfProbe.begin("hud") ... PerfProbe.end("hud").
 static func begin(key: String) -> void:
 	if _sec:
@@ -146,6 +180,8 @@ func _process(delta: float) -> void:
 	print(line)
 	if DebugArgs.has("perftree"):
 		print("PERFTREE ", _census())
+	if DebugArgs.has("perfmesh"):
+		print("PERFMESH ", _mesh_census())
 	_label.text = line.replace(" ", "\n").replace("|\n", "")
 	_t = 0.0
 	_frames = 0
