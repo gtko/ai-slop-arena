@@ -354,11 +354,9 @@ static func renderer_probe(fps: float) -> bool:
 		cfg.set_value("renderer", "decided", true)
 	if pick != now:
 		_write_renderer(pick)
-		# the next launch measures from the last 60 fps step again (not the 30 fps one)
-		cfg.set_value("quality", "auto_level", "low")
-		cfg.set_value("quality", "auto_scale", 0.65)
-		cfg.set_value("quality", "auto_fps", 60)
 	cfg.save(CFG)
+	# (the next launch starts on the 30 fps step; after 20 smooth seconds it tries the 60 fps step
+	# again, and if that is still too slow this is called again there, with that renderer's fps)
 	print("AUTOQ renderer probe: %s %.1f fps, %s %s -> %s next launch" % [now, fps, other, "untested" if other_fps < 0.0 else "%.1f fps" % other_fps, pick])
 	return pick != now
 
