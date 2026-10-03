@@ -9,6 +9,10 @@ signal resume
 signal quit
 signal options
 
+# The home screen's Escape menu reuses this card: the game's name instead of PAUSED, no online note,
+# and QUIT GAME (native builds only: a browser tab is closed by the browser) instead of QUIT TO MENU.
+var home := false
+
 func _ready() -> void:
 	super._ready()
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -24,7 +28,7 @@ func _build() -> void:
 	var w := minf(320.0 if phone else 360.0, W - 28.0)
 	var col := _box(7 if phone else 12, true)
 	col.custom_minimum_size.x = w
-	var t := _title(I18n.t("pause.title"), 40 if phone else 72, Color.WHITE, 4.0 if phone else 5.0, 4.0 if phone else 6.0)
+	var t := _title("AI SLOP ARENA" if home else I18n.t("pause.title"), 40 if phone else 72, Color.WHITE, 4.0 if phone else 5.0, 4.0 if phone else 6.0)
 	var ta := UiKit.anim(t)
 	col.add_child(ta)
 	col.add_child(_gap(2 if phone else 8))
@@ -35,12 +39,14 @@ func _build() -> void:
 	var o := _ghost(I18n.t("pause.options"), 15 if phone else 22, 7 if phone else 12, 14, 4 if phone else 6)
 	o.pressed.connect(func(): options.emit())
 	col.add_child(o)
-	var q := _ghost(I18n.t("pause.quit"), 15 if phone else 22, 7 if phone else 12, 14, 4 if phone else 6)
-	q.pressed.connect(func(): visible = false; quit.emit())
-	col.add_child(q)
-	var note := _body(I18n.t("pause.online"), 12, UiKit.WMUTED, 700)
-	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(note)
+	if not (home and OS.has_feature("web")):
+		var q := _ghost(I18n.t("home.quit" if home else "pause.quit"), 15 if phone else 22, 7 if phone else 12, 14, 4 if phone else 6)
+		q.pressed.connect(func(): visible = false; quit.emit())
+		col.add_child(q)
+	if not home:
+		var note := _body(I18n.t("pause.online"), 12, UiKit.WMUTED, 700)
+		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		col.add_child(note)
 	_page.add_child(col)
 	col.reset_size()
 	var ms := col.get_combined_minimum_size()
