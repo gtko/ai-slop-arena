@@ -219,7 +219,7 @@ python art-src/process_images.py   # resize, normal maps, portrait cut-outs
 ### Layout
 
 ```
-godot/          the game client (Godot 4.4): scripts/, scenes, data exported from src/, export presets
+godot/          the game client (Godot 4.5): scripts/, scenes, data exported from src/, export presets
 src/
   game.js ...   the shared game rules the server runs (game, ai, arena, brawler, combat, maps, ...)
   server/       the headless server bundle entry (sim.js) and its stubs

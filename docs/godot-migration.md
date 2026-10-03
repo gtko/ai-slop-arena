@@ -33,7 +33,7 @@ Taken with the user on 2026-10-03: **D1 local simulation** (spike first), **D2 k
 |---|---|---|
 | D1 | Offline solo and dojo | Local simulation: run the same `ServerMatch` bundle inside the client (browser JS VM on web via `JavaScriptBridge`, an embedded JS engine such as QuickJS on native). 2-3 day spike first. Fallback: server-side dojo, offline accepted as a loss. |
 | D2 | SSO | Merge the server part of the SSO branch first; build the login UI in Godot web only. Store builds stay account-less. |
-| D3 | Engine version | Stay on 4.4.1 for 0.18.0, but check Play's target SDK 35/36 and Sentry GDScript traces (complete only in 4.5+) during the spike. |
+| D3 | Engine version | Stay on 4.4.1 for 0.18.0, but check Play's target SDK 35/36 and Sentry GDScript traces (complete only in 4.5+) during the spike. After 0.18.1: moved to 4.5.2 (shader baker, GDScript backtraces; target SDK 36 kept). |
 | D4 | Android versionCode | `(maj*10000+min*100+patch)*100+b` (`b=99` final, `1..98` betas): monotonic and allows Play test tracks. |
 | D5 | three.js freeze | From now on, bug fixes only in the three.js client; new gameplay goes to `src/game.js` (shared) and Godot. |
 

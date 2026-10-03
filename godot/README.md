@@ -11,7 +11,7 @@ Capacitor shells were deleted in v0.18 (`docs/godot-migration.md`).
 ```bash
 node godot/tools/export-data.mjs       # maps.json + brawlers.json from src/ (re-run when maps/stats change)
 cd godot/tools && npm i && node convert-models.mjs && cd ..   # meshopt GLBs -> plain GLBs for Godot
-godot --path godot                      # desktop (Godot 4.4+)
+godot --path godot                      # desktop (Godot 4.5.2)
 ```
 
 ![Godot client, first render](../docs/godot-shot.png)
@@ -78,9 +78,9 @@ An arm64 debug APK (85 MB, signed, verified with `apksigner`) is produced withou
 downloads: Ubuntu's `apksigner zipalign adb` packages provide build-tools, plus a debug keystore and
 the editor settings `export/android/android_sdk_path`, `java_sdk_path`, `debug_keystore*`. Then:
 `godot --headless --path godot --export-debug "Android" build/android/ai-slop-arena.apk`
-(export templates 4.4.1 installed). Install with `adb install -r`. iOS needs a Mac with Xcode.
+(export templates 4.5.2 installed). Install with `adb install -r`. iOS needs a Mac with Xcode.
 Since the presets became store-ready (see "Export"), "Android" is a Gradle build: it also needs the
-build template and JDK 17.
+build template and JDK 17 (still 17 for Godot 4.5: Gradle 8.11.1, compileSdk 35, NDK 28.1).
 
 ## Web hosting note
 
@@ -136,16 +136,29 @@ is 11 MB): desktop and Android take it from the OS, the web export shows boxes. 
   icon like the Capacitor app's, Windows `.ico`.
 - **Android Gradle build template**: not committed (`godot/android/` is ignored). Unzip it from the
   export templates as the editor's *Project → Install Android Build Template* does:
-  `unzip <templates>/4.4.1.stable/android_source.zip -d godot/android/build`, then
-  `printf 4.4.1.stable > godot/android/.build_version` and `touch godot/android/build/.gdignore`.
+  `unzip <templates>/4.5.2.stable/android_source.zip -d godot/android/build`, then
+  `printf 4.5.2.stable > godot/android/.build_version` and `touch godot/android/build/.gdignore`.
   The Gradle build needs **JDK 17** exactly (Godot refuses 21) and the Android SDK.
 - **Signing**: release Android exports read the upload key from `GODOT_ANDROID_KEYSTORE_RELEASE_PATH`,
   `_USER`, `_PASSWORD` (CI: GitHub secrets, see `.claude/skills/release/SKILL.md`); debug exports from the
   editor settings' debug keystore or `GODOT_ANDROID_KEYSTORE_DEBUG_*`.
-- **Windows icon**: Godot 4.4 needs `rcedit` (editor setting *Export → Windows → rcedit*, plus *wine*
+- **Windows icon**: Godot 4.4+ needs `rcedit` (editor setting *Export → Windows → rcedit*, plus *wine*
   on Linux: the CI image has both); without it the export still works with Godot's icon.
 - **iOS**: Godot refuses to export without *App Store Team ID*; the committed value is empty and CI
   fills `APPLE_TEAM_ID` or a placeholder (enough for the unsigned simulator build).
+
+- **Shader baker** (Godot 4.5): the Android, Android (Play), Windows and Linux presets have
+  `shader_baker/enabled`: the export precompiles the engine's and the project's Vulkan shaders into the
+  PCK, so a fresh install does not compile them on the device (first-use hitches; measured on desktop:
+  the user shader cache a first launch writes drops from 141 files / 11.4 MB to 33 files / 2.9 MB).
+  The baker only runs when the exporting editor has a Vulkan renderer: **a `--headless` export silently
+  skips it**. Export these presets from the editor, or windowed from the command line
+  (`godot --path godot --rendering-driver vulkan --rendering-method mobile --export-release ...`, it
+  opens and closes a window; CI does it on Xvfb with Mesa's lavapipe: `godot-bake`,
+  `.github/actions/godot-prepare`). Windowed exports log harmless "No loader found for resource" errors
+  for the `.ico` and `.json.gz` files (they are still packed) and re-save `project.godot` without its
+  comment and default values (do not commit that). Web (Compatibility) and iOS (Metal, needs Apple's
+  tools) are not baked.
 
 Example: `godot --headless --path godot --export-release "Web" build/web/index.html`.
 The web preset uses the Compatibility (WebGL2) renderer automatically; native targets use Mobile

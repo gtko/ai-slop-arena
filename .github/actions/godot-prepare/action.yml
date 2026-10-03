@@ -2,8 +2,9 @@ name: Prepare the Godot project
 description: >
   Inside the barichello/godot-ci container: game data, strings and models exported from src/, the
   package.json version written into the project and presets, export templates and editor settings
-  moved to the runner's HOME, the Android Gradle build template unzipped, then the import.
-  Needs env GODOT_VERSION (e.g. 4.4.1).
+  moved to the runner's HOME, the Android Gradle build template unzipped, Xvfb + Mesa's software
+  Vulkan (lavapipe) for the shader baker, then the import.
+  Needs env GODOT_VERSION (e.g. 4.5.2).
 runs:
   using: composite
   steps:
@@ -33,6 +34,22 @@ runs:
         printf '%s' "${GODOT_VERSION}.stable" > godot/android/.build_version
         touch godot/android/build/.gdignore
         chmod +x godot/android/build/gradlew
+    - name: Xvfb + software Vulkan (shader baker)
+      # The shader baker (export option shader_baker/enabled) only runs when the exporting editor has a
+      # RenderingDevice renderer: a --headless export silently skips it. So the native presets are
+      # exported by a windowed editor on a virtual display with Mesa's lavapipe (CPU Vulkan); the
+      # SPIR-V it bakes does not depend on the GPU. `godot-bake` = that editor, same arguments as godot.
+      shell: bash
+      run: |
+        apt-get update -qq
+        apt-get install -y -qq --no-install-recommends xvfb xauth mesa-vulkan-drivers libvulkan1 \
+          libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6 libxext6 libxrender1 libgl1 libfontconfig1 >/dev/null
+        cat > /usr/local/bin/godot-bake <<'EOF'
+        #!/bin/bash
+        # windowed editor on a virtual display, Vulkan through lavapipe, Mobile renderer like the targets
+        exec xvfb-run -a -s "-screen 0 1280x720x24" godot --rendering-driver vulkan --rendering-method mobile "$@"
+        EOF
+        chmod +x /usr/local/bin/godot-bake
     - name: Import
       shell: bash
       # the first import of a fresh checkout can crash on exit after writing the cache; the second is clean
