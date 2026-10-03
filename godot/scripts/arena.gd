@@ -178,6 +178,8 @@ func _bushes(tiles: Array) -> void:
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
 	mmi.material_override = mat
+	if not grass:
+		mmi.set_meta("prop", "bush")   # Low: bush_low.glb (PropLib.set_low)
 	add_child(mmi)
 
 # three's Color.setHSL (lightness clamped to 1)
@@ -490,6 +492,11 @@ func apply_quality() -> void:
 		mmi.multimesh.visible_instance_count = int(ceilf(int(d[1]) * float(q.ring)))
 		# the web's ring casts shadows down to detail 0.6 (desktop and mobile high)
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if float(q.ring) >= 1.0 else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Low: the decor MultiMeshes (ring, walls, rocks, crates, lanterns) draw their decimated copies
+	var low := Quality.name_now() == "low"
+	for c in get_children():
+		if c is MultiMeshInstance3D and c.has_meta("prop"):
+			PropLib.set_low(c, low)
 
 # Flat pentagon stepping stones with a darker rim on the open floor (arena.js buildStones, Oasis).
 func _stones() -> void:
@@ -786,12 +793,16 @@ func _decor_ring() -> void:
 			var mul := (0.8 + rng.randf() * 0.5) * low
 			if kind == "cliff":
 				mul *= 1.2 + rng.randf() * 0.9
-			if not by_kind.has(kind):
-				by_kind[kind] = []
-			by_kind[kind].append({"pos": pos, "yaw": rng.randf() * TAU, "mul": mul, "ysq": 0.9 + rng.randf() * 0.25})
-	for kind in by_kind:
+			# one MultiMesh per kind and per block of the ring (3 x 3 blocks around the arena, the middle
+			# one empty): the blocks out of view are culled, instead of the whole ring drawn every frame
+			var block := "%s:%d:%d" % [kind, (i + 6) * 3 / (n + 12), (j + 6) * 3 / (n + 12)]
+			if not by_kind.has(block):
+				by_kind[block] = []
+			by_kind[block].append({"pos": pos, "yaw": rng.randf() * TAU, "mul": mul, "ysq": 0.9 + rng.randf() * 0.25})
+	for block in by_kind:
+		var kind: String = String(block).get_slice(":", 0)
 		var prop := _snowy(TREE_PROP.get(kind, "tree_round"))
-		var list: Array = by_kind[kind]
+		var list: Array = by_kind[block]
 		list.shuffle() # the quality preset hides the tail of the list: keep the thinning even
 		var mmi := PropLib.multi(prop, TREE_FIT.get(kind, {"height": 4.6}), list, false)
 		if mmi:

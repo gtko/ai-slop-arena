@@ -736,6 +736,19 @@ func _show_lines() -> void:
 	var on := not _faded and (lvl >= 2 or (lvl == 1 and is_local))
 	for l in _lines:
 		l.visible = on
+	_lod()
+
+# The importer builds each figurine's LODs (meshoptimizer, down to ~1-3k triangles a body). Godot picks
+# them by size on screen; on Low it steps down LOD_LOW times sooner: at the match camera a brawler is
+# ~50-70 px tall, drawn there with ~2-6k triangles instead of ~8-25k (close-ups keep their detail).
+const LOD_LOW := 0.3
+func _lod() -> void:
+	var b := LOD_LOW if Quality.name_now() == "low" else 1.0
+	for a in DebugArgs.list():
+		if a.begins_with("--fighterlod="):
+			b = float(a.substr(13))
+	for mi in _meshes + _lines:
+		mi.lod_bias = b
 
 # Emote sticker above the head for 2 s.
 func show_emote(text: String, col: Color) -> void:

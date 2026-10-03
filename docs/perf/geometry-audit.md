@@ -1,5 +1,76 @@
 # Geometry and draw-call budget (2026-10)
 
+## Second pass: Low tier LODs and model textures (after v0.18.1)
+
+**Counting fix.** Godot 4.4 counts a MultiMesh whose mesh has LODs as a single instance (the LOD path of
+`render_forward_mobile` `_fill_render_list` does not multiply by the instance count). The decor ring,
+walls, boulders, crates and lanterns all have importer LODs, so the first pass under-reported them by
+their instance count: Low really drew 220-680k triangles a frame, not 140-360k. `geometry_audit.gd`
+now hides each such MultiMesh alone and multiplies its share; the "before" below is v0.18.1 measured
+with the fixed tool (raw tables `lod-before-low.md`, `lod-after-low.md`, `lod-after-high.md`; shots
+`lod-low-before-after.jpg`, left before, right after).
+
+What changed (Medium / High / Ultra keep their meshes; only the ring blocks and textures apply to them):
+
+- **Brawlers** (`fighter.gd` `_lod`): on Low, `lod_bias` 0.3 on the figurine and its outline hull, so
+  Godot steps down the importer's LODs (meshoptimizer, down to ~1-3k triangles a body) 3x sooner. At
+  the match camera a brawler is ~50-70 px tall: ~5k triangles each instead of ~12k, same look
+  (compared at 2x zoom with bias 1.0 / 0.3 / 0.2). Close-ups still pick LOD 0 by size on screen.
+- **Decor drawn by the dozen** (`PropLib.set_low`, `arena.gd` `apply_quality`): a MultiMesh chooses one
+  LOD for all its instances from its whole bounding box, which reaches the camera, so Godot's LODs
+  never applied. Decimated copies `decor/<prop>_low.glb` (Blender, `tools/decimate.py ... nomat`,
+  committed; `convert-models.mjs` LOW keeps them when Blender is missing) are swapped into the
+  MultiMeshes on Low: ring trees 1500 -> 300, rocks / boulders / stumps / crates / lanterns 25 %, wall
+  blocks ~515 -> ~230, bush 1065 -> 425. Same material and placement (the instance transforms are
+  corrected by the two GLBs' node transforms).
+- **Ring of trees** (`arena.gd` `_decor_ring`): one MultiMesh per kind and per block of a 3 x 3 grid
+  around the arena, so the blocks out of view are culled (all tiers; +6-12 draws, -40 to -130k
+  triangles on High).
+- **Fauna** (`tools/fauna_import.gd`, post-import script of the 14 animal GLBs): `lod_bias` 0.4 baked
+  in (10-30 px tall animals kept ~3k of ~5.7k triangles).
+- **Textures**: the textures Godot extracts from the GLBs (`<model>_<image>.webp`, 8 x 1024² brawlers,
+  31 x 512² decor / fauna) were imported lossless, i.e. uncompressed RGBA in GPU memory (the "detect 3D"
+  switch to VRAM only runs in the editor). They and their `.import` are now committed with
+  `compress/mode=2` (ETC2/ASTC on phones, S3TC/BPTC on desktops) and mipmaps. Ground textures and
+  normal maps (`assets/tex`) were already VRAM-compressed with mipmaps (1024² albedo, 512² normals);
+  UI images stay lossless (4 Mpx in all). No per-tier size cap: Godot imports one size per platform,
+  and with mipmaps the GPU only reads the small levels at the game camera.
+
+### Low tier, triangles k (game view = match camera, menu = attract camera)
+
+| map / view | draws | triangles k | fighters k | tree ring k | bushes k | walls k | props k | fauna k |
+|---|---|---|---|---|---|---|---|---|
+| oasis / game | 62 -> 74 | 453 -> 176 | 93 -> 43 | 142 -> 34 | 33 -> 33 | 67 -> 30 | 92 -> 23 | 17 -> 5 |
+| oasis / menu | 59 -> 67 | 498 -> 167 | 151 -> 43 | 142 -> 26 | 33 -> 33 | 67 -> 30 | 92 -> 23 | 4 -> 4 |
+| dunes / game | 56 -> 71 | 489 -> 180 | 93 -> 43 | 164 -> 34 | 17 -> 17 | 76 -> 34 | 106 -> 29 | 14 -> 4 |
+| dunes / menu | 56 -> 64 | 547 -> 175 | 151 -> 43 | 164 -> 24 | 17 -> 17 | 76 -> 34 | 106 -> 29 | 14 -> 10 |
+| grove / game | 63 -> 75 | 630 -> 241 | 93 -> 43 | 190 -> 37 | 124 -> 49 | 66 -> 29 | 89 -> 24 | 27 -> 16 |
+| grove / menu | 61 -> 68 | 682 -> 228 | 151 -> 43 | 190 -> 27 | 124 -> 49 | 66 -> 29 | 89 -> 24 | 21 -> 13 |
+| frost / game | 61 -> 67 | 523 -> 176 | 93 -> 43 | 200 -> 37 | 47 -> 19 | 62 -> 28 | 80 -> 20 | 26 -> 13 |
+| frost / menu | 57 -> 61 | 570 -> 159 | 151 -> 43 | 200 -> 27 | 47 -> 19 | 62 -> 28 | 80 -> 20 | 15 -> 7 |
+| isles / game | 68 -> 68 | 217 -> 120 | 93 -> 43 | 0 -> 0 | 34 -> 14 | 6 -> 3 | 25 -> 11 | 19 -> 10 |
+| isles / menu | 65 -> 65 | 270 -> 117 | 151 -> 43 | 0 -> 0 | 34 -> 14 | 6 -> 3 | 25 -> 11 | 15 -> 8 |
+| marsh / game | 63 -> 74 | 566 -> 192 | 93 -> 43 | 198 -> 36 | 95 -> 38 | 60 -> 27 | 96 -> 26 | 8 -> 6 |
+| marsh / menu | 63 -> 70 | 624 -> 183 | 151 -> 43 | 198 -> 26 | 95 -> 38 | 60 -> 27 | 96 -> 26 | 8 -> 7 |
+
+(fighters = 8 bodies + weapons + team rings + your outline hull; oasis / dunes bushes are grass tufts.)
+
+### GPU memory with the map and the 8 brawlers loaded (desktop S3TC; ETC2 is the same 4 bpp)
+
+| map | Low textures MB | Low video total MB | High textures MB | High video total MB |
+|---|---|---|---|---|
+| oasis | 64.3 -> 17.1 | 100.8 -> 49.8 | 140.8 -> 93.7 | 178.0 -> 126.8 |
+| dunes | 66.0 -> 17.7 | 104.1 -> 52.1 | 142.5 -> 94.2 | 181.3 -> 128.9 |
+| grove | 72.9 -> 19.7 | 113.4 -> 56.6 | 149.4 -> 96.2 | 190.6 -> 133.4 |
+| frost | 76.3 -> 18.3 | 117.6 -> 56.0 | 152.9 -> 94.8 | 194.8 -> 132.8 |
+| isles | 78.4 -> 18.0 | 120.0 -> 55.9 | 155.0 -> 94.5 | 197.2 -> 132.8 |
+| marsh | 84.2 -> 21.4 | 125.7 -> 59.3 | 160.7 -> 97.9 | 202.9 -> 136.0 |
+
+High: same meshes and look (screenshot diff = particles and animation phase only), ring blocks culled:
+722-971k triangles instead of 784-1054k on the 5 ringed maps.
+
+## First pass (v0.18.1)
+
 Measured by `godot/tools/geometry_audit.gd` (Mobile renderer, 1280x720, 8 brawlers around the camera focus; game view = match camera, menu = attract camera at zoom 0.8). Raw per-category tables: `geometry-{before,after}-{low,high}.md`. Shots (left before, right after, game view, dunes / grove / frost / isles / marsh / oasis): `geometry-{low,high}-before-after.jpg`.
 
 ### Low tier (draws / objects / primitives k; "+ n" = shadow pass)
