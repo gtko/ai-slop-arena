@@ -881,7 +881,12 @@ func motion_stats() -> Dictionary:
 	var sd := sqrt(maxf(0.0, _mlog.sum2 / n - mean * mean))
 	return {"n": _mlog.n, "mean": mean, "cv": sd / maxf(mean, 1e-3), "stall": _mlog.stall, "jerk": _mlog.jerk / n / maxf(mean, 1e-3)}
 
-func _process(delta: float) -> void:
+func _process(delta: float) -> void:   # timed for the perf overlay (perf_probe.gd)
+	var t0 := PerfProbe.now()
+	_process_timed(delta)
+	PerfProbe.add("fighters", t0)
+
+func _process_timed(delta: float) -> void:
 	if _dbg_cam.size() > 0 or _dbg_fx != "":
 		_debug()
 	if _team != _team_key():

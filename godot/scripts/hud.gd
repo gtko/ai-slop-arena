@@ -503,7 +503,12 @@ func _sound_rect() -> Rect2:
 
 # ---------------------------------------------------------------- frame
 
-func _process(delta: float) -> void:
+func _process(delta: float) -> void:   # timed for the perf overlay (perf_probe.gd)
+	var t0 := PerfProbe.now()
+	_process_timed(delta)
+	PerfProbe.add("hud", t0)
+
+func _process_timed(delta: float) -> void:
 	if not visible:
 		return
 	_time += delta

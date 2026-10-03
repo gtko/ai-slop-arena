@@ -134,7 +134,12 @@ func _empty() -> bool:
 			return false
 	return true
 
-func _process(delta: float) -> void:
+func _process(delta: float) -> void:   # timed for the perf overlay (perf_probe.gd)
+	var t0 := PerfProbe.now()
+	_process_timed(delta)
+	PerfProbe.add("ui_cache", t0)
+
+func _process_timed(delta: float) -> void:
 	if not is_instance_valid(layer):
 		queue_free()
 		return

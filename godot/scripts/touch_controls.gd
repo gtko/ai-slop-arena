@@ -141,7 +141,12 @@ func _end_aim(cancel: bool) -> void:
 	# keep the last aim for the release shot; main keeps its aim_dir once this drops under 0.25
 	aim = Vector2.ZERO
 
-func _process(delta: float) -> void:
+func _process(delta: float) -> void:   # timed for the perf overlay (perf_probe.gd)
+	var t0 := PerfProbe.now()
+	_process_timed(delta)
+	PerfProbe.add("touch", t0)
+
+func _process_timed(delta: float) -> void:
 	_time += delta
 	if _fire_until > 0:
 		if Time.get_ticks_msec() < _fire_until:

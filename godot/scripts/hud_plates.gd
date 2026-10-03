@@ -116,7 +116,12 @@ func say(f: Fighter, icon: String, word: String, col: Color) -> void:
 	if f:
 		_bubbles[f.id] = {"text": icon, "word": word, "col": col, "t": 2.0, "age": 0.0}
 
-func _process(delta: float) -> void:
+func _process(delta: float) -> void:   # timed for the perf overlay (perf_probe.gd)
+	var t0 := PerfProbe.now()
+	_process_timed(delta)
+	PerfProbe.add("plates", t0)
+
+func _process_timed(delta: float) -> void:
 	if not visible:
 		return
 	for f in _floats:

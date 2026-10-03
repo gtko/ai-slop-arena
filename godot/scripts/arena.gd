@@ -587,21 +587,37 @@ func update(delta: float) -> void:
 	var me: Fighter = m.get("me") if m else null
 	var focus := me.position if me else Vector3.ZERO
 	if kit:
+		var t_kit := PerfProbe.now()
 		kit.update(delta, fighters, me)
+		PerfProbe.add("arena.kit", t_kit)
 	if lighting:
+		var t_lighting := PerfProbe.now()
 		lighting.update(delta)
+		PerfProbe.add("arena.lighting", t_lighting)
+		var t_glow := PerfProbe.now()
 		_glow(delta)
+		PerfProbe.add("arena.glow", t_glow)
 		for id in fighters:
 			lighting.attach_blob(fighters[id])
 	if weather:
+		var t_weather := PerfProbe.now()
 		weather.update(delta, focus)
+		PerfProbe.add("arena.weather", t_weather)
 	if water:
+		var t_water := PerfProbe.now()
 		water.update(delta)
+		PerfProbe.add("arena.water", t_water)
 	if ambient:
+		var t_ambient := PerfProbe.now()
 		ambient.update(delta, fighters)
+		PerfProbe.add("arena.ambient", t_ambient)
 	if skins:
+		var t_skins := PerfProbe.now()
 		skins.update(delta, fighters, self)
+		PerfProbe.add("arena.skins", t_skins)
+	var t_foliage := PerfProbe.now()
 	Foliage.update(delta, me, self)
+	PerfProbe.add("arena.foliage", t_foliage)
 	if _sim:
 		_simulate(delta, fighters, me)
 

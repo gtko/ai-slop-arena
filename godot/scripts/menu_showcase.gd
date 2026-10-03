@@ -333,7 +333,12 @@ func _frame_shift(dist: float) -> float:
 	var frac := (float(nav) / 2.0 if nav != null else 32.0) / UiKit.css_view_h()
 	return frac * 2.0 * dist * tan(deg_to_rad(_cam.fov / 2.0))
 
-func _process(delta: float) -> void:
+func _process(delta: float) -> void:   # timed for the perf overlay (perf_probe.gd)
+	var t0 := PerfProbe.now()
+	_process_timed(delta)
+	PerfProbe.add("showcase", t0)
+
+func _process_timed(delta: float) -> void:
 	if not active or arena == null:
 		return
 	if _rec != null:

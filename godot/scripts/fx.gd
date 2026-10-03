@@ -431,7 +431,12 @@ func on_event(e: Dictionary) -> void:
 
 # ---------------------------------------------------------------- frame
 
-func _process(delta: float) -> void:
+func _process(delta: float) -> void:   # timed for the perf overlay (perf_probe.gd)
+	var t0 := PerfProbe.now()
+	_process_timed(delta)
+	PerfProbe.add("fx", t0)
+
+func _process_timed(delta: float) -> void:
 	time += delta
 	sparks.update(delta)
 	debris.update(delta)
