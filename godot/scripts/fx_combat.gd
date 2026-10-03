@@ -378,6 +378,8 @@ func _update_bullets(dt: float) -> void:
 				var fo: Fighter = o
 				if fo == B.owner or not fo.alive or not fo.visible:
 					continue
+				if fo.team >= 0 and B.owner is Fighter and fo.team == (B.owner as Fighter).team:
+					continue   # Duo: partners' shots fly through each other (game.js hits / ally)
 				var rr: float = fo.radius + B.r
 				var ddx: float = fo.position.x - B.x
 				var ddz: float = fo.position.z - B.z

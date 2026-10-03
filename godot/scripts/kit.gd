@@ -668,7 +668,11 @@ func fall_ghost(f: Node3D) -> void:
 	g.position = f.position
 	g.rotation = f.rotation
 	add_child(g)
-	(src as Node3D).reparent(g, true) # the model moves to the falling piece (the dead fighter is hidden anyway)
+	# a copy falls, the fighter's own model only hides: a Duo partner may revive it (fighter.gd revive)
+	var copy := (src as Node3D).duplicate() as Node3D
+	g.add_child(copy)
+	copy.transform = (src as Node3D).transform
+	(src as Node3D).visible = false
 	falling.append({"node": g, "vy": 0.0, "rx": (rng.randf() - 0.5) * 6.0, "rz": (rng.randf() - 0.5) * 6.0, "t": 1.4, "free": true, "shrink": true})
 
 # ------------------------------------------------------------------ bridges

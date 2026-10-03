@@ -190,7 +190,7 @@ func _plate_sig(f: Fighter, k: float) -> Array:
 		bub = roundi(clampf(b.age / 0.18, 0.0, 1.0) * 30.0) if b.t > 0.0 else 100 + roundi(clampf(1.0 + b.t / 0.2, 0.0, 1.0) * 30.0)
 	return [k, mine, ceili(maxf(f.hp, 0.0)), roundi(fr * w), roundi(float(_lag.get(f.id, 1.0)) * w),
 		roundi(clampf(f.ammo, 0.0, 3.0) * w / 3.0) if mine else 0, f.fname, f.cubes, in_bush, bub,
-		String(b.get("text", "")), I18n.lang]
+		String(b.get("text", "")), I18n.lang, f.ally, Settings.colorblind]
 
 # ---------------------------------------------------------------- plates (.ov)
 
@@ -240,6 +240,9 @@ func _plate_draw(ci: CanvasItem, f: Fighter) -> void:
 	D.flat_fill(ci, inner2, 3.0 * k, Color(1, 1, 1, 0.75 * a), inner2.size.x * lag)
 	if mine:
 		D.grad_fill(ci, inner2, 3.0 * k, _al(Color("6dff9f"), a), _al(Color("1fc45a"), a), inner2.size.x * fr)
+	elif f.ally:   # .ov.mate: your Duo partner (body.cb: lavender)
+		var cb := Settings.colorblind
+		D.grad_fill(ci, inner2, 3.0 * k, _al(Color("d4c8ff" if cb else "8dffc0"), a), _al(Color("8f7ae0" if cb else "22b86a"), a), inner2.size.x * fr)
 	else:
 		D.grad_fill(ci, inner2, 3.0 * k, _al(Color("ff7a6b"), a), _al(Color("e0342e"), a), inner2.size.x * fr)
 	D.text_c(ci, Vector2(inner2.get_center().x, inner2.position.y + 6.0 * k), str(ceili(maxf(f.hp, 0.0))), disp, 12.0 * k,
@@ -250,7 +253,7 @@ func _plate_draw(ci: CanvasItem, f: Fighter) -> void:
 	var lh := D.line_h(disp, nfs)
 	y -= lh
 	var name := I18n.t("hud.you") if mine else f.fname
-	var ncol := D.BLUE if mine else Color("ffb3b3")
+	var ncol := D.BLUE if mine else (Color("d4c8ff" if Settings.colorblind else "7dffa8") if f.ally else Color("ffb3b3"))
 	var nw := D.width(disp, name, nfs)
 	var cub := ""
 	var cw2 := 0.0
