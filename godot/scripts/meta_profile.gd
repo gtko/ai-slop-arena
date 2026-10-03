@@ -4,7 +4,7 @@ extends RefCounted
 # ('iaslop-profile'): user://profile.json has the same JSON shape, so the rules read the same.
 #  - account level and XP; Slop Coins (earned by playing) and Gems (bought: payment is not integrated
 #    yet, only development builds can add test Gems, like the web's shop);
-#  - the brawlers you own (the 3 starters are free; a profile from before brawlers were owned keeps
+#  - the brawlers you own (the starters, all eight since v0.18.1, are free; a profile from before brawlers were owned keeps
 #    the five of before), the cosmetics you own and the ones you wear (cosmetics.js);
 #  - Bot League trophies per brawler and the Trophy Road.
 # Plus the shop of the day (metaui.js shopItems): the same seeded pick as the web, so every player and
@@ -66,6 +66,9 @@ static func load_all() -> void:
 	for id in D().get("free", []):   # items made free later
 		if not owns(String(id)):
 			(P.owned as Array).append(String(id))
+	for k in D().get("starters", []):   # brawlers made free later (v0.18.1: all eight) reach old profiles too
+		if not owns("brawler:" + String(k)):
+			(P.owned as Array).append("brawler:" + String(k))
 	if not (P.wear.get("skins") is Dictionary):
 		P.wear.skins = {}
 	for a in DebugArgs.list():       # screenshots / tests: --wallet=coins,gems (never saved)
