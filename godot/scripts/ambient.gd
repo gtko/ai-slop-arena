@@ -7,7 +7,8 @@ extends Node3D
 #
 # Hide and seek: animals only react to brawlers the local player can see (Fighter.visible): a bird
 # flying off a bush someone hides in would give them away.
-# Quality "fauna" scales the counts (a phone on Low keeps 40 %).
+# Quality "fauna" scales the counts (40 % on Low). Phones and tablets on Low keep only the tiny swarms
+# (lean(): no rigged animals, whose animation players pose a skeleton each), moved every other frame.
 
 const FLYERS := ["vulture", "raven"]
 const WORLD := 1.9
@@ -69,6 +70,12 @@ var flocks: Array = []
 var swarms: Array = []
 var rng := RandomNumberGenerator.new()
 var pond: PondLife   # Misty Marsh: lily pads, bubbles, dragonflies (pond_life.gd)
+var _frame := 0
+
+# Phones and tablets on Low: the CPU is the limit there, and the walkers / birds cost a skeleton pose
+# and a script step each per frame.
+static func lean() -> bool:
+	return Quality.mobile() and Quality.name_now() == "low"
 
 func setup(a: Arena) -> void:
 	arena = a
@@ -202,7 +209,12 @@ func _walkers(spec: Dictionary) -> void:
 		var h: Vector2i = homes[rng.randi() % homes.size()]
 		var p := arena.center(h.x, h.y) + Vector3(rng.randf_range(-0.7, 0.7), 0, rng.randf_range(-0.7, 0.7))
 		holder.position = p
-		var c := {"node": holder, "ap": _ap(holder), "clip": "", "spec": spec, "home": p, "pos": p, "target": p, "yaw": rng.randf() * TAU,
+		var ap := _ap(holder)
+		var idles: Array = []
+		for n in IDLES:
+			if ap != null and ap.has_animation(n):
+				idles.append(n)
+		var c := {"node": holder, "ap": ap, "idles": idles, "clip": "", "spec": spec, "home": p, "pos": p, "target": p, "yaw": rng.randf() * TAU,
 			"state": "idle", "wait": rng.randf() * 3.0, "run": false, "scale": rng.randf_range(0.9, 1.1), "hop_t": 0.0, "idx": k}
 		holder.rotation.y = c.yaw
 		holder.scale = Vector3.ONE * float(c.scale)
@@ -245,10 +257,7 @@ func _step_walkers(delta: float, fighters: Dictionary) -> void:
 		match String(c.state):
 			"idle":
 				c.wait = float(c.wait) - delta
-				var idles: Array = []
-				for n in IDLES:
-					if c.ap != null and c.ap.has_animation(n):
-						idles.append(n)
+				var idles: Array = c.idles
 				if c.clip == "" or (c.clip != "" and c.ap != null and not c.ap.is_playing()):
 					_play(c, idles[rng.randi() % idles.size()] if not idles.is_empty() else "Idle")
 				if float(c.wait) <= 0.0:
@@ -435,23 +444,40 @@ func _step_swarms() -> void:
 
 func update(delta: float, fighters: Dictionary) -> void:
 	t += delta
-	_step_walkers(delta, fighters)
-	_step_flocks(delta)
-	_step_swarms()
+	if _walk_on:
+		_step_walkers(delta, fighters)
+	if _flock_on:
+		_step_flocks(delta)
+	_frame += 1
+	if not _lean or _frame % 2 == 0:
+		_step_swarms()
 	if pond:
 		pond.update(delta)
 
+var _lean := false
+var _walk_on := true
+var _flock_on := true
+
 # The animals the tier leaves out are hidden and paused (their AnimationPlayer would still pose a
 # skeleton every frame).
+
 func apply_quality() -> void:
 	var k := float(Quality.preset().fauna)
+	_lean = lean()
+	var kr := 0.0 if _lean else k   # the rigged animals
+	_walk_on = false
 	for c in walkers:
 		var spec: Dictionary = c.spec
-		_show(c.node, int(c.idx) < int(ceil(int(spec.n) * k)))
+		var on := int(c.idx) < int(ceil(int(spec.n) * kr))
+		_show(c.node, on)
+		_walk_on = _walk_on or on
+	_flock_on = false
 	for F in flocks:
 		var n: int = F.birds.size()
 		for i in n:
-			_show(F.birds[i].node, i < int(ceil(n * clampf(k * 1.4, 0.0, 1.0))))
+			var on := i < int(ceil(n * clampf(kr * 1.4, 0.0, 1.0)))
+			_show(F.birds[i].node, on)
+			_flock_on = _flock_on or on
 	for S in swarms:
 		(S.mm as MultiMesh).visible_instance_count = maxi(1, int(ceil(int(S.n) * k)))
 

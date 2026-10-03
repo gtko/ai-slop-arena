@@ -503,7 +503,12 @@ func _sound_rect() -> Rect2:
 
 # ---------------------------------------------------------------- frame
 
-func _process(delta: float) -> void:
+func _process(delta: float) -> void:   # timed for the perf overlay (perf_probe.gd)
+	var t0 := PerfProbe.now()
+	_process_timed(delta)
+	PerfProbe.add("hud", t0)
+
+func _process_timed(delta: float) -> void:
 	if not visible:
 		return
 	_time += delta
@@ -523,13 +528,15 @@ func _process(delta: float) -> void:
 	gad_cd = maxf(gad_cd - delta, 0.0)
 	_hurt_age += delta
 	_gad_bump += delta
-	for r in _feed:
-		r.age += delta
-	_feed = _feed.filter(func(r): return r.age < FEED_LIFE + 0.5)
-	for p in _pings:
-		p.t -= delta
-		p.age += delta
-	_pings = _pings.filter(func(p): return p.t > 0.0)
+	if not _feed.is_empty():   # (no filter copies on the frames with nothing to age)
+		for r in _feed:
+			r.age += delta
+		_feed = _feed.filter(func(r): return r.age < FEED_LIFE + 0.5)
+	if not _pings.is_empty():
+		for p in _pings:
+			p.t -= delta
+			p.age += delta
+		_pings = _pings.filter(func(p): return p.t > 0.0)
 	if not _banner.is_empty():
 		_banner.age += delta
 		if _banner.age > 2.2:

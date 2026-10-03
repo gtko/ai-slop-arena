@@ -193,7 +193,12 @@ func _fill_to(l: int) -> void:
 				_mm.set_instance_custom_data(k, Color(php, timer, BOUND_H if r == 0 else 0.0, float(p)))
 				_mm.visible_instance_count = k + 1
 
-func _process(delta: float) -> void:
+func _process(delta: float) -> void:   # timed for the perf overlay (perf_probe.gd)
+	var t0 := PerfProbe.now()
+	_process_timed(delta)
+	PerfProbe.add("gas", t0)
+
+func _process_timed(delta: float) -> void:
 	if not enabled:
 		return
 	_t += delta

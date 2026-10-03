@@ -122,6 +122,11 @@ func _preset_row() -> Dictionary:
 		Quality.set_level(String(v))
 		changed.emit("gfx"), I18n.t("opt.preset.hint"))
 
+# The performance overlay (perf_probe.gd): frame time split, draw calls, quality step, renderer and
+# the per-system script costs, for a screenshot that tells where the frame goes.
+func _perf_row() -> Dictionary:
+	return _toggle(I18n.t("g.opt.perf"), func(): return Settings.show_perf, func(v): Settings.show_perf = v; _done("show_perf"), I18n.t("g.opt.perf.hint"))
+
 func _fullscreen_row() -> Dictionary:
 	if OS.has_feature("web"):   # the page's fullscreen (the web game's option): asked from this tap, not saved
 		return _toggle(I18n.t("opt.fullscreen"), func(): return DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN, func(v):
@@ -145,6 +150,7 @@ func _rows_of(t: String) -> Array:
 				rows.append(_fullscreen_row())
 			rows.append_array([
 				_toggle(I18n.t("opt.fps"), func(): return Settings.show_fps, func(v): Settings.show_fps = v; _done("show_fps")),
+				_perf_row(),
 				_toggle(I18n.t("opt.shake"), func(): return Settings.shake, func(v): Settings.shake = v; _done("shake")),
 				_toggle(I18n.t("opt.colorblind"), func(): return Settings.colorblind, func(v): Settings.colorblind = v; _done("colorblind"), I18n.t("opt.colorblind.hint")),
 				_preset_row(),
@@ -257,6 +263,7 @@ func _reset_tab() -> void:
 		"general":
 			Settings.lang = ""
 			Settings.show_fps = false
+			Settings.show_perf = false
 			Settings.shake = true
 			_done("lang")
 		"graphics":
