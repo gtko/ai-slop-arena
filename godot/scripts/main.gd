@@ -77,6 +77,7 @@ func _ready() -> void:
 	# root Window, not DisplayServer: the Window rewrites its title on every locale change.
 	get_window().title = "AI SLOP ARENA"
 	Settings.load_all()
+	LegacyImport.run()   # web, first launch: the old three.js client's saves (localStorage) -> user://
 	Controls.setup()   # the rebindable keys + gamepad buttons in the InputMap (controls.gd)
 	if not DebugArgs.has("autotest") and not Array(DebugArgs.list()).any(func(a): return String(a).begins_with("--menushot")):
 		Settings.apply_display()   # window mode + vsync (desktop)
@@ -119,6 +120,18 @@ func _ready() -> void:
 		for a in args:
 			if a.begins_with("--menushot="):
 				_menushot(a.substr(11), args)
+		_join_invite()
+
+# Web invite links (/play?room=CODE, redirected to /godot/<v>/?room=CODE): straight into that room.
+# Release builds too (DebugArgs only reads the URL on debug ones): only a room code is taken from it.
+func _join_invite() -> void:
+	if not OS.has_feature("web"):
+		return
+	var q = JavaScriptBridge.eval("new URLSearchParams(location.search).get('room') || ''")
+	var code := String(q).strip_edges().to_upper() if typeof(q) == TYPE_STRING else ""
+	var re := RegEx.create_from_string("^[A-Z0-9]{4,6}$")
+	if re.search(code) != null:
+		_open_room(code, false)
 
 # Screenshot of the menu (or one of its overlays) for layout checks:
 #   godot --path godot -- --menushot=/tmp/menu.png [--overlay=settings|room|queue] [--brawler=volt]

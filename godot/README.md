@@ -1,9 +1,10 @@
-# AI SLOP ARENA, Godot 4 client (comparison branch)
+# AI SLOP ARENA, the Godot 4 client
 
-A Godot 4.4 client for the **existing** game server. Nothing of the rules is ported: the Cloudflare
-room (`worker/index.js`) runs every match with the same `Game` code as the web build, and this
-client only renders snapshots and sends inputs (protocol v6, see `scripts/net_client.gd`). So the
-Godot build and the three.js builds can play in the same room (cross-play).
+The game client on every platform (web, Windows / Linux for Steam, Windows for Epic, Android, iOS).
+Nothing of the rules is ported: the Cloudflare room (`worker/index.js`) runs every match with the
+shared rules of `src/` (`src/server/sim.js`), and this client only renders snapshots and sends inputs
+(protocol v6, see `scripts/net_client.gd`). It replaced the three.js client, whose code, Electron and
+Capacitor shells were deleted in v0.18 (`docs/godot-migration.md`).
 
 ## Run
 
@@ -24,12 +25,18 @@ godot --headless --path godot -- --autotest ws://localhost:8787
 
 ## What is in
 
-Everything is a client of the existing server (protocol v6, cross-play with the three.js builds).
+Everything is a client of the server (protocol v6, cross-play between every platform).
 
 - **Flow:** main menu (brawler picker with 3D preview, loadout, profile icon, settings), quick play through the
   ranked party queue with bots, private rooms by code (leader: map, Solo/Duo, chaos, kick), loading,
   countdown, match, result screen, reconnect. 30 locales exported from `src/i18n` (EN/FR complete for the
-  Godot-only strings, others fall back to EN).
+  Godot-only strings, others fall back to EN). Web: an invite link `/play?room=CODE` joins that room at
+  launch (`main.gd` `_join_invite`).
+- **Saves of the three.js web client:** on web, the first launch imports the old client's `localStorage`
+  (same origin) into `user://`: profile (coins, gems, XP, owned, trophies, worn items), the `cid` the
+  server's rank and bans are keyed by, name, brawler, mode, loadouts, settings, audio mix; the rest
+  (mastery, quests, achievements, hidden bot level) is kept as-is in `user://legacy/web_storage.json`
+  for their ports (`scripts/legacy_import.gd`).
 - **World:** the 6 maps from the JS grids, sculpted props and brawlers (GLB, skeleton animations), map kit
   (jump pads, bridges, void, crumbling isles, barrels, mushrooms, traps, ice), water, weather (rain, snow,
   sandstorm, fog), times of day, foliage sway, fauna, skins/recolours/trails.
@@ -73,7 +80,8 @@ the editor settings `export/android/android_sdk_path`, `java_sdk_path`, `debug_k
 The exported `index.pck` (about 70 MB) and `index.wasm` (44 MB, 9 MB gzipped) exceed Cloudflare Workers
 static assets' 25 MiB per-file limit, so the web export lives in the R2 bucket `ai-slop-arena-godot-web`
 (binding `GODOT_WEB` in `wrangler.jsonc`) and the site's Worker serves it at **`/godot/`**
-(`worker/godot-web.js`):
+(`worker/godot-web.js`). The game's public URL **`/play`** (and `/play.html`, `/play/...`, invite links
+`?room=CODE`) redirects there too, query kept:
 
 - every release uploads under its own prefix `godot/<version>/`, so a new release never mixes files;
   `/godot/` redirects to `/godot/<version of the deployed worker>/` (query string kept), so the Godot

@@ -3,8 +3,8 @@ import * as Sentry from '@sentry/cloudflare';
 import { version } from '../package.json';
 import { ServerMatch, makeRoster, randomMap, validBrawler, validLoadout, validCos, COS_DEFAULT, weeklyMutator, MAP_KEYS } from './build/sim.js';
 import { rate, tierOf, pickGroup, partyMmr, botLevelFor, START_MMR } from './ranking.js';
-import { manifestFor } from '../src/updates.js';
-import { isGodotPath, serveGodot } from './godot-web.js';
+import { manifestFor, FROZEN_APP_BUNDLE } from '../src/updates.js';
+import { isGodotPath, serveGodot, isPlayPath, redirectToGodot } from './godot-web.js';
 
 // AI SLOP ARENA — online server.
 //
@@ -16,8 +16,9 @@ import { isGodotPath, serveGodot } from './godot-web.js';
 //   /api/report  player reports (also used by Steam P2P lobbies, which have no server of ours).
 //   /api/bug     bug reports from the in-game form (text, technical info, optional screenshot).
 //   /api/rank    a player's visible rank (tier + RP); the hidden MMR never leaves the server.
-//   /app/latest.json  the mobile apps' over-the-air update manifest (src/ota.js, docs/ota-updates.md).
-//   /godot/*     the Godot client's web export, from the GODOT_WEB R2 bucket (worker/godot-web.js).
+//   /app/latest.json  the old Capacitor apps' update manifest, frozen on their last bundle (docs/ota-updates.md).
+//   /godot/*     the Godot client's web export, from the GODOT_WEB R2 bucket (worker/godot-web.js);
+//   /play        the game's URL (and /play.html, invite links /play?room=CODE): a redirect to /godot/<v>/.
 //   /admin/*     moderation API (reports, bans), enabled once the ADMIN_TOKEN secret is set.
 // Steam friend lobbies (src/steamnet.js) stay peer-to-peer: a player hosts, with the same checks.
 // Errors of the Worker and of every Durable Object go to Sentry (SENTRY_DSN in wrangler.jsonc).
@@ -70,17 +71,18 @@ export default Sentry.withSentry(sentry, {
         return cors(json({ ok: true, rp: p.rp, tier: tierOf(p.rp), matches: p.matches, wins: p.wins }));
       }
     }
-    // Mobile apps: the newest web bundle (this deploy's version, a GitHub release asset) and the oldest
-    // native shell able to run it. Until the tag's release workflow has uploaded the zip, the apps get a
-    // 404 on the download and simply retry at their next launch.
+    // The old Capacitor apps (three.js client): their last web bundle, frozen at v0.17.1 (src/updates.js),
+    // so they keep running instead of failing on a missing download at every launch.
     if (url.pathname === '/app/latest.json') {
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-      const r = cors(json(manifestFor(version)));
+      const r = cors(json(manifestFor(FROZEN_APP_BUNDLE)));
       r.headers.set('cache-control', 'public, max-age=300');
       return r;
     }
     if (url.pathname.startsWith('/admin/')) return admin(request, env, url);
     if (isGodotPath(url.pathname)) return serveGodot(request, env, url, version);
+    // The game is the Godot client: the old three.js page's URLs (and invite links ?room=) land on it.
+    if (isPlayPath(url.pathname)) return redirectToGodot(env, url, version);
     // Everything else is a static asset (the Vite build); unknown paths get a 404 from the asset layer.
     return env.ASSETS.fetch(request);
   },

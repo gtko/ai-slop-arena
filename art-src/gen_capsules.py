@@ -164,7 +164,7 @@ def build():
     lg = Image.new('RGBA', (1280, 720))
     place_logo(lg, 1180, (720 - LOGO.height * 1180 / LOGO.width) / 2)
     lg.save(os.path.join(OUT, 'library_logo.png'))
-    Image.open(os.path.join(ROOT, 'electron', 'icon.png')).convert('RGB').resize((184, 184), Image.LANCZOS) \
+    Image.open(os.path.join(ROOT, 'assets', 'app-icons', 'icon.png')).convert('RGB').resize((184, 184), Image.LANCZOS) \
         .save(os.path.join(OUT, 'community_icon.jpg'), quality=95)
     print('capsules ->', OUT)
 

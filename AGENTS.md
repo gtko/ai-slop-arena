@@ -11,7 +11,7 @@ Every change goes through these five steps, in this order.
    never `git add -A`: other sessions may be working in the repo at the same time, and their files
    (untracked art, `steam/store/`, `.claude/launch.json`...) must not end up in your commits.
 2. **PR**: rebase the branch on `origin/main` (`git fetch origin && git rebase origin/main`), run
-   `npm test`, `npm run build` and `npx vite build --mode app`, push the branch and open a pull
+   `npm test` and `npm run build`, push the branch and open a pull
    request to `main` with `gh pr create`: what changed, why, what was tested and what was not.
 3. **Review**: review the PR diff (`/code-review` on the PR, or a reviewer agent) and fix what it
    finds with new commits on the branch; re-run the tests after the fixes.
@@ -22,19 +22,20 @@ Every change goes through these five steps, in this order.
 
 Stop and tell the user when a step fails instead of pushing on.
 
-## three.js client frozen
+## The game is the Godot client
 
-The Godot client (`godot/`) is replacing the three.js client (plan: `docs/godot-migration.md`). The
-three.js client only gets bug fixes; new gameplay goes into the shared rules (`src/game.js` and what
-the server bundles) and into Godot.
+The game client is `godot/` on every platform (web at `/godot/<version>/`, `/play` redirects there;
+desktop and mobile exports). The three.js client, Electron and Capacitor are gone (`docs/godot-migration.md`).
+`src/` keeps the shared game rules the server bundles (`src/server/sim.js` imports `src/game.js` and its
+graph: keep them), the data the Godot tools export (`godot/tools/export-*.mjs`), the locales and the website.
 
 ## Useful commands
 
 ```bash
-npm test                     # headless server rules, ranking, the 30 locales
-npm run build                # site + game (dist/) and the server bundle
-npx vite build --mode app    # mobile web bundle (dist-app/)
-npm run dev                  # dev server (the browser pane: .claude/launch.json "brawl-arena")
+npm test                     # headless server rules, ranking, the 30 locales, the frozen OTA manifest
+npm run build                # website (dist/) and the server bundle (worker/build/sim.js)
+npm run dev:server           # local server (wrangler) on :8787: site, rooms, /play -> /godot/ from local R2
+npm run deploy:godot-web -- --local   # export the Godot web build into the local R2 of wrangler dev
 ```
 
 Art pipeline (reference images, local 3D, portraits, promo media): `art-src/ai3d/README.md`.
