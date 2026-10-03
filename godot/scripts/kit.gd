@@ -669,7 +669,7 @@ func fall_ghost(f: Node3D) -> void:
 	g.rotation = f.rotation
 	add_child(g)
 	# a copy falls, the fighter's own model only hides: a Duo partner may revive it (fighter.gd revive)
-	var copy := (src as Node3D).duplicate() as Node3D
+	var copy := (src as Node3D).duplicate(Node.DUPLICATE_SIGNALS | Node.DUPLICATE_GROUPS | Node.DUPLICATE_SCRIPTS) as Node3D   # (not by instancing: the outline hulls were added at run time)
 	g.add_child(copy)
 	copy.transform = (src as Node3D).transform
 	(src as Node3D).visible = false

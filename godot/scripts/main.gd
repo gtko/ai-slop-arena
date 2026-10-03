@@ -370,7 +370,7 @@ func _autotest_duo_shots(stats: Dictionary) -> void:
 	var want := ""
 	var mine_g := duo.ghost_of(duo.mate) if duo.mate else {}
 	var my_g := duo.my_ghost()
-	if duo.tether_shown() and not stats.has("shot_tether") and me.position.distance_to(duo.mate.position) > 2.5:
+	if state == State.PLAYING and duo.tether_shown() and not stats.has("shot_tether") and me.position.distance_to(duo.mate.position) > 4.0:
 		want = "tether"
 	elif (float(mine_g.get("p", 0.0)) > 1.0 or float(my_g.get("p", 0.0)) > 1.0) and not stats.has("shot_reviving"):
 		want = "reviving"
@@ -690,7 +690,11 @@ func _on_net_closed() -> void:
 	_in_match_room = false
 	_to_menu(I18n.t("g.connLost"))
 
+var _last_err: Dictionary = {}   # (autotest) the last {t:"error"} / {t:"kicked"}
+
 func _to_menu(msg: String) -> void:
+	if DebugArgs.has("autotest") and msg != "":
+		print("AUTOTEST to menu: %s (state %d, last error %s)" % [msg, state, _last_err])
 	_auto_start = false
 	_clear_match()
 	audio.stop_jingle()   # AUDIO HOOK
@@ -872,10 +876,12 @@ func _on_message(m: Dictionary) -> void:
 		"reported":
 			lobby.toast(I18n.t("mod.reported") if bool(m.get("ok", false)) else I18n.t("err.unreachable"))
 		"kicked":
+			_last_err = m
 			_leaving = true
 			net.close()
 			_to_menu(_error_text(m))
 		"error":
+			_last_err = m
 			if state == State.LOBBY or state == State.MENU or state == State.QUEUE:
 				_leaving = true
 				net.close()
