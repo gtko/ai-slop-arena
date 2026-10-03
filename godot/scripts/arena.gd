@@ -362,7 +362,7 @@ func _glow(delta: float) -> void:
 	var q := Quality.preset()
 	# the Mobile renderer lights a mesh (the whole floor is one) with 8 omni lights at most, and
 	# fx.gd keeps a pool of its own (4 on High, 2 on Medium, none on Low)
-	var budget := 4 if float(q.ring) >= 1.0 else (4 if int(q.shadow) > 0 else 3)
+	var budget := int(q.get("alights", 4))   # Quality: 4 on High, 3 on Medium, 2 on Low
 	var ranked: Array = []
 	for e in _lights:
 		if not is_instance_valid(e[0]):

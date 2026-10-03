@@ -244,6 +244,11 @@ var _anim_rate := 1.0         # status: frozen 0, slowed 0.6
 var _idle_t := 0.0
 var _next_flourish := 6.0
 var _cheer_until := 0.0
+# Quality "anim" (Low: 2): the other fighters' trees advance every other frame, by the time gone
+# (staggered by fighter, so half of them update each frame); yours every frame.
+var _anim_acc := 0.0
+var _anim_n := 0
+var _q_rev := -1              # Quality.rev seen (outline hulls follow Quality.outlines)
 
 func _build_animator(path: String) -> void:
 	if _anim == null:
@@ -490,7 +495,12 @@ func _animate(delta: float, speed_frac: float, in_bush: bool) -> void:
 	_aim_w = move_toward(_aim_w, 1.0 if aiming and not _held else 0.0, dt / 0.12)
 	_tree.set("parameters/aim/blend_amount", _aim_w)
 	_tree.set("parameters/speed/scale", _loop_speed if _state == _loop else 1.0)
-	_tree.advance(dt)
+	_anim_acc += dt
+	_anim_n += 1
+	var every := 1 if is_local else Quality.anim_every
+	if every <= 1 or (_anim_n + get_instance_id()) % every == 0:
+		_tree.advance(_anim_acc)
+		_anim_acc = 0.0
 
 func _capsule(mat: StandardMaterial3D) -> void:
 	var pal: Dictionary = type.palette
@@ -675,8 +685,13 @@ func set_faded(on: bool) -> void:
 	_faded = on
 	for mi in _meshes:
 		mi.transparency = 0.5 if on else 0.0
+	_show_lines()
+
+# The outline hulls: off while faded, and on the tiers without outlines (Quality "outline": Low).
+func _show_lines() -> void:
+	_q_rev = Quality.rev
 	for l in _lines:
-		l.visible = not on
+		l.visible = not _faded and Quality.outlines
 
 # Emote sticker above the head for 2 s.
 func show_emote(text: String, col: Color) -> void:
@@ -827,6 +842,8 @@ func _process(delta: float) -> void:
 		_debug()
 	if _team != _team_key():
 		_team_colours()
+	if _q_rev != Quality.rev:
+		_show_lines()
 	if _flash_t > 0.0:
 		_flash_t = maxf(0.0, _flash_t - delta * 7.0)
 		if _flash_t <= 0.0:
