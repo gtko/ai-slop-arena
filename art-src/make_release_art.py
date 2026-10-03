@@ -1313,6 +1313,31 @@ def v0180():
     img.convert('RGB').save(os.path.join(OUT, 'v0.18.0-changes.png'), optimize=True)
 
 
+def v0181():
+    banner('v0.18.1', 'TEAMWORK', 'Revive your partner, preview every power.',
+           [('💚', 'Duo revives'), ('🎬', '32 power previews'), ('📱', 'Smoother tablets'), ('🔓', 'All 8 brawlers free')],
+           'v0.18.1-banner.png', ('kappa', 'mochi', 'pipchomp'))
+
+    # what changed (PR #30: duo.gd, ability_preview.gd, quality.gd, convert-models.mjs): real numbers
+    W, H = 1600, 900
+    img = background(W, H, glow=(0.5, 0.35))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'BETTER TOGETHER', display(50), YELLOW, anchor='ma')
+    rows = [('💚', 'Revive your Duo partner', 'stand 3 s by their ghost: a tether, a partner card and an arrow show the way'),
+            ('🎬', 'See every power before you pick', '32 short clips of the 16 gadgets and 16 star powers, filmed with the real rules'),
+            ('🔓', 'All eight brawlers are free', 'everyone owns the whole roster; new brawlers will be for Slop Coins or Gems'),
+            ('📱', 'Smoother on phones and tablets', 'a 2880x1800 tablet now draws 1.3 MP on Low instead of 5.2 MP'),
+            ('🌳', 'Lighter arenas', 'bushes 3,571 -> 1,070 triangles, brawlers 4x fewer vertices, up to 47 % fewer draws'),
+            ('⏸️', 'A menu on the home screen', 'Escape or Back: resume, options, quit the game')]
+    for i, (icon, head, line) in enumerate(rows):
+        y = 120 + i * 124
+        card(img, (60, y, W - 60, y + 108), outline=(90, 150, 230), radius=20)
+        d.text((92, y + 26), icon, font=emoji(50), embedded_color=True)
+        d.text((175, y + 16), head, font=display(32), fill=YELLOW)
+        d.text((175, y + 62), line, font=body(23, 'Bold'), fill=TEXT)
+    img.convert('RGB').save(os.path.join(OUT, 'v0.18.1-changes.png'), optimize=True)
+
+
 if __name__ == '__main__':
     import sys
     os.makedirs(OUT, exist_ok=True)
@@ -1342,5 +1367,6 @@ if __name__ == '__main__':
     v0170()
     v0171()
     v0180()
+    v0181()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')

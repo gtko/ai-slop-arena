@@ -3,6 +3,14 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.18.1](docs/releases/v0.18.1.md): Teamwork
+
+<a href="docs/releases/v0.18.1.md"><img src="docs/releases/img/v0.18.1-banner.png" alt="v0.18.1: teamwork" width="100%"></a>
+
+- 💚 Duo partners can revive each other again (ghost, tether, partner card).
+- 🎬 32 preview clips of every gadget and star power; 🔓 all eight brawlers free.
+- 📱 Much lighter on phones and tablets; ⏸️ a menu on the home screen.
+
 ## [v0.18.0](docs/releases/v0.18.0.md): Godot everywhere
 
 <a href="docs/releases/v0.18.0.md"><img src="docs/releases/img/v0.18.0-banner.png" alt="v0.18.0: Godot everywhere" width="100%"></a>
