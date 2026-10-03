@@ -289,7 +289,12 @@ func _lob(f: Fighter, d: Vector3, point: Vector3, sup: bool, bubble: bool, at :=
 
 # ---------------------------------------------------------------- per frame
 
-func _process(dt: float) -> void:
+func _process(dt: float) -> void:   # timed for the perf overlay (perf_probe.gd)
+	var t0 := PerfProbe.now()
+	_process_timed(dt)
+	PerfProbe.add("fx_combat", t0)
+
+func _process_timed(dt: float) -> void:
 	var now := _now()
 	var k := later.size() - 1
 	while k >= 0:
@@ -305,6 +310,8 @@ func _process(dt: float) -> void:
 	_update_zones(dt)
 	_update_windups(dt)
 	_update_waves(dt)
+	if fx.light_count() == 0:   # Low: no light pool
+		return
 	for B in bullets:
 		if B.emit:
 			fx.emit_light(Vector3(B.x, BULLET_Y + 0.2, B.z), B.lcol, 12.0 if B.big else 8.0, 6.5)

@@ -11,6 +11,10 @@ void fragment() {
 	ALBEDO = COLOR.rgb;
 	ROUGHNESS = roughness;
 	METALLIC = 0.0;
+#ifdef LOW
+	vec3 sh_wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	SIGHT_SHADE(sh_wp)
+#endif
 }
 
 void light() {

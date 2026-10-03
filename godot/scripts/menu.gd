@@ -2101,7 +2101,12 @@ func _clock(ms: float) -> String:
 	var s := maxi(0, roundi(ms / 1000.0))
 	return "%d:%02d" % [s / 60, s % 60]
 
-func _process(delta: float) -> void:
+func _process(delta: float) -> void:   # timed for the perf overlay (perf_probe.gd)
+	var t0 := PerfProbe.now()
+	_process_timed(delta)
+	PerfProbe.add("menu", t0)
+
+func _process_timed(delta: float) -> void:
 	if _toast_t > 0.0:
 		_toast_t -= delta
 		if _toast_t <= 0.0 and _toast:

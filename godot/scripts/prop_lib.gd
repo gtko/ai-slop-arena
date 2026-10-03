@@ -75,7 +75,30 @@ static func multi(prop_name: String, fit: Dictionary, placements: Array, shadows
 	mmi.multimesh = mm
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mmi.material_override = mat if mat else material(prop_name) # foliage: sway + bush reveal (foliage.gd)
+	if has(prop_name + "_low"):
+		mmi.set_meta("prop", prop_name)   # set_low can swap in its Low tier copy
 	return mmi
+
+# Low tier: a MultiMesh of a prop with a decimated copy (<prop>_low.glb, 20-45 % of the triangles, made
+# by tools/convert-models.mjs) draws that copy instead. A MultiMesh picks one LOD for all its instances
+# from its whole bounding box, which reaches the camera: Godot's own LODs never kick in for the decor
+# (a map's ring of trees drew ~130 trees x 1500 triangles on Low). Same material, same placement: the
+# two meshes share the GLB's scene space, so each instance only changes by the two node transforms.
+static func set_low(mmi: MultiMeshInstance3D, on: bool) -> void:
+	if not mmi.has_meta("prop") or bool(mmi.get_meta("low", false)) == on:
+		return
+	var full := info(String(mmi.get_meta("prop")))
+	var low := info(String(mmi.get_meta("prop")) + "_low")
+	if full.is_empty() or low.is_empty():
+		return
+	var corr: Transform3D = (full.xf as Transform3D).affine_inverse() * (low.xf as Transform3D)
+	if not on:
+		corr = corr.affine_inverse()
+	var mm := mmi.multimesh
+	mm.mesh = low.mesh if on else full.mesh
+	for k in mm.instance_count:
+		mm.set_instance_transform(k, mm.get_instance_transform(k) * corr)
+	mmi.set_meta("low", on)
 
 # The prop's shader material (src/props.js `prepare`): its GLB texture, roughness 0.78, no metal,
 # rim light, the wind bend for trees and cacti.

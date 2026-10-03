@@ -1,6 +1,13 @@
 // The game's GLBs use EXT_meshopt_compression, which Godot 4 does not import (nor KHR_mesh_quantization). This decodes them
 // into plain GLBs under godot/assets/models/ (Godot then imports and compresses them per platform).
 // Run: cd godot/tools && npm i && node convert-models.mjs
+//
+// Textures: Godot's scene import extracts each GLB's embedded texture next to it (<model>_<image>.webp).
+// Those files and their .import are committed with VRAM compression (compress/mode=2: ETC2/ASTC on
+// phones, S3TC/BPTC on desktops) and mipmaps: Godot's default for an extracted texture is lossless,
+// i.e. uncompressed RGBA in GPU memory (8x the bytes and the bandwidth of ETC2), its "detect 3D"
+// switch to VRAM only runs in the editor. The .import keeps the image's md5: a changed texture is
+// extracted again and keeps these settings; a new model's texture needs its .import set to mode 2.
 import { NodeIO } from '@gltf-transform/core';
 import { EXTMeshoptCompression, ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { MeshoptDecoder } from 'meshoptimizer';
@@ -21,6 +28,17 @@ const DECIMATE = {
   'decor/wall_moss.glb': 0.35,    // 1500 -> ~520, every wall block of Grove / Marsh (126 on Grove)
   'decor/wall_canyon.glb': 0.35,
   'decor/wall_ice.glb': 0.35,
+};
+// Low tier copies (<prop>_low.glb, ratio of the shipped GLB's triangles): the props drawn by the dozen
+// in MultiMeshes, whose single LOD for the whole MultiMesh stays at full detail at the game camera.
+// PropLib swaps them in on Low (prop_lib.gd set_low); no material (the full prop's is used).
+const LOW = {
+  'decor/tree_round.glb': 0.2, 'decor/tree_pine.glb': 0.2, 'decor/tree_pine_snow.glb': 0.2,
+  'decor/tree_dead.glb': 0.2, 'decor/cactus.glb': 0.25, 'decor/rock_canyon.glb': 0.25,
+  'decor/boulder.glb': 0.25, 'decor/boulder_snow.glb': 0.25, 'decor/stump.glb': 0.25,
+  'decor/crate.glb': 0.25, 'decor/lantern.glb': 0.25,
+  'decor/wall_canyon.glb': 0.45, 'decor/wall_ice.glb': 0.45, 'decor/wall_moss.glb': 0.45,
+  'decor/bush.glb': 0.4,
 };
 const BLENDER = process.env.BLENDER || 'C:/Program Files/Blender Foundation/Blender 5.2/blender.exe';
 const here = dirname(fileURLToPath(import.meta.url));
@@ -57,6 +75,12 @@ async function convert(dir) {
       rmSync(tmp, { force: true });
     } else {
       await io.write(join(out, f), doc);
+    }
+    if (LOW[key]) {
+      const low = join(out, f.replace(/\.glb$/, '_low.glb'));
+      const r = spawnSync(BLENDER, ['--background', '--factory-startup', '--python', join(here, 'decimate.py'), '--', join(out, f), low, String(LOW[key]), 'nomat'], { encoding: 'utf8' });
+      const line = (r.stdout || '').split(/\r?\n/).find(l => l.startsWith('DECIMATE'));
+      console.log(line || `${key}: no Blender (${r.error || r.status}), kept the committed ${existsSync(low) ? 'low copy' : 'full mesh only (no low copy)'}`);
     }
     bytes += statSync(join(out, f)).size; n++;
   }

@@ -33,6 +33,7 @@ var _ground_slots: Dictionary = {}   # tile key -> [MultiMesh, index]
 
 func build(map_data: Dictionary) -> void:
 	map = map_data
+	Quality.flush_shaders()   # a LOW / FULL shader switch held back during the last match lands now
 	items = Items.new()   # power cubes on the ground ('item' / 'pick' events)
 	add_child(items)
 	Foliage.ensure_globals() # the world shaders read global parameters (wind, reveal, rim, sky)
@@ -178,6 +179,8 @@ func _bushes(tiles: Array) -> void:
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
 	mmi.material_override = mat
+	if not grass:
+		mmi.set_meta("prop", "bush")   # Low: bush_low.glb (PropLib.set_low)
 	add_child(mmi)
 
 # three's Color.setHSL (lightness clamped to 1)
@@ -374,35 +377,32 @@ func _crate_gems(crates: Array) -> void:
 
 # Lantern flicker, halos, spinning gems and the light budget (arena.js update / emit, effects.js
 # LightPool): every light is scored by intensity * range / (6 + distance to the camera focus), fading
-# out from 22 to 30 m, and only the best few are on (see budget).
+# out from 22 to 30 m, and only the best few are on (see budget). The ranking follows the camera
+# focus 5 times a second (it walks, it does not jump); the lights on flicker every frame. Phones and
+# tablets move the halos and gems at 30 Hz (20 Hz on Low): their flicker is a 2 Hz wobble.
+var _rank_t := 0.0
+var _lit: Array = []   # [light, intensity without the flicker, flicker phase] of the lights on
+var _glow_frame := 0
+
 func _glow(delta: float) -> void:
 	_glow_t += delta
 	var t := _glow_t
 	var night := float(lighting.state.get("night", 0.0)) if lighting else 0.0
-	var m := get_parent()
-	var focus: Vector3 = m.get("cam_focus") if m and m.get("cam_focus") != null else Vector3.ZERO
-	var q := Quality.preset()
-	# the Mobile renderer lights a mesh (the whole floor is one) with 8 omni lights at most, and
-	# fx.gd keeps a pool of its own (4 on High, 2 on Medium, none on Low)
-	var budget := int(q.get("alights", 4))   # Quality: 4 on High, 3 on Medium, 2 on Low
-	var ranked: Array = []
-	for e in _lights:
-		if not is_instance_valid(e[0]):
-			continue
+	_rank_t -= delta
+	if _rank_t <= 0.0:
+		_rank_t = 0.2
+		_rank_lights(night)
+	for e in _lit:
 		var l: OmniLight3D = e[0]
-		var ph: float = e[3]
+		if not is_instance_valid(l):
+			continue
+		var ph: float = e[2]
 		var f := 0.85 + 0.15 * sin(t * 13.0 + ph) * sin(t * 7.3 + ph * 2.0) if ph >= 0.0 else 1.0
-		var i := (float(e[1]) + float(e[2]) * night) * f
-		var p := l.position
-		var d := Vector2(p.x - focus.x, (p.z - focus.z) * 1.2).length()
-		i *= 1.0 - smoothstep(22.0, 30.0, d)
-		ranked.append([i * l.omni_range / (6.0 + d), l, i])
-	ranked.sort_custom(func(a, b): return a[0] > b[0])
-	for k in ranked.size():
-		var l: OmniLight3D = ranked[k][1]
-		var i: float = ranked[k][2]
-		l.visible = k < budget and i > 0.02
-		l.light_energy = i / PI
+		l.light_energy = float(e[1]) * f / PI
+	_glow_frame += 1
+	var every := (3 if Quality.name_now() == "low" else 2) if Quality.mobile() else 1
+	if _glow_frame % every != 0:
+		return
 	var glow := 0.25 + 0.75 * night
 	for k in (_halos.size() if _halo_mm else 0):
 		var ph: float = _halos[k][1]
@@ -414,6 +414,34 @@ func _glow(delta: float) -> void:
 		for k in _gem_xf.size():
 			if _gems.get_instance_transform(k).basis.get_scale().x > 0.01:
 				_gems.set_instance_transform(k, Transform3D(b, _gem_xf[k]))
+
+# Which lights are on: the best `alights` of the Quality tier (4 on High, 3 on Medium, 2 on Low; the
+# Mobile renderer lights a mesh, the whole floor is one, with 8 omni lights at most, and fx.gd keeps a
+# pool of its own).
+func _rank_lights(night: float) -> void:
+	var m := get_parent()
+	var focus: Vector3 = m.get("cam_focus") if m and m.get("cam_focus") != null else Vector3.ZERO
+	var budget := int(Quality.preset().get("alights", 4))
+	var ranked: Array = []
+	for e in _lights:
+		if not is_instance_valid(e[0]):
+			continue
+		var l: OmniLight3D = e[0]
+		var i := float(e[1]) + float(e[2]) * night
+		var p := l.position
+		var d := Vector2(p.x - focus.x, (p.z - focus.z) * 1.2).length()
+		i *= 1.0 - smoothstep(22.0, 30.0, d)
+		ranked.append([i * l.omni_range / (6.0 + d), l, i, e[3]])
+	ranked.sort_custom(func(a, b): return a[0] > b[0])
+	_lit.clear()
+	for k in ranked.size():
+		var l: OmniLight3D = ranked[k][1]
+		var i: float = ranked[k][2]
+		l.visible = k < budget and i > 0.02
+		if l.visible:
+			_lit.append([l, i, ranked[k][3]])
+		else:
+			l.light_energy = 0.0
 
 # A crate or lantern that breaks takes its light with it.
 func _drop_lights(key: int) -> void:
@@ -448,7 +476,11 @@ func _world() -> void:
 		_puddles()
 	if map.get("stones", false):
 		_stones()
+	_building = true
 	Quality.apply()
+	_building = false
+
+var _building := false
 
 func apply_quality() -> void:
 	var q := Quality.preset()
@@ -465,6 +497,16 @@ func apply_quality() -> void:
 		mmi.multimesh.visible_instance_count = int(ceilf(int(d[1]) * float(q.ring)))
 		# the web's ring casts shadows down to detail 0.6 (desktop and mobile high)
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if float(q.ring) >= 1.0 else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Low: the decor MultiMeshes (ring, walls, rocks, crates, lanterns) draw their decimated copies.
+	# Swapped when the arena is built (or behind the menu): an auto quality step during a match waits
+	# for the next arena, like the shader variants (loading the low GLBs mid-fight is a hitch)
+	var m := Quality.main_node()
+	if not _building and m != null and m.get("arena") == self:
+		return
+	var low := Quality.name_now() == "low"
+	for c in get_children():
+		if c is MultiMeshInstance3D and c.has_meta("prop"):
+			PropLib.set_low(c, low)
 
 # Flat pentagon stepping stones with a darker rim on the open floor (arena.js buildStones, Oasis).
 func _stones() -> void:
@@ -579,6 +621,20 @@ func _windmill() -> void:
 			g.add_child(sails)
 			add_child(g)
 
+# The time of day settles and then holds still (no cycle): phones and tablets re-evaluate it every
+# 2nd frame (3rd on Low) while nothing moves it fast (the day cycle, the head-lamp that follows you
+# after dusk, once lit; a lightning flash). A settings change shows at the next update, within 50 ms.
+var _light_dt := 0.0
+var _light_frame := 0
+
+func _lighting_due() -> bool:
+	_light_frame += 1
+	if not Quality.mobile() or Lighting.cycle or (lighting.lamp != null and lighting.lamp.visible):
+		return true
+	if weather and weather.flash > 0.0:
+		return true
+	return _light_frame % (3 if Quality.name_now() == "low" else 2) == 0
+
 func update(delta: float) -> void:
 	if sails:
 		sails.rotation.z += delta * 0.6
@@ -587,21 +643,40 @@ func update(delta: float) -> void:
 	var me: Fighter = m.get("me") if m else null
 	var focus := me.position if me else Vector3.ZERO
 	if kit:
+		var t_kit := PerfProbe.now()
 		kit.update(delta, fighters, me)
+		PerfProbe.add("arena.kit", t_kit)
 	if lighting:
-		lighting.update(delta)
+		var t_lighting := PerfProbe.now()
+		_light_dt += delta
+		if _lighting_due():
+			lighting.update(_light_dt)
+			_light_dt = 0.0
+		PerfProbe.add("arena.lighting", t_lighting)
+		var t_glow := PerfProbe.now()
 		_glow(delta)
+		PerfProbe.add("arena.glow", t_glow)
 		for id in fighters:
 			lighting.attach_blob(fighters[id])
 	if weather:
+		var t_weather := PerfProbe.now()
 		weather.update(delta, focus)
+		PerfProbe.add("arena.weather", t_weather)
 	if water:
+		var t_water := PerfProbe.now()
 		water.update(delta)
+		PerfProbe.add("arena.water", t_water)
 	if ambient:
+		var t_ambient := PerfProbe.now()
 		ambient.update(delta, fighters)
+		PerfProbe.add("arena.ambient", t_ambient)
 	if skins:
+		var t_skins := PerfProbe.now()
 		skins.update(delta, fighters, self)
+		PerfProbe.add("arena.skins", t_skins)
+	var t_foliage := PerfProbe.now()
 	Foliage.update(delta, me, self)
+	PerfProbe.add("arena.foliage", t_foliage)
 	if _sim:
 		_simulate(delta, fighters, me)
 
@@ -728,15 +803,20 @@ func _decor_ring() -> void:
 			var mul := (0.8 + rng.randf() * 0.5) * low
 			if kind == "cliff":
 				mul *= 1.2 + rng.randf() * 0.9
-			if not by_kind.has(kind):
-				by_kind[kind] = []
-			by_kind[kind].append({"pos": pos, "yaw": rng.randf() * TAU, "mul": mul, "ysq": 0.9 + rng.randf() * 0.25})
-	for kind in by_kind:
+			# one MultiMesh per kind and per block of the ring (3 x 3 blocks around the arena, the middle
+			# one empty): the blocks out of view are culled, instead of the whole ring drawn every frame
+			var block := "%s:%d:%d" % [kind, (i + 6) * 3 / (n + 12), (j + 6) * 3 / (n + 12)]
+			if not by_kind.has(block):
+				by_kind[block] = []
+			by_kind[block].append({"pos": pos, "yaw": rng.randf() * TAU, "mul": mul, "ysq": 0.9 + rng.randf() * 0.25})
+	for block in by_kind:
+		var kind: String = String(block).get_slice(":", 0)
 		var prop := _snowy(TREE_PROP.get(kind, "tree_round"))
-		var list: Array = by_kind[kind]
+		var list: Array = by_kind[block]
 		list.shuffle() # the quality preset hides the tail of the list: keep the thinning even
 		var mmi := PropLib.multi(prop, TREE_FIT.get(kind, {"height": 4.6}), list, false)
 		if mmi:
+			mmi.extra_cull_margin = 1.5   # the wind bends the tops ~1 m out of the rest-pose box: no popping at the edges
 			add_child(mmi)
 			_decor.append([mmi, list.size()])
 

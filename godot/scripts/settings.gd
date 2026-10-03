@@ -6,7 +6,7 @@ extends RefCounted
 #   player   nickname, brawler, loadouts, profile icon
 #   ui       language, graphics preset + custom values, battery saver, display (window, vsync, fps
 #            cap, render scale, AA, shadows, bloom, weather, brightness, time of day), interface
-#            (FPS counter, camera shake, colour-blind colours)
+#            (FPS counter, performance overlay, camera shake, colour-blind colours)
 #   controls key bindings (only those changed from the defaults: controls.gd), gamepad dead zone,
 #            vibration, aim assist
 #   audio    volumes live in AudioManager (user://audio.cfg); vol_* here are the pre-options values
@@ -42,6 +42,7 @@ static var brightness := 1.0             # settings.js exposure (0.5..1.8)
 static var tod := "2"                    # settings.js tod: "0".."3" (morning..night) or "cycle"
 # interface
 static var show_fps := false
+static var show_perf := false           # the performance overlay (perf_probe.gd)
 static var shake := true
 static var colorblind := false
 # controls
@@ -93,6 +94,7 @@ static func load_all() -> void:
 	brightness = float(cf.get_value("ui", "brightness", brightness))
 	tod = String(cf.get_value("ui", "tod", tod))
 	show_fps = bool(cf.get_value("ui", "show_fps", show_fps))
+	show_perf = bool(cf.get_value("ui", "show_perf", show_perf))
 	shake = bool(cf.get_value("ui", "shake", shake))
 	colorblind = bool(cf.get_value("ui", "colorblind", colorblind))
 	var b: Variant = cf.get_value("controls", "binds", {})
@@ -131,6 +133,7 @@ static func save() -> void:
 	cf.set_value("ui", "brightness", brightness)
 	cf.set_value("ui", "tod", tod)
 	cf.set_value("ui", "show_fps", show_fps)
+	cf.set_value("ui", "show_perf", show_perf)
 	cf.set_value("ui", "shake", shake)
 	cf.set_value("ui", "colorblind", colorblind)
 	cf.set_value("controls", "binds", binds)

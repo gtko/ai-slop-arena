@@ -116,22 +116,30 @@ func say(f: Fighter, icon: String, word: String, col: Color) -> void:
 	if f:
 		_bubbles[f.id] = {"text": icon, "word": word, "col": col, "t": 2.0, "age": 0.0}
 
-func _process(delta: float) -> void:
+func _process(delta: float) -> void:   # timed for the perf overlay (perf_probe.gd)
+	var t0 := PerfProbe.now()
+	_process_timed(delta)
+	PerfProbe.add("plates", t0)
+
+func _process_timed(delta: float) -> void:
 	if not visible:
 		return
-	for f in _floats:
-		f.age += delta
-		f.since += delta
-	_floats = _floats.filter(func(f): return f.age < FLOAT_LIFE)
-	for s in _kos:
-		s.age += delta
-	_kos = _kos.filter(func(s): return s.age < KO_LIFE)
-	for id in _bubbles.keys():
-		var b: Dictionary = _bubbles[id]
-		b.t -= delta
-		b.age += delta
-		if b.t <= -0.2:
-			_bubbles.erase(id)
+	if not _floats.is_empty():   # (no filter / keys() copies on the frames with nothing to age)
+		for f in _floats:
+			f.age += delta
+			f.since += delta
+		_floats = _floats.filter(func(f): return f.age < FLOAT_LIFE)
+	if not _kos.is_empty():
+		for s in _kos:
+			s.age += delta
+		_kos = _kos.filter(func(s): return s.age < KO_LIFE)
+	if not _bubbles.is_empty():
+		for id in _bubbles.keys():
+			var b: Dictionary = _bubbles[id]
+			b.t -= delta
+			b.age += delta
+			if b.t <= -0.2:
+				_bubbles.erase(id)
 	for f in fighters.values():
 		var fr := clampf(f.hp / maxf(f.max_hp, 1.0), 0.0, 1.0)
 		var l: float = _lag.get(f.id, 1.0)

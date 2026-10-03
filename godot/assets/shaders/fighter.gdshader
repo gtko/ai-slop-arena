@@ -8,7 +8,7 @@ shader_type spatial;
 
 #include "res://assets/shaders/toon.gdshaderinc"
 
-uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D albedo_tex : source_color, TEX_FILTER, repeat_enable;
 uniform vec4 albedo : source_color = vec4(1.0);
 uniform float gain = 1.0;                  // figurines.js textureGain (per brawler)
 uniform vec3 recol = vec3(0.0, 1.0, 1.0);  // skin: hue turn (radians), saturation, brightness
@@ -37,11 +37,38 @@ void fragment() {
 	ROUGHNESS = mix(0.6, 0.3, gold);
 	METALLIC = 0.5 * gold;
 	EMISSION = c * self_light + tint + toon_rim(NORMAL, VIEW);
+#ifdef LOW
+	vec3 sh_wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	SIGHT_SHADE(sh_wp)
+#endif
 }
 
 // toon_direct (MeshStandardMaterial with the cartoon ramp) plus what the figurine adds on top: the
 // metal of the golden skin (F0 towards the albedo) and the clear coat (GGX, roughness 0.45, its N.L
 // not ramped, like three's clearcoat), which also dims the base layer by its fresnel.
+// LOW (quality.gd): one GGX lobe at the clear coat's roughness carries both layers (the base's broad
+// 0.6 lobe is folded into it), approximate Smith visibility, Schlick by multiplications.
+#ifdef LOW
+void light() {
+	float cc = mix(0.3, 0.8, gold);
+	float ndl = clamp(dot(NORMAL, LIGHT), 0.0, 1.0);
+	float ndv = clamp(dot(NORMAL, VIEW), 1e-3, 1.0);
+	vec3 h = normalize(LIGHT + VIEW);
+	float ndh = clamp(dot(NORMAL, h), 0.0, 1.0);
+	float fv = toon_pow5(1.0 - clamp(dot(VIEW, h), 0.0, 1.0));
+	float cc_dim = 1.0 - cc * (0.04 + 0.96 * toon_pow5(1.0 - ndv));
+	vec3 irr = LIGHT_COLOR * (mix(ndl, toon_ramp(ndl), 0.85) * ATTENUATION);
+	DIFFUSE_LIGHT += irr / PI * cc_dim;
+	float a = min(ROUGHNESS, CC_ROUGH);
+	a *= a;
+	float a2 = a * a;
+	float dd = ndh * ndh * (a2 - 1.0) + 1.0;
+	float dv = a2 / (PI * dd * dd) * 0.5 / max(ndl * (ndv * (1.0 - a) + a) + ndv * (ndl * (1.0 - a) + a), 1e-5);
+	vec3 f0 = mix(vec3(0.04), ALBEDO, METALLIC);
+	vec3 f = (f0 + (vec3(1.0) - f0) * fv) * cc_dim + vec3(cc * (0.04 + 0.96 * fv));
+	SPECULAR_LIGHT += irr * dv * f;
+}
+#else
 void light() {
 	float cc = mix(0.3, 0.8, gold);
 	float ndl = clamp(dot(NORMAL, LIGHT), 0.0, 1.0);
@@ -70,3 +97,4 @@ void light() {
 	float cvis = 0.5 / max(ndl * sqrt(ndv * ndv * (1.0 - ca2) + ca2) + ndv * sqrt(ndl * ndl * (1.0 - ca2) + ca2), 1e-5);
 	SPECULAR_LIGHT += LIGHT_COLOR * (ndl * ATTENUATION) * (cd * cvis * (0.04 + 0.96 * fv)) * cc;
 }
+#endif

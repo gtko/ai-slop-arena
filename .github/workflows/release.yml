@@ -25,7 +25,7 @@ permissions:
 
 env:
   TAG: ${{ github.event.inputs.tag || github.ref_name }}
-  GODOT_VERSION: 4.4.1
+  GODOT_VERSION: 4.5.2
   # SHA-256 of the Play upload certificate (~/.android-keys/aisloparena-upload.jks, the Capacitor app's):
   # a signed build with another certificate is refused, Play would reject it.
   UPLOAD_CERT_SHA256: 5c7778cc08b62841d0eb26824af500d06e997b0af9802b4e5a171b291903357b
@@ -39,7 +39,7 @@ jobs:
     name: Windows (Steam + Epic), Linux (Steam), web, iOS project
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.4.1
+      image: barichello/godot-ci:4.5.2
     env:
       # rcedit runs under wine, which refuses HOME=/github/home (not owned by the container's root)
       WINEPREFIX: /tmp/wine
@@ -55,19 +55,26 @@ jobs:
       - name: Export
         run: |
           set -o pipefail
-          export_preset() { # preset, path relative to godot/
-            mkdir -p "godot/$(dirname "$2")"
-            godot --headless --path godot --export-release "$1" "$2" 2>&1 | tee -a export.log
-            test -s "godot/$2"
+          export_preset() { # godot command (godot --headless / godot-bake), preset, path relative to godot/
+            mkdir -p "godot/$(dirname "$3")"
+            $1 --path godot --export-release "$2" "$3" 2>&1 | tee -a export.log
+            test -s "godot/$3"
           }
-          export_preset "Windows (Steam)" build/windows-steam/AISlopArena.exe
-          export_preset "Windows (Epic)" build/windows-epic/AISlopArena.exe
-          export_preset "Linux (Steam)" build/linux-steam/AISlopArena.x86_64
-          export_preset "Web" build/web/index.html
+          baked() { # the shader baker ran for this platform (a failed Vulkan start would skip it silently)
+            ls godot/.godot/exported/*/shader_baker/$1/vulkan/*/ >/dev/null || { echo "::error::shader baker did not run ($1)"; exit 1; }
+          }
+          # native presets: godot-bake (windowed editor on Xvfb + lavapipe, see godot-prepare) so the
+          # shader baker precompiles the Vulkan shaders; web (Compatibility) and iOS (Metal) are not baked
+          export_preset godot-bake "Windows (Steam)" build/windows-steam/AISlopArena.exe
+          export_preset godot-bake "Windows (Epic)" build/windows-epic/AISlopArena.exe
+          baked Windows
+          export_preset godot-bake "Linux (Steam)" build/linux-steam/AISlopArena.x86_64
+          baked Linux
+          export_preset "godot --headless" "Web" build/web/index.html
           # Xcode project only (the .ipa needs a Mac); the team id is only used to sign, not by the
           # simulator build: APPLE_TEAM_ID (secret) when there is one, else a placeholder
           sed -i "s/^application\/app_store_team_id=.*/application\/app_store_team_id=\"${APPLE_TEAM_ID:-SIMULATOR}\"/" godot/export_presets.cfg
-          export_preset "iOS" build/ios/AISlopArena.ipa || test -d godot/build/ios/AISlopArena.xcodeproj
+          export_preset "godot --headless" "iOS" build/ios/AISlopArena.ipa || test -d godot/build/ios/AISlopArena.xcodeproj
           if grep -qE "Could not start rcedit|rcedit failed|Resources Modification" export.log; then echo "::warning::rcedit failed: the Windows exe keeps Godot's icon and version info"; fi
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -91,7 +98,7 @@ jobs:
     name: Android (APK + Play AAB)
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.4.1
+      image: barichello/godot-ci:4.5.2
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/godot-prepare
@@ -108,8 +115,8 @@ jobs:
             export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/upload.jks"
             export GODOT_ANDROID_KEYSTORE_RELEASE_USER="$KEY_ALIAS"
             export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$KEY_PASSWORD"
-            godot --headless --path godot --export-release "Android" build/android/AISlopArena-android.apk
-            godot --headless --path godot --export-release "Android (Play)" build/android/AISlopArena-android.aab
+            godot-bake --path godot --export-release "Android" build/android/AISlopArena-android.apk
+            godot-bake --path godot --export-release "Android (Play)" build/android/AISlopArena-android.aab
             rm -f "$RUNNER_TEMP/upload.jks"
             test -s godot/build/android/AISlopArena-android.aab
             cp godot/build/android/AISlopArena-android.aab out/
@@ -120,9 +127,11 @@ jobs:
               -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
             export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$RUNNER_TEMP/debug.keystore"
             export GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
-            godot --headless --path godot --export-debug "Android" build/android/AISlopArena-android.apk
+            godot-bake --path godot --export-debug "Android" build/android/AISlopArena-android.apk
           fi
           test -s godot/build/android/AISlopArena-android.apk
+          # the shader baker ran (godot-bake: windowed editor on Xvfb + lavapipe, see godot-prepare)
+          ls godot/.godot/exported/*/shader_baker/Android/vulkan/*/ >/dev/null || { echo "::error::shader baker did not run (Android)"; exit 1; }
           cp godot/build/android/AISlopArena-android.apk out/
       - name: Check signature and manifest
         run: |
@@ -157,8 +166,8 @@ jobs:
           # The simulator SDK has no MetalFX; Godot's simulator library does not use it (only the
           # device one does), so the simulator build drops the framework from the link.
           sed -i '' '/MetalFX.framework/d' ios/AISlopArena.xcodeproj/project.pbxproj
-          # Godot 4.4.1's simulator libgodot.a only links as x86_64 (its arm64 objects are missing):
-          # an x86_64 app, run by the simulator under Rosetta on Apple silicon Macs.
+          # Godot's simulator libgodot.a (still in 4.5.2, despite its ios-arm64_x86_64-simulator folder)
+          # only holds x86_64 objects: an x86_64 app, run by the simulator under Rosetta on Apple silicon.
           xcodebuild -project ios/AISlopArena.xcodeproj -scheme AISlopArena -configuration Release \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
             ARCHS=x86_64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build | grep -E "error|warning: ignoring|BUILD" | tail -n 40

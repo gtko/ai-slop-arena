@@ -736,6 +736,19 @@ func _show_lines() -> void:
 	var on := not _faded and (lvl >= 2 or (lvl == 1 and is_local))
 	for l in _lines:
 		l.visible = on
+	_lod()
+
+# The importer builds each figurine's LODs (meshoptimizer, down to ~1-3k triangles a body). Godot picks
+# them by size on screen; on Low it steps down LOD_LOW times sooner: at the match camera a brawler is
+# ~50-70 px tall, drawn there with ~2-6k triangles instead of ~8-25k (close-ups keep their detail).
+const LOD_LOW := 0.3
+func _lod() -> void:
+	var b := LOD_LOW if Quality.name_now() == "low" else 1.0
+	for a in DebugArgs.list():
+		if a.begins_with("--fighterlod="):
+			b = float(a.substr(13))
+	for mi in _meshes + _lines:
+		mi.lod_bias = b
 
 # Emote sticker above the head for 2 s.
 func show_emote(text: String, col: Color) -> void:
@@ -881,7 +894,12 @@ func motion_stats() -> Dictionary:
 	var sd := sqrt(maxf(0.0, _mlog.sum2 / n - mean * mean))
 	return {"n": _mlog.n, "mean": mean, "cv": sd / maxf(mean, 1e-3), "stall": _mlog.stall, "jerk": _mlog.jerk / n / maxf(mean, 1e-3)}
 
-func _process(delta: float) -> void:
+func _process(delta: float) -> void:   # timed for the perf overlay (perf_probe.gd)
+	var t0 := PerfProbe.now()
+	_process_timed(delta)
+	PerfProbe.add("fighters", t0)
+
+func _process_timed(delta: float) -> void:
 	if _dbg_cam.size() > 0 or _dbg_fx != "":
 		_debug()
 	if _team != _team_key():
