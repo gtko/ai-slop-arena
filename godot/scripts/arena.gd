@@ -606,13 +606,13 @@ func _windmill() -> void:
 
 # The time of day settles and then holds still (no cycle): phones and tablets re-evaluate it every
 # 2nd frame (3rd on Low) while nothing moves it fast (the day cycle, the head-lamp that follows you
-# after dusk, a lightning flash). A settings change shows at the next update, within 50 ms.
+# after dusk, once lit; a lightning flash). A settings change shows at the next update, within 50 ms.
 var _light_dt := 0.0
 var _light_frame := 0
 
 func _lighting_due() -> bool:
 	_light_frame += 1
-	if not Quality.mobile() or Lighting.cycle or float(lighting.state.get("night", 0.0)) > 0.2:
+	if not Quality.mobile() or Lighting.cycle or (lighting.lamp != null and lighting.lamp.visible):
 		return true
 	if weather and weather.flash > 0.0:
 		return true
