@@ -23,7 +23,11 @@ async function convert(dir) {
     if (statSync(p).isDirectory()) { await convert(join(dir, f)); continue; }
     if (!f.endsWith('.glb')) continue;
     const doc = await io.read(p);
-    await doc.transform(dequantize(), weld(), normals({ overwrite: false })); // Godot has no KHR_mesh_quantization; the decor GLBs ship without normals (three computes them at load)
+    // Godot has no KHR_mesh_quantization; the decor GLBs ship without normals (three computes them at
+    // load). normals() unwelds the whole document (flat normals need split corners), so weld again
+    // after it: without indices every triangle owns its 3 vertices (4.4x the vertices to skin and
+    // shade on a brawler, and Godot cannot build LODs).
+    await doc.transform(dequantize(), weld(), normals({ overwrite: false }), weld());
     doc.getRoot().listExtensionsUsed().filter(e => ['EXT_meshopt_compression', 'KHR_mesh_quantization'].includes(e.extensionName)).forEach(e => e.dispose());
     await io.write(join(out, f), doc);
     bytes += statSync(join(out, f)).size; n++;
