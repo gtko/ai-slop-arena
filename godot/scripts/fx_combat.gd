@@ -118,7 +118,7 @@ func attack(f: Fighter, d: Vector3, point: Vector3, sup: bool) -> void:
 				bursts.append({"f": f, "t": k * (0.055 if sup else 0.075) - lead, "a": base, "sup": sup})
 		"frostbite":
 			if sup:
-				_windup(f, 0.2, 5.0, COL.ice, func(): _nova(f))
+				_windup(f, 0.2, 6.25 if f.has_star("permafrost") else 5.0, COL.ice, func(): _nova(f))   # Permafrost: +25 %
 				return
 			for k in [-1, 0, 1]:
 				_bullet(f, m.x, m.z, base + k * 0.11, {"speed": 21.0, "range": 12.0, "r": 0.21, "big": false, "emit": k == 0, "col": col})
@@ -279,7 +279,7 @@ func _lob(f: Fighter, d: Vector3, point: Vector3, sup: bool, bubble: bool, at :=
 		fuse_next.erase(f.id)
 	var B := {"sx": tx - ux * 4.0 if sup else mx, "sz": tz - uz * 4.0 if sup else mz, "sy": 12.0 if sup else 1.6,
 		"tx": tx, "tz": tz, "t": 0.0, "dur": (0.5 + (cd / R) * 0.35) * (0.6 if fuse else 1.0), "h": 2.6 + cd * 0.22,
-		"radius": 1.6 if bubble else (3.6 if sup else 2.0), "owner": f, "sup": sup, "mesh": g, "core": core, "flame": flame,
+		"radius": 1.6 if bubble else (3.6 if sup else (2.4 if f.has_star("bigBang") else 2.0)), "owner": f, "sup": sup, "mesh": g, "core": core, "flame": flame,
 		"spin": 1.0 if bubble else rnd(6, 12), "fx": Vector3(mx, 1.6, mz), "bubble": bubble, "shadow": null,
 		"blind": at != Vector3.INF and not sup}
 	B.t = lead / B.dur
@@ -326,7 +326,8 @@ func _update_bursts(dt: float) -> void:
 			k += 1
 			continue
 		bursts.remove_at(k)
-		var a: float = s.a + rnd(-0.035, 0.035)
+		var still := f.has_star("steadyAim") and Vector2(f.vel.x, f.vel.z).length() < 0.8   # Steady Aim: half the spread
+		var a: float = s.a + rnd(-0.035, 0.035) * (0.5 if still else 1.0)
 		var dx := sin(a)
 		var dz := cos(a)
 		var col := color_for(f, s.sup)
@@ -367,6 +368,7 @@ func _update_bullets(dt: float) -> void:
 			if c == "X" or c == "T" or c == "G" or (c == "#" and not B.big):
 				dead = true
 				fx.spark_burst(back, WALL_SPARK, 5, 4, 0.25, 0.12)
+				_splinter(B)
 			elif c == "#":
 				B.travel += 1.2   # a super goes through (the server breaks the wall)
 			elif _is_crate(c):
@@ -378,6 +380,8 @@ func _update_bullets(dt: float) -> void:
 				var fo: Fighter = o
 				if fo == B.owner or not fo.alive or not fo.visible:
 					continue
+				if fo.team >= 0 and B.owner is Fighter and fo.team == (B.owner as Fighter).team:
+					continue   # Duo: partners' shots fly through each other (game.js hits / ally)
 				var rr: float = fo.radius + B.r
 				var ddx: float = fo.position.x - B.x
 				var ddz: float = fo.position.z - B.z
@@ -400,6 +404,16 @@ func _update_bullets(dt: float) -> void:
 			if B.shape == "seed":
 				mi.rotate_object_local(Vector3.RIGHT, dt * 16.0)
 		i -= 1
+
+# Blaster's Splinters (combat.js splinter): a seed that hits a wall bursts into 2 shards bouncing back.
+func _splinter(B: Dictionary) -> void:
+	var o = B.owner
+	if B.shape != "seed" or B.get("shard", false) or not is_instance_valid(o) or not (o as Fighter).has_star("splinters"):
+		return
+	var back := atan2(-float(B.dx), -float(B.dz))
+	for s in [-0.5, 0.5]:
+		_bullet(o, float(B.x) - float(B.dx) * 0.4, float(B.z) - float(B.dz) * 0.4, back + s + rnd(-0.1, 0.1),
+			{"speed": 20.0, "range": 3.0, "r": 0.14, "big": false, "emit": false, "col": B.col, "shape": "seed", "shard": true})
 
 func _update_bombs(dt: float) -> void:
 	var i := bombs.size() - 1
@@ -519,7 +533,7 @@ func _update_windups(dt: float) -> void:
 
 # Frostbite super: ring of frost around him.
 func _nova(f: Fighter) -> void:
-	var R := 5.0
+	var R := 6.25 if f.has_star("permafrost") else 5.0
 	var p := f.position
 	fx.ring(p, Color(1.2, 2.6, 3.4), R, 0, 0.55)
 	fx.ring(p, Color(2, 3.4, 4), R * 0.6, 0, 0.4)
@@ -539,7 +553,7 @@ func _storm(f: Fighter, point: Vector3, at := Vector3.INF) -> void:
 	var cd := minf(dl, R)
 	var cx := o.x + d.x / dl * cd
 	var cz := o.z + d.z / dl * cd
-	var n := 5
+	var n := 7 if f.has_star("surge") else 5   # Surge: 7 lighter bolts
 	for k in n:
 		var a := k * 2.39996
 		var r := 2.8 * sqrt((k + 0.5) / n)

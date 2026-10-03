@@ -16,6 +16,8 @@ var flags := 0
 var target := Vector3.ZERO
 var facing := 0.0
 var hidden_by_server := false
+var team := -1                # Duo: the roster's team (0..3), -1 in Showdown (duo.gd)
+var ally := false             # Duo: the local player's partner
 var _body: MeshInstance3D
 var _model: Node3D
 var _anim: AnimationPlayer
@@ -45,6 +47,12 @@ var _emote: Label3D
 var _emote_t := 0.0
 # FX (fx.gd / brawler.js look): loadout gadget letter, hit squash spring, spawn pop, K.O. fall, status
 var gadget := "A"
+var star := 1                   # star power 1 / 2 (STARS: what the fx draw differently)
+# Star power ids of each brawler (src/gadgets.js STARS): index 0 = star 1, index 1 = star 2.
+const STARS := {
+	"blaster": ["sapRegen", "splinters"], "gunslinger": ["steadyAim", "axoRegen"], "bomber": ["magmaPuddle", "bigBang"],
+	"frostbite": ["deepFreeze", "permafrost"], "volt": ["conductor", "surge"], "kappa": ["hydrotherapy", "undertow"],
+	"pipchomp": ["huntersNose", "hungry"], "mochi": ["heavyweight", "secondHelping"]}
 var _base_scale := Vector3.ONE
 var _base_y := 0.0
 var _squash := 0.0
@@ -64,8 +72,11 @@ static var _ice_mat: StandardMaterial3D
 # outline and the ring under the feet in the team colour.
 const GAIN := {"blaster": 1.518, "bomber": 1.633, "frostbite": 1.213}   # figurines.js textureGain of each texture
 # brawler.js LINE (outline) and RING (linear, blooms); "Cb": the colour-blind option (blue against orange)
-const LINE := {"me": Color("19b6ff"), "foe": Color("5c0d14"), "meCb": Color("3a8dff"), "foeCb": Color("8a4400")}
-const RING := {"me": Vector3(0.3, 1.6, 2.0), "foe": Vector3(1.8, 0.25, 0.2), "meCb": Vector3(0.35, 0.9, 2.4), "foeCb": Vector3(2.2, 1.0, 0.05)}
+# "mate": your Duo partner (green; lavender with the colour-blind option)
+const LINE := {"me": Color("19b6ff"), "foe": Color("5c0d14"), "meCb": Color("3a8dff"), "foeCb": Color("8a4400"),
+	"mate": Color("2fd36b"), "mateCb": Color("b7a6ff")}
+const RING := {"me": Vector3(0.3, 1.6, 2.0), "foe": Vector3(1.8, 0.25, 0.2), "meCb": Vector3(0.35, 0.9, 2.4), "foeCb": Vector3(2.2, 1.0, 0.05),
+	"mate": Vector3(0.4, 2.2, 0.8), "mateCb": Vector3(1.4, 1.4, 2.6)}
 static var _ring_mesh: Mesh
 var _mats: Array[ShaderMaterial] = []
 var _lines: Array[MeshInstance3D] = []
@@ -84,9 +95,14 @@ func setup(row: Dictionary, brawlers: Dictionary) -> void:
 	fname = row.name
 	var key := String(row.type).split(":")[0]
 	type = brawlers.get(key, brawlers.blaster)
-	var lo := String(row.type).split(":")   # 'volt:B2' = gadget B, star 2
-	if lo.size() > 1 and lo[1].begins_with("B"):
-		gadget = "B"
+	# loadout: the roster's `lo` ('B2' = gadget B, star power 2), else inside the type ('volt:B2'),
+	# like game.js newMatch
+	var lo: String = String(row.lo) if row.get("lo") is String and String(row.lo).length() == 2 else ""
+	var parts := String(row.type).split(":")
+	if lo == "" and parts.size() > 1:
+		lo = parts[1]
+	gadget = "B" if lo.begins_with("B") else "A"
+	star = 2 if lo.length() > 1 and lo[1] == "2" else 1
 	max_hp = float(type.hp)
 	hp = max_hp
 	var pal: Dictionary = type.palette
@@ -124,8 +140,7 @@ func setup(row: Dictionary, brawlers: Dictionary) -> void:
 # mesh, skin and skeleton, drawn back faces only, pushed out along the normals (fighter_outline).
 func _look(key: String) -> void:
 	Foliage.ensure_globals()   # g_rim (lighting.gd sets it; the menu may draw a figure first)
-	_line_mat = ShaderMaterial.new()
-	_line_mat.shader = preload("res://assets/shaders/fighter_outline.gdshader")
+	_line_mat = _team_mat("line", _team_key())
 	var shader: Shader = preload("res://assets/shaders/fighter.gdshader")
 	var cache := {}
 	for mi in _meshes:
@@ -169,22 +184,42 @@ func _add_ring() -> void:
 	_ring.scale = Vector3(1, 0.02, 1)
 	_ring.position.y = 0.045
 	_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_ring_mat = ShaderMaterial.new()
-	_ring_mat.shader = preload("res://assets/shaders/fighter_ring.gdshader")
+	_ring_mat = _team_mat("ring", _team_key())
 	_ring.material_override = _ring_mat
 	add_child(_ring)
 	_team_colours()
 
 func _team_key() -> String:
-	return ("me" if is_local else "foe") + ("Cb" if Settings.colorblind else "")
+	return ("me" if is_local else ("mate" if ally else "foe")) + ("Cb" if Settings.colorblind else "")
 
-# You (and the menu's star) wear the bright cyan outline and ring, everybody else the dark red one.
+# You (and the menu's star) wear the bright cyan outline and ring, your Duo partner a green one,
+# everybody else the dark red one.
+# One outline and one ring material per team colour, shared by every fighter wearing it: the
+# renderer batches them instead of switching material for each brawler.
+static var _team_mats: Dictionary = {}
+
+static func _team_mat(kind: String, team: String) -> ShaderMaterial:
+	var key := kind + team
+	if not _team_mats.has(key):
+		var m := ShaderMaterial.new()
+		if kind == "line":
+			m.shader = preload("res://assets/shaders/fighter_outline.gdshader")
+			m.set_shader_parameter("color", LINE[team])
+		else:
+			m.shader = preload("res://assets/shaders/fighter_ring.gdshader")
+			m.set_shader_parameter("color", RING[team])
+		_team_mats[key] = m
+	return _team_mats[key]
+
 func _team_colours() -> void:
 	_team = _team_key()
 	if _line_mat:
-		_line_mat.set_shader_parameter("color", LINE[_team])
+		_line_mat = _team_mat("line", _team)
+		for l in _lines:
+			l.material_override = _line_mat
 	if _ring_mat:
-		_ring_mat.set_shader_parameter("color", RING[_team])
+		_ring_mat = _team_mat("ring", _team)
+		_ring.material_override = _ring_mat
 
 # Skins.apply: hue turn / saturation / brightness of the painted texture, or the golden figurine.
 func set_skin(rc: Vector3, gold: bool) -> void:
@@ -244,6 +279,11 @@ var _anim_rate := 1.0         # status: frozen 0, slowed 0.6
 var _idle_t := 0.0
 var _next_flourish := 6.0
 var _cheer_until := 0.0
+# Quality "anim" (Low: 2): the other fighters' trees advance every other frame, by the time gone
+# (staggered by fighter, so half of them update each frame); yours every frame.
+var _anim_acc := 0.0
+var _anim_n := 0
+var _q_rev := -1              # Quality.rev seen (outline hulls follow Quality.outlines)
 
 func _build_animator(path: String) -> void:
 	if _anim == null:
@@ -427,6 +467,10 @@ func _fire(clip: String) -> void:
 	_tree.set("parameters/up/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 
 # brawler.js face(): turn to the attack for half a second.
+func has_star(sid: String) -> bool:
+	var list: Array = STARS.get(String(type.get("key", "")), [])
+	return list.size() >= star and String(list[star - 1]) == sid
+
 func face(dx: float, dz: float) -> void:
 	if absf(dx) + absf(dz) < 1e-4:
 		return
@@ -490,7 +534,12 @@ func _animate(delta: float, speed_frac: float, in_bush: bool) -> void:
 	_aim_w = move_toward(_aim_w, 1.0 if aiming and not _held else 0.0, dt / 0.12)
 	_tree.set("parameters/aim/blend_amount", _aim_w)
 	_tree.set("parameters/speed/scale", _loop_speed if _state == _loop else 1.0)
-	_tree.advance(dt)
+	_anim_acc += dt
+	_anim_n += 1
+	var every := 1 if is_local else Quality.anim_every
+	if every <= 1 or (_anim_n + get_instance_id()) % every == 0:
+		_tree.advance(_anim_acc)
+		_anim_acc = 0.0
 
 func _capsule(mat: StandardMaterial3D) -> void:
 	var pal: Dictionary = type.palette
@@ -525,6 +574,7 @@ func _hud() -> void:
 	_bar_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
 	_bar.material_override = _bar_mat
 	_bar.position.y = 2.5
+	_bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_bar)
 	_label = Label3D.new()
 	_label.text = fname
@@ -675,8 +725,17 @@ func set_faded(on: bool) -> void:
 	_faded = on
 	for mi in _meshes:
 		mi.transparency = 0.5 if on else 0.0
+	_show_lines()
+
+# The outline hull is a second skinned draw of every mesh: off while faded, and on Low only on your
+# own brawler (Quality "outline": 0 none, 1 yours, 2 everybody); the ring under the feet still
+# carries everybody's team colour.
+func _show_lines() -> void:
+	_q_rev = Quality.rev
+	var lvl := Quality.outline_level
+	var on := not _faded and (lvl >= 2 or (lvl == 1 and is_local))
 	for l in _lines:
-		l.visible = not on
+		l.visible = on
 
 # Emote sticker above the head for 2 s.
 func show_emote(text: String, col: Color) -> void:
@@ -827,6 +886,8 @@ func _process(delta: float) -> void:
 		_debug()
 	if _team != _team_key():
 		_team_colours()
+	if _q_rev != Quality.rev:
+		_show_lines()
 	if _flash_t > 0.0:
 		_flash_t = maxf(0.0, _flash_t - delta * 7.0)
 		if _flash_t <= 0.0:
@@ -897,3 +958,28 @@ func _debug() -> void:
 		"freeze": flags |= 8
 		"stun": flags |= 32
 		"bush": set_faded(true)
+
+# Duo (brawler.js revive): brought back by the partner where it fell, at 40 % health, no cubes; it
+# pops back in (spawn pop) and stands up from its Death pose. duo.gd calls it.
+func revive(p: Vector3) -> void:
+	alive = true
+	won = false
+	_die_t = 0.0
+	_hitstop = 0.0
+	_fell = false
+	_launch = Vector3.ZERO
+	position = Vector3(p.x, 0.0, p.z)
+	target = position
+	_last_pos = position
+	_snaps.clear()
+	vel = Vector3.ZERO
+	cubes = 0
+	hp = roundf(max_hp * 0.4)
+	flags = 0
+	_spawn_t = 0.0
+	if _model:
+		_model.visible = true   # a ring-out hid it (kit.gd fall_ghost)
+	elif _body:
+		_body.visible = true
+	if _anim:
+		_anim.speed_scale = 1.0

@@ -10,6 +10,9 @@ extends Node
 # the GPU process, which is what held the web build far under 60 fps. Cached, the menu costs one
 # textured quad a frame and the full price only on the frames where it changes.
 #
+# On the web export and natively on phones / tablets (web_perf.gd): the Mobile and Compatibility
+# renderers pay for each of those draw calls too (the home screen: ~405 draw calls -> ~105).
+#
 # How: CanvasLayer.custom_viewport sends the layer's canvas to a SubViewport (window-sized in
 # physical pixels, the logical size as its 2D size, so text stays as sharp as before). The nodes do
 # not move: input, focus and layout still happen in the main viewport exactly as before; only the
@@ -37,7 +40,6 @@ var _hot := 0.0
 var _since := 0.0
 var _hist: PackedByteArray = []
 var _bypass := 0.0
-var _hooked := {}
 static var _poked := -10
 
 # Content that moves every frame without redrawing (the HUD's plates follow the fighters): call this
@@ -73,20 +75,30 @@ func _ready() -> void:
 	_view.visible = false
 	_view_layer.add_child(_view)
 	_hook(layer)
+	layer.tree_exiting.connect(_release)
 	get_tree().node_added.connect(_on_node_added)
 	get_viewport().size_changed.connect(_resize)
 	_resize()
 
 func _exit_tree() -> void:
+	_release()
+
+# Back to the main viewport, also when the layer leaves the tree first (quitting): CanvasLayer
+# disconnects its parent's child_order_changed from the viewport it draws to now, but connected it
+# to the one it entered with (an engine error at exit otherwise).
+func _release() -> void:
 	if _on and is_instance_valid(layer) and layer.is_inside_tree() and get_viewport() != null:
 		layer.custom_viewport = get_viewport()   # (null is refused: the main viewport is the default)
 		_on = false
+		if _view:
+			_view.visible = false
 
 func _resize() -> void:
 	var logical := get_viewport().get_visible_rect().size
 	var px := Vector2(DisplayServer.window_get_size())
-	if px.x < 1.0 or px.y < 1.0:
-		px = logical
+	var w := get_window()
+	if px.x < 1.0 or px.y < 1.0 or (w and w.content_scale_mode == Window.CONTENT_SCALE_MODE_VIEWPORT):
+		px = logical   # (phones / tablets: the frame budget draws the whole frame at the logical size)
 	_vp.size = Vector2i(maxi(1, int(px.x)), maxi(1, int(px.y)))
 	_vp.size_2d_override = Vector2i(maxi(1, int(logical.x)), maxi(1, int(logical.y)))
 	_mark()
@@ -97,20 +109,16 @@ func _on_node_added(n: Node) -> void:
 		_mark()
 
 func _hook(n: Node) -> void:
-	if n is CanvasItem and not _hooked.has(n.get_instance_id()):
-		_hooked[n.get_instance_id()] = true
+	# (a node moved to another parent leaves and enters again: its signals are still connected)
+	if n is CanvasItem and not (n as CanvasItem).draw.is_connected(_mark):
 		var ci := n as CanvasItem
 		ci.draw.connect(_mark)
 		ci.visibility_changed.connect(_mark)
-		ci.tree_exiting.connect(_forget.bind(n.get_instance_id()))
+		ci.tree_exiting.connect(_mark)
 		if ci is Control:
 			(ci as Control).item_rect_changed.connect(_mark)
 	for c in n.get_children():
 		_hook(c)
-
-func _forget(id: int) -> void:
-	_hooked.erase(id)
-	_mark()
 
 func _mark() -> void:
 	_dirty = true

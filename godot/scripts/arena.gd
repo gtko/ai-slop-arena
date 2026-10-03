@@ -248,6 +248,7 @@ func _lanterns(tiles: Array) -> void:
 				var pos := center(ij[0], ij[1]) + Vector3(0, BOUND_H, 0)
 				small.append({"pos": pos, "yaw": rng.randf() * TAU})
 				_torch(pos + Vector3(0, 1.3 * 0.72, 0), Vector2i(ij[0], ij[1]))
+	_halo_multi()
 	if not PropLib.has("lantern"):
 		return
 	if not tall.is_empty():
@@ -262,7 +263,9 @@ func _lanterns(tiles: Array) -> void:
 # Point lights of the world, lit by the nearest-first budget of _glow (the web's LightPool):
 # [light, base intensity, + at night, flicker phase or -1, tile key]
 var _lights: Array = []
-var _halos: Array = []        # [MeshInstance3D, StandardMaterial3D, flicker phase]
+var _halos: Array = []        # [position, flicker phase], drawn by _halo_mm (one draw call for all)
+var _halo_mm: MultiMesh
+const HALO_SCALED := false
 var _gems: MultiMesh
 var _gem_xf: Array = []        # [position, tile key]
 var _glow_t := 0.0
@@ -299,23 +302,42 @@ func _torch(pos: Vector3, t: Vector2i) -> void:
 		gt.width = 64
 		gt.height = 64
 		_halo_tex = gt
+	_halos.append([pos, ph])
+
+# Every lantern's halo in one MultiMesh (one draw call, one material: they used to be a mesh and a
+# material each): additive billboards, scaled and faded per instance by _glow.
+func _halo_multi() -> void:
+	if _halos.is_empty():
+		return
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	# The per-halo MeshInstance3D this replaced was scaled 1.6-2.8 x, but a billboard drops its node's
+	# scale unless keep_scale is on: they were drawn 1 m wide, mostly behind the lantern roof (the
+	# web's are 1.6-2.8 m glows). Kept as it looked; HALO_SCALED = true draws the web's glow.
+	m.billboard_keep_scale = HALO_SCALED
+	m.vertex_color_use_as_albedo = true   # the instance colour carries the fade
 	m.albedo_texture = _halo_tex
 	m.albedo_color = Color("ffb070")
-	m.no_depth_test = false
 	var q := QuadMesh.new()
 	q.size = Vector2.ONE
-	var mi := MeshInstance3D.new()
-	mi.mesh = q
-	mi.material_override = m
-	mi.position = pos
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(mi)
-	_halos.append([mi, m, ph])
+	q.material = m
+	_halo_mm = MultiMesh.new()
+	_halo_mm.transform_format = MultiMesh.TRANSFORM_3D
+	_halo_mm.use_colors = true
+	_halo_mm.mesh = q
+	_halo_mm.instance_count = _halos.size()
+	for k in _halos.size():
+		_halo_mm.set_instance_transform(k, Transform3D(Basis.IDENTITY, _halos[k][0]))
+		_halo_mm.set_instance_color(k, Color(1, 1, 1, 0))
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = _halo_mm
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# the billboards turn to the camera: grow the culling box so none pops out at the edges
+	mmi.extra_cull_margin = 3.0
+	add_child(mmi)
 
 # The power cube floating over each crate (arena.js makeCrate): a glowing green gem, spinning, with
 # a green light (0.8 + 2.5 night, range 5).
@@ -362,7 +384,7 @@ func _glow(delta: float) -> void:
 	var q := Quality.preset()
 	# the Mobile renderer lights a mesh (the whole floor is one) with 8 omni lights at most, and
 	# fx.gd keeps a pool of its own (4 on High, 2 on Medium, none on Low)
-	var budget := 4 if float(q.ring) >= 1.0 else (4 if int(q.shadow) > 0 else 3)
+	var budget := int(q.get("alights", 4))   # Quality: 4 on High, 3 on Medium, 2 on Low
 	var ranked: Array = []
 	for e in _lights:
 		if not is_instance_valid(e[0]):
@@ -382,11 +404,11 @@ func _glow(delta: float) -> void:
 		l.visible = k < budget and i > 0.02
 		l.light_energy = i / PI
 	var glow := 0.25 + 0.75 * night
-	for h in _halos:
-		var ph: float = h[2]
+	for k in (_halos.size() if _halo_mm else 0):
+		var ph: float = _halos[k][1]
 		var f := 0.85 + 0.15 * sin(t * 13.0 + ph) * sin(t * 7.3 + ph * 2.0)
-		(h[0] as MeshInstance3D).scale = Vector3.ONE * (1.6 + glow * 1.2 * f)
-		(h[1] as StandardMaterial3D).albedo_color.a = glow * (0.7 + 0.3 * f)
+		_halo_mm.set_instance_transform(k, Transform3D(Basis.from_scale(Vector3.ONE * (1.6 + glow * 1.2 * f)), _halos[k][0]))
+		_halo_mm.set_instance_color(k, Color(1, 1, 1, glow * (0.7 + 0.3 * f)))
 	if _gems:
 		var b := Basis(Vector3.UP, t * 1.2) * Basis.from_euler(Vector3(PI / 4.0, PI / 4.0, 0.0))
 		for k in _gem_xf.size():
@@ -648,6 +670,8 @@ func on_event(e: Dictionary) -> void:
 	match String(e.get("e", "")):
 		"kit":
 			kit.on_event(e)
+		"ice":   # Frostbite's Ice Wall (ice_walls.gd)
+			IceWalls.add_to(self, e.get("t", []))
 		"wall":
 			var c := center(int(e.i), int(e.j))
 			WorldFx.debris(self, Vector3(c.x, 1.0, c.z), GameData.color_of(map.get("debris", 0x9a8a70)), 12, 0.3, 6.0)
@@ -852,16 +876,17 @@ func _ground(kinds: Dictionary) -> void:
 		var outer_name := String(map.get("outer", "grass"))
 		var om := _outer_material(outer_name)
 		var e := GameData.HALF
+		var parts: Array = []   # the four sides baked into one mesh: one draw call
 		for r in [[Vector2(260, 130 - e), Vector3(0, 0, -(e + (130 - e) / 2.0))], [Vector2(260, 130 - e), Vector3(0, 0, e + (130 - e) / 2.0)],
 				[Vector2(130 - e, e * 2.0), Vector3(-(e + (130 - e) / 2.0), 0, 0)], [Vector2(130 - e, e * 2.0), Vector3(e + (130 - e) / 2.0, 0, 0)]]:
-			var outer := MeshInstance3D.new()
 			var op := PlaneMesh.new()
 			op.size = r[0]
-			outer.mesh = op
-			outer.position = (r[1] as Vector3) + Vector3(0, -0.02, 0)
-			outer.material_override = om
-			outer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			add_child(outer)
+			parts.append([op, Transform3D(Basis.IDENTITY, (r[1] as Vector3) + Vector3(0, -0.02, 0))])
+		var outer := MeshInstance3D.new()
+		outer.mesh = MeshMerge.bake(parts)
+		outer.material_override = om
+		outer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(outer)
 
 const TEX_DIR := "res://assets/tex/%s.jpg"
 

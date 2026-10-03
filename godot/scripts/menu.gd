@@ -13,6 +13,7 @@ const MenuTap := preload("res://scripts/menu_tap.gd")
 const MenuW := preload("res://scripts/menu_widgets.gd")
 const MenuShop := preload("res://scripts/menu_shop.gd")
 const MenuCollection := preload("res://scripts/menu_collection.gd")
+const AbilityPreview := preload("res://scripts/ability_preview.gd")
 
 signal quick_play
 signal create_room
@@ -769,6 +770,7 @@ func _render_loadout() -> void:
 			else:
 				b.pressed.connect(_on_star.bind(i))
 			opts.add_child(b)
+			AbilityPreview.hook(self, b, key, gr[3], i)   # its preview clip: hover, focus, the ▶ badge, a long press
 		grid.add_child(gv)
 	if not icons_only and not phone and _fit < 2 and MetaProfile.owns_brawler(key):
 		var gi := "AB".find(lo[0])

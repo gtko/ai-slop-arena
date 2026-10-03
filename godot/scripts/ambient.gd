@@ -225,7 +225,7 @@ func _step_walkers(delta: float, fighters: Dictionary) -> void:
 			continue
 		var pos: Vector3 = c.pos
 		if arena.char_at(pos.x, pos.z) == "V": # its ground crumbled away: gone with it
-			node.visible = false
+			_show(node, false)
 			c.idx = 999
 			continue
 		# shy: run from a brawler that gets too close
@@ -441,14 +441,20 @@ func update(delta: float, fighters: Dictionary) -> void:
 	if pond:
 		pond.update(delta)
 
+# The animals the tier leaves out are hidden and paused (their AnimationPlayer would still pose a
+# skeleton every frame).
 func apply_quality() -> void:
 	var k := float(Quality.preset().fauna)
 	for c in walkers:
 		var spec: Dictionary = c.spec
-		(c.node as Node3D).visible = int(c.idx) < int(ceil(int(spec.n) * k))
+		_show(c.node, int(c.idx) < int(ceil(int(spec.n) * k)))
 	for F in flocks:
 		var n: int = F.birds.size()
 		for i in n:
-			(F.birds[i].node as Node3D).visible = i < int(ceil(n * clampf(k * 1.4, 0.0, 1.0)))
+			_show(F.birds[i].node, i < int(ceil(n * clampf(k * 1.4, 0.0, 1.0))))
 	for S in swarms:
 		(S.mm as MultiMesh).visible_instance_count = maxi(1, int(ceil(int(S.n) * k)))
+
+static func _show(node: Node3D, on: bool) -> void:
+	node.visible = on
+	node.process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
