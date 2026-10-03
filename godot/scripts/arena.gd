@@ -476,7 +476,11 @@ func _world() -> void:
 		_puddles()
 	if map.get("stones", false):
 		_stones()
+	_building = true
 	Quality.apply()
+	_building = false
+
+var _building := false
 
 func apply_quality() -> void:
 	var q := Quality.preset()
@@ -493,7 +497,12 @@ func apply_quality() -> void:
 		mmi.multimesh.visible_instance_count = int(ceilf(int(d[1]) * float(q.ring)))
 		# the web's ring casts shadows down to detail 0.6 (desktop and mobile high)
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if float(q.ring) >= 1.0 else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# Low: the decor MultiMeshes (ring, walls, rocks, crates, lanterns) draw their decimated copies
+	# Low: the decor MultiMeshes (ring, walls, rocks, crates, lanterns) draw their decimated copies.
+	# Swapped when the arena is built (or behind the menu): an auto quality step during a match waits
+	# for the next arena, like the shader variants (loading the low GLBs mid-fight is a hitch)
+	var m := Quality.main_node()
+	if not _building and m != null and m.get("arena") == self:
+		return
 	var low := Quality.name_now() == "low"
 	for c in get_children():
 		if c is MultiMeshInstance3D and c.has_meta("prop"):
@@ -807,6 +816,7 @@ func _decor_ring() -> void:
 		list.shuffle() # the quality preset hides the tail of the list: keep the thinning even
 		var mmi := PropLib.multi(prop, TREE_FIT.get(kind, {"height": 4.6}), list, false)
 		if mmi:
+			mmi.extra_cull_margin = 1.5   # the wind bends the tops ~1 m out of the rest-pose box: no popping at the edges
 			add_child(mmi)
 			_decor.append([mmi, list.size()])
 
