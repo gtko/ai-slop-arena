@@ -874,16 +874,17 @@ func _ground(kinds: Dictionary) -> void:
 		var outer_name := String(map.get("outer", "grass"))
 		var om := _outer_material(outer_name)
 		var e := GameData.HALF
+		var parts: Array = []   # the four sides baked into one mesh: one draw call
 		for r in [[Vector2(260, 130 - e), Vector3(0, 0, -(e + (130 - e) / 2.0))], [Vector2(260, 130 - e), Vector3(0, 0, e + (130 - e) / 2.0)],
 				[Vector2(130 - e, e * 2.0), Vector3(-(e + (130 - e) / 2.0), 0, 0)], [Vector2(130 - e, e * 2.0), Vector3(e + (130 - e) / 2.0, 0, 0)]]:
-			var outer := MeshInstance3D.new()
 			var op := PlaneMesh.new()
 			op.size = r[0]
-			outer.mesh = op
-			outer.position = (r[1] as Vector3) + Vector3(0, -0.02, 0)
-			outer.material_override = om
-			outer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			add_child(outer)
+			parts.append([op, Transform3D(Basis.IDENTITY, (r[1] as Vector3) + Vector3(0, -0.02, 0))])
+		var outer := MeshInstance3D.new()
+		outer.mesh = MeshMerge.bake(parts)
+		outer.material_override = om
+		outer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(outer)
 
 const TEX_DIR := "res://assets/tex/%s.jpg"
 
