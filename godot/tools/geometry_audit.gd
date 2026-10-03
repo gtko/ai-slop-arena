@@ -7,6 +7,12 @@ extends SceneTree
 # difference). With --models it also lists every GLB: triangles, vertices, surfaces, LODs, bones,
 # blend shapes.
 #
+# Godot 4.4 counts a MultiMesh whose mesh has LODs as ONE instance (render_forward_mobile
+# _fill_render_list: the LOD path does not multiply by the instance count, the non-LOD path does), so
+# the trees, rocks, crates... of a MultiMesh were under-counted by their instance count. The
+# primitives here are corrected: each such MultiMesh is hidden alone and its difference multiplied by
+# its instances drawn. "GPU ms" is the viewport's measured GPU render time (average of 20 frames).
+#
 #   godot --path godot --resolution 1280x720 -s res://tools/geometry_audit.gd -- --quality=low [--maps=dunes,grove] [--models] [--out=path.md] [--shots=dir]
 #
 # Needs a real renderer (not --headless: the dummy one counts nothing). Mobile renderer by default,
@@ -209,9 +215,23 @@ func _audit_map(map_key: String) -> void:
 		_place(view)
 		await _wait(6)
 		var all := _info()
+		var gpu := await _gpu_ms()
+		var fix := await _lod_fix(cats)   # category -> [vis, shadow] primitives Godot did not count
+		var fix_tot := [0, 0]
+		for c in fix:
+			fix_tot[0] += fix[c][0]
+			fix_tot[1] += fix[c][1]
+		all.vis_prims += fix_tot[0]
+		all.shadow_prims += fix_tot[1]
+		if view == "game":   # what the map and the 8 brawlers hold in GPU memory (textures, then everything)
+			_p("\n%s memory: textures %.1f MB, buffers %.1f MB, video total %.1f MB" % [map_key,
+				Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0,
+				Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED) / 1048576.0,
+				Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0])
 		if _shots != "":
 			root.get_texture().get_image().save_png("%s/%s_%s.png" % [_shots, map_key, view])
 		_p("\n## %s / %s view" % [map_key, view])
+		_p("GPU %.2f ms" % gpu)
 		_p("| category | nodes | draws (vis+shadow) | objects (vis+shadow) | primitives k (vis+shadow) |")
 		_p("|---|---:|---:|---:|---:|")
 		_p("| **total** | %d | %d + %d | %d + %d | %.0f + %.0f |" % [_count_nodes(cats), all.vis_draws, all.shadow_draws, all.vis_objs, all.shadow_objs, all.vis_prims / 1000.0, all.shadow_prims / 1000.0])
@@ -226,6 +246,10 @@ func _audit_map(map_key: String) -> void:
 			var w := _info()
 			for n in cats[c]:
 				(n as Node3D).visible = was[n]
+			# the other categories' uncounted instances are still drawn in w
+			var own: Array = fix.get(c, [0, 0])
+			w.vis_prims += fix_tot[0] - own[0]
+			w.shadow_prims += fix_tot[1] - own[1]
 			_p("| %s | %d | %d + %d | %d + %d | %.1f + %.1f |" % [c, cats[c].size(), all.vis_draws - w.vis_draws, all.shadow_draws - w.shadow_draws,
 				all.vis_objs - w.vis_objs, all.shadow_objs - w.shadow_objs, (all.vis_prims - w.vis_prims) / 1000.0, (all.shadow_prims - w.shadow_prims) / 1000.0])
 		await _wait(2)
@@ -234,6 +258,46 @@ func _audit_map(map_key: String) -> void:
 	PropLib._cache.clear()
 	PropLib._mats.clear()
 	await _wait(2)
+
+# The viewport's GPU render time, averaged over 20 frames.
+func _gpu_ms() -> float:
+	var vp := root.get_viewport_rid()
+	RenderingServer.viewport_set_measure_render_time(vp, true)
+	await _wait(4)
+	var t := 0.0
+	for k in 20:
+		await RenderingServer.frame_post_draw
+		t += RenderingServer.viewport_get_measured_render_time_gpu(vp)
+	return t / 20.0
+
+# MultiMeshes whose mesh has LODs: Godot counted one instance; returns, per category, the primitives
+# of the other instances drawn ([visible pass, shadow pass]).
+func _lod_fix(cats: Dictionary) -> Dictionary:
+	var r := {}
+	for c in cats:
+		for n in cats[c]:
+			if not (n is MultiMeshInstance3D) or not (n as Node3D).is_visible_in_tree():
+				continue
+			var mm := (n as MultiMeshInstance3D).multimesh
+			if mm == null or mm.mesh == null:
+				continue
+			var cnt := mm.visible_instance_count if mm.visible_instance_count >= 0 else mm.instance_count
+			var lods := 0
+			for s in mm.mesh.get_surface_count():
+				lods += (RenderingServer.mesh_get_surface(mm.mesh.get_rid(), s).get("lods", []) as Array).size()
+			if cnt <= 1 or lods == 0:
+				continue
+			var a := _info()
+			(n as Node3D).visible = false
+			await _wait(3)
+			var b := _info()
+			(n as Node3D).visible = true
+			await _wait(2)
+			if not r.has(c):
+				r[c] = [0, 0]
+			r[c][0] += (a.vis_prims - b.vis_prims) * (cnt - 1)
+			r[c][1] += (a.shadow_prims - b.shadow_prims) * (cnt - 1)
+	return r
 
 func _count_nodes(cats: Dictionary) -> int:
 	var n := 0
