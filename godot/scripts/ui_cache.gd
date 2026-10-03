@@ -76,14 +76,23 @@ func _ready() -> void:
 	_view.visible = false
 	_view_layer.add_child(_view)
 	_hook(layer)
+	layer.tree_exiting.connect(_release)
 	get_tree().node_added.connect(_on_node_added)
 	get_viewport().size_changed.connect(_resize)
 	_resize()
 
 func _exit_tree() -> void:
+	_release()
+
+# Back to the main viewport, also when the layer leaves the tree first (quitting): CanvasLayer
+# disconnects its parent's child_order_changed from the viewport it draws to now, but connected it
+# to the one it entered with (an engine error at exit otherwise).
+func _release() -> void:
 	if _on and is_instance_valid(layer) and layer.is_inside_tree() and get_viewport() != null:
 		layer.custom_viewport = get_viewport()   # (null is refused: the main viewport is the default)
 		_on = false
+		if _view:
+			_view.visible = false
 
 func _resize() -> void:
 	var logical := get_viewport().get_visible_rect().size
