@@ -275,7 +275,9 @@ func _head_lamp() -> void:
 	lamp.look_at(Vector3(p.x + d.x * 9.0, 0.0, p.z + d.z * 9.0))
 	lamp.visible = true
 	lamp.light_energy = 70.0 * k / PI
-	lamp.shadow_enabled = int(Quality.preset().shadow) >= 2048 and not no_shadow
+	# (not on the web: in the Compatibility renderer a shadowed spot adds a shadow map and a whole
+	# additive lighting pass over everything it touches)
+	lamp.shadow_enabled = int(Quality.preset().shadow) >= 2048 and not no_shadow and not OS.has_feature("web")
 
 func apply_quality() -> void:
 	var q := Quality.preset()

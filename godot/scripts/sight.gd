@@ -135,17 +135,20 @@ uniform float graded = 0.0;   // 1: the frame went through the grade LUT; 2: it 
 uniform float lut_scale = 0.5;
 void fragment() {
 	vec3 src = texture(screen_tex, SCREEN_UV).rgb;
-	vec2 ndc = vec2(SCREEN_UV.x * 2.0 - 1.0, 1.0 - SCREEN_UV.y * 2.0);
-	vec3 dir = normalize(-cam_back + cam_right * ndc.x * tan_half.x + cam_up * ndc.y * tan_half.y);
-	vec2 hit = cam_pos.xz + dir.xz * ((0.6 - cam_pos.y) / min(dir.y, -1e-3));
-	vec2 uv = (hit + half_size) / (2.0 * half_size);
-	float r = 2.5 / 256.0;
-	float v = vis(uv) * 0.28
-		+ (vis(uv + vec2(r, 0.0)) + vis(uv - vec2(r, 0.0)) + vis(uv + vec2(0.0, r)) + vis(uv - vec2(0.0, r))) * 0.12
-		+ (vis(uv + vec2(r, r)) + vis(uv - vec2(r, r)) + vis(uv + vec2(r, -r)) + vis(uv - vec2(r, -r))) * 0.06;
-	float hide = 1.0 - v;
-	if (clear_r > 0.0) hide = max(hide, smoothstep(clear_r * 0.85, clear_r * 1.1, distance(hit, center)));
-	hide *= amount;
+	float hide = 0.0;
+	if (amount > 0.0) {   // (menus, web grade only: no mask lookups)
+		vec2 ndc = vec2(SCREEN_UV.x * 2.0 - 1.0, 1.0 - SCREEN_UV.y * 2.0);
+		vec3 dir = normalize(-cam_back + cam_right * ndc.x * tan_half.x + cam_up * ndc.y * tan_half.y);
+		vec2 hit = cam_pos.xz + dir.xz * ((0.6 - cam_pos.y) / min(dir.y, -1e-3));
+		vec2 uv = (hit + half_size) / (2.0 * half_size);
+		float r = 2.5 / 256.0;
+		float v = vis(uv) * 0.28
+			+ (vis(uv + vec2(r, 0.0)) + vis(uv - vec2(r, 0.0)) + vis(uv + vec2(0.0, r)) + vis(uv - vec2(0.0, r))) * 0.12
+			+ (vis(uv + vec2(r, r)) + vis(uv - vec2(r, r)) + vis(uv + vec2(r, -r)) + vis(uv - vec2(r, -r))) * 0.06;
+		hide = 1.0 - v;
+		if (clear_r > 0.0) hide = max(hide, smoothstep(clear_r * 0.85, clear_r * 1.1, distance(hit, center)));
+		hide *= amount;
+	}
 	if (hide < 0.002 && graded < 1.5) {
 		COLOR = vec4(src, 1.0);
 	} else {
