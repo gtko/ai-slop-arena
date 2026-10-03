@@ -17,7 +17,7 @@ const SFX_DIR := "res://assets/audio/sfx/"
 const MUSIC_DIR := "res://assets/audio/music/"
 const MAX_VOICES := 12
 const LEAN_VOICES := 8
-const START_BUDGET := 2            # sounds started per frame (web, Low phones)
+const START_BUDGET := 2            # sounds started per frame (web, Low phones; 1 in a Low phone browser)
 const COOLDOWN_MS := 35            # per-sound minimum gap, so repeats do not machine-gun
 const SETTINGS_PATH := "user://audio.cfg"
 
@@ -237,7 +237,7 @@ func play(sound: String, world_pos: Variant = null, vol: float = 1.0, rate: floa
 			return
 	if gain < 0.03:
 		return
-	if _budget and _starts >= START_BUDGET and gain < 0.5:
+	if _budget and _starts >= (1 if _lean and OS.has_feature("web") else START_BUDGET) and gain < 0.5:
 		return
 	var stream := _stream(file)
 	if stream == null:
