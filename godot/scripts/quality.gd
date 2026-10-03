@@ -24,10 +24,10 @@ extends RefCounted
 
 const LEVELS := ["low", "medium", "high", "ultra"]
 const PRESETS := {
-	"low": {"scale": 0.7, "msaa": 0, "shadow": 0, "atlas": 1024, "weather": 0.25, "ring": 0.35, "fauna": 0.4, "glow": false, "water": 0, "lights": 0},
-	"medium": {"scale": 0.85, "msaa": 0, "shadow": 1024, "atlas": 1024, "weather": 0.5, "ring": 0.6, "fauna": 0.7, "glow": false, "water": 1, "lights": 2},
-	"high": {"scale": 1.0, "msaa": 2, "shadow": 2048, "atlas": 2048, "weather": 1.0, "ring": 1.0, "fauna": 1.0, "glow": true, "water": 2, "lights": 4},
-	"ultra": {"scale": 1.0, "msaa": 4, "shadow": 4096, "atlas": 4096, "weather": 1.0, "ring": 1.0, "fauna": 1.0, "glow": true, "water": 2, "lights": 4},
+	"low": {"scale": 0.7, "msaa": 0, "shadow": 0, "atlas": 1024, "weather": 0.25, "ring": 0.35, "fauna": 0.4, "glow": false, "water": 0, "lights": 0, "outline": 1},
+	"medium": {"scale": 0.85, "msaa": 0, "shadow": 1024, "atlas": 1024, "weather": 0.5, "ring": 0.6, "fauna": 0.7, "glow": false, "water": 1, "lights": 2, "outline": 2},
+	"high": {"scale": 1.0, "msaa": 2, "shadow": 2048, "atlas": 2048, "weather": 1.0, "ring": 1.0, "fauna": 1.0, "glow": true, "water": 2, "lights": 4, "outline": 2},
+	"ultra": {"scale": 1.0, "msaa": 4, "shadow": 4096, "atlas": 4096, "weather": 1.0, "ring": 1.0, "fauna": 1.0, "glow": true, "water": 2, "lights": 4, "outline": 2},
 }
 # The values the options can tune one by one (anything else follows the tier).
 const TUNABLE := ["scale", "msaa", "shadow", "glow", "weather", "lights"]

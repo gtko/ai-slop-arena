@@ -124,8 +124,7 @@ func setup(row: Dictionary, brawlers: Dictionary) -> void:
 # mesh, skin and skeleton, drawn back faces only, pushed out along the normals (fighter_outline).
 func _look(key: String) -> void:
 	Foliage.ensure_globals()   # g_rim (lighting.gd sets it; the menu may draw a figure first)
-	_line_mat = ShaderMaterial.new()
-	_line_mat.shader = preload("res://assets/shaders/fighter_outline.gdshader")
+	_line_mat = _team_mat("line", _team_key())
 	var shader: Shader = preload("res://assets/shaders/fighter.gdshader")
 	var cache := {}
 	for mi in _meshes:
@@ -169,8 +168,7 @@ func _add_ring() -> void:
 	_ring.scale = Vector3(1, 0.02, 1)
 	_ring.position.y = 0.045
 	_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_ring_mat = ShaderMaterial.new()
-	_ring_mat.shader = preload("res://assets/shaders/fighter_ring.gdshader")
+	_ring_mat = _team_mat("ring", _team_key())
 	_ring.material_override = _ring_mat
 	add_child(_ring)
 	_team_colours()
@@ -179,12 +177,32 @@ func _team_key() -> String:
 	return ("me" if is_local else "foe") + ("Cb" if Settings.colorblind else "")
 
 # You (and the menu's star) wear the bright cyan outline and ring, everybody else the dark red one.
+# One outline and one ring material per team colour, shared by every fighter wearing it: the
+# renderer batches them instead of switching material for each brawler.
+static var _team_mats: Dictionary = {}
+
+static func _team_mat(kind: String, team: String) -> ShaderMaterial:
+	var key := kind + team
+	if not _team_mats.has(key):
+		var m := ShaderMaterial.new()
+		if kind == "line":
+			m.shader = preload("res://assets/shaders/fighter_outline.gdshader")
+			m.set_shader_parameter("color", LINE[team])
+		else:
+			m.shader = preload("res://assets/shaders/fighter_ring.gdshader")
+			m.set_shader_parameter("color", RING[team])
+		_team_mats[key] = m
+	return _team_mats[key]
+
 func _team_colours() -> void:
 	_team = _team_key()
 	if _line_mat:
-		_line_mat.set_shader_parameter("color", LINE[_team])
+		_line_mat = _team_mat("line", _team)
+		for l in _lines:
+			l.material_override = _line_mat
 	if _ring_mat:
-		_ring_mat.set_shader_parameter("color", RING[_team])
+		_ring_mat = _team_mat("ring", _team)
+		_ring.material_override = _ring_mat
 
 # Skins.apply: hue turn / saturation / brightness of the painted texture, or the golden figurine.
 func set_skin(rc: Vector3, gold: bool) -> void:
@@ -525,6 +543,7 @@ func _hud() -> void:
 	_bar_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
 	_bar.material_override = _bar_mat
 	_bar.position.y = 2.5
+	_bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_bar)
 	_label = Label3D.new()
 	_label.text = fname
@@ -675,8 +694,28 @@ func set_faded(on: bool) -> void:
 	_faded = on
 	for mi in _meshes:
 		mi.transparency = 0.5 if on else 0.0
+	_show_lines()
+
+# The outline hull is a second skinned draw of every mesh: the Low tier keeps it on your own brawler
+# only (Quality preset "outline": 0 none, 1 yours, 2 everybody); the ring under the feet still
+# carries everybody's team colour.
+var _outline_lvl := -1
+var _outline_check := 0
+
+func _show_lines() -> void:
+	var on := not _faded and (_outline_lvl >= 2 or (_outline_lvl == 1 and is_local))
 	for l in _lines:
-		l.visible = not on
+		l.visible = on
+
+func _check_outline() -> void:
+	_outline_check -= 1
+	if _outline_check > 0:
+		return
+	_outline_check = 30
+	var lvl := int(Quality.preset().get("outline", 2))
+	if lvl != _outline_lvl:
+		_outline_lvl = lvl
+		_show_lines()
 
 # Emote sticker above the head for 2 s.
 func show_emote(text: String, col: Color) -> void:
@@ -827,6 +866,8 @@ func _process(delta: float) -> void:
 		_debug()
 	if _team != _team_key():
 		_team_colours()
+		_show_lines()
+	_check_outline()
 	if _flash_t > 0.0:
 		_flash_t = maxf(0.0, _flash_t - delta * 7.0)
 		if _flash_t <= 0.0:
