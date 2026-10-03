@@ -9,7 +9,7 @@ on:
     paths: ['godot/**', 'scripts/godot-version.mjs', '.github/actions/godot-prepare/**', '.github/workflows/godot.yml']
 
 env:
-  GODOT_VERSION: 4.4.1
+  GODOT_VERSION: 4.5.2
   WINEPREFIX: /tmp/wine # rcedit (Windows icon) runs under wine, which refuses HOME=/github/home
   WINEDEBUG: -all
 
@@ -21,23 +21,30 @@ jobs:
   export:
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.4.1
+      image: barichello/godot-ci:4.5.2
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/godot-prepare
       - name: Web
         run: mkdir -p godot/build/web && godot --headless --path godot --export-release "Web" build/web/index.html
+      # native presets: godot-bake (windowed editor on Xvfb + lavapipe) so the shader baker runs, then a
+      # check that it did (a headless or failed Vulkan start would silently ship unbaked shaders)
       - name: Linux
-        run: mkdir -p godot/build/linux-steam && godot --headless --path godot --export-release "Linux (Steam)" build/linux-steam/AISlopArena.x86_64
+        run: |
+          mkdir -p godot/build/linux-steam && godot-bake --path godot --export-release "Linux (Steam)" build/linux-steam/AISlopArena.x86_64
+          ls godot/.godot/exported/*/shader_baker/Linux/vulkan/*/ >/dev/null || { echo "::error::shader baker did not run (Linux)"; exit 1; }
       - name: Windows
-        run: mkdir -p godot/build/windows-steam && godot --headless --path godot --export-release "Windows (Steam)" build/windows-steam/AISlopArena.exe
+        run: |
+          mkdir -p godot/build/windows-steam && godot-bake --path godot --export-release "Windows (Steam)" build/windows-steam/AISlopArena.exe
+          ls godot/.godot/exported/*/shader_baker/Windows/vulkan/*/ >/dev/null || { echo "::error::shader baker did not run (Windows)"; exit 1; }
       - name: Android (debug keystore)
         run: |
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
           export GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$PWD/debug.keystore GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
           mkdir -p godot/build/android
-          godot --headless --path godot --export-debug "Android" build/android/AISlopArena-android.apk
+          godot-bake --path godot --export-debug "Android" build/android/AISlopArena-android.apk
           test -s godot/build/android/AISlopArena-android.apk
+          ls godot/.godot/exported/*/shader_baker/Android/vulkan/*/ >/dev/null || { echo "::error::shader baker did not run (Android)"; exit 1; }
       - uses: actions/upload-artifact@v4
         with:
           name: godot-builds

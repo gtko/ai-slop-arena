@@ -4,8 +4,8 @@
 //   npm run deploy:godot-web -- --local      upload to the local R2 of `wrangler dev` instead (testing)
 //   options: --skip-export (reuse godot/build/web-deploy), --force (overwrite an uploaded version),
 //            --version X.Y.Z (default: package.json)
-// Godot: the GODOT env var, else the WinGet install of Godot 4.4.1 (the web export templates must be
-// installed). The worker deploy picks the files of its own version, so upload before `npm run deploy`.
+// Godot: the GODOT env var, else Godot 4.5.2 unzipped in %LOCALAPPDATA%/Godot/4.5.2 (the official
+// Godot_v4.5.2-stable_win64.exe.zip; the web export templates must be installed). The worker deploy picks the files of its own version, so upload before `npm run deploy`.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { gzipSync, constants } from 'node:zlib';
@@ -21,8 +21,7 @@ const opt = (f, d) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] :
 const local = flag('--local');
 const version = opt('--version', JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version);
 if (!/^\d+\.\d+\.\d+([-+][\w.]+)?$/.test(version || '')) throw new Error(`bad version "${version}" (expected X.Y.Z)`);
-const GODOT = process.env.GODOT || join(process.env.LOCALAPPDATA || '', 'Microsoft', 'WinGet', 'Packages',
-  'GodotEngine.GodotEngine_Microsoft.Winget.Source_8wekyb3d8bbwe', 'Godot_v4.4.1-stable_win64_console.exe');
+const GODOT = process.env.GODOT || join(process.env.LOCALAPPDATA || '', 'Godot', '4.5.2', 'Godot_v4.5.2-stable_win64_console.exe');
 
 const TYPES = {
   html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', wasm: 'application/wasm',
