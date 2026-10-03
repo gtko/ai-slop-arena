@@ -38,6 +38,12 @@ var _since := 0.0
 var _hist: PackedByteArray = []
 var _bypass := 0.0
 var _hooked := {}
+static var _poked := -10
+
+# Content that moves every frame without redrawing (the HUD's plates follow the fighters): call this
+# each frame it is on screen, the layer is then drawn directly.
+static func poke() -> void:
+	_poked = Engine.get_process_frames()
 
 func _init(target: CanvasLayer) -> void:
 	layer = target
@@ -126,6 +132,8 @@ func _process(delta: float) -> void:
 		return
 	_since += delta
 	_hot = maxf(0.0, _hot - delta)
+	if Engine.get_process_frames() - _poked <= 1:
+		_bypass = maxf(_bypass, 0.5)   # live content on the layer: draw it directly
 	var update := _dirty or _hot > 0.0 or _since >= REFRESH
 	_hist.append(1 if (_dirty or _hot > 0.0) else 0)
 	if _hist.size() > WINDOW:

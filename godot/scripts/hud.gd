@@ -539,7 +539,41 @@ func _process(delta: float) -> void:
 	touch.gadget_charges = gad_charges
 	touch.gadget_ready = gad_cd <= 0.0
 	_update_screen(delta)
-	_front.queue_redraw()
+	var sig := _front_sig()
+	if sig != _front_last:   # redraw only when something drawn changed (each redraw rebuilds every box)
+		_front_last = sig
+		_front.queue_redraw()
+
+# Everything _draw_front shows, rounded to what can be seen; while something animates (a pulse,
+# a pop, a fade, pings that follow the camera) the clock is part of it and the front redraws each
+# frame, as before.
+var _front_last: Array = []
+
+func _front_sig() -> Array:
+	if arena == null:
+		return []
+	var k := D.css_scale(self)
+	var w := size.x
+	var sig: Array = [k, size, touch != null and touch.visible and not _dbg_desktop, D.short_screen(self), I18n.lang,
+		Controls.using_pad, _muted(), alive_n, gas != null and gas.enabled]
+	var anim := not _cutin.is_empty() or not _pings.is_empty() or not _banner.is_empty() or _gad_bump < 0.35
+	if gas and gas.enabled:
+		var n := gas.next_in()
+		sig.append_array([gas.level, ceili(maxf(n, 0.0)) if n < 1e5 else -1])
+		anim = anim or (n < 6.0 and n > 0.0)
+	for row in _feed:
+		sig.append_array([row.killer, row.victim, row.kind, row.sup])
+		anim = anim or row.age < 0.3 or row.age > FEED_LIFE
+	if me:
+		var f := clampf(me.hp / maxf(me.max_hp, 1.0), 0.0, 1.0)
+		var sf := clampf(me.super_charge, 0.0, 1.0)
+		sig.append_array([me.cubes, ceili(maxf(me.hp, 0.0)), roundi(f * w * 0.42), roundi(_mh_lag * w * 0.42), roundi(_mh_alpha * 50.0),
+			roundi(clampf(me.ammo, 0.0, 3.0) * 64.0 * k), roundi(sf * 300.0), playing, roundi(gad_cd * 60.0), gad_charges,
+			str(me.type.get("key", ""))])
+		anim = anim or f < 0.3 or (sf >= 1.0 and playing)
+	if anim:
+		sig.append(_time)
+	return sig
 
 # --hudtest: local, cosmetic-only events so a screenshot shows the kill feed, numbers, stamp, emote,
 # banner and a spent gadget (nothing is sent to the server).

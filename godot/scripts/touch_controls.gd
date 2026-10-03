@@ -143,9 +143,26 @@ func _process(delta: float) -> void:
 			_fire_until = 0
 			if _aim_mode != "free":
 				firing = false
-	# the charge state changes over time (glow pulse, cooldown sweep): redraw only while visible
+	# the charge state changes over time (glow pulse, cooldown sweep): redraw while visible, and only
+	# when something drawn changed (every redraw rebuilds the buttons' polygons)
 	if visible:
-		queue_redraw()
+		var sig := _sig()
+		if sig != _last_sig:
+			_last_sig = sig
+			queue_redraw()
+
+var _last_sig: Array = []
+
+func _sig() -> Array:
+	var sig: Array = [_k(), size, buttons_on, _dbg_hide, _touch_move, _touch_aim, _aim_mode, I18n.lang,
+		roundi(super_frac * 200.0), roundi(gadget_cd * 120.0), gadget_charges, gadget_ready]
+	if _touch_move != -1:
+		sig.append_array([_origin_move.round(), _cur_move.round()])
+	if _touch_aim != -1:
+		sig.append_array([_origin_aim.round(), _cur_aim.round()])
+	if super_frac >= 1.0 and buttons_on:
+		sig.append(_time)   # the ready glow pulses
+	return sig
 
 # ---------------------------------------------------------------- drawing
 
@@ -201,6 +218,10 @@ func _attack(k: float) -> void:
 	var c0 := Color("ffe066")
 	var c1 := Color("ffb300")
 	var n := 48
+	# all the gradient's triangles go out as one triangle array (one draw instead of ~96 polygons)
+	var tp := PackedVector2Array()
+	var tc := PackedColorArray()
+	var ti := PackedInt32Array()
 	for i in n:
 		var a0 := TAU * i / n
 		var a1 := TAU * (i + 1) / n
@@ -210,7 +231,10 @@ func _attack(k: float) -> void:
 		var q1 := f + (p1 - f).limit_length(reach)
 		var cq0 := c0.lerp(c1, f.distance_to(q0) / reach)
 		var cq1 := c0.lerp(c1, f.distance_to(q1) / reach)
-		draw_polygon(PackedVector2Array([f, q0, q1]), PackedColorArray([c0, cq0, cq1]))
+		var b0 := tp.size()
+		tp.append_array(PackedVector2Array([f, q0, q1]))
+		tc.append_array(PackedColorArray([c0, cq0, cq1]))
+		ti.append_array(PackedInt32Array([b0, b0 + 1, b0 + 2]))
 		# the outer band, where the gradient reached its end colour: none where the rim is within reach
 		# (a zero-area quad: "triangulation failed" every frame on touch screens)
 		var band := PackedVector2Array([q0])
@@ -219,8 +243,13 @@ func _attack(k: float) -> void:
 			if (e[0] as Vector2).distance_to(band[band.size() - 1]) > 0.5 and (e[0] as Vector2).distance_to(band[0]) > 0.5:
 				band.append(e[0])
 				band_c.append(e[1])
-		if band.size() >= 3:
-			draw_polygon(band, band_c)
+		if band.size() >= 3:   # convex (3 or 4 points): a fan
+			var b1 := tp.size()
+			tp.append_array(band)
+			tc.append_array(band_c)
+			for j in range(1, band.size() - 1):
+				ti.append_array(PackedInt32Array([b1, b1 + j, b1 + j + 1]))
+	RenderingServer.canvas_item_add_triangle_array(get_canvas_item(), ti, tp, tc)
 	_knob(_knob_pos(c, "attack", k), 27.0 * k, Color(22 / 255.0, 18 / 255.0, 31 / 255.0, 0.55), k)
 
 func _super(k: float) -> void:
