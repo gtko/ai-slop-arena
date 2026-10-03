@@ -5,7 +5,7 @@ extends Control
 #   attack button  bottom right: drag to aim, release fires (a quick tap fires straight ahead)
 #   super button   above it: lights up when charged, drag to aim, release fires
 #   gadget button  left of the attack button, 3 charge pips
-#   pause (top right) and the emote button under it
+#   pause (top right) and the emote button under it; in Duo the ping button under that (.t-ping)
 # A touch on the right half outside the buttons still works as a floating aim stick that fires
 # while held (the older Godot control, kept for the real-input test). The Hud feeds the button
 # state. Sizes are CSS px times HudDraw.css_scale(), so they match the web page on the same screen.
@@ -14,6 +14,7 @@ signal super_pressed
 signal gadget_pressed
 signal emote_pressed
 signal pause_pressed
+signal ping_pressed
 
 const D := preload("res://scripts/hud_draw.gd")
 const R := 58.0          # stick radius, CSS px (touch.js)
@@ -25,6 +26,7 @@ var gadget_cd := 0.0         # 0..1 fraction of the lockout still to wait
 var gadget_charges := 3
 var gadget_ready := true
 var buttons_on := true       # false while the brawler is out
+var ping_on := false         # Duo: the ping button shows (body.duo #touch .t-ping)
 
 var move := Vector2.ZERO
 var aim := Vector2.ZERO
@@ -63,6 +65,9 @@ func _pause_r() -> Rect2:
 func _emote_c() -> Vector2:
 	var k := _k()
 	return Vector2(_vs().x - (12.0 + 23.0) * k, (70.0 + 23.0) * k)
+func _ping_c() -> Vector2:   # meta.css #touch .t-ping: right 12, top 124, 46 px
+	var k := _k()
+	return Vector2(_vs().x - (12.0 + 23.0) * k, (124.0 + 23.0) * k)
 
 func _input(ev: InputEvent) -> void:
 	if not visible:
@@ -77,6 +82,8 @@ func _input(ev: InputEvent) -> void:
 				pause_pressed.emit()
 			elif pos.distance_to(_emote_c()) <= 27.0 * k:
 				emote_pressed.emit()
+			elif ping_on and buttons_on and pos.distance_to(_ping_c()) <= 27.0 * k:
+				ping_pressed.emit()
 			elif buttons_on and pos.distance_to(_gadget_c()) <= 36.0 * k:
 				gadget_pressed.emit()
 			elif buttons_on and _touch_aim == -1 and pos.distance_to(_super_c()) <= 47.0 * k:
@@ -155,7 +162,7 @@ var _last_sig: Array = []
 
 func _sig() -> Array:
 	var sig: Array = [_k(), size, buttons_on, _dbg_hide, _touch_move, _touch_aim, _aim_mode, I18n.lang,
-		roundi(super_frac * 200.0), roundi(gadget_cd * 120.0), gadget_charges, gadget_ready]
+		roundi(super_frac * 200.0), roundi(gadget_cd * 120.0), gadget_charges, gadget_ready, ping_on]
 	if _touch_move != -1:
 		sig.append_array([_origin_move.round(), _cur_move.round()])
 	if _touch_aim != -1:
@@ -179,6 +186,8 @@ func _draw() -> void:
 	_emote(k)
 	if not buttons_on:
 		return
+	if ping_on:
+		_ping(k)
 	_gadget(k)
 	_super(k)
 	_attack(k)
@@ -327,6 +336,18 @@ func _emote(k: float) -> void:
 		draw_circle(c + Vector2(-4, -3) * k, 1.6 * k, D.INK)
 		draw_circle(c + Vector2(4, -3) * k, 1.6 * k, D.INK)
 		draw_arc(c + Vector2(0, 1) * k, 5.0 * k, 0.3, PI - 0.3, 10, D.INK, 1.6 * k, true)
+
+# Duo ping (.t-ping): a 46 px green see-through disc, 3 px ink border, the pin.
+func _ping(k: float) -> void:
+	var c := _ping_c()
+	draw_circle(c, 23.0 * k, D.INK)
+	draw_circle(c, 20.0 * k, Color(47 / 255.0, 211 / 255.0, 107 / 255.0, 0.45))
+	if D.has_emoji():
+		D.text_c(self, c, "📍", D.emoji_font(), 22.0 * k, Color.WHITE)
+	else:   # a drawn pin without an emoji font
+		draw_circle(c + Vector2(0, -3) * k, 7.0 * k, D.RED)
+		draw_colored_polygon(PackedVector2Array([c + Vector2(-5, -1) * k, c + Vector2(5, -1) * k, c + Vector2(0, 10) * k]), D.RED)
+		draw_circle(c + Vector2(0, -3) * k, 2.5 * k, Color.WHITE)
 
 static func _gray(c: Color, amount: float) -> Color:
 	if amount <= 0.0:

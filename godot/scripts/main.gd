@@ -34,6 +34,7 @@ var ui: Control
 var status: Label
 var hud: Label
 var hud_ui: Hud                    # HUD hook: in-match HUD + combat feedback (hud.gd)
+var duo: Duo                       # Duo: teams, ghosts, revives, the tether (duo.gd, hud_duo.gd)
 var rank_label: Label             # ranked-points text under the HUD result overlay
 var audio: AudioManager           # AUDIO HOOK: pooled SFX + music (scripts/audio_manager.gd)
 var menu: MainMenu
@@ -254,6 +255,9 @@ func _fake_load(counting: bool) -> void:
 # Headless end-to-end check against a local server:
 #   godot --headless --path godot -- --autotest ws://localhost:8787 [--quick] [--map=grove] [--shot=/tmp/x.png] [--lobbyshot=/tmp/l.png]
 # Default: a private room, the leader starts. --quick: matchmaking queue, then "play now with bots".
+# --mode=duo: a Duo match (you and a bot partner against 3 bot teams); the player walks (legit
+# touch.move inputs) after its partner, to its ghost when it is knocked out (a revive), and
+# --duoshots=<dir> saves tether.png, reviving.png, revived.png and ghost.png when they happen.
 func _autotest() -> void:
 	var args := DebugArgs.list()
 	var url := NetClient.default_origin()
@@ -296,6 +300,8 @@ func _autotest() -> void:
 			for a in args:
 				if a.begins_with("--map="):
 					net.send({"t": "map", "map": a.substr(6)})
+				elif a.begins_with("--mode="):
+					net.send({"t": "mode", "mode": a.substr(7)})
 			net.send({"t": "start"})
 		if state == State.PLAYING and me and DebugArgs.has("keytest") and not stats.has("keys"):
 			stats["keys"] = true
@@ -310,10 +316,20 @@ func _autotest() -> void:
 					stats["touch_fired"] = true
 				if not stats.has("start_pos"):
 					stats["start_pos"] = me.position
+			elif duo.on:
+				touch.visible = true
+				touch.move = _autotest_duo_move()
+				last_move = touch.move
+				var foe := _nearest_foe()   # fight back: aim at the nearest enemy in reach (a tap) and fire
+				var shoot := foe != null and me.position.distance_to(foe.position) < float(me.type.range)
+				touch.auto_aim = shoot
+				touch.firing = shoot
 			else:
 				last_move = Vector2(1, 0.3)
 				touch.move = Vector2(0.7, 0.4)
 				touch.visible = true
+		if duo.on:
+			await _autotest_duo_shots(stats)
 	for a in args:
 		if a.begins_with("--shot="):
 			await RenderingServer.frame_post_draw
@@ -330,6 +346,48 @@ func _autotest() -> void:
 	print("AUTOTEST-INPUT touchsize=%s touchscreen=%s touch_visible=%s touch_moved=%s touch_fired=%s start=%s end=%s" % [touch.size, DisplayServer.is_touchscreen_available(), touch.visible, stats.get("touch_moved", false), stats.get("touch_fired", false), stats.get("start_pos", Vector3.ZERO), me.position if me else Vector3.ZERO])
 	print("AUTOTEST state=%d snaps=%d me=%s hp=%s pos=%s fighters=%d arena=%s matchmade=%s" % [state, stats.snaps, me != null, me.hp if me else -1, me.position if me else Vector3.ZERO, fighters.size(), arena != null, net.matchmade])
 	get_tree().quit(0 if stats.snaps > 20 and me != null else 1)
+
+# --mode=duo autotest: walk to the partner's ghost (a revive: stand within 2.5 m), else stay near the
+# partner; a plain stick input like a thumb would give (the server checks every step).
+func _autotest_duo_move() -> Vector2:
+	if me == null or not me.alive or duo.mate == null:
+		return Vector2.ZERO
+	var G := duo.ghost_of(duo.mate)
+	var to := Vector3.INF
+	var near := 3.0
+	if not G.is_empty():
+		to = Vector3(G.x, 0, G.z)
+		near = 0.8
+	elif duo.mate.alive:
+		to = duo.mate.position
+	if to == Vector3.INF:
+		return Vector2(0.7, 0.4)
+	var d := Vector2(to.x - me.position.x, to.z - me.position.z)
+	return d.normalized() if d.length() > near else Vector2.ZERO
+
+func _autotest_duo_shots(stats: Dictionary) -> void:
+	var dir := ""
+	for a in DebugArgs.list():
+		if a.begins_with("--duoshots="):
+			dir = a.substr(11)
+	var want := ""
+	var mine_g := duo.ghost_of(duo.mate) if duo.mate else {}
+	var my_g := duo.my_ghost()
+	if state == State.PLAYING and duo.tether_shown() and not stats.has("shot_tether") and me.position.distance_to(duo.mate.position) > 4.0:
+		want = "tether"
+	elif (float(mine_g.get("p", 0.0)) > 1.0 or float(my_g.get("p", 0.0)) > 1.0) and not stats.has("shot_reviving"):
+		want = "reviving"
+	elif not my_g.is_empty() and float(my_g.p) == 0.0 and not stats.has("shot_ghost"):
+		want = "ghost"
+	elif duo.last_revive_ms > 0 and Time.get_ticks_msec() - duo.last_revive_ms > 400 and not stats.has("shot_revived"):
+		want = "revived"
+	if want == "":
+		return
+	stats["shot_" + want] = true
+	print("DUOSHOT %s me_alive=%s mate_alive=%s ghosts=%s revives=%s" % [want, me.alive, duo.mate.alive if duo.mate else false, duo.ghosts.keys(), duo.revives])
+	if dir != "":
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(dir.path_join(want + ".png"))
 
 func _notification(what: int) -> void:
 	# battery: a game nobody looks at should not keep the GPU busy
@@ -378,6 +436,10 @@ func _build_scene() -> void:
 	env.environment = e
 	add_child(env)
 	add_child(Sight.new(self))   # line-of-sight dimming (sight.gd, src/sight.js)
+	duo = Duo.new()
+	duo.main = self
+	duo.audio = audio
+	add_child(duo)
 	add_child(WebPerf.new())   # web: WebGL state filter, frame-rate keeper; ?perf probe (web_perf.gd)
 
 func _build_ui() -> void:
@@ -396,6 +458,12 @@ func _build_ui() -> void:
 	hud_ui.menu_requested.connect(_result_menu)
 	hud_ui.options_requested.connect(func(): settings_view.open())
 	hud_ui.play_again.connect(_result_again)
+	hud_ui.duo = duo
+	var duo_hud := DuoHud.new()   # partner card, arrow, ghost message (over the Hud)
+	duo_hud.duo = duo
+	duo_hud.hud = hud_ui
+	duo_hud.cam = cam
+	hud_ui.add_child(duo_hud)
 	hud = Label.new()
 	hud.visible = false   # HUD hook: replaced by hud_ui
 	hud.position = Vector2(20, 12)
@@ -631,7 +699,11 @@ func _on_net_closed() -> void:
 	_in_match_room = false
 	_to_menu(I18n.t("g.connLost"))
 
+var _last_err: Dictionary = {}   # (autotest) the last {t:"error"} / {t:"kicked"}
+
 func _to_menu(msg: String) -> void:
+	if DebugArgs.has("autotest") and msg != "":
+		print("AUTOTEST to menu: %s (state %d, last error %s)" % [msg, state, _last_err])
 	_auto_start = false
 	_clear_match()
 	audio.stop_jingle()   # AUDIO HOOK
@@ -662,6 +734,7 @@ func _clear_match() -> void:
 	_match_done = false
 	_result_shown = false
 	hud_ui.end_match()   # HUD hook
+	duo.end()
 	rank_label.visible = false
 
 func _error_text(m: Dictionary) -> String:
@@ -691,7 +764,9 @@ func _show_result() -> void:
 	if not _result_shown and me != null:
 		# XP, Slop Coins and Bot League trophies of this match (the web's awardMatch, meta_profile.gd)
 		var st: Dictionary = result._stats.get(String(me.id), {})
-		MetaProfile.award_match(1 if won else maxi(_my_place, 1), int(st.get("kos", 0)), won, Settings.brawler, _vs_bots)
+		var place := 1 if won else maxi(_my_place, 1)
+		# Duo: 1st-4th team; progression counts them like 1st, 3rd, 5th and 7th of 8 (main.js onResult)
+		MetaProfile.award_match(place * 2 - 1 if result.duo else place, int(st.get("kos", 0)), won, Settings.brawler, _vs_bots)
 	_result_shown = true
 	# the web's #result: SPECTATE while the others still fight, PLAY AGAIN / MENU once it is over
 	var over := _winner != "" or _match_done
@@ -815,16 +890,29 @@ func _on_message(m: Dictionary) -> void:
 		"reported":
 			lobby.toast(I18n.t("mod.reported") if bool(m.get("ok", false)) else I18n.t("err.unreachable"))
 		"kicked":
+			_last_err = m
 			_leaving = true
 			net.close()
 			_to_menu(_error_text(m))
 		"error":
+			_last_err = m
 			if state == State.LOBBY or state == State.MENU or state == State.QUEUE:
 				_leaving = true
 				net.close()
 				_to_menu(_error_text(m))
 			else:
 				status.text = _error_text(m)
+
+# Duo: our partner revived us (duo.gd revive): back in the match.
+func _on_duo_revived() -> void:
+	_knock = Vector2.ZERO
+	_cam_target = null
+	status.text = ""
+	if state == State.OVER and _winner == "" and not _match_done:
+		result.hide_result()
+		hud_ui.result_open = false
+		_result_shown = false
+		_set_state(State.PLAYING)
 
 # The server ended the match (someone won, or the time ran out): show the result once.
 func _match_over() -> void:
@@ -863,6 +951,7 @@ func _start_match(m: Dictionary) -> void:
 	Feel.current = feel
 	_cam_target = null
 	_knock = Vector2.ZERO
+	duo.begin(m.roster, fighters, me, arena)   # before the HUD: it counts the teams
 	hud_ui.begin_match(m, arena, fighters)   # HUD hook
 	_final_music = false   # AUDIO HOOK: the map theme (+ weather bed) starts with the match
 	_me_hp = -1.0
@@ -954,6 +1043,8 @@ func _apply_snap(m: Dictionary) -> void:
 		var f: Fighter = fighters.get(r[0])
 		if f == null:
 			continue
+		if not f.alive:
+			duo.revived_in_snap(f, float(r[1]), float(r[2]))   # Duo: back up (game.js applySnap)
 		seen[r[0]] = true
 		if _vislog and f.hidden_by_server and f != me:
 			print("VIS t=%.2f show %s jump=%.2f d_me=%.1f" % [Time.get_ticks_msec() / 1000.0, f.id, f.position.distance_to(Vector3(r[1], 0, r[2])), me.position.distance_to(Vector3(r[1], 0, r[2])) if me else -1.0])
@@ -964,6 +1055,7 @@ func _apply_snap(m: Dictionary) -> void:
 			if _vislog and not fighters[id].hidden_by_server and fighters[id].alive:
 				print("VIS t=%.2f hide %s d_me=%.1f why=%s" % [Time.get_ticks_msec() / 1000.0, id, me.position.distance_to(fighters[id].position) if me else -1.0, _vis_why(fighters[id])])
 			fighters[id].hidden_by_server = true   # in a bush / fog: the server does not tell us
+	duo.after_snap(m)
 	_flush_attacks()
 	_audio_snap()   # AUDIO HOOK
 	if me and m.has("me") and int(m.me[2]) != fix_seen:
@@ -975,6 +1067,9 @@ func _apply_event(e: Dictionary) -> void:
 	if arena:
 		arena.on_event(e)  # WORLD hook
 	var f: Fighter = fighters.get(e.get("id", ""))
+	if e.get("e", "") == "kill":
+		duo.on_kill(e, f)   # Duo: ghost where it fell (before the fall moves it)
+	duo.on_event(e)   # Duo: revive progress, revives, ghosts gone, pings
 	_feel_event(e)   # FEEL: turning, Shoot / Super clips, kicks, punches, hit ladder, K.O. beat
 	match e.get("e", ""):
 		"atk":
@@ -990,10 +1085,17 @@ func _apply_event(e: Dictionary) -> void:
 				if fighters.get(e.get("by", "")) == me and f != me:
 					audio.play("kill")
 					audio.duck()
+			# Duo: knocked out while your partner stands, you wait for a revive (no result yet); your
+			# partner's K.O. with a rank puts your whole team out (game.js duoKo)
+			var waiting := f == me and duo.waiting()
+			var team_out := f != null and f != me and duo.ally(f, me) and not me.alive and int(e.get("rank", 0)) > 0
 			if f == me:
 				audio.set_danger(0.0)
+				if not waiting:
+					audio.play("lose")
+			elif team_out:
 				audio.play("lose")
-			if f == me and state != State.OVER:
+			if ((f == me and not waiting) or team_out) and state != State.OVER:
 				_my_place = int(e.get("rank", 0))
 				_set_state(State.OVER)
 				status.text = I18n.t("g.ko", {"rank": _my_place})
@@ -1001,12 +1103,13 @@ func _apply_event(e: Dictionary) -> void:
 				_show_result()
 		"win":
 			_winner = String(e.get("id", ""))
-			if f == me:
+			var ours := f == me or duo.ally(f, me)   # Duo: your partner's win is yours
+			if ours:
 				_my_place = 1
 				audio.play("win")   # AUDIO HOOK
 			if state != State.OVER:
 				_set_state(State.OVER)
-				status.text = I18n.t("result.victory") if f == me else I18n.t("g.wins", {"name": f.fname if f else "?"})
+				status.text = I18n.t("result.victory") if ours else I18n.t("g.wins", {"name": f.fname if f else "?"})
 				await get_tree().create_timer(1.2).timeout
 				_show_result()
 			elif _result_shown:
@@ -1181,6 +1284,9 @@ func _follow_camera(delta: float) -> void:
 	var F := feel
 	var tgt: Fighter = me
 	if not me.alive:
+		var mate_cam := duo.cam_target()   # Duo: watch your partner
+		if mate_cam:
+			_cam_target = mate_cam
 		if _cam_target == null or not is_instance_valid(_cam_target) or not _cam_target.alive:
 			_cam_target = null
 			for f in fighters.values():
@@ -1235,7 +1341,7 @@ func _nearest_foe() -> Fighter:
 	var best: Fighter = null
 	var bd := INF
 	for f in fighters.values():
-		if f == me or not f.alive or not f.visible:
+		if f == me or not f.alive or not f.visible or duo.ally(f, me):   # (Duo: never your partner)
 			continue
 		var d := Vector2(f.position.x - me.position.x, f.position.z - me.position.z).length()
 		if d < bd:

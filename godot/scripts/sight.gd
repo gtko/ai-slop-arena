@@ -223,7 +223,11 @@ func _process(delta: float) -> void:
 	var vision := float(hud.get("vision")) if hud and hud.get("vision") != null else 0.0
 	# game.js sightViewer: you while alive; on fog maps whoever the camera follows (here: still you)
 	var viewer: Fighter = null
-	if me and is_instance_valid(me) and arena and (me.alive or vision > 0.0):
+	var duo: Duo = main.get("duo") if main else null
+	var mate_eye: Fighter = duo.sight_viewer() if duo and arena else null   # Duo: your partner's eyes once you are out
+	if mate_eye:
+		viewer = mate_eye
+	elif me and is_instance_valid(me) and arena and (me.alive or vision > 0.0):
 		viewer = me
 	var want := 1.0 if viewer and not _off else 0.0
 	amount += (want - amount) * (1.0 - exp(-4.0 * delta))

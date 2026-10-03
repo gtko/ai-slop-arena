@@ -16,6 +16,8 @@ var flags := 0
 var target := Vector3.ZERO
 var facing := 0.0
 var hidden_by_server := false
+var team := -1                # Duo: the roster's team (0..3), -1 in Showdown (duo.gd)
+var ally := false             # Duo: the local player's partner
 var _body: MeshInstance3D
 var _model: Node3D
 var _anim: AnimationPlayer
@@ -70,8 +72,11 @@ static var _ice_mat: StandardMaterial3D
 # outline and the ring under the feet in the team colour.
 const GAIN := {"blaster": 1.518, "bomber": 1.633, "frostbite": 1.213}   # figurines.js textureGain of each texture
 # brawler.js LINE (outline) and RING (linear, blooms); "Cb": the colour-blind option (blue against orange)
-const LINE := {"me": Color("19b6ff"), "foe": Color("5c0d14"), "meCb": Color("3a8dff"), "foeCb": Color("8a4400")}
-const RING := {"me": Vector3(0.3, 1.6, 2.0), "foe": Vector3(1.8, 0.25, 0.2), "meCb": Vector3(0.35, 0.9, 2.4), "foeCb": Vector3(2.2, 1.0, 0.05)}
+# "mate": your Duo partner (green; lavender with the colour-blind option)
+const LINE := {"me": Color("19b6ff"), "foe": Color("5c0d14"), "meCb": Color("3a8dff"), "foeCb": Color("8a4400"),
+	"mate": Color("2fd36b"), "mateCb": Color("b7a6ff")}
+const RING := {"me": Vector3(0.3, 1.6, 2.0), "foe": Vector3(1.8, 0.25, 0.2), "meCb": Vector3(0.35, 0.9, 2.4), "foeCb": Vector3(2.2, 1.0, 0.05),
+	"mate": Vector3(0.4, 2.2, 0.8), "mateCb": Vector3(1.4, 1.4, 2.6)}
 static var _ring_mesh: Mesh
 var _mats: Array[ShaderMaterial] = []
 var _lines: Array[MeshInstance3D] = []
@@ -185,9 +190,10 @@ func _add_ring() -> void:
 	_team_colours()
 
 func _team_key() -> String:
-	return ("me" if is_local else "foe") + ("Cb" if Settings.colorblind else "")
+	return ("me" if is_local else ("mate" if ally else "foe")) + ("Cb" if Settings.colorblind else "")
 
-# You (and the menu's star) wear the bright cyan outline and ring, everybody else the dark red one.
+# You (and the menu's star) wear the bright cyan outline and ring, your Duo partner a green one,
+# everybody else the dark red one.
 # One outline and one ring material per team colour, shared by every fighter wearing it: the
 # renderer batches them instead of switching material for each brawler.
 static var _team_mats: Dictionary = {}
@@ -952,3 +958,28 @@ func _debug() -> void:
 		"freeze": flags |= 8
 		"stun": flags |= 32
 		"bush": set_faded(true)
+
+# Duo (brawler.js revive): brought back by the partner where it fell, at 40 % health, no cubes; it
+# pops back in (spawn pop) and stands up from its Death pose. duo.gd calls it.
+func revive(p: Vector3) -> void:
+	alive = true
+	won = false
+	_die_t = 0.0
+	_hitstop = 0.0
+	_fell = false
+	_launch = Vector3.ZERO
+	position = Vector3(p.x, 0.0, p.z)
+	target = position
+	_last_pos = position
+	_snaps.clear()
+	vel = Vector3.ZERO
+	cubes = 0
+	hp = roundf(max_hp * 0.4)
+	flags = 0
+	_spawn_t = 0.0
+	if _model:
+		_model.visible = true   # a ring-out hid it (kit.gd fall_ghost)
+	elif _body:
+		_body.visible = true
+	if _anim:
+		_anim.speed_scale = 1.0

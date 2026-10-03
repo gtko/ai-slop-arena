@@ -66,7 +66,12 @@ func track(e: Dictionary) -> void:
 			if e.get("s") != null and String(e.get("s")) != String(e.get("id", "")):
 				_add(e.get("s"), "dmg", float(e.get("a", 0.0)))
 		"kill":
-			_ranks[String(e.get("id", ""))] = int(e.get("rank", 0))
+			var kid := String(e.get("id", ""))
+			_ranks[kid] = int(e.get("rank", 0))
+			if duo and int(e.get("rank", 0)) > 0 and _rows.has(kid):   # the whole team out: the partner's place too (game.js duoKo)
+				for id in _rows:
+					if id != kid and _rows[id].get("team", -1) == _rows[kid].get("team", -2):
+						_ranks[id] = int(e.get("rank", 0))
 			if e.get("by") != null and String(e.get("by")) != String(e.get("id", "")):
 				_add(e.get("by"), "kos")
 		"win":
