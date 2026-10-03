@@ -53,7 +53,12 @@ Everything is a client of the server (protocol v6, cross-play between every plat
   --overlay=settings --tab=graphics [--capture] [--padnav=rb,down,right]`; `--autotest ... --keytest` presses
   every shortcut and prints KEYTEST lines.
 - **Power:** Low/Medium/High/Ultra (`Quality`), battery saver (30 fps, 0.7 render scale, no shadow map, 25 % particles),
-  5 fps in the background, menus stop 3D rendering.
+  5 fps in the background, menus stop 3D rendering. Phones and tablets (native and web) draw the whole frame at a
+  pixel budget per tier (Low 1.3 M pixels, Medium 2.3 M, High 3.7 M: a 2880x1800 tablet at Low renders 1442x901 and
+  upscales once), cache the menu layers, start on Low or Medium by GPU and step down automatically (last step:
+  a steady 30 fps); on Android the frame-rate keeper also tries the other renderer (Vulkan / OpenGL ES) at the next
+  launch when even that is too slow, and keeps the faster (`quality.gd`). Desktop check: `-- --device=mobile`.
+  Measure with `-- --perf[=sec] [--perfuncap] [--perfmesh]` (`perf_probe.gd`).
 
 ## Verified vs not
 
