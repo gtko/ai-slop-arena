@@ -87,6 +87,12 @@ The web keeps `/classic/` (three.js) for two weeks behind a Worker switch for in
 
 ## Code removal (phase 3)
 
+**Done** (branch `claude/remove-threejs`, decided with the user on 2026-10-03: the three.js client goes
+for good, the website included, no `/classic/` rollback): `/play` and the invite links redirect to the
+Godot web client, the web saves are imported by `godot/scripts/legacy_import.gd`, `/app/latest.json` is
+frozen on v0.17.1 (`src/updates.js`). Data the tools read moved to `src/economy.js`,
+`src/i18n/langs.json` and `src/achievements.json`; the desktop icons to `assets/app-icons/`.
+
 **Shared with the server, keep**: `game.js, ai.js, arena.js, assets.js, foliage.js, lantern.js, maps.js,
 materials.js, props.js, shore.js, water.js, brawler.js, cosmetics.js, figurines.js, animator.js,
 models.js, gadgets.js, combat.js, effects.js, events.js, feel.js, kit.js, mutators.js, poison.js,

@@ -4,7 +4,7 @@
 
 <p align="center">
   <b>A cute top-down 3D brawler that runs in your browser.</b><br>
-  Brawl Stars–style Showdown in three.js · real-time lighting and shadows · 5 arenas with live weather · online multiplayer
+  Brawl Stars–style Showdown in Godot 4 · real-time lighting and shadows · 5 arenas with live weather · online multiplayer
 </p>
 
 <p align="center">
@@ -19,7 +19,7 @@
 
 Pick a brawler, hide in the tall grass, smash crates for power cubes and be the last one standing while the poison gas closes in.
 Eight players per match: play solo against bots, or create a room and share the link with friends (bots fill the empty slots).
-No install, no account: it runs in any modern browser, with mouse and keyboard or a gamepad.
+No install, no account: it runs in any modern browser, with mouse and keyboard, touch or a gamepad.
 
 ## Made by an AI in two evenings
 
@@ -123,43 +123,36 @@ The game rigs and animates them at load time: walking, aiming, recoil and breath
 
 ## Play
 
-**[Play in your browser](https://ai-slop-arena.gtux-prog.workers.dev/play)**, or run it locally:
+**[Play in your browser](https://ai-slop-arena.gtux-prog.workers.dev/play)**. The game client is the
+Godot 4 project in `godot/` (web, Windows, Linux, Android, iOS); the server and the website live here:
 
 ```bash
 npm install
-npm run dev          # site on http://localhost:5173, game on http://localhost:5173/play.html
-npm run dev:server   # online server (Cloudflare Worker + Durable Objects, local), on :8787
-npm run deploy       # build and deploy everything to Cloudflare
+npm test                 # the server's game rules headless, ranking, the 30 locales
+npm run dev              # the website on http://localhost:5173
+npm run dev:server       # site + online server (Cloudflare Worker + Durable Objects, local) on :8787
+npm run deploy:godot-web -- --local   # export the Godot web client into the local R2: /play works on :8787
+npm run deploy           # build and deploy the website and the server to Cloudflare
 ```
 
-The home page (`index.html`, "/") is the showcase site with the trailer; the game itself is `play.html` ("/play"),
-which opens on a loading screen while the models and textures stream in.
+The home page (`index.html`, "/") is the showcase site with the trailer; the game is at "/play", which
+redirects to the Godot web client (`/godot/<version>/`, served from R2). Run the client natively with
+`godot --path godot` (see [godot/README.md](godot/README.md)).
 
 ### Online play
 
 **Find a match** puts every platform (web, Steam, Epic, Android, iOS) in one queue; after 1 minute of
-waiting, bots fill the empty slots. Room codes still work for playing with friends. Our server runs
-every online match itself (the game rules built headless), validates every move, sends each player
-only what they can see, and handles reports, kicks and bans: see [docs/moderation.md](docs/moderation.md).
+waiting, bots fill the empty slots. Room codes still work for playing with friends, and an invite link
+(`/play?room=CODE`) opens the game straight in that room. Our server runs every online match itself
+(the game rules built headless), validates every move, sends each player only what they can see, and
+handles reports, kicks and bans: see [docs/moderation.md](docs/moderation.md).
 
-### Desktop + Steam
+### Steam, Epic, Android and iOS
 
-The same game also runs as a desktop app (Electron) with Steam achievements, friend invites,
-"Join game" from the friends list and Steam P2P multiplayer (no server needed). Cross-play rooms
-let Steam and browser players meet, and the game is translated into all 30 Steam languages:
-
-```bash
-npm run desktop      # build and open the desktop app (start Steam first for the Steam features)
-npm run dist:steam   # packaged Windows build in release/win-unpacked, ready for SteamPipe
-```
-
-See [steam/README.md](steam/README.md) for the achievements to declare and how to upload a build.
-
-### Android, iOS and Epic Games Store
-
-The same game ships as Android and iOS apps (Capacitor, with touch controls) and as an Epic Games
-Store build. Every tagged version is built by GitHub Actions and attached to a
-[GitHub release](https://github.com/gtko/ai-slop-arena/releases). Details: [docs/platforms.md](docs/platforms.md).
+The same Godot client is exported for Steam (Windows, Linux), the Epic Games Store, Android and iOS.
+Every tagged version is built by GitHub Actions and attached to a
+[GitHub release](https://github.com/gtko/ai-slop-arena/releases). Details: [docs/platforms.md](docs/platforms.md);
+Steam: [steam/README.md](steam/README.md).
 
 ## Controls
 
@@ -181,53 +174,28 @@ Keys can be rebound in the options menu, which also has the graphics presets (lo
 
 ### Stack
 
-three.js (WebGL) · JavaScript · Vite · Cloudflare Workers and Durable Objects · Hunyuan3D-2 (local, AMD GPU via ROCm) ·
+Godot 4 (GDScript) · JavaScript · Vite · Cloudflare Workers and Durable Objects · Hunyuan3D-2 (local, AMD GPU via ROCm) ·
 Gemini 2.5 Flash Image and Lyria 3 via OpenRouter · ElevenLabs · ffmpeg · Claude Code Desktop with Claude Opus 5.5
 
-### Lighting and shadow techniques
+### The client
 
-- **Camera-fitted, texel-snapped sun shadows.** The orthographic shadow frustum follows the view instead of covering
-  the whole map, which gives about 2 cm texels at 2048² instead of about 4 cm. Its origin snaps to whole shadow-map
-  texels in light space, so edges don't shimmer while the camera moves. Both options can be toggled in the panel to compare.
-- **Selectable filtering:** PCF (hardware 2×2 compare with 5 Vogel-disk taps rotated by interleaved gradient noise), VSM, or hard shadows, plus a softness slider.
-- **Animated time of day.** Four keyframes (morning, noon, sunset, night) are interpolated in linear space: sun colour,
-  intensity, elevation and azimuth, sky/ground hemisphere, IBL intensity, fog, exposure, bloom and rim light.
-  The sun arcs across the far side of the arena, so shadows always fall toward the camera where you can see them.
-- **Pooled dynamic point lights.** There are 12 fixed `PointLight`s (a fixed count, so shaders never recompile). Each frame they are
-  handed to the most relevant emitters, scored by brightness and distance to the camera: projectiles, muzzle flashes,
-  explosions, torches, glowing crates, power cubes and the poison wall. Lights fade out with distance before they could lose their slot, so there's no popping.
-- **Shadow-casting head-lamp.** A spot light follows whoever the camera tracks and fades in after dusk. Walls and bushes
-  throw long moving shadows ahead of you. Its shadow pass is skipped entirely in daylight.
-- **Swaying foliage shadows.** Wind sway and "push-away" from nearby brawlers happen in world space in *both* the colour
-  shader and a matching custom depth material, so bush and tree shadows move with the leaves.
-- **Dithered bush reveal.** When you hide in a bush, the leaves around you dissolve with a 4×4 Bayer screen-door pattern.
-  The pass stays opaque, so there are no transparency sorting problems, and the bush keeps casting its full shadow.
-- **GTAO** ambient occlusion for contact shadows. Particles, decals and gas are excluded from its depth/normal pre-pass.
-- **HDR pipeline:** half-float MSAA target → GTAO → Unreal bloom (emissive projectiles, fire and gems exceed 1.0) → ACES tone mapping.
-- **Fresnel rim light** on characters, tinted per time of day, so brawlers stay readable in shade and at night.
-- Baked vertex-colour gradients on walls, a PMREM room environment for speculars, a water shader with scrolling
-  normals and shoreline foam, scorch decals, and shadow-casting debris.
-
-Weather is a per-frame modifier on top of the time of day (sun, sky, fog distance, shadow softness,
-exposure). It dims at night, so a foggy or rainy night stays dark. Storms also make the foliage sway harder.
+The Godot client (`godot/`) renders the server's snapshots and sends inputs; the rules run on the
+server only. Its lighting, weather, foliage, water and toon shading are ports of the first client
+(three.js, retired in v0.18): see [godot/README.md](godot/README.md) and
+[docs/godot-migration.md](docs/godot-migration.md).
 
 ### Multiplayer
 
-`worker/index.js` is a Cloudflare Worker. It serves the built game as static assets and routes `/ws/<CODE>` to one
-Durable Object per room, using the WebSocket Hibernation API. The room is a relay:
-
-- The first player in the room is the **host**. Their browser runs the full simulation: bots, damage, walls,
-  crates, cubes and gas. It broadcasts 15 Hz snapshots and events (attacks, hits, knockouts...).
-- Other players send their input and position at 20 Hz. Movement is client-authoritative, which keeps it smooth,
-  and everything else is decided by the host.
-- If the host leaves, the next player is promoted and the running match is cancelled. A client who leaves mid-match
-  is replaced by a bot.
-
-Create a room from **Multiplayer**, then share the code or the invite link (`?room=CODE`).
+`worker/index.js` is a Cloudflare Worker. It serves the website as static assets, the Godot web
+client from R2 (`/godot/`), and routes `/ws/<CODE>` to one Durable Object per room, using the
+WebSocket Hibernation API. The room **runs the match**: `src/server/sim.js` bundles the shared game
+rules (`src/game.js` and its graph, built headless by `vite build --mode server`). Players only send
+their inputs; the room validates them and sends each player what they can see. `/mm` is the global
+matchmaking queue.
 
 ### Generated assets
 
-Everything under `public/assets/` was generated, and the game falls back to procedural art or synth sounds if any file is missing.
+Everything under `public/assets/` was generated. The Godot client imports the models and sounds from there (`godot/tools/convert-models.mjs`, `convert-audio.mjs`); the website uses the portraits, screenshots and the trailer.
 
 - `tex/`: seamless painted textures (sand, brick, stone, wood, grass) from Gemini 2.5 Flash Image,
   prompted as flat albedo with no baked lighting so the dynamic lights do the shading. Each `*_n.png` is a
@@ -235,10 +203,10 @@ Everything under `public/assets/` was generated, and the game falls back to proc
 - `ui/`: brawler portraits for the menu cards, action poses with the background removed (`art-src/ai3d/cutout.py`).
 - `models/`: the brawler figurines and `models/decor/` the 15 decor props, generated on this machine's GPU from
   style-matched reference art (Hunyuan3D-2 shape + paint, see `art-src/ai3d/README.md`), then budgeted with
-  `art-src/optimize_models.py`. The figurines are rigged at load time (`src/figurines.js`).
+  `art-src/optimize_models.py`.
 - `music/`: lobby, battle, victory and one theme per arena from Lyria 3 (`art-src/gen_music.py`), plus ElevenLabs day/night and weather ambience loops.
 - `sfx/`: ElevenLabs sound effects (`art-src/gen_audio.py`).
-- `site/`: the trailer and screenshots, recorded from the engine by the dev-only `src/trailer.js`.
+- `site/`: the trailer and screenshots, recorded from the first (three.js) client.
 
 Regenerate or reprocess them with the scripts in `art-src/` (raw sources are kept there):
 
@@ -251,34 +219,18 @@ python art-src/process_images.py   # resize, normal maps, portrait cut-outs
 ### Layout
 
 ```
+godot/          the game client (Godot 4.4): scripts/, scenes, data exported from src/, export presets
 src/
-  main.js       renderer, post-processing chain, UI wiring, main loop
-  lighting.js   sun/moon, hemisphere, IBL, head-lamp, time-of-day presets, shadow fitting
-  materials.js  shader patches (rim, foliage sway + dither, water) and procedural textures
-  arena.js      map layout, instanced walls/bushes/water, crates, torches, collision and line-of-sight
-  effects.js    LightPool + instanced particles, flashes, shockwaves, scorch decals
-  brawler.js    brawler types, movement and animation (figurine walk / aim, procedural rig fallback)
-  figurines.js  GLB figurines: auto-rig (joint fit, arm cutting, skin weights), weapon axes, materials
-  props.js      decor GLBs (walls, trees, rocks, crates, bushes, lanterns), instancing helpers
-  combat.js     bullets, bursts, lobbed fireballs, explosions
-  ai.js         A* pathfinding and bot behaviour
-  poison.js     shrinking gas
-  game.js       match flow, damage, items, visibility, camera
-  hud.js        overhead bars, floaters, HUD
-  menu.js       video-game style menus: options, key bindings, gamepad navigation
-  assets.js     texture loading (shared GPU images, per-use repeat)
-  audio.js      sampled SFX, music crossfades, day/night + weather ambience, mix settings (synth fallback)
-  maps.js       the five map layouts and their themes
-  weather.js    rain + lightning, snow, sandstorm, fog + fireflies
-  water.js      water basins (clear / swamp) and the ice field
-  foliage.js    bushes, trees, pines, cacti, dead trees, obstacles
-  lantern.js    lantern model (procedural, or the sculpted prop with glowing windows)
-  net.js        WebSocket client for the rooms
-  devtools.js   dev-only console helpers (manual stepping, poses, weight view, frame capture)
-  trailer.js    dev-only trailer and screenshot recording
-  site/         landing page script + styles (trailer, cards, reveals, prompt list)
+  game.js ...   the shared game rules the server runs (game, ai, arena, brawler, combat, maps, ...)
+  server/       the headless server bundle entry (sim.js) and its stubs
+  economy.js    profile economy constants (exported to the Godot client)
+  cosmetics.js  skins, trails, emotes, shop prices
+  i18n/         English strings, the 29 other locales, the language list
+  updates.js    the old Capacitor apps' frozen update manifest
+  site/         landing page and roadmap script + styles
 worker/
-  index.js      Cloudflare Worker + Room Durable Object (multiplayer relay)
+  index.js      Cloudflare Worker: rooms (Durable Objects), matchmaking, ranking, moderation, /play
+  godot-web.js  the Godot web client from R2 (/godot/<version>/)
 art-src/        asset generation scripts and raw sources (ai3d/ = local image-to-3D pipeline)
 docs/readme/    logo and animated trailer for this README
 ```

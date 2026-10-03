@@ -1,13 +1,15 @@
 ---
 name: release
-description: Ship a new version of AI SLOP ARENA end to end - tests, version bump, graphic release notes, Cloudflare deploy, git tag, GitHub release with every platform build (Steam, Epic, Android, iOS, web), then verification. Use when the user asks to release, publish a version, "faire une release", tag vX.Y.Z or ship to GitHub.
+description: Ship a new version of AI SLOP ARENA end to end - tests, version bump, graphic release notes, Cloudflare deploy (site, server, Godot web build), git tag, GitHub release with every Godot platform build (Steam, Epic, Android, iOS, web), then verification. Use when the user asks to release, publish a version, "faire une release", tag vX.Y.Z or ship to GitHub.
 ---
 
 # Release AI SLOP ARENA
 
-A release = the website/server deployed on Cloudflare + a git tag `vX.Y.Z` whose GitHub Actions run
-(`.github/workflows/release.yml`) builds every platform and publishes the GitHub release with the
-hand-written notes of `docs/releases/vX.Y.Z.md`. Follow every step in order; stop and tell the user
+A release = the website/server and the Godot web build deployed on Cloudflare + a git tag `vX.Y.Z`
+whose GitHub Actions run (`.github/workflows/release.yml`, the Godot jobs) exports every platform from
+`godot/` and publishes the GitHub release with the hand-written notes of `docs/releases/vX.Y.Z.md`.
+The game is the Godot client everywhere; the three.js client, Electron and Capacitor are gone.
+Follow every step in order; stop and tell the user
 when a step fails instead of pushing on.
 
 Talk to the user in French. Commit after each step that changes files (see memory "commit-each-step").
@@ -24,36 +26,35 @@ git fetch origin && git status -sb && git log --oneline origin/main..HEAD
   explicitly, never `git add -A`. Mention leftovers to the user instead.
 - Pick the version (semver): new features -> minor (`0.5.0` -> `0.6.0`), fixes only -> patch.
   Ask the user if it is not obvious. Previous tags: `git tag --sort=-v:refname | head`.
-- Stop any dev server you started (`preview_stop`): Vite and wrangler watchers lock files and make
-  `electron-builder` fail with `EPERM ... rename win-unpacked.tmp`.
+- Stop any dev server you started (`preview_stop`): Vite and wrangler watchers lock files.
 
 ## 1. Tests and builds
 
 ```bash
-npm test              # server rules headless (tests/server.test.mjs) + the 30 locales (tests/i18n.test.mjs)
-npm run build         # site + game (dist/) and the server bundle (worker/build/sim.js)
-npx vite build --mode app   # mobile web bundle (dist-app/), must build too
+npm test              # server rules headless, ranking, the 30 locales, the frozen OTA manifest
+npm run build         # website (dist/) and the server bundle (worker/build/sim.js)
 ```
 
 All green before going on. If a feature changed online play, also run a local end-to-end check
-(`npm run dev:server` + `npm run dev`, two clients) as in docs/moderation.md.
+(`npm run deploy:godot-web -- --local`, `npm run dev:server`, two Godot clients on
+`http://localhost:8787/play`) as in docs/moderation.md.
 
 ## 2. Version bump
 
 ```bash
 # edit "version" in package.json, then
 npm install --package-lock-only
-npm run native:version   # iOS version + build number in the Xcode project (npm test checks it)
 ```
 
-If the online protocol changed (worker/index.js + src/net.js `PROTOCOL`), both must be bumped
-together, and the notes must carry the "update required" warning (old apps are refused online).
+The Godot project and its export presets get the version from the release workflow (see the Godot
+jobs in `.github/workflows/release.yml`).
 
-Mobile over-the-air updates (docs/ota-updates.md): the installed Android/iOS apps download this
-release's web bundle by themselves. If this release adds, removes or upgrades a native Capacitor
-plugin (package.json `@capacitor/*` / `@capgo/*`, or `android/` / `ios/` changes the JS relies on),
-set `MIN_NATIVE` in `src/updates.js` to the new version: older apps then keep their bundle, and the
-notes must tell mobile players to install the new APK.
+If the online protocol changed (`PROTOCOL` in worker/index.js and `godot/scripts/net_client.gd`), both
+must be bumped together, and the notes must carry the "update required" warning (old apps are refused
+online).
+
+The old Capacitor apps (three.js, up to v0.17.1) get no more web bundles: `/app/latest.json` stays
+frozen on 0.17.1 (`FROZEN_APP_BUNDLE` in `src/updates.js`, docs/ota-updates.md). Never change it.
 
 ## 3. Graphic release notes
 
@@ -74,9 +75,9 @@ notes must tell mobile players to install the new APK.
 ```bash
 npm run deploy:godot-web                      # Godot web export -> R2 godot/<version>/ (before the worker deploy)
 op run --env-file=.env.op -- npm run deploy   # builds (source maps -> Sentry), then wrangler deploy
-# site serves this build, rooms accept the protocol, refuse old ones, queue answers, the mobile
-# update manifest (/app/latest.json) announces this version, /godot/ serves this version (retried while
-# the new version propagates; a plain `sleep 30` is blocked by the harness)
+# site serves this build, /play redirects to the Godot client, rooms accept the protocol, refuse old
+# ones, queue answers, /app/latest.json stays frozen, /godot/ serves this version (retried while the
+# new version propagates; a plain `sleep 30` is blocked by the harness)
 for i in 1 2 3 4 5 6; do if npm run check:prod > "$TEMP/prod.log" 2>&1; then break; fi; sleep 10; done; tail -8 "$TEMP/prod.log"
 ```
 
@@ -88,13 +89,15 @@ for i in 1 2 3 4 5 6; do if npm run check:prod > "$TEMP/prod.log" 2>&1; then bre
 - The new version takes ~30 s to reach every edge: wait before `check:prod`, and re-run it once
   before investigating a failure (an old page bundle or a missing room welcome right after the
   deploy is just propagation).
-- Deploy **before** tagging: the apps built by the tag talk to the live server.
+- Deploy **before** tagging: the apps built by the tag talk to the live server. `/play` (the site's
+  Play buttons, invite links `?room=CODE`) redirects to `/godot/<deployed version>/`, so without the R2
+  upload the game is down.
 - Secrets (e.g. `ADMIN_TOKEN`) are the user's: never create or print them.
 - Crash reports: `op run` (1Password CLI) fills `SENTRY_AUTH_TOKEN` from the reference in `.env.op`
   (the user approves the access; never print or copy the value). The apps get it from the GitHub
-  secret of the same name. With the token, the builds upload their source maps to Sentry for release `ai-slop-arena@X.Y.Z`. Without
-  it everything still works, Sentry just shows minified stack traces. After the deploy, check the
-  Sentry projects `ai-slop-arena` / `ai-slop-arena-server` (org odykit) for new issues of this release.
+  secret of the same name. The website has no client code to report any more; the server reports to
+  Sentry (`SENTRY_DSN` in wrangler.jsonc). After the deploy, check the Sentry project
+  `ai-slop-arena-server` (org odykit) for new issues of this release.
 
 ## 5. Push, tag, build
 
@@ -104,7 +107,7 @@ git tag -a vX.Y.Z -m "AI SLOP ARENA X.Y.Z: <one-line summary>"
 git push origin vX.Y.Z
 ```
 
-Then watch the workflow in the background (it takes ~6 minutes; macOS/iOS is the slowest):
+Then watch the workflow in the background (the Godot exports; macOS/iOS is the slowest):
 
 ```bash
 ID=$(gh run list --workflow release.yml --limit 1 --json databaseId --jq '.[0].databaseId')
@@ -121,15 +124,10 @@ If a job fails: `gh run view $ID --log-failed`, fix, commit, push, then re-run t
 gh release view vX.Y.Z --json url,assets --jq '.url, (.assets[] | "\(.name) \(.size/1048576|floor) MB")'
 ```
 
-- Seven assets: `AISlopArena-steam-windows.zip`, `-steam-linux.tar.gz`, `-epic-windows.zip`,
-  `-android.apk`, `-ios-simulator.zip`, `-web.zip`, and `-app-bundle.zip` (the mobile OTA update).
-- The OTA chain answers: the manifest names this version and its zip downloads (a 302 to GitHub's
-  storage then 200); from then on the installed apps pick it up at their next launch.
-
-```bash
-curl -s https://ai-slop-arena.gtux-prog.workers.dev/app/latest.json
-curl -sIL "https://github.com/gtko/ai-slop-arena/releases/download/vX.Y.Z/AISlopArena-app-bundle.zip" | grep -E "^HTTP|content-length"
-```
+- The assets the Godot jobs of `release.yml` publish (Steam Windows / Linux, Epic Windows, Android,
+  iOS simulator, web): compare with the previous release. No `-app-bundle.zip` any more: the old
+  Capacitor apps stay on v0.17.1's (`curl -s https://ai-slop-arena.gtux-prog.workers.dev/app/latest.json`
+  must still name 0.17.1).
 - The description is the notes file (the workflow applies it; if not: `gh release edit vX.Y.Z --notes-file docs/releases/vX.Y.Z.md`).
 - Open the release page in the browser pane and look at it: banner and infographics load
   (raw.githubusercontent may take a few minutes to refresh an image that changed).

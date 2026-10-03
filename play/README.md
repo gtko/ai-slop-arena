@@ -1,5 +1,11 @@
 # Google Play Games
 
+> **v0.18: the three.js client and its Electron / Capacitor shells are gone.** The game is the Godot
+> client (`godot/`); the store builds come from the Godot jobs of `.github/workflows/release.yml`.
+> The integration described below is the one of the old client (code in git history, tag `v0.17.1`):
+> its Godot port is listed in `docs/godot-migration.md` (feature inventory). The store data here
+> (ids, achievements, texts, graphics) stays valid.
+
 The Android app uses [Play Games Services v2](https://developer.android.com/games/pgs/overview)
 for the same 15 achievements as Steam. It gets the game into the Google Play Games app (achievements,
 player profile) and makes it eligible for Play Points quests and Play Games promotions.
