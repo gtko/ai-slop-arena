@@ -22,6 +22,8 @@ body { color: white; background-color: #16121f; overflow: hidden; touch-action: 
   width: min(90vw, 560px); background: #2c2440; border: 4px solid #0d0a14; border-radius: 16px; color: #fff;
   font: 16px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; padding: 18px 20px; text-align: center;
   box-shadow: 0 6px 0 #0d0a14; z-index: 1; user-select: text; -webkit-user-select: text; }
+#status-notice .reload { margin-top: 12px; font: inherit; font-weight: 700; color: #0d0a14; background: #ffd23f; border: 3px solid #0d0a14;
+  border-radius: 12px; padding: 8px 22px; cursor: pointer; box-shadow: 0 4px 0 #0d0a14; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 $GODOT_HEAD_INCLUDE
@@ -146,6 +148,9 @@ window.SlopLoader = (function () {
 
   function layout(fontJustLoaded) {
     const w = window.innerWidth, h = window.innerHeight;
+    // A page loaded in a tab or pane that is not laid out yet reports a 0x0 window: lay out nothing
+    // until it has a real size (frame() checks the size every frame, a 'resize' may never come).
+    if (!(w >= 1 && h >= 1)) { W = 0; H = 0; return; }
     const ow = W, oh = H, oGY = GY;
     W = w; H = h; DPR = Math.min(2, window.devicePixelRatio || 1);
     cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
@@ -181,15 +186,19 @@ window.SlopLoader = (function () {
       if (l.st <= 1) { l.x = l.hx; l.y = l.hy; }
       else if (ow > 0) { l.x = clamp(l.x * W / ow, l.w / 2, W - l.w / 2); l.y = Math.min(GY - capH / 2, GY - (oGY - l.y)); }
     }
-    if (ow > 0 && !fontJustLoaded) { for (const c of [B, G]) c.x = c.x * W / ow; B.home = homeB(); G.home = homeG(); }
+    if (ow > 0 && oh > 0 && !fontJustLoaded) { for (const c of [B, G]) c.x = c.x * W / ow; B.home = homeB(); G.home = homeG(); }
+    else if (!(ow > 0 && oh > 0) && phase === 'enter') B.x = offL();   // first real size: Blaster starts off-screen
   }
   const homeB = () => (portrait ? Math.max(W * 0.17, CH * 0.5) : Math.max(W * 0.09, CH * 0.55));
   const homeG = () => (portrait ? W * 0.8 : W - Math.max(W * 0.12, CH * 0.45));
+  // off-stage spots: the sprites are ~1.05 CH wide at most, so 1.3 CH past the edge is always hidden
+  const offL = () => -CH * 1.3;
+  const offR = () => W + CH * 1.3;
 
   // ------------------------------------------------------------------ actors
   function actor(spr) {
     return { spr, x: -999, dx: 0, lift: 0, vy: 0, rot: 0, face: 1, sx: 1, sy: 1, sq: 0, ph: 0, flash: 0, kick: 0, aim: 0, home: 0, run: 0,
-      onGround: true, bang: 0, busy: 0, aimT: 0, fired: false, target: null, panic: 0, arrived: -1 };
+      onGround: true, bang: 0, busy: 0, aimT: 0, fired: false, target: null, panic: 0, arrived: -1, stage: false };
   }
   const B = actor(SPR_B), G = actor(SPR_G);
   const parts = [], seeds = [], bolts = [];
@@ -220,17 +229,21 @@ window.SlopLoader = (function () {
   }
 
   // ------------------------------------------------------------------ progress + director
+  // prog: 0..1, never above 1 (Godot's loaded can pass its total: a stale cached file, a size
+  // mismatch); with an unknown total (0) it is an estimate that never reaches 1 before ready().
   let prog = 0, shown = 0, loaded = 0, total = 0, engineReady = false, failed = false, hidden = false, skip = false;
   let phase = 'enter', ft = 0, cool = 0.6, knocked = 0, wander = 0, endT = 0, readyT = 0;
+  let lastChange = 0, soft = '';   // watchdogs: last progress change (ms), kind of the notice shown
   const NL = L.length;
+  const now = () => performance.now();
 
   function reset() {
     for (const l of L) { l.st = 0; l.x = l.hx; l.y = l.hy; l.rot = 0; l.vx = l.vy = l.vr = 0; l.sq = 0; l.wob = l.wobv = 0; l.aimed = false; l.dim = 0; l.k = 1; }
     parts.length = 0; seeds.length = 0; bolts.length = 0;
-    Object.assign(B, actor(SPR_B), { x: -CH, home: homeB() });
-    Object.assign(G, actor(SPR_G), { x: W + CH, face: 1, home: homeG() });
+    Object.assign(B, actor(SPR_B), { x: offL(), home: homeB() });
+    Object.assign(G, actor(SPR_G), { x: offR(), face: 1, home: homeG() });
     phase = RM ? 'still' : 'enter'; ft = 0; cool = 0.5; knocked = 0; prog = DEMO_FIX >= 0 ? DEMO_FIX : 0; shown = prog; endT = 0;
-    if (RM) { B.x = B.home; G.x = G.home; }
+    if (RM) { B.x = B.home; G.x = G.home; G.stage = true; }
   }
 
   // fast: the download is over, the last letters go in a rapid barrage
@@ -283,6 +296,7 @@ window.SlopLoader = (function () {
     }
     shown += (prog - shown) * Math.min(1, dt * 6);
     const loadDone = prog >= 0.999;
+    if (!G.stage) G.x = offR();   // Gunslinger waits off-screen (right) until the finale, whatever the layout did
     const allowed = loadDone ? NL : Math.floor(prog * NL + 1e-6);
 
     // ---- director
@@ -312,7 +326,7 @@ window.SlopLoader = (function () {
         if (Math.abs(d) > 2) { B.run = 0.7; B.face = d > 0 ? 1 : -1; B.x += Math.sign(d) * Math.min(Math.abs(d), CH * 1.3 * dt); }
         else { if (B.run) B.sq = 0.6; B.run = 0; B.face = 1; }
       }
-      if (loadDone && knocked >= NL && seeds.length === 0 && L.every((l) => l.st === 3 || l.t > 0.7)) { phase = 'finale'; ft = 0; }
+      if (loadDone && knocked >= NL && seeds.length === 0 && L.every((l) => l.st === 3 || l.t > 0.7)) { phase = 'finale'; ft = 0; G.stage = true; G.x = offR(); }
     } else if (phase === 'finale') {
       const t0 = ft; ft += dt;
       const at = (t) => t0 < t && ft >= t;
@@ -338,10 +352,9 @@ window.SlopLoader = (function () {
       if (DEMO && phase === 'done' && endT > 1.4) reset();
       if (DEMO && phase === 'still' && DEMO_FIX < 0) { prog = (time * 0.15) % 1.2 > 1 ? 1 : (time * 0.15) % 1.2; }
     }
-    if (engineReady) {
-      readyT += dt;
-      if (phase === 'done' || phase === 'still' || skip || readyT > 3.2) hide();
-    }
+    // the engine is the only judge of "finished": once it runs, the gag gets ~1.8 s more (played at
+    // double speed by frame()), then the overlay fades whatever the animation is doing
+    if (engineReady && !DEMO && (phase === 'done' || phase === 'still' || skip || readyT > 1.8)) hide();
 
     // ---- actors
     for (const c of [B, G]) {
@@ -497,7 +510,7 @@ window.SlopLoader = (function () {
   }
 
   function drawActor(c) {
-    if (!c.spr.ok || c.x < -CH * 2 || c.x > W + CH * 2) return;
+    if (!c.spr.ok || (c === G && !G.stage) || c.x < -CH * 2 || c.x > W + CH * 2) return;
     const h = CH * c.spr.h / (c.spr.h - c.spr.pad * 2), w = h * c.spr.w / c.spr.h;
     // ground shadow
     g.save();
@@ -590,10 +603,13 @@ window.SlopLoader = (function () {
     g.fillStyle = 'rgba(255,255,255,0.45)'; rrect(x + h * 0.3, y + h * 0.15, Math.max(0, fw - h * 0.6), h * 0.22, h * 0.11); g.fill();
     g.restore();
     // percent + size
-    const pct = Math.round(clamp(shown, 0, 1) * 100);
+    const pct = Math.min(100, Math.round(clamp(shown, 0, 1) * 100));
+    const MB = (n) => (n / 1048576).toFixed(0);
     let txt = pct + '%';
-    if (total > 0) txt += '  ' + (loaded / 1048576).toFixed(0) + ' / ' + (total / 1048576).toFixed(0) + ' MB';
-    if (prog >= 0.999 && !engineReady && !DEMO) txt = '100%' + '.'.repeat(1 + Math.floor(time * 3) % 3);
+    if (total > 0) txt += '  ' + MB(Math.min(loaded, total)) + ' / ' + MB(total) + ' MB';
+    else if (loaded > 0 && !DEMO) txt = MB(loaded) + ' MB';   // unknown total: no percent to make up
+    // downloaded, the engine compiles and boots (the page may freeze for a while): say so
+    if (!DEMO && (engineReady || prog >= 0.999)) txt = engineReady ? 'GO!' : 'Starting' + '.'.repeat(1 + Math.floor(time * 3) % 3);
     const fs = clamp(F * 0.3, 14, 26);
     g.font = fs + 'px SlopLoader'; g.textAlign = 'center'; g.textBaseline = 'top'; g.lineJoin = 'round';
     g.lineWidth = fs * 0.28; g.strokeStyle = INK; g.strokeText(txt, W / 2, y + h + b + fs * 0.5);
@@ -623,10 +639,15 @@ window.SlopLoader = (function () {
 
   let last = 0, raf = 0;
   function frame(ts) {
-    const dt = Math.min(0.05, last ? (ts - last) / 1000 : 0.016) * SPEED;
+    const real = Math.min(0.05, last ? (ts - last) / 1000 : 0.016);
     last = ts;
-    update(dt);
-    draw();
+    // the window size is checked every frame: a missed 'resize' (or a 0x0 start) must not stick
+    if (window.innerWidth !== W || window.innerHeight !== H) layout(false);
+    if (W > 0) {
+      if (engineReady) readyT += real;
+      update(real * SPEED * (engineReady ? 2 : 1));   // the game is up: hurry the ending
+      draw();
+    }
     if (!hidden) raf = requestAnimationFrame(frame);
   }
 
@@ -637,10 +658,42 @@ window.SlopLoader = (function () {
     setTimeout(() => { cancelAnimationFrame(raf); status.remove(); if (ac) ac.close().catch(() => {}); }, 400);
   }
 
+  // A notice over the loader (download stalled, engine crashed while starting...), with a reload button.
+  const notice = document.getElementById('status-notice');
+  function showNotice(msg, kind) {
+    if (soft === 'fail' || hidden) return;   // a fatal error stays on screen
+    soft = kind;
+    while (notice.lastChild) notice.removeChild(notice.lastChild);
+    msg.split('\n').forEach((line) => { notice.appendChild(document.createTextNode(line)); notice.appendChild(document.createElement('br')); });
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = 'Reload'; b.className = 'reload';
+    b.addEventListener('click', () => location.reload());
+    notice.appendChild(b);
+    notice.style.display = 'block';
+  }
+  function clearNotice(kind) {   // no kind: any notice but a fatal one
+    if (!soft || soft === 'fail' || (kind && soft !== kind)) return;
+    soft = ''; notice.style.display = 'none';
+  }
+  // Watchdogs (1 s timer, so they also tick while the animation is throttled; time only counts while
+  // the page is visible: a background tab gets no progress callbacks either).
+  let stallS = 0, bootS = 0;
+  if (!DEMO) setInterval(() => {
+    if (hidden || failed || engineReady || document.visibilityState === 'hidden') return;
+    if (prog < 0.999) {
+      stallS = lastChange && now() - lastChange > 1500 ? stallS + 1 : 0;
+      if (stallS >= 30 && !soft) showNotice('The download seems stuck.\nCheck your connection, then reload the page.', 'stall');
+      else if (stallS === 0) clearNotice('stall');
+    } else {
+      clearNotice('stall');
+      if (++bootS === 75 && !soft) showNotice('The game is taking a long time to start.\nSlow or low-memory devices may need a minute; or reload the page.', 'boot');
+    }
+  }, 1000);
+
   // taps: sound on (browsers need a gesture), poke a title letter, skip the ending once the game is ready
   function poke(e) {
     audioOn();
-    if (engineReady && (phase === 'finale' || phase === 'done')) { skip = true; return; }
+    if (engineReady) { skip = true; hide(); return; }
     const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
     for (const l of L) if (Math.abs(px - l.x) < l.w * 0.6 && Math.abs(py - l.y) < capH * 0.7) {
       if (l.st === 0) { l.wobv += (Math.random() < 0.5 ? -1 : 1) * 18; l.sq = 0.5; SND.boing(); }
@@ -649,7 +702,7 @@ window.SlopLoader = (function () {
     }
   }
   status.addEventListener('pointerdown', poke);
-  window.addEventListener('keydown', () => { if (hidden) return; audioOn(); if (engineReady) skip = true; });
+  window.addEventListener('keydown', () => { if (hidden) return; audioOn(); if (engineReady) { skip = true; hide(); } });
   window.addEventListener('resize', () => layout(false));
 
   layout(false);
@@ -659,17 +712,27 @@ window.SlopLoader = (function () {
   return {
     demo: DEMO,
     progress(cur, tot) {
-      if (DEMO) return;
-      if (cur > 0 && tot > 0) { loaded = cur; total = tot; prog = Math.max(prog, clamp(cur / tot, 0, 1)); }
+      if (DEMO || engineReady) return;
+      cur = Math.max(0, +cur || 0); tot = Math.max(0, +tot || 0);
+      if (cur !== loaded || tot !== total) lastChange = now();
+      loaded = cur; total = tot;
+      // known total: the byte ratio, clamped (loaded can exceed total). Unknown total (0): a guess that
+      // creeps towards 95 % (the whole build is ~117 MB) and lets ready() finish the bar.
+      const p = tot > 0 ? cur / tot : 0.95 * cur / (cur + 64 * 1048576);
+      prog = Math.max(prog, clamp(p, 0, tot > 0 ? 1 : 0.95));
       label.textContent = 'AI SLOP ARENA: loading ' + Math.round(prog * 100) + '%';
     },
     ready() {
+      if (engineReady) return;
       prog = 1; engineReady = true; readyT = 0; label.textContent = 'AI SLOP ARENA';
-      setTimeout(hide, 4500);   // a background tab gets no animation frames: never keep the game hidden
+      clearNotice();   // the engine runs after all: drop the stall / slow boot / error notices
+      setTimeout(hide, 2200);   // a background tab gets no animation frames: never keep the game hidden
     },
-    fail() { failed = true; },
+    notice: showNotice,
+    fail() { failed = true; soft = 'fail'; },
+    isReady: () => engineReady,
     step(sec) { if (!MANUAL) return; for (let t = 0; t < sec; t += 1 / 60) update(1 / 60); draw(); return this.debug(); },
-    debug: () => ({ phase, ft, prog, knocked, B: { x: B.x, home: B.home }, G: { x: G.x }, W, H, F, CH }),
+    debug: () => ({ phase, ft, prog, shown, loaded, total, engineReady, knocked, B: { x: B.x, home: B.home }, G: { x: G.x, stage: G.stage }, W, H, F, CH, soft }),
   };
 }());
 </script>
@@ -680,8 +743,6 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 const engine = new Engine(GODOT_CONFIG);
 
 (function () {
-	const statusNotice = document.getElementById('status-notice');
-
 	function displayFailureNotice(err) {
 		console.error(err);
 		let msg = 'An unknown error occurred.';
@@ -690,14 +751,7 @@ const engine = new Engine(GODOT_CONFIG);
 		} else if (typeof err === 'string') {
 			msg = err;
 		}
-		while (statusNotice.lastChild) {
-			statusNotice.removeChild(statusNotice.lastChild);
-		}
-		msg.split('\n').forEach((line) => {
-			statusNotice.appendChild(document.createTextNode(line));
-			statusNotice.appendChild(document.createElement('br'));
-		});
-		statusNotice.style.display = 'block';
+		SlopLoader.notice(msg, 'fail');
 		SlopLoader.fail();
 	}
 
@@ -740,9 +794,26 @@ const engine = new Engine(GODOT_CONFIG);
 			displayFailureNotice(missingMsg + missing.join('\n'));
 		}
 	} else {
+		// Godot's loader swallows some failures: a WebAssembly compile / out-of-memory error rejects a
+		// promise nobody catches, and startGame() then never settles. Any uncaught error before the
+		// engine runs shows a notice with a reload button (a late ready() still removes it).
+		const early = (what) => {
+			setTimeout(() => {
+				if (!SlopLoader.isReady()) SlopLoader.notice('The game could not start:\n' + what, 'error');
+			}, 3000);
+		};
+		window.addEventListener('unhandledrejection', (e) => {
+			if (!SlopLoader.isReady()) early(String((e.reason && e.reason.message) || e.reason || 'unknown error'));
+		});
+		window.addEventListener('error', (e) => {
+			if (!SlopLoader.isReady() && e.message) early(e.message);
+		});
 		engine.startGame({
 			'onProgress': function (current, total) {
 				SlopLoader.progress(current, total);
+			},
+			'onExit': function (code) {
+				if (!SlopLoader.isReady()) displayFailureNotice('The game stopped while starting (exit code ' + code + ').');
 			},
 		}).then(() => {
 			SlopLoader.ready();
