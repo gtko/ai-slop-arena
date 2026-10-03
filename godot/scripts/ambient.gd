@@ -415,7 +415,8 @@ func _step_swarms() -> void:
 		var spec: Dictionary = S.spec
 		var mm: MultiMesh = S.mm
 		var shape := String(spec.shape)
-		for k in S.items.size():
+		var n: int = S.items.size() if mm.visible_instance_count < 0 else mini(S.items.size(), mm.visible_instance_count)
+		for k in n:   # (the ones a lower quality hides are not moved)
 			var it: Dictionary = S.items[k]
 			var a: float = float(it.ph) + t * float(it.sp)
 			var x := float(it.a.x) + cos(a) * float(it.r) + sin(a * 0.37) * 0.4

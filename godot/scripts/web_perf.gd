@@ -19,6 +19,63 @@ func _process(delta: float) -> void:
 	if not _cached:
 		_cache_layers()
 	_keep_rate(delta)
+	_warm_up()
+
+# ---------------------------------------------------------------- shader warm-up
+
+# The Compatibility renderer compiles a shader the first time something draws with it (no
+# ubershaders), and a WebGL compile + link costs tens of ms: the first explosion, the first
+# additive flash, the first muzzle light each froze a frame of the first match. Once the menu's
+# arena is up, every effect material (fx_lib glow variants and particle layers) is drawn for a few
+# frames as a speck in front of the camera, with an omni and a spot light switched on, so those
+# programs are built behind the menu instead. `?nowarm` skips it.
+var _warm: Node3D
+var _warm_frames := -1
+
+func _warm_up() -> void:
+	if _warm_frames == 0 or not OS.has_feature("web") or DebugArgs.has("nowarm"):
+		return
+	if _warm_frames > 0:
+		_warm_frames -= 1
+		if _warm_frames == 0 and is_instance_valid(_warm):
+			_warm.queue_free()
+		return
+	var m := get_parent()
+	var sc = m.get("showcase") if m else null
+	var cam = m.get("cam") if m else null
+	var a = sc.get("_arena") if sc else null
+	if not (a is Node3D and is_instance_valid(a) and cam is Camera3D) or get_viewport().disable_3d:
+		return
+	_warm = Node3D.new()
+	_warm.name = "ShaderWarmUp"
+	(a as Node3D).add_child(_warm)
+	var c := cam as Camera3D
+	_warm.global_position = c.global_position - c.global_basis.z * 6.0
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.02, 0.02)
+	var mats: Array[Material] = []
+	for blend in ["mix", "add"]:
+		for alpha in [1.0, 0.5]:
+			for ds in [false, true]:
+				mats.append(FxLib.glow(Color.WHITE, alpha, blend, ds))
+	for kind in ["sparks", "fire", "smoke", "debris"]:
+		mats.append(FxLib.layer_material(kind))
+	for i in mats.size():
+		var mi := MeshInstance3D.new()
+		mi.mesh = quad
+		mi.material_override = mats[i]
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.position = Vector3((i % 6) * 0.03, (i / 6) * 0.03, 0.0)
+		_warm.add_child(mi)
+	var omni := OmniLight3D.new()
+	omni.light_energy = 0.001
+	omni.omni_range = 40.0
+	_warm.add_child(omni)
+	var spot := SpotLight3D.new()
+	spot.light_energy = 0.001
+	spot.spot_range = 40.0
+	_warm.add_child(spot)
+	_warm_frames = 4
 
 # ---------------------------------------------------------------- automatic quality (autoquality.js)
 
