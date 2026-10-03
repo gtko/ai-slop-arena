@@ -31,6 +31,9 @@ void fragment() {
 	ROUGHNESS = roughness;
 	METALLIC = 0.0;
 	NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+#ifdef LOW
+	SIGHT_SHADE(wpos)
+#endif
 }
 
 void light() {

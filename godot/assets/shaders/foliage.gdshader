@@ -43,6 +43,9 @@ void fragment() {
 	ALBEDO = col;
 	ROUGHNESS = roughness;
 	METALLIC = 0.0;
+#ifdef LOW
+	SIGHT_SHADE(wpos)
+#endif
 }
 
 void light() {

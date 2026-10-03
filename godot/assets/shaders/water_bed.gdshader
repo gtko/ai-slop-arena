@@ -44,6 +44,9 @@ void fragment() {
 	ALBEDO = c * amb_tint;
 	ROUGHNESS = 0.6;
 	METALLIC = 0.0;
+#ifdef LOW
+	SIGHT_SHADE(wpos)
+#endif
 }
 
 void light() {

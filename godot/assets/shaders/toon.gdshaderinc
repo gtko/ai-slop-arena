@@ -71,6 +71,46 @@ vec3 toon_to_local(mat3 m, vec3 d) {
 	return vec3(dot(m[0], d) / dot(m[0], m[0]), dot(m[1], d) / dot(m[1], m[1]), dot(m[2], d) / dot(m[2], m[2]));
 }
 
+#ifdef LOW
+// The line of sight drawn by the world itself (sight.gd at Low on phones / tablets, instead of its
+// full-screen pass over a copy of the frame): the view ray through this pixel meets the y = 0.6 plane,
+// the pre-blurred visibility mask is looked up there, and the hidden surface is greyed, dimmed and
+// tinted like the pass does, in linear HDR before the lighting (as the web does it: before its grade
+// and tone mapping). The sandstorm's dust stays a blended screen quad (sight.gd DUST_SHADER): it
+// must cover what these shaders do not draw. g_sight: fade-in amount, clear radius, its centre x, z;
+// g_sight_b: arena half size, value outside the mask.
+global uniform sampler2D g_sight_tex : filter_linear, repeat_disable;
+global uniform vec4 g_sight;
+global uniform vec4 g_sight_b;
+
+float sight_hide(vec3 wp, vec3 cam) {
+	if (g_sight.x < 0.005) {
+		return 0.0;
+	}
+	vec2 hit = cam.xz + (wp.xz - cam.xz) * ((0.6 - cam.y) / min(wp.y - cam.y, -1e-3));
+	vec2 uv = (hit + g_sight_b.x) / (2.0 * g_sight_b.x);
+	float v = (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) ? g_sight_b.y : texture(g_sight_tex, uv).r;
+	float hide = 1.0 - v;
+	if (g_sight.y > 0.0) {
+		hide = max(hide, smoothstep(g_sight.y * 0.85, g_sight.y * 1.1, distance(hit, g_sight.zw)));
+	}
+	return hide * g_sight.x;
+}
+
+vec3 sight_grey(vec3 c, float hide) {
+	float l = dot(c, vec3(0.299, 0.587, 0.114));
+	return mix(c, mix(c, vec3(l), 0.5) * vec3(0.58, 0.61, 0.7), hide);
+}
+
+// The scene's depth fog, drawn by the shader (FOG) so the hidden pixels' fog is shaded too, like the
+// pass shaded the fogged frame: lighting.gd's g_fog (linear colour) and g_fog_range (begin, end).
+global uniform vec4 g_fog;
+global uniform vec4 g_fog_range;
+
+// ALBEDO, EMISSION and FOG of a pixel, `wp` its world position: call last in fragment().
+#define SIGHT_SHADE(wp) { float sh_h = sight_hide(wp, CAMERA_POSITION_WORLD); vec3 sh_f = g_fog.rgb; if (sh_h > 0.0) { ALBEDO = sight_grey(ALBEDO, sh_h); EMISSION = sight_grey(EMISSION, sh_h); sh_f = sight_grey(sh_f, sh_h); } FOG = vec4(sh_f, smoothstep(g_fog_range.x, g_fog_range.y, length(VERTEX))); }
+#endif
+
 // Fresnel rim (charMat / props): added light, not tinted by the albedo.
 vec3 toon_rim(vec3 n, vec3 v) {
 	float r = smoothstep(0.5, 1.0, 1.0 - clamp(dot(n, v), 0.0, 1.0));

@@ -37,6 +37,10 @@ void fragment() {
 	ROUGHNESS = mix(0.6, 0.3, gold);
 	METALLIC = 0.5 * gold;
 	EMISSION = c * self_light + tint + toon_rim(NORMAL, VIEW);
+#ifdef LOW
+	vec3 sh_wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	SIGHT_SHADE(sh_wp)
+#endif
 }
 
 // toon_direct (MeshStandardMaterial with the cartoon ramp) plus what the figurine adds on top: the

@@ -106,6 +106,9 @@ void fragment() {
 		NORMAL = normalize((VIEW_MATRIX * vec4(wn, 0.0)).xyz);
 	}
 #endif
+#ifdef LOW
+	SIGHT_SHADE(wpos)
+#endif
 }
 
 void light() {

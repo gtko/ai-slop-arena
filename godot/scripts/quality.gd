@@ -347,6 +347,7 @@ static func apply_shaders(low: bool) -> void:
 		return
 	shaders_low = low
 	Foliage.ensure_globals()   # (their global uniforms must exist before they compile)
+	Sight.ensure_globals()
 	for n in LOW_SHADERS:
 		var sh := load("res://assets/shaders/%s.gdshader" % n) as Shader
 		if sh == null:

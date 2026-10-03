@@ -137,6 +137,7 @@ func _bench_map(map_key: String, tag := "") -> void:
 			sight.set_process(not String(c).ends_with("nosight"))
 			if String(c).ends_with("nosight"):
 				sight.visible = false
+				RenderingServer.global_shader_parameter_set("g_sight", Vector4.ZERO)
 			await _wait(40)   # compiles, the mask and its blurred copy
 			sums[c].append(await _measure(frames))
 			if r == 0 and _args.has("shots"):

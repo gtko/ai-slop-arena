@@ -85,6 +85,9 @@ void fragment() {
 	METALLIC = 0.0;
 	// the web's cheap sky reflection (uSky = sky colour * 0.25)
 	EMISSION = g_sky.rgb * 0.25 * (0.04 + fres * 0.7) * (1.0 - foam);
+#ifdef LOW
+	SIGHT_SHADE(wpos)
+#endif
 }
 
 void light() {

@@ -17,6 +17,16 @@ extends CanvasLayer
 # undoes lighting.gd's LUT (Neutral, grade) to get the HDR colour back, shades it like the web and
 # redoes the LUT. Without the LUT (Compatibility: Linear tone mapper) it shades the decoded colour.
 #
+# Low on phones / tablets (Quality.shaders_low): no full-screen pass for the sight (it copied the
+# whole frame, then read it back with 9 mask taps and the grade undone and redone per pixel). The
+# 9-tap blur is drawn once into a second 256 x 256 mask (BLUR_SHADER) when the mask changes, and the
+# LOW world shaders shade their own hidden pixels from it (toon.gdshaderinc SIGHT_SHADE: the same
+# ray onto y = 0.6, one lookup, the same grey / dim / tint, before the lighting) through the global
+# uniforms g_sight*; they draw the depth fog themselves to shade it too (lighting.gd g_fog). The
+# sandstorm's dust, which must also hide what those shaders do not draw (items, fauna, effects), is a
+# blended quad over the frame (DUST_SHADER: one lookup, no copy). On the Compatibility renderer the
+# pass stays for the grade only (and does it all in the sandstorm).
+#
 # Self-driven: main.gd adds one node; it reads main.arena / main.me / main.cam / main.env each frame.
 
 const SIZE := 256                       # mask resolution over the whole arena (~0.2 m per texel)
@@ -167,6 +177,72 @@ void fragment() {
 }
 """
 
+# Low on phones / tablets: SHADER's 9-tap blur of the mask, done once per mask update (256 x 256),
+# for the world shaders' single lookup.
+const BLUR_SHADER := """
+shader_type canvas_item;
+render_mode unshaded;
+uniform sampler2D mask : filter_linear, repeat_disable;
+uniform float outside = 0.0;
+float vis(vec2 uv) {
+	return (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) ? outside : texture(mask, uv).r;
+}
+void fragment() {
+	vec2 uv = UV;
+	float r = 2.5 / 256.0;
+	float v = vis(uv) * 0.28
+		+ (vis(uv + vec2(r, 0.0)) + vis(uv - vec2(r, 0.0)) + vis(uv + vec2(0.0, r)) + vis(uv - vec2(0.0, r))) * 0.12
+		+ (vis(uv + vec2(r, r)) + vis(uv - vec2(r, r)) + vis(uv + vec2(r, -r)) + vis(uv - vec2(r, -r))) * 0.06;
+	COLOR = vec4(vec3(v), 1.0);
+}
+"""
+
+# Low on phones / tablets with the grade LUT, in the sandstorm: the dust over the hidden pixels as a
+# blended quad (no screen copy), SHADER's mix towards the dust in display space.
+const DUST_SHADER := """
+shader_type canvas_item;
+render_mode unshaded, blend_mix;
+uniform sampler2D vis_tex : filter_linear, repeat_disable;   // the blurred mask
+uniform vec3 cam_pos;
+uniform vec3 cam_right;
+uniform vec3 cam_up;
+uniform vec3 cam_back;
+uniform vec2 tan_half = vec2(0.6, 0.36);
+uniform float half_size = 25.0;
+uniform float amount = 0.0;
+uniform vec2 center;
+uniform float clear_r = 0.0;
+uniform float outside = 0.0;
+uniform vec3 dust_col = vec3(0.8, 0.6, 0.4);   // sRGB, as shown
+uniform float dust_amt = 0.0;
+void fragment() {
+	vec2 ndc = vec2(SCREEN_UV.x * 2.0 - 1.0, 1.0 - SCREEN_UV.y * 2.0);
+	vec3 dir = -cam_back + cam_right * ndc.x * tan_half.x + cam_up * ndc.y * tan_half.y;
+	vec2 hit = cam_pos.xz + dir.xz * ((0.6 - cam_pos.y) / min(dir.y, -1e-3));
+	vec2 uv = (hit + half_size) / (2.0 * half_size);
+	float v = (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) ? outside : texture(vis_tex, uv).r;
+	float hide = 1.0 - v;
+	if (clear_r > 0.0) hide = max(hide, smoothstep(clear_r * 0.85, clear_r * 1.1, distance(hit, center)));
+	COLOR = vec4(dust_col, hide * amount * dust_amt);
+}
+"""
+
+# The world shaders' globals (LOW variant, toon.gdshaderinc): added before they compile.
+static var _globals := false
+
+static func ensure_globals() -> void:
+	if _globals:
+		return
+	_globals = true
+	var white := Image.create(1, 1, false, Image.FORMAT_R8)
+	white.fill(Color.WHITE)
+	RenderingServer.global_shader_parameter_add("g_sight_tex", RenderingServer.GLOBAL_VAR_TYPE_SAMPLER2D, ImageTexture.create_from_image(white))
+	RenderingServer.global_shader_parameter_add("g_sight", RenderingServer.GLOBAL_VAR_TYPE_VEC4, Vector4.ZERO)
+	RenderingServer.global_shader_parameter_add("g_sight_b", RenderingServer.GLOBAL_VAR_TYPE_VEC4, Vector4(GameData.HALF, 0, 0, 0))
+	# the depth fog the LOW shaders draw themselves (lighting.gd keeps them in step with the scene's)
+	RenderingServer.global_shader_parameter_add("g_fog", RenderingServer.GLOBAL_VAR_TYPE_VEC4, Vector4.ZERO)
+	RenderingServer.global_shader_parameter_add("g_fog_range", RenderingServer.GLOBAL_VAR_TYPE_VEC4, Vector4(1e5, 2e5, 0, 0))
+
 var main: Node
 var amount := 0.0
 var _dust_amt := 0.0
@@ -177,6 +253,11 @@ var _mask_mat: ShaderMaterial
 var _grid_tex: ImageTexture
 var _rect: ColorRect
 var _mat: ShaderMaterial
+var _blur_vp: SubViewport
+var _blur_mat: ShaderMaterial
+var _full_mat: ShaderMaterial
+var _dust_mat: ShaderMaterial
+var _world := false   # the LOW world shaders shade the hidden pixels (no screen pass for the sight)
 var _off := DebugArgs.has("nosight")   # screenshots without the dimming
 
 func _init(main_: Node = null) -> void:
@@ -190,7 +271,23 @@ func _ready() -> void:
 	_vp.disable_3d = true
 	_vp.transparent_bg = false
 	_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
-	add_child(_vp)
+	# the blurred copy (Low on phones / tablets); the mask viewport inside it draws first
+	_blur_vp = SubViewport.new()
+	_blur_vp.size = Vector2i(SIZE, SIZE)
+	_blur_vp.disable_3d = true
+	_blur_vp.transparent_bg = false
+	_blur_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	add_child(_blur_vp)
+	_blur_vp.add_child(_vp)
+	var blur := ColorRect.new()
+	blur.size = Vector2(SIZE, SIZE)
+	_blur_mat = ShaderMaterial.new()
+	var bsh := Shader.new()
+	bsh.code = BLUR_SHADER
+	_blur_mat.shader = bsh
+	_blur_mat.set_shader_parameter("mask", _vp.get_texture())
+	blur.material = _blur_mat
+	_blur_vp.add_child(blur)
 	var mask := ColorRect.new()
 	mask.size = Vector2(SIZE, SIZE)
 	_mask_mat = ShaderMaterial.new()
@@ -204,14 +301,19 @@ func _ready() -> void:
 	_rect = ColorRect.new()
 	_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_mat = ShaderMaterial.new()
-	var sh := Shader.new()
-	sh.code = SHADER
-	_mat.shader = sh
-	_mat.set_shader_parameter("vis_tex", _vp.get_texture())
-	_mat.set_shader_parameter("half_size", GameData.HALF)
+	_full_mat = _pass_mat(SHADER, _vp)
+	_mat = _full_mat
 	_rect.material = _mat
 	add_child(_rect)
+
+func _pass_mat(code: String, mask_vp: SubViewport) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	var sh := Shader.new()
+	sh.code = code
+	m.shader = sh
+	m.set_shader_parameter("vis_tex", mask_vp.get_texture())
+	m.set_shader_parameter("half_size", GameData.HALF)
+	return m
 
 func _process(delta: float) -> void:
 	var arena: Arena = main.get("arena") if main else null
@@ -234,16 +336,41 @@ func _process(delta: float) -> void:
 	if arena == null:
 		amount = 0.0   # back to the menu: no stale mask over the showcase map
 	var compat := Lighting.compat_grade()   # web: this pass is also the colour grade, menus included
-	visible = compat or (amount > 0.005 and cam != null)
-	if not visible:
+	var sandstorm := arena != null and String(arena.map.get("weather", "")) == "sandstorm"
+	# Low on phones / tablets: the world shaders grey the hidden pixels; the sandstorm's dust, which
+	# must also cover what they do not draw (items, fauna, effects), is a blended quad (DUST_SHADER).
+	# Compatibility in the sandstorm: the full pass, as it grades every pixel anyway.
+	var world := Quality.shaders_low and amount > 0.005 and cam != null and not (compat and sandstorm)
+	if world != _world:
+		_world = world
+		_key = Vector2i(1 << 30, 0)   # redraw the mask and its blurred copy
+		if world:
+			ensure_globals()
+			RenderingServer.global_shader_parameter_set("g_sight_tex", _blur_vp.get_texture())
+		else:
+			RenderingServer.global_shader_parameter_set("g_sight", Vector4.ZERO)
+	var want_mat := _full_mat
+	if world and not compat:
+		if _dust_mat == null:
+			_dust_mat = _pass_mat(DUST_SHADER, _blur_vp)
+		want_mat = _dust_mat
+	if want_mat != _mat:
+		_mat = want_mat
+		_rect.material = _mat
+	var d := 1.0 if sandstorm else 0.0
+	_dust_amt += (d * 0.92 - _dust_amt) * (1.0 - exp(-2.0 * delta))
+	visible = compat or (amount > 0.005 and cam != null and (not world or _dust_amt > 0.005))
+	if not visible and not world:
 		return
 	if compat:
 		_mat.set_shader_parameter("graded", 2.0)
 		_mat.set_shader_parameter("lut_scale", 1.0)
-	if amount <= 0.005 or cam == null:
+	if amount <= 0.005 or cam == null or (world and compat):
 		_mat.set_shader_parameter("amount", 0.0)
-		return
-	_mat.set_shader_parameter("amount", amount)
+		if not world:
+			return
+	else:
+		_mat.set_shader_parameter("amount", amount)
 	var env := cam.get_world_3d().environment if cam.get_world_3d() else null
 	if not compat:
 		_mat.set_shader_parameter("graded", 1.0 if graded(env) else 0.0)
@@ -255,16 +382,18 @@ func _process(delta: float) -> void:
 	var vs := get_viewport().get_visible_rect().size
 	var tv := tan(deg_to_rad(cam.fov) * 0.5)
 	_mat.set_shader_parameter("tan_half", Vector2(tv * vs.x / maxf(vs.y, 1.0), tv))
-	var sandstorm := arena != null and String(arena.map.get("weather", "")) == "sandstorm"
-	var d := 1.0 if sandstorm else 0.0
-	_dust_amt += (d * 0.92 - _dust_amt) * (1.0 - exp(-2.0 * delta))
 	_mat.set_shader_parameter("dust_amt", _dust_amt)
 	if sandstorm:
 		if env:   # the scene fog colour, scaled like the scene by the exposure (the pass shades after it)
 			var c := env.fog_light_color.srgb_to_linear() * exposure(env)
 			_mat.set_shader_parameter("dust", Vector3(c.r, c.g, c.b))
-	_mat.set_shader_parameter("clear_r", _sight_range(arena, vision, hud))
-	_mat.set_shader_parameter("outside", 1.0 if arena and arena.map.get("sky", false) else 0.0)
+			if _mat == _dust_mat:   # as the screen shows it (the quad blends over the finished frame)
+				var dd := to_display(env.fog_light_color.srgb_to_linear() * 0.95, env)
+				_mat.set_shader_parameter("dust_col", Vector3(dd.r, dd.g, dd.b))
+	var clear := _sight_range(arena, vision, hud)
+	var outside := 1.0 if arena and arena.map.get("sky", false) else 0.0
+	_mat.set_shader_parameter("clear_r", clear)
+	_mat.set_shader_parameter("outside", outside)
 	if viewer:
 		var at := Vector2(viewer.position.x, viewer.position.z)
 		for arg in DebugArgs.list():   # screenshots side by side with the web: --sightat=x,z
@@ -273,6 +402,11 @@ func _process(delta: float) -> void:
 				at = Vector2(float(v[0]), float(v[1]))
 		_mat.set_shader_parameter("center", at)
 		_trace(arena, at.x, at.y)
+		if world:   # the LOW world shaders' copy of the same
+			RenderingServer.global_shader_parameter_set("g_sight", Vector4(amount, clear, at.x, at.y))
+			RenderingServer.global_shader_parameter_set("g_sight_b", Vector4(GameData.HALF, outside, 0.0, 0.0))
+	elif world:
+		RenderingServer.global_shader_parameter_set("g_sight", Vector4.ZERO)
 
 # The frame gets the web's grade: lighting.gd's LUT (Mobile / Forward+), or this pass (Compatibility).
 static func graded(env: Environment) -> bool:
@@ -332,3 +466,6 @@ func _trace(A: Arena, x: float, z: float) -> void:
 	_key = key
 	_mask_mat.set_shader_parameter("eye", Vector2(x / GameData.TILE + GameData.N / 2.0, z / GameData.TILE + GameData.N / 2.0))
 	_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	if _world:
+		_blur_mat.set_shader_parameter("outside", 1.0 if A.map.get("sky", false) else 0.0)
+		_blur_vp.render_target_update_mode = SubViewport.UPDATE_ONCE

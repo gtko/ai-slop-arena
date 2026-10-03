@@ -27,7 +27,7 @@ void fragment() {
 #ifdef LOW
 	float e = c_edges(wpos.xz * 0.55, 0.0);
 	float c1 = 1.0 - smoothstep(0.0, 0.05, e);
-	vec3 col = mix(vec3(0.28, 0.55, 0.78), vec3(0.75, 0.9, 1.0), smoothstep(0.0, 0.6, e * 0.9));
+	vec3 col = mix(vec3(0.28, 0.55, 0.78), vec3(0.75, 0.9, 1.0), smoothstep(0.1, 0.7, e) * 0.6);
 	col = mix(col, vec3(0.97, 0.99, 1.0), c1);
 #else
 	float c1 = 1.0 - smoothstep(0.0, 0.05, c_edges(wpos.xz * 0.55, 0.0));
@@ -43,6 +43,9 @@ void fragment() {
 	METALLIC = 0.05;
 	// the web's glossy ice mirrors its bright studio environment: a sky-tinted sheen
 	EMISSION = g_sky.rgb * 0.05 + vec3(0.05);
+#ifdef LOW
+	SIGHT_SHADE(wpos)
+#endif
 }
 
 void light() {
