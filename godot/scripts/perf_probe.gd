@@ -119,7 +119,8 @@ func _mesh_census() -> String:
 			var arr := mesh.surface_get_arrays(s)
 			var idx = arr[Mesh.ARRAY_INDEX]
 			t += (idx.size() if idx != null and idx.size() > 0 else (arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()) / 3
-		var key := "%s/%s" % [g.get_parent().name if g.get_parent() else "-", g.get_class()]
+		var mn := mesh.resource_path.get_file() if mesh.resource_path != "" else mesh.resource_name
+		var key := "%s/%s:%s" % [g.get_parent().name if g.get_parent() else "-", g.get_class(), mn]
 		tri[key] = int(tri.get(key, 0)) + t * n
 		cnt[key] = int(cnt.get(key, 0)) + n
 	var keys := tri.keys()

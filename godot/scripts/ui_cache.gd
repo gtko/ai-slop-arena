@@ -40,7 +40,6 @@ var _hot := 0.0
 var _since := 0.0
 var _hist: PackedByteArray = []
 var _bypass := 0.0
-var _hooked := {}
 static var _poked := -10
 
 # Content that moves every frame without redrawing (the HUD's plates follow the fighters): call this
@@ -110,20 +109,16 @@ func _on_node_added(n: Node) -> void:
 		_mark()
 
 func _hook(n: Node) -> void:
-	if n is CanvasItem and not _hooked.has(n.get_instance_id()):
-		_hooked[n.get_instance_id()] = true
+	# (a node moved to another parent leaves and enters again: its signals are still connected)
+	if n is CanvasItem and not (n as CanvasItem).draw.is_connected(_mark):
 		var ci := n as CanvasItem
 		ci.draw.connect(_mark)
 		ci.visibility_changed.connect(_mark)
-		ci.tree_exiting.connect(_forget.bind(n.get_instance_id()))
+		ci.tree_exiting.connect(_mark)
 		if ci is Control:
 			(ci as Control).item_rect_changed.connect(_mark)
 	for c in n.get_children():
 		_hook(c)
-
-func _forget(id: int) -> void:
-	_hooked.erase(id)
-	_mark()
 
 func _mark() -> void:
 	_dirty = true
