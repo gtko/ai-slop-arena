@@ -68,7 +68,7 @@ jobs:
           # simulator build: APPLE_TEAM_ID (secret) when there is one, else a placeholder
           sed -i "s/^application\/app_store_team_id=.*/application\/app_store_team_id=\"${APPLE_TEAM_ID:-SIMULATOR}\"/" godot/export_presets.cfg
           export_preset "iOS" build/ios/AISlopArena.ipa || test -d godot/build/ios/AISlopArena.xcodeproj
-          if grep -q "rcedit" export.log; then echo "::warning::rcedit failed: the Windows exe keeps Godot's icon and version info"; fi
+          if grep -qE "Could not start rcedit|rcedit failed|Resources Modification" export.log; then echo "::warning::rcedit failed: the Windows exe keeps Godot's icon and version info"; fi
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       - name: Package
@@ -157,9 +157,11 @@ jobs:
           # The simulator SDK has no MetalFX; Godot's simulator library does not use it (only the
           # device one does), so the simulator build drops the framework from the link.
           sed -i '' '/MetalFX.framework/d' ios/AISlopArena.xcodeproj/project.pbxproj
+          # Godot 4.4.1's simulator libgodot.a only links as x86_64 (its arm64 objects are missing):
+          # an x86_64 app, run by the simulator under Rosetta on Apple silicon Macs.
           xcodebuild -project ios/AISlopArena.xcodeproj -scheme AISlopArena -configuration Release \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
-            ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build | tail -n 40
+            ARCHS=x86_64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build | grep -E "error|warning: ignoring|BUILD" | tail -n 40
           test -d build/Build/Products/Release-iphonesimulator/AISlopArena.app
       - run: cd build/Build/Products/Release-iphonesimulator && zip -qry "$GITHUB_WORKSPACE/AISlopArena-ios-simulator.zip" AISlopArena.app
       - uses: actions/upload-artifact@v4
