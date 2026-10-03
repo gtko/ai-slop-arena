@@ -38,6 +38,7 @@ const LOW = {
   'decor/boulder.glb': 0.25, 'decor/boulder_snow.glb': 0.25, 'decor/stump.glb': 0.25,
   'decor/crate.glb': 0.25, 'decor/lantern.glb': 0.25,
   'decor/wall_canyon.glb': 0.45, 'decor/wall_ice.glb': 0.45, 'decor/wall_moss.glb': 0.45,
+  'decor/bush.glb': 0.4,
 };
 const BLENDER = process.env.BLENDER || 'C:/Program Files/Blender Foundation/Blender 5.2/blender.exe';
 const here = dirname(fileURLToPath(import.meta.url));

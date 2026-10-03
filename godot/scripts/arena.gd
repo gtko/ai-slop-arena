@@ -178,6 +178,8 @@ func _bushes(tiles: Array) -> void:
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
 	mmi.material_override = mat
+	if not grass:
+		mmi.set_meta("prop", "bush")   # Low: bush_low.glb (PropLib.set_low)
 	add_child(mmi)
 
 # three's Color.setHSL (lightness clamped to 1)
