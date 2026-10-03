@@ -39,7 +39,7 @@ func _build() -> void:
 	var o := _ghost(I18n.t("pause.options"), 15 if phone else 22, 7 if phone else 12, 14, 4 if phone else 6)
 	o.pressed.connect(func(): options.emit())
 	col.add_child(o)
-	if not (home and OS.has_feature("web")):
+	if not (home and (OS.has_feature("web") or OS.has_feature("ios"))):   # iOS: apps never quit themselves
 		var q := _ghost(I18n.t("home.quit" if home else "pause.quit"), 15 if phone else 22, 7 if phone else 12, 14, 4 if phone else 6)
 		q.pressed.connect(func(): visible = false; quit.emit())
 		col.add_child(q)

@@ -79,6 +79,7 @@ func _ready() -> void:
 	# root Window, not DisplayServer: the Window rewrites its title on every locale change.
 	get_window().title = "AI SLOP ARENA"
 	Settings.load_all()
+	Quality.renderer_boot_check()   # Android: a renderer still on trial falls back by itself after a crash
 	LegacyImport.run()   # web, first launch: the old three.js client's saves (localStorage) -> user://
 	Controls.setup()   # the rebindable keys + gamepad buttons in the InputMap (controls.gd)
 	if not DebugArgs.has("autotest") and not Array(DebugArgs.list()).any(func(a): return String(a).begins_with("--menushot")):
@@ -597,6 +598,8 @@ func _random_code() -> String:
 
 func _set_state(s: State) -> void:
 	state = s
+	if home_menu and s != State.MENU:
+		home_menu.visible = false   # (a queue match, an invite) the home Escape menu never covers a room or a match
 	_show_screen()
 
 func _show_screen() -> void:

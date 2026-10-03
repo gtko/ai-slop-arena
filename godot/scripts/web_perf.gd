@@ -21,6 +21,26 @@ func _process(delta: float) -> void:
 		_cache_layers()
 	_keep_rate(delta)
 	_warm_up()
+	_renderer_trial(delta)
+
+# A launch on a renderer still on trial (Quality.renderer_boot_check): a minute of focused play
+# confirms it; 10 s of frames over 250 ms in a row (unplayable, and _keep_rate never judges those)
+# gives up on it.
+var _trial_ok := 0.0
+var _trial_bad := 0.0
+
+func _renderer_trial(delta: float) -> void:
+	if not Quality.renderer_trial() or not DisplayServer.window_is_focused():
+		return
+	if delta > 0.25:
+		_trial_bad += delta
+		if _trial_bad > 10.0:
+			Quality.renderer_failed()
+		return
+	_trial_bad = 0.0
+	_trial_ok += delta
+	if _trial_ok > 60.0:
+		Quality.renderer_confirm()
 
 # ---------------------------------------------------------------- shader warm-up
 

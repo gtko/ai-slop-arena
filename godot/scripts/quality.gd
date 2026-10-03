@@ -142,7 +142,9 @@ static func gpu_tier(name: String, touch: bool) -> Array:
 static func frame_budget() -> float:
 	if not mobile() or DisplayServer.get_name() == "headless":
 		return 0.0
-	return float(preset().get("frame", 0.0)) * 1e6
+	# phone browsers (one thread, WebGL through ANGLE) get half the native budget: v0.18.0 drew their 3D
+	# at about 0.25-0.4 MP through the pixel-ratio cap, the full native budget would be 4-5x that
+	return float(preset().get("frame", 0.0)) * 1e6 * (0.5 if OS.has_feature("web") else 1.0)
 
 # The render scale of the 3D view: the tier's, the auto step's, and on the web the pixel-ratio cap.
 static func render_scale() -> float:
@@ -361,6 +363,46 @@ static func renderer_probe(fps: float) -> bool:
 	# again, and if that is still too slow this is called again there, with that renderer's fps)
 	print("AUTOQ renderer probe: %s %.1f fps, %s %s -> %s next launch" % [now, fps, other, "untested" if other_fps < 0.0 else "%.1f fps" % other_fps, pick])
 	return pick != now
+
+# A launch on a renderer this device never confirmed is a trial: the override file is removed at once,
+# so a crash or a frozen boot falls back to the default renderer at the next launch by itself. After a
+# minute of play without a frozen stretch it is written back and confirmed (renderer_confirm); a
+# catastrophic stretch (renderer_failed) gives up on it for good.
+static var _trial := false
+
+static func renderer_boot_check() -> void:
+	if OS.get_name() != "Android" or Settings.test_run() or not FileAccess.file_exists(RENDER_OVERRIDE):
+		return
+	var cfg := ConfigFile.new()
+	cfg.load(CFG)
+	if bool(cfg.get_value("renderer", "ok_" + renderer_now(), false)):
+		return
+	_trial = true
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(RENDER_OVERRIDE))
+
+static func renderer_confirm() -> void:
+	if not _trial:
+		return
+	_trial = false
+	var cfg := ConfigFile.new()
+	cfg.load(CFG)
+	cfg.set_value("renderer", "ok_" + renderer_now(), true)
+	cfg.save(CFG)
+	_write_renderer(renderer_now())
+
+static func renderer_failed() -> void:
+	if not _trial:
+		return
+	_trial = false
+	var cfg := ConfigFile.new()
+	cfg.load(CFG)
+	cfg.set_value("renderer", "fps_" + renderer_now(), 0.0)
+	cfg.set_value("renderer", "decided", true)   # the default renderer stays (its override is already gone)
+	cfg.save(CFG)
+	print("AUTOQ renderer %s froze: back to the default renderer from the next launch" % renderer_now())
+
+static func renderer_trial() -> bool:
+	return _trial
 
 static func _write_renderer(r: String) -> void:
 	var method := "gl_compatibility" if r == "gl" else "mobile"

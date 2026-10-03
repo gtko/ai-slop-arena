@@ -6,7 +6,7 @@ import { EXTMeshoptCompression, ALL_EXTENSIONS } from '@gltf-transform/extension
 import { MeshoptDecoder } from 'meshoptimizer';
 import { dequantize, weld, normals } from '@gltf-transform/functions';
 import { spawnSync } from 'node:child_process';
-import { readdirSync, mkdirSync, statSync } from 'node:fs';
+import { readdirSync, mkdirSync, statSync, existsSync, renameSync, rmSync } from 'node:fs';
 import { join, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -44,11 +44,19 @@ async function convert(dir) {
     const key = join(dir, f).split(sep).join('/');
     await doc.transform(dequantize(), weld(), normals({ overwrite: false }), weld());
     doc.getRoot().listExtensionsUsed().filter(e => ['EXT_meshopt_compression', 'KHR_mesh_quantization'].includes(e.extensionName)).forEach(e => e.dispose());
-    await io.write(join(out, f), doc);
     if (DECIMATE[key]) {
-      const r = spawnSync(BLENDER, ['--background', '--factory-startup', '--python', join(here, 'decimate.py'), '--', join(out, f), join(out, f), String(DECIMATE[key])], { encoding: 'utf8' });
+      // decimated in Blender from a temp copy: without Blender (CI containers) the committed, already
+      // decimated GLB stays as it is instead of being replaced by the full mesh
+      const tmp = join(out, f + '.full.glb');
+      await io.write(tmp, doc);
+      const r = spawnSync(BLENDER, ['--background', '--factory-startup', '--python', join(here, 'decimate.py'), '--', tmp, join(out, f), String(DECIMATE[key])], { encoding: 'utf8' });
       const line = (r.stdout || '').split(/\r?\n/).find(l => l.startsWith('DECIMATE'));
-      console.log(line || `${key}: Blender decimation failed (${r.error || r.status}), kept the full mesh (set BLENDER=<blender.exe>)`);
+      if (line) console.log(line);
+      else if (existsSync(join(out, f))) console.log(`${key}: no Blender (${r.error || r.status}), kept the committed decimated GLB (set BLENDER=<blender.exe> to rebuild it)`);
+      else { renameSync(tmp, join(out, f)); console.log(`${key}: no Blender and no committed GLB: the full mesh ships`); }
+      rmSync(tmp, { force: true });
+    } else {
+      await io.write(join(out, f), doc);
     }
     bytes += statSync(join(out, f)).size; n++;
   }
