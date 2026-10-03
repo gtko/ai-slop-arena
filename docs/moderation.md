@@ -119,9 +119,11 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -d '{"id":12,"status":"done"}' ht
 ## Testing locally
 
 ```bash
-npm run dev          # the game on :5173
-npm run dev:server   # builds worker/build/sim.js, then the server on :8787
+npm run deploy:godot-web -- --local   # the Godot web client into the local R2 (once per client change)
+npm run dev:server   # builds worker/build/sim.js, then the server on :8787: the game at http://localhost:8787/play
 ```
+
+Native Godot clients join it with the server `ws://localhost:8787` in the options (`godot/README.md`).
 
 `npx wrangler dev --var QUEUE_BOTS_AFTER_MS:6000 --var ADMIN_TOKEN:test` shortens the matchmaking
 wait to 6 s and enables the admin API with the token `test`, for tests only.

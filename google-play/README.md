@@ -1,12 +1,20 @@
 # Google Play listing
 
+> **v0.18: the three.js client and its Electron / Capacitor shells are gone.** The game is the Godot
+> client (`godot/`); the store builds come from the Godot jobs of `.github/workflows/release.yml`.
+> The integration described below is the one of the old client (code in git history, tag `v0.17.1`):
+> its Godot port is listed in `docs/godot-migration.md` (feature inventory). The store data here
+> (ids, achievements, texts, graphics) stays valid.
+
 Package `com.aislop.arena` (Play, permanent). Console: developer 4735682826873956606, app 4973855167888523454.
-Build the upload bundle with `npm run android:aab`
-(`android/app/build/outputs/bundle/release/app-release.aab`, signed with the upload key in
-`~/.android-keys/`, versionCode = major*10000 + minor*100 + patch from package.json).
+The upload bundle comes from the Godot Android export (Gradle build, signed with the same upload key
+as the Capacitor app, in `~/.android-keys/` and the GitHub secrets). The Capacitor builds (up to v0.17.1)
+used versionCode = major*10000 + minor*100 + patch; the Godot builds must stay above it
+(`docs/godot-migration.md` D4).
 
 Graphics in this folder: `icon-512.png`, `feature-graphic.png` (1024x500), phone screenshots
-(2608x1304: a landscape touch phone emulated in Electron by `art-src/gp_screenshots.cjs`, French UI).
+(2608x1304: a landscape touch phone emulated in Electron by the deleted `art-src/gp_screenshots.cjs`, French UI;
+new ones: Godot `--menushot`).
 Play wants 16:9 screenshots: pad them to 2608x1467 with dark bars before uploading (phone, 7" and
 10" tablet slots all use the same seven, menu first).
 

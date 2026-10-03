@@ -1,0 +1,41 @@
+name: Prepare the Godot project
+description: >
+  Inside the barichello/godot-ci container: game data, strings and models exported from src/, the
+  package.json version written into the project and presets, export templates and editor settings
+  moved to the runner's HOME, the Android Gradle build template unzipped, then the import.
+  Needs env GODOT_VERSION (e.g. 4.4.1).
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with: { node-version: 22 }
+    - name: Game data, strings and models (maps, brawlers, i18n, cosmetics, meshopt -> plain GLB)
+      shell: bash
+      run: |
+        node godot/tools/export-data.mjs
+        node godot/tools/export-i18n.mjs
+        (cd godot/tools && npm ci && node convert-models.mjs)
+    - name: Version (package.json -> project.godot + every export preset)
+      shell: bash
+      run: node scripts/godot-version.mjs
+    - name: Export templates, editor settings, Android build template
+      shell: bash
+      run: |
+        T=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+        mkdir -p ~/.local/share/godot/export_templates ~/.config/godot
+        # the image keeps them under /root; Actions runs with HOME=/github/home
+        [ -d "$T" ] || cp -r /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable "$T"
+        # the image's editor settings carry the Java / Android SDK paths, the debug keystore, rcedit + wine
+        cp -r /root/.config/godot/. ~/.config/godot/ 2>/dev/null || true
+        # what the editor's "Install Android Build Template" does, needed by the Gradle presets
+        rm -rf godot/android && mkdir -p godot/android/build
+        unzip -q "$T/android_source.zip" -d godot/android/build
+        printf '%s' "${GODOT_VERSION}.stable" > godot/android/.build_version
+        touch godot/android/build/.gdignore
+        chmod +x godot/android/build/gradlew
+    - name: Import
+      shell: bash
+      # the first import of a fresh checkout can crash on exit after writing the cache; the second is clean
+      run: |
+        godot --headless --path godot --import || true
+        godot --headless --path godot --import

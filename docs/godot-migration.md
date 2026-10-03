@@ -67,8 +67,13 @@ Taken with the user on 2026-10-03: **D1 local simulation** (spike first), **D2 k
 
 ## Release pipeline
 
-New Godot jobs in `.github/workflows/release.yml` (image `barichello/godot-ci:4.4.1`), first next to
-the three.js jobs with `-godot` assets, then replacing them:
+Godot jobs in `.github/workflows/release.yml` (image `barichello/godot-ci:4.4.1`). Since the three.js
+client removal they **replace** the Electron/Capacitor jobs and produce the same asset names (+
+`AISlopArena-android.aab`, - `AISlopArena-app-bundle.zip`); details in docs/platforms.md "Releases".
+Differences with the plan below: the web build is uploaded to R2 by `npm run deploy:godot-web` from the
+release machine, not by CI (the Worker's `/godot/` redirect follows the deployed Worker's version, and
+the Cloudflare token stays off CI); no OTA PCK yet; target SDK 36 is set on Godot 4.4.1's Gradle
+template (compileSdk 34).
 
 - **prepare**: data, i18n and model export, `scripts/godot-version.mjs` (new: writes the version into
   `project.godot` and every preset), import.
@@ -86,6 +91,12 @@ apps get a last "bridge" OTA bundle pointing them to the store, and `/app/latest
 The web keeps `/classic/` (three.js) for two weeks behind a Worker switch for instant rollback.
 
 ## Code removal (phase 3)
+
+**Done** (branch `claude/remove-threejs`, decided with the user on 2026-10-03: the three.js client goes
+for good, the website included, no `/classic/` rollback): `/play` and the invite links redirect to the
+Godot web client, the web saves are imported by `godot/scripts/legacy_import.gd`, `/app/latest.json` is
+frozen on v0.17.1 (`src/updates.js`). Data the tools read moved to `src/economy.js`,
+`src/i18n/langs.json` and `src/achievements.json`; the desktop icons to `assets/app-icons/`.
 
 **Shared with the server, keep**: `game.js, ai.js, arena.js, assets.js, foliage.js, lantern.js, maps.js,
 materials.js, props.js, shore.js, water.js, brawler.js, cosmetics.js, figurines.js, animator.js,

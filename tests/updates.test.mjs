@@ -1,10 +1,11 @@
 // Over-the-air updates of the mobile bundle (src/updates.js): version order, manifest checks, which
-// downloaded bundle to switch to, retries of downloads and boots, and the native build numbers.
+// downloaded bundle to switch to, retries of downloads and boots, the native build numbers, and the
+// manifest frozen on the last three.js bundle.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   parseVersion, compareVersions, manifestFor, shouldDownload, pickDownloaded, MIN_NATIVE, bundleUrl, buildNumber,
-  nativeVersion, loadState, downloadStarted, downloadDone, bootFailed, bootOk, MAX_DOWNLOADS, MAX_BOOTS,
+  nativeVersion, loadState, downloadStarted, downloadDone, bootFailed, bootOk, MAX_DOWNLOADS, MAX_BOOTS, FROZEN_APP_BUNDLE,
 } from '../src/updates.js';
 
 let n = 0;
@@ -112,14 +113,15 @@ test('pickDownloaded', () => {
   assert.equal(pickDownloaded(undefined, { running: '0.16.0' }), null);
 });
 
-test('the iOS project carries package.json\'s version and build number (npm run native:version)', () => {
+test('the manifest stays frozen on the last three.js bundle (the old Capacitor apps keep running)', () => {
+  assert.equal(FROZEN_APP_BUNDLE, '0.17.1');
+  assert.deepEqual(manifestFor(), manifestFor(FROZEN_APP_BUNDLE));
+  const m = manifestFor();
+  assert.equal(m.url, 'https://github.com/gtko/ai-slop-arena/releases/download/v0.17.1/AISlopArena-app-bundle.zip');
+  assert.equal(shouldDownload(m, { running: '0.17.1', native: '0.17.1' }), false, 'an app on 0.17.1 sees nothing newer');
+  assert.equal(shouldDownload(m, { running: '0.17.0', native: '0.17.0' }), true, 'an older app still gets 0.17.1');
   const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
-  const pbx = readFileSync(new URL('../ios/App/App.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
-  const all = re => [...pbx.matchAll(re)].map(m => m[1]);
-  const mv = all(/MARKETING_VERSION = ([^;]+);/g), cv = all(/CURRENT_PROJECT_VERSION = ([^;]+);/g);
-  assert.ok(mv.length && cv.length);
-  assert.ok(mv.every(v => v === version), `MARKETING_VERSION ${mv} != ${version}`);
-  assert.ok(cv.every(v => +v === buildNumber(version)), `CURRENT_PROJECT_VERSION ${cv} != ${buildNumber(version)}`);
+  assert.ok(compareVersions(version, FROZEN_APP_BUNDLE) >= 0, 'package.json never goes below the frozen bundle');
 });
 
 console.log(`ok   ${n} OTA update checks`);

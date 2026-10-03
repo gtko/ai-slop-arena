@@ -23,7 +23,7 @@ the game itself. Talk to the user in French. Commit after each step that changes
 | `steam/store/trailer.mp4` | 1080p trailer with music and logo intro (git-ignored, 64 MB) | `art-src/make_steam_trailer.py` |
 | `steam/README.md` | Steamworks technical setup (app id, stats, achievements API names, SteamPipe) | Hand-written |
 
-The game is the source of truth: achievements come from `src/achievements.js`, their names and every
+The game is the source of truth: achievements come from `src/achievements.json`, their names and every
 translated game term from `src/i18n/en.js` and `src/i18n/locales/<lang>.json`.
 
 ## Content rules (Valve review and the user's choices)
@@ -66,7 +66,7 @@ the language table of `steam/store/README.md` (Steamworks language name in Engli
 
 ## Task: achievements
 
-The list is `ACHIEVEMENTS` in `src/achievements.js`; `steam/README.md` holds the API names and stats
+The list is `achievements` in `src/achievements.json`; `steam/README.md` holds the API names and stats
 to declare in Steamworks. When one is added or renamed:
 
 1. Check its strings exist in `src/i18n/en.js` and every locale (`ach.<ID>`, `ach.<ID>.desc`).

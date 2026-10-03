@@ -1,68 +1,71 @@
 # Platforms
 
-One game, one codebase (`src/`), several shells:
+One game client, the Godot 4 project in `godot/` (see [godot/README.md](../godot/README.md)), exported
+for every platform; one server, the Cloudflare Worker (`worker/index.js`) that runs every online match
+with the shared rules of `src/` (`src/server/sim.js`).
 
-| Platform | Shell | Build | Online play |
-| --- | --- | --- | --- |
-| Web | the site itself | `npm run deploy` | Cloudflare rooms |
-| Steam (Windows, Linux) | Electron + steamworks.js | `npm run dist:steam` | Steam lobbies (P2P) + cross-play rooms |
-| Epic Games Store (Windows) | Electron, Steam left out | `npm run dist:epic` | Cloudflare rooms (cross-play) |
-| Android | Capacitor | `npm run android:apk` | Cloudflare rooms (cross-play) |
-| iOS / iPadOS | Capacitor | `npm run ios` (on a Mac) | Cloudflare rooms (cross-play) |
+| Platform | Build | Online play |
+| --- | --- | --- |
+| Web | Godot "Web" preset, uploaded to R2 by `npm run deploy:godot-web`, served at `/godot/<version>/` | Cloudflare rooms |
+| Steam (Windows, Linux) | Godot "Windows (Steam)" / "Linux (Steam)" presets | Cloudflare rooms (cross-play) |
+| Epic Games Store (Windows) | Godot "Windows (Epic)" preset | Cloudflare rooms (cross-play) |
+| Android | Godot "Android" preset (Gradle build, `com.aislop.arena`) | Cloudflare rooms (cross-play) |
+| iOS / iPadOS | Godot "iOS" preset (Xcode project, on a Mac) | Cloudflare rooms (cross-play) |
 
-Every version can meet every other one through matchmaking or in a room created on our server
-(a "cross-play room" on Steam, a normal room everywhere else); the server runs those matches.
-Steam lobbies are Steam-only and hosted by a player. See [moderation.md](moderation.md).
+Every version meets every other one through matchmaking or in a room by code; the server runs those
+matches, validates every move and sends each player only what they can see ([moderation.md](moderation.md)).
 
-GitHub builds all of them: see [Releases](#releases) below.
+## Web
 
-## Android and iOS
+The site (`index.html`, `roadmap.html`, `src/site/`, `public/privacy.html`) is a Vite build served as
+Worker static assets (`npm run deploy`). The game's URL is **`/play`**: the Worker redirects `/play`,
+`/play.html` and `/play/...` to `/godot/<version of the deployed worker>/` with the query kept, so the
+site's Play buttons and the old invite links (`/play?room=CODE`) land on the Godot client, which joins
+the room of a `?room=` link at launch (`main.gd` `_join_invite`).
 
-`vite build --mode app` builds only the game (as `index.html`, without the showcase site) into
-`dist-app/`; [Capacitor](https://capacitorjs.com) copies it into the native projects in `android/`
-and `ios/` (`npm run app:build` = build + `cap sync`).
+Players of the old three.js web client keep their progress: it ran on the same origin and kept
+everything in `localStorage`; at its first launch the Godot web client imports those keys into its own
+saves (`godot/scripts/legacy_import.gd`: profile, coins, gems, owned items, trophies, the `cid` the
+server's rank and bans are keyed by, name, brawler, mode, settings, audio mix).
 
-- Touch controls (`src/touch.js`): floating move stick, attack stick (tap = nearest enemy, drag =
-  aim, release = fire), super button, pause button. Gamepads work too.
-- Phones start on the Low graphics preset; landscape only, full screen, notch-safe HUD.
-- Icons and splash screens come from `assets/` (`npx capacitor-assets generate`).
-- Android: achievements on Google Play Games (sign-in, the Steam achievements, an *ACHIEVEMENTS*
-  button in the menu): setup in [play/README.md](../play/README.md).
+## Store builds
 
-**Android**: needs JDK 21 and the Android SDK (Android Studio installs both).
-`npm run android:apk` builds a debug APK in `android/app/build/outputs/apk/debug/`;
-`npm run android` opens the project in Android Studio. For Google Play, build a signed App
-Bundle (Build → Generate Signed App Bundle) with your upload key.
+The release workflow (`.github/workflows/release.yml`, the Godot jobs) exports the presets of
+`godot/export_presets.cfg` and attaches the builds to the GitHub release of the tag; the store uploads
+(SteamPipe, Epic BuildPatchTool, Play Console, App Store Connect) are done from those builds. Store
+metadata lives in `steam/`, `google-play/` and `play/` (Play Games achievements); the desktop icons
+in `assets/app-icons/` (written by `art-src/make_app_art.py`).
 
-**iOS**: needs a Mac with Xcode. `npm run ios` opens the project in Xcode; set your team in
-Signing & Capabilities, then Product → Archive to upload to App Store Connect / TestFlight.
-
-## Epic Games Store
-
-`npm run dist:epic` packages the desktop app flagged `"store": "epic"` (`electron/builder-epic.cjs`)
-into `release/epic/win-unpacked`: Steam is never loaded and steamworks.js is not shipped.
-The Epic launcher's `-epicusername` and `-epiclocale` arguments give the default nickname and the
-game language. Upload the folder with Epic's BuildPatchTool from the Epic Developer Portal and set
-the launch executable to `AISlopArena.exe`.
-
-Not in yet: Epic Online Services (Epic achievements, friends, invites). The platform layer
-(`src/platform.js`) is where an EOS bridge would plug in, like `steamnet.js` does for Steam.
+The old Electron (Steam, Epic) and Capacitor (Android, iOS) shells of the three.js client are gone.
+The Android app already on Google Play (Capacitor, up to v0.17.1) is replaced in place by the Godot
+build (same package `com.aislop.arena`, same upload key, higher versionCode); until then it keeps
+running its last web bundle ([ota-updates.md](ota-updates.md)).
 
 ## Releases
 
 Pushing a tag `v*` (e.g. `git tag v0.2.0 && git push origin v0.2.0`) runs
-`.github/workflows/release.yml`, which builds everything and attaches it to a GitHub release:
+`.github/workflows/release.yml`, which exports the **Godot client** (`godot/`, Godot 4.4.1 in the
+`barichello/godot-ci` container) for every platform and attaches it to a GitHub release:
 
 | File | What |
 | --- | --- |
-| `AISlopArena-steam-windows.zip` | Steam build, Windows x64 |
-| `AISlopArena-steam-linux.tar.gz` | Steam build, Linux x64 |
-| `AISlopArena-epic-windows.zip` | Epic build, Windows x64 |
-| `AISlopArena-android.apk` | Android, debug-signed, installable directly |
-| `AISlopArena-ios-simulator.zip` | iOS simulator build (unsigned: a device / App Store build needs your Apple certificates) |
-| `AISlopArena-web.zip` | the website + game, as deployed to Cloudflare |
+| `AISlopArena-steam-windows.zip` | preset "Windows (Steam)", Windows x64 (exe + pck) |
+| `AISlopArena-steam-linux.tar.gz` | preset "Linux (Steam)", Linux x64 |
+| `AISlopArena-epic-windows.zip` | preset "Windows (Epic)", Windows x64 |
+| `AISlopArena-android.apk` | preset "Android" (arm64 + armv7), signed with the Play upload key, installable directly (debug-signed when the signing secrets are missing) |
+| `AISlopArena-android.aab` | preset "Android (Play)" (+ x86_64), the bundle to upload by hand in the Play Console (only with the signing secrets) |
+| `AISlopArena-ios-simulator.zip` | Godot's Xcode project built for the simulator on macOS (x86_64, the only simulator architecture Godot 4.4.1's library links; Rosetta on Apple silicon; MetalFX left out; unsigned: a device / App Store build needs the Apple certificates) |
+| `AISlopArena-web.zip` | the Godot web export alone, to self-host (the live one is uploaded to R2 by `npm run deploy:godot-web`) |
 
-The workflow can also be started by hand (Actions → Release → Run workflow).
+Versions come from `package.json` (`npm run godot:version`, run by the workflow too): Android
+versionCode and iOS build number `(major*10000 + minor*100 + patch)*100 + 99` (`+N` for `-beta.N`),
+above the Capacitor app's codes so Play takes the Godot build as an update of `com.aislop.arena`.
+Android signing uses the GitHub secrets `ANDROID_UPLOAD_KEYSTORE_B64`, `ANDROID_UPLOAD_ALIAS`,
+`ANDROID_UPLOAD_PASSWORD` (see `.claude/skills/release/SKILL.md`).
+
+The workflow can also be started by hand: `gh workflow run release.yml --ref <branch>` is a dry run
+(everything is built, the builds are the run's artifacts, no release); `-f tag=vX.Y.Z -f dry_run=false`
+publishes.
 
 **Release notes**: write `docs/releases/<tag>.md` before tagging (banner and infographics from
 `art-src/make_release_art.py`, see [CHANGELOG.md](../CHANGELOG.md)); the workflow uses it as the

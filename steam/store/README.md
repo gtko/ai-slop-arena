@@ -93,8 +93,8 @@ Capsules et visuels de bibliothèque faits : [../capsules/](../capsules/) (`pyth
 | Library header | 920 x 430 | Bibliothèque. |
 | Library hero | 3840 x 1240 | Sans texte ni logo (le logo est posé par-dessus). |
 | Library logo | 1280 x 720 | PNG transparent (`library_logo.png`). |
-| Icône communauté | 184 x 184 | Depuis `electron/icon.png`. |
-| Icône client | .ico + 32 x 32 | `electron/icon.ico`. |
+| Icône communauté | 184 x 184 | Depuis `assets/app-icons/icon.png`. |
+| Icône client | .ico + 32 x 32 | `assets/app-icons/icon.ico`. |
 | Icônes de succès | 256 x 256 x 15, en double (débloqué + grisé) | Faites : [../achievements/](../achievements/) (`python art-src/gen_achievements.py`). |
 | Captures d'écran | 1920 x 1080, 5 min. (8 à 10 conseillé) | Les nôtres font 1600 x 900 et 1280 x 800 : à refaire en 1080p. |
 | Bande-annonce | MP4 H.264, 1920 x 1080, 5000 kbit/s min. | Faite : `steam/store/trailer.mp4`, 25 s en 1080p avec musique et logo (`python art-src/make_steam_trailer.py`). |

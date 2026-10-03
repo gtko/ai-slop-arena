@@ -1,11 +1,17 @@
 # Steam release
 
+> **v0.18: the three.js client and its Electron / Capacitor shells are gone.** The game is the Godot
+> client (`godot/`); the store builds come from the Godot jobs of `.github/workflows/release.yml`.
+> The integration described below is the one of the old client (code in git history, tag `v0.17.1`):
+> its Godot port is listed in `docs/godot-migration.md` (feature inventory). The store data here
+> (ids, achievements, texts, graphics) stays valid.
+
 The desktop app is the same game as the website, wrapped in Electron (`electron/`) with
 [steamworks.js](https://github.com/ceifa/steamworks.js) for the Steam features:
 
 | Feature | How |
 | --- | --- |
-| **Achievements + stats** | `src/achievements.js`. Progress is kept locally and mirrored to Steam, so anything earned offline unlocks the next time Steam is running. |
+| **Achievements + stats** | `src/achievements.json` (list and stats). Progress is kept locally and mirrored to Steam, so anything earned offline unlocks the next time Steam is running. |
 | **Friends** | Online rooms are Steam lobbies: *Invite Steam friends* opens the overlay invite dialog, friends can *Join game* from their friends list (running or not: `+connect_lobby`), and rich presence shows what you are doing and groups you with your party. |
 | **Networking** | `src/steamnet.js`: the lobby owner hosts the match and everyone talks to them over Steam P2P (relayed by Steam, no port forwarding, no server). Host leaves > Steam hands the lobby to someone else, who takes over. Room codes still work. |
 | **Cross-play** | On Steam, *Cross-play room* creates a room on the website's relay instead of a Steam lobby: browser players join it with its code or link. Joining by code tries Steam lobbies first, then web rooms, so Steam players can also enter any browser room. |

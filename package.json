@@ -6,7 +6,6 @@
   "private": true,
   "version": "0.17.1",
   "type": "module",
-  "main": "electron/main.cjs",
   "steam": {
     "appId": 480
   },
@@ -16,73 +15,18 @@
     "build": "vite build && vite build --mode server",
     "preview": "npm run build && wrangler dev --port 8787",
     "deploy": "npm run build && wrangler deploy",
-    "test": "vite build --mode server && node tests/server.test.mjs && node tests/ranking.test.mjs && node tests/i18n.test.mjs && node tests/ambient.test.mjs && node tests/updates.test.mjs",
+    "test": "vite build --mode server && node tests/server.test.mjs && node tests/ranking.test.mjs && node tests/i18n.test.mjs && node tests/updates.test.mjs && node tests/godot-version.test.mjs",
     "check:prod": "node scripts/check-prod.mjs",
     "deploy:godot-web": "node scripts/deploy-godot-web.mjs",
-    "balance": "vite build --mode server && node scripts/balance.mjs",
-    "desktop": "vite build && electron .",
-    "desktop:dev": "electron . --dev-server=http://localhost:5173/play.html",
-    "dist:steam": "vite build && electron-builder --win --x64 --dir",
-    "dist:steam:linux": "vite build && electron-builder --linux --x64 --dir",
-    "dist:epic": "vite build && electron-builder --win --x64 --dir --config electron/builder-epic.cjs",
-    "native:version": "node scripts/native-version.mjs",
-    "app:build": "vite build --mode app && node scripts/native-version.mjs && cap sync",
-    "android": "npm run app:build && cap open android",
-    "android:apk": "npm run app:build && cd android && gradlew assembleDebug",
-    "android:aab": "npm run app:build && cd android && gradlew bundleRelease",
-    "ios": "npm run app:build && cap open ios"
+    "godot:version": "node scripts/godot-version.mjs",
+    "balance": "vite build --mode server && node scripts/balance.mjs"
   },
   "dependencies": {
-    "@capacitor/android": "^8.5.2",
-    "@capacitor/app": "^8.1.1",
-    "@capacitor/core": "^8.5.2",
-    "@capacitor/ios": "^8.5.2",
-    "@capacitor/network": "^8.0.1",
-    "@capacitor/screen-orientation": "^8.0.1",
-    "@capacitor/status-bar": "^8.0.3",
-    "@capgo/capacitor-updater": "^8.51.25",
-    "@sentry/browser": "^11.0.0",
-    "@sentry/cloudflare": "^11.0.0",
-    "meshoptimizer": "^1.3.0",
-    "posthog-js": "^1.434.13",
-    "steamworks.js": "^0.4.0"
+    "@sentry/cloudflare": "^11.0.0"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5",
-    "@capacitor/cli": "^8.5.2",
-    "@sentry/vite-plugin": "^5.4.0",
-    "electron": "^44.4.5",
-    "electron-builder": "^26.15.3",
     "three": "^0.186.0",
     "vite": "^8.3.0",
     "wrangler": "^4.136.3"
-  },
-  "build": {
-    "appId": "ch.gtko.aisloparena",
-    "productName": "AI SLOP ARENA",
-    "executableName": "AISlopArena",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "package.json",
-      "electron/**",
-      "dist/**",
-      "!dist/index.html",
-      "!dist/assets/site/**",
-      "!dist/assets/site-*.js"
-    ],
-    "asarUnpack": [
-      "node_modules/steamworks.js/**"
-    ],
-    "win": {
-      "icon": "electron/icon.ico",
-      "target": "dir"
-    },
-    "linux": {
-      "icon": "electron/icon.png",
-      "target": "dir",
-      "category": "Game"
-    }
   }
 }

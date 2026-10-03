@@ -7,9 +7,7 @@ art-src/old
 
 # raw image-to-3D outputs (85 MB, regenerate with art-src/ai3d); the game ships the optimised copies
 art-src/glb/
-/release
 steam/store/preview.html
-dist-app
 steam/store/trailer.mp4
 worker/build
 art-src/rig/work/
@@ -23,6 +21,8 @@ __pycache__/
 godot/.godot/
 godot/*.translation
 godot/tools/node_modules/
+# Android Gradle build template, unzipped from the export templates by CI / the release skill
+godot/android/
 godot/assets/models/**/*.webp
 godot/assets/models/**/*.webp.import
 godot/build/*
