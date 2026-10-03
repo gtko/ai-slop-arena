@@ -26,7 +26,7 @@ var _mutex := Mutex.new()
 var _inbox: Array[String] = []
 var _outbox: Array[String] = []
 var _run := false
-var _poll_us := PackedInt64Array()   # native: cost of each poll (measurement, last 600)
+var _poll_us := PackedInt64Array()   # cost of the last 600 polls, incl. the JSON hop (measurement)
 
 # The local room can run here: the bundle is in the pack and a JS engine is available.
 static func available() -> bool:
@@ -100,6 +100,7 @@ func _process(delta: float) -> void:
 		var t := Time.get_ticks_usec()
 		var raw := String(_js.poll(_room, delta))
 		last_step_ms = (Time.get_ticks_usec() - t) / 1000.0
+		_record(Time.get_ticks_usec() - t)
 		_drain(raw)
 		return
 	_mutex.lock()
@@ -154,9 +155,7 @@ func _sim_loop(src: String, opts: String) -> void:
 		var out = _vm.call("call_function", "SlopLocal.poll", [_room, dt])
 		var cost := Time.get_ticks_usec() - now
 		last_step_ms = cost / 1000.0
-		_poll_us.append(cost)
-		if _poll_us.size() > 600:
-			_poll_us = _poll_us.slice(_poll_us.size() - 600)
+		_record(cost)
 		if typeof(out) == TYPE_STRING and out != "[]":
 			_mutex.lock()
 			_outbox.append(out)
@@ -166,6 +165,11 @@ func _sim_loop(src: String, opts: String) -> void:
 		OS.delay_usec(maxi(1000, 16666 - (Time.get_ticks_usec() - now)))
 	if _vm != null and _room >= 0:
 		_vm.call("call_function", "SlopLocal.close", [_room])
+
+func _record(us: int) -> void:
+	_poll_us.append(us)
+	if _poll_us.size() > 600:
+		_poll_us = _poll_us.slice(_poll_us.size() - 600)
 
 # Measurement: mean / p95 / max cost of the recent polls in ms, and the VM heap.
 func stats() -> Dictionary:
