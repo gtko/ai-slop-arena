@@ -11,6 +11,8 @@ extends Node3D
 # match: Arena (kit, weather), Fighter (snapshot interpolation, animations), Fx / FxCombat, GasRing.
 # Without a recording for the pick, the brawler stands on the most open ground near the middle.
 # Battery saver: main.gd turns the whole backdrop off.
+# Phones and tablets: the bots off screen step (motion, animation tree) every 2nd frame, every 4th on
+# Low, where their attacks off screen also skip the effects and the sounds (_lean, _far_step).
 
 const AttractReplay := preload("res://scripts/attract_replay.gd")
 const MENU_ZOOM := 0.8                            # game.js menuZoom
@@ -49,6 +51,8 @@ var _t := 0.0                    # replay clock (s)
 var _si := 0                     # next snapshot
 var _ei := 0                     # next event batch
 var _last_path := ""
+var _frame := 0
+var _far_dt: Dictionary = {}     # fighter -> time its _process has not seen yet (off screen)
 
 func setup(cam: Camera3D, env: WorldEnvironment, light: DirectionalLight3D) -> void:
 	_cam = cam
@@ -202,6 +206,7 @@ func _clear() -> void:
 		_cam.v_offset = 0.0
 	me = null
 	_star = null
+	_far_dt.clear()
 	for f in fighters.values():
 		f.queue_free()
 	fighters = {}
@@ -264,6 +269,9 @@ func _event(e: Dictionary) -> void:
 	match kind:
 		"atk":
 			if f == null or not f.alive:
+				return
+			if _lean() and f != _star and not _on_screen(f):   # (Low phones: no fx / sound out of sight)
+				f.face(float(e.get("dx", 0.0)), float(e.get("dz", 0.0)))
 				return
 			var sup := bool(e.get("s", false))
 			if f.hidden_by_server:   # a shot from the fog (marsh): only what lands, no sound
@@ -333,17 +341,66 @@ func _frame_shift(dist: float) -> float:
 	var frac := (float(nav) / 2.0 if nav != null else 32.0) / UiKit.css_view_h()
 	return frac * 2.0 * dist * tan(deg_to_rad(_cam.fov / 2.0))
 
-func _process(delta: float) -> void:
+func _process(delta: float) -> void:   # timed for the perf overlay (perf_probe.gd)
+	var t0 := PerfProbe.now()
+	_process_timed(delta)
+	PerfProbe.add("showcase", t0)
+
+func _process_timed(delta: float) -> void:
 	if not active or arena == null:
 		return
 	if _rec != null:
 		_t += delta
+		var tp := PerfProbe.now()
 		_pump()
+		PerfProbe.add("showcase.replay", tp)
 		if _t >= _rec.dur:
 			_start()   # game.js: a new match 3 s after the last K.O.
 			return
 		_focus = _focus.lerp(_clamp_focus(_star.position), 1.0 - exp(-2.2 * delta))
 		if AudioManager.current:
 			AudioManager.current.listener = _focus
+	var tf := PerfProbe.now()
+	_far_step(delta)
+	PerfProbe.add("showcase.far_bots", tf)
+	var tc := PerfProbe.now()
 	_place_camera(delta)
+	PerfProbe.add("showcase.camera", tc)
+	var ta := PerfProbe.now()
 	arena.update(delta)
+	PerfProbe.add("showcase.arena", ta)
+
+static func _lean() -> bool:
+	return Quality.mobile() and Quality.name_now() == "low"
+
+func _on_screen(f: Fighter) -> bool:
+	return _cam != null and _cam.is_position_in_frustum(f.position + Vector3(0, 1.0, 0))
+
+# Phones and tablets: a bot off screen runs its _process (snapshot motion, animation tree) every 2nd
+# frame, every 4th on Low, with the time it skipped; on screen (or back on it) every frame.
+func _far_step(delta: float) -> void:
+	_frame += 1
+	if not Quality.mobile() or _cam == null:
+		return
+	var every := 4 if _lean() else 2
+	for f in fighters.values():
+		var fi: Fighter = f
+		if fi == _star or not is_instance_valid(fi):
+			continue
+		var far := not _on_screen(fi)
+		if not far:
+			if not fi.is_processing():
+				fi.set_process(true)
+				var left: float = _far_dt.get(fi, 0.0)
+				_far_dt.erase(fi)
+				if left > 0.0:
+					fi._process_timed(left)
+			continue
+		if fi.is_processing():
+			fi.set_process(false)
+		var acc: float = float(_far_dt.get(fi, 0.0)) + delta
+		if (_frame + fi.get_instance_id()) % every == 0:
+			acc = minf(acc, 0.25)
+			fi._process_timed(acc)
+			acc = 0.0
+		_far_dt[fi] = acc

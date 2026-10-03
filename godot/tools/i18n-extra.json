@@ -65,7 +65,9 @@
     "g.opt.fxaa.hint": "Fast anti-aliasing on the whole picture (a little blurrier, almost free).",
     "g.opt.aimAssist": "Aim assist",
     "g.opt.aimAssist.hint": "Gamepad: attacking without the right stick aims at the nearest enemy in range.",
-    "home.quit": "QUIT GAME"
+    "home.quit": "QUIT GAME",
+    "g.opt.perf": "Show performance",
+    "g.opt.perf.hint": "Overlay with the frame time split, draw calls, quality step and the cost of each game system. Send us a screenshot if the game runs slowly."
   },
   "fr": {
     "g.quick": "PARTIE RAPIDE",
@@ -133,6 +135,8 @@
     "g.opt.fxaa.hint": "Anticrénelage rapide sur toute l'image (un peu plus flou, presque gratuit).",
     "g.opt.aimAssist": "Aide à la visée",
     "g.opt.aimAssist.hint": "Manette : attaquer sans le stick droit vise l'ennemi le plus proche à portée.",
-    "home.quit": "QUITTER LE JEU"
+    "home.quit": "QUITTER LE JEU",
+    "g.opt.perf": "Afficher les performances",
+    "g.opt.perf.hint": "Affiche le détail du temps de chaque image, les appels de dessin, le palier de qualité et le coût de chaque système du jeu. Envoie-nous une capture si le jeu rame."
   }
 }

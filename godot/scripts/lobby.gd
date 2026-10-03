@@ -534,7 +534,12 @@ func toast(msg: String, secs: float = 3.0) -> void:
 	_toast.visible = true
 	_toast_t = secs
 
-func _process(delta: float) -> void:
+func _process(delta: float) -> void:   # timed for the perf overlay (perf_probe.gd)
+	var t0 := PerfProbe.now()
+	_process_timed(delta)
+	PerfProbe.add("lobby", t0)
+
+func _process_timed(delta: float) -> void:
 	if _toast_t > 0.0:
 		_toast_t -= delta
 		if _toast_t <= 0.0:
