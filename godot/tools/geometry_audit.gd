@@ -214,6 +214,7 @@ func _audit_map(map_key: String) -> void:
 	for view in VIEWS:
 		_place(view)
 		await _wait(6)
+		paused = true   # fauna, fighters and their LODs hold still while categories are hidden in turn
 		var all := _info()
 		var gpu := await _gpu_ms()
 		var fix := await _lod_fix(cats)   # category -> [vis, shadow] primitives Godot did not count
@@ -252,6 +253,7 @@ func _audit_map(map_key: String) -> void:
 			w.shadow_prims += fix_tot[1] - own[1]
 			_p("| %s | %d | %d + %d | %d + %d | %.1f + %.1f |" % [c, cats[c].size(), all.vis_draws - w.vis_draws, all.shadow_draws - w.shadow_draws,
 				all.vis_objs - w.vis_objs, all.shadow_objs - w.shadow_objs, (all.vis_prims - w.vis_prims) / 1000.0, (all.shadow_prims - w.shadow_prims) / 1000.0])
+		paused = false
 		await _wait(2)
 	host.free()
 	host = null
