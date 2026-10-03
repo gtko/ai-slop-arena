@@ -95,9 +95,13 @@ static func web_tier(mobile: bool) -> Array:
 static func render_scale() -> float:
 	var s := float(preset().scale)
 	if OS.has_feature("web"):
+		var full := s
 		s *= web_pixel_factor()
 		if custom.is_empty() and not saver:
 			s *= auto_scale
+		# never under 0.75 3D pixel per CSS pixel: the upscale is blocky below that (three.js's
+		# lowest was 0.5 x 1.25 = 0.63, but it upscaled smoothly)
+		s = maxf(s, minf(full, 0.75 / maxf(_dpr, 1.0)))
 	return clampf(s, 0.25, 2.0)
 
 static func web_pixel_factor() -> float:
