@@ -61,7 +61,7 @@ Pushing a tag `v*` (e.g. `git tag v0.2.0 && git push origin v0.2.0`) runs
 | `AISlopArena-epic-windows.zip` | preset "Windows (Epic)", Windows x64 |
 | `AISlopArena-android.apk` | preset "Android" (arm64 + armv7), signed with the Play upload key, installable directly (debug-signed when the signing secrets are missing) |
 | `AISlopArena-android.aab` | preset "Android (Play)" (+ x86_64), the bundle to upload by hand in the Play Console (only with the signing secrets) |
-| `AISlopArena-ios-simulator.zip` | Godot's Xcode project built for the simulator on macOS (unsigned: a device / App Store build needs the Apple certificates) |
+| `AISlopArena-ios-simulator.zip` | Godot's Xcode project built for the simulator on macOS (x86_64, the only simulator architecture Godot 4.4.1's library links; Rosetta on Apple silicon; MetalFX left out; unsigned: a device / App Store build needs the Apple certificates) |
 | `AISlopArena-web.zip` | the Godot web export alone, to self-host (the live one is uploaded to R2 by `npm run deploy:godot-web`) |
 
 Versions come from `package.json` (`npm run godot:version`, run by the workflow too): Android
