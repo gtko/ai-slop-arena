@@ -32,6 +32,8 @@ var bridge_mm: MultiMesh
 var rock_mm: MultiMesh
 var rock_idx: Dictionary = {}   # tile key -> instance index
 var pad_mat: StandardMaterial3D
+var pad_mm: MultiMesh
+var shroom_mm: MultiMesh
 var t := 0.0
 # the local player
 var dash: Dictionary = {}       # {vx, vz, t, T} while flying off a pad
@@ -146,26 +148,20 @@ func _build_pads() -> void:
 	am.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	am.cull_mode = BaseMaterial3D.CULL_DISABLED
 	arrow.surface_set_material(0, am)
-	for p in pads:
-		var g := Node3D.new()
-		g.position = Vector3(p.x, 0, p.z)
-		var b := MeshInstance3D.new()
-		b.mesh = base
-		b.position.y = 0.08
-		g.add_child(b)
-		var d := MeshInstance3D.new()
-		d.mesh = disc
-		d.position.y = 0.18
-		d.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		g.add_child(d)
-		var ar := MeshInstance3D.new()
-		ar.mesh = arrow
-		ar.position.y = 0.215
-		ar.rotation.y = atan2(-p.dx, -p.dz)
-		ar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		g.add_child(ar)
-		add_child(g)
-		p.node = g
+	# every pad in one MultiMesh of one baked mesh (base, glowing disc, arrow): 3 draw calls in all
+	var pad: ArrayMesh = MeshMerge.bake([[base, Transform3D(Basis.IDENTITY, Vector3(0, 0.08, 0))], [disc, Transform3D(Basis.IDENTITY, Vector3(0, 0.18, 0)), true],
+		[arrow, Transform3D(Basis.IDENTITY, Vector3(0, 0.215, 0)), true]])
+	pad_mm = MultiMesh.new()
+	pad_mm.transform_format = MultiMesh.TRANSFORM_3D
+	pad_mm.mesh = pad
+	pad_mm.instance_count = pads.size()
+	for k in pads.size():
+		var p: Dictionary = pads[k]
+		p.k = k
+		pad_mm.set_instance_transform(k, Transform3D(Basis(Vector3.UP, atan2(-p.dx, -p.dz)), Vector3(p.x, 0, p.z)))
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = pad_mm
+	add_child(mmi)
 
 func _build_shrooms(tiles: Array) -> void:
 	if tiles.is_empty():
@@ -189,27 +185,30 @@ func _build_shrooms(tiles: Array) -> void:
 	dot.radial_segments = 6
 	dot.rings = 3
 	dot.material = _std(Color.WHITE, 0.6)
-	for tl in tiles:
-		var g := Node3D.new()
-		g.position = arena.center(tl.x, tl.y)
-		var st := MeshInstance3D.new()
-		st.mesh = stem
-		st.position.y = 0.3
-		g.add_child(st)
-		var cp := MeshInstance3D.new()
-		cp.mesh = cap
-		cp.position.y = 0.55
-		cp.scale.y = 0.8
-		g.add_child(cp)
-		for k in 5:
-			var a := k / 5.0 * TAU
-			var d := MeshInstance3D.new()
-			d.mesh = dot
-			d.position = Vector3(cos(a) * 0.36, 0.85, sin(a) * 0.36)
-			d.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			g.add_child(d)
-		add_child(g)
-		shrooms.append({"i": tl.x, "j": tl.y, "node": g, "ready": true})
+	# stem, cap and its 5 dots baked into one mesh, every mushroom in one MultiMesh: 2 draw calls in all
+	var parts: Array = [[stem, Transform3D(Basis.IDENTITY, Vector3(0, 0.3, 0))], [cap, Transform3D(Basis.from_scale(Vector3(1, 0.8, 1)), Vector3(0, 0.55, 0))]]
+	for k in 5:
+		var a := k / 5.0 * TAU
+		parts.append([dot, Transform3D(Basis.IDENTITY, Vector3(cos(a) * 0.36, 0.85, sin(a) * 0.36))])
+	shroom_mm = MultiMesh.new()
+	shroom_mm.transform_format = MultiMesh.TRANSFORM_3D
+	shroom_mm.mesh = MeshMerge.bake(parts)
+	shroom_mm.instance_count = tiles.size()
+	for k in tiles.size():
+		var tl: Vector2i = tiles[k]
+		shroom_mm.set_instance_transform(k, Transform3D(Basis.IDENTITY, arena.center(tl.x, tl.y)))
+		shrooms.append({"i": tl.x, "j": tl.y, "k": k, "ready": true})
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = shroom_mm
+	add_child(mmi)
+
+# A mushroom or a pad shown / hidden: its MultiMesh instance at its tile, or scaled to nothing.
+func _show_shroom(s: Dictionary, on: bool) -> void:
+	var c := arena.center(int(s.i), int(s.j))
+	shroom_mm.set_instance_transform(int(s.k), Transform3D(Basis.IDENTITY if on else Basis.from_scale(Vector3.ZERO), c))
+
+func _hide_pad(p: Dictionary) -> void:
+	pad_mm.set_instance_transform(int(p.k), Transform3D(Basis.from_scale(Vector3.ZERO), Vector3(p.x, 0, p.z)))
 
 func _build_bridges(tiles: Array) -> void:
 	if tiles.is_empty():
@@ -418,72 +417,55 @@ func _build_sky() -> void:
 	var stone := _std(Color("ece2cf"), 0.85)
 	var roofm := _std(Color("c8453a"), 0.7)
 	var a0 := rng.randf() * TAU
+	# each islet baked into one mesh (rock, grass, trees or tower and roof), its sails into another:
+	# 1-2 draw calls an islet instead of 4 to 10; far below the arena, they cast no shadow
 	for k in 9:
 		var a := a0 + k / 9.0 * TAU + (rng.randf() - 0.5) * 0.4
 		var d := 33.0 + rng.randf() * 12.0
 		var sz := 1.4 + rng.randf() * 1.6
 		var g := Node3D.new()
-		var rk := MeshInstance3D.new()
-		rk.mesh = rock
 		var hh := sz * (1.6 + rng.randf())
-		rk.scale = Vector3(sz, hh, sz)
-		rk.position.y = -hh / 2.0
-		g.add_child(rk)
-		var gr := MeshInstance3D.new()
-		gr.mesh = top
-		gr.scale = Vector3(sz, 1, sz)
-		gr.position.y = 0.15
-		g.add_child(gr)
+		var parts: Array = [[rock, Transform3D(Basis.from_scale(Vector3(sz, hh, sz)), Vector3(0, -hh / 2.0, 0))],
+			[top, Transform3D(Basis.from_scale(Vector3(sz, 1, sz)), Vector3(0, 0.15, 0))]]
 		var hub: Node3D = null
 		if k % 3 == 0: # a tiny windmill, sails turning
-			var tw := MeshInstance3D.new()
 			var tm := CylinderMesh.new()
 			tm.top_radius = 0.3
 			tm.bottom_radius = 0.42
 			tm.height = 1.3
 			tm.radial_segments = 8
 			tm.material = stone
-			tw.mesh = tm
-			tw.position.y = 0.95
-			g.add_child(tw)
-			var rf := MeshInstance3D.new()
+			parts.append([tm, Transform3D(Basis.IDENTITY, Vector3(0, 0.95, 0))])
 			var rm := CylinderMesh.new()
 			rm.top_radius = 0.0
 			rm.bottom_radius = 0.4
 			rm.height = 0.45
 			rm.radial_segments = 8
 			rm.material = roofm
-			rf.mesh = rm
-			rf.position.y = 1.82
-			g.add_child(rf)
+			parts.append([rm, Transform3D(Basis.IDENTITY, Vector3(0, 1.82, 0))])
 			hub = Node3D.new()
 			hub.position = Vector3(0, 1.35, 0.4)
 			var sp := BoxMesh.new()
 			sp.size = Vector3(0.08, 0.9, 0.03)
 			sp.material = stone
+			var sails: Array = []
 			for q in 4:
-				var s := MeshInstance3D.new()
-				s.mesh = sp
-				s.position = Vector3(0, 0.45, 0)
-				var pivot := Node3D.new()
-				pivot.rotation.z = q * PI / 2.0
-				pivot.add_child(s)
-				hub.add_child(pivot)
+				sails.append([sp, Transform3D(Basis(Vector3(0, 0, 1), q * PI / 2.0), Vector3.ZERO) * Transform3D(Basis.IDENTITY, Vector3(0, 0.45, 0))])
+			var smi := MeshInstance3D.new()
+			smi.mesh = MeshMerge.bake(sails)
+			smi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			hub.add_child(smi)
 			g.add_child(hub)
 		else:
 			for q in 1 + (k % 2):
-				var tr := Node3D.new()
-				var tk := MeshInstance3D.new()
-				tk.mesh = trunk
-				tk.position.y = 0.75
-				tr.add_child(tk)
-				var cr := MeshInstance3D.new()
-				cr.mesh = crown
-				cr.position.y = 1.35
-				cr.scale = Vector3.ONE * (0.8 + rng.randf() * 0.5)
-				tr.add_child(cr)
-				tr.position = Vector3((rng.randf() - 0.5) * sz * 0.9, 0, (rng.randf() - 0.5) * sz * 0.9)
-				g.add_child(tr)
+				var cs := 0.8 + rng.randf() * 0.5
+				var tp := Vector3((rng.randf() - 0.5) * sz * 0.9, 0, (rng.randf() - 0.5) * sz * 0.9)
+				parts.append([trunk, Transform3D(Basis.IDENTITY, tp + Vector3(0, 0.75, 0))])
+				parts.append([crown, Transform3D(Basis.from_scale(Vector3.ONE * cs), tp + Vector3(0, 1.35, 0))])
+		var body := MeshInstance3D.new()
+		body.mesh = MeshMerge.bake(parts)
+		body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		g.add_child(body)
 		var y0 := -5.0 - rng.randf() * 7.0
 		g.position = Vector3(cos(a) * d, y0, sin(a) * d)
 		g.rotation.y = -a + PI / 2.0
@@ -647,7 +629,7 @@ func land_fx(x: float, z: float) -> void:
 
 func _shroom_fx(s: Dictionary, on: bool) -> void:
 	s.ready = on
-	s.node.visible = on
+	_show_shroom(s, on)
 	var c := arena.center(s.i, s.j)
 	if not on:
 		WorldFx.sparks(self, Vector3(c.x, 1.0, c.z), Color(0.5, 1.0, 0.7), 16, 4.0, 0.5)
@@ -813,12 +795,12 @@ func crumble(tiles: Array) -> void:
 				_remove_trap(T, false)
 		for p in pads.duplicate():
 			if p.i == i and p.j == j:
-				p.node.visible = false
+				_hide_pad(p)
 				pads.erase(p)
 		for s in shrooms:
 			if s.i == i and s.j == j:
 				s.ready = false
-				s.node.visible = false
+				_show_shroom(s, false)
 		var in_lifted := false
 		for L in lifted:
 			if L.keys.has(k):
