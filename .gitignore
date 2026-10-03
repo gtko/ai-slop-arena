@@ -23,7 +23,5 @@ godot/*.translation
 godot/tools/node_modules/
 # Android Gradle build template, unzipped from the export templates by CI / the release skill
 godot/android/
-godot/assets/models/**/*.webp
-godot/assets/models/**/*.webp.import
 godot/build/*
 !godot/build/.gdignore

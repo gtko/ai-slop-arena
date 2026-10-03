@@ -1,6 +1,13 @@
 // The game's GLBs use EXT_meshopt_compression, which Godot 4 does not import (nor KHR_mesh_quantization). This decodes them
 // into plain GLBs under godot/assets/models/ (Godot then imports and compresses them per platform).
 // Run: cd godot/tools && npm i && node convert-models.mjs
+//
+// Textures: Godot's scene import extracts each GLB's embedded texture next to it (<model>_<image>.webp).
+// Those files and their .import are committed with VRAM compression (compress/mode=2: ETC2/ASTC on
+// phones, S3TC/BPTC on desktops) and mipmaps: Godot's default for an extracted texture is lossless,
+// i.e. uncompressed RGBA in GPU memory (8x the bytes and the bandwidth of ETC2), its "detect 3D"
+// switch to VRAM only runs in the editor. The .import keeps the image's md5: a changed texture is
+// extracted again and keeps these settings; a new model's texture needs its .import set to mode 2.
 import { NodeIO } from '@gltf-transform/core';
 import { EXTMeshoptCompression, ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { MeshoptDecoder } from 'meshoptimizer';
