@@ -241,9 +241,9 @@ func _count_nodes(cats: Dictionary) -> int:
 		n += cats[c].size()
 	return n
 
-# Every GLB: triangles (LOD 0), vertices, surfaces, LOD levels, bones, blend shapes.
+# Every GLB: triangles (LOD 0), vertices, surfaces, LOD levels Godot generated, bones, blend shapes.
 func _models() -> void:
-	_p("# Models\n\n| model | tris | verts | surfaces | lods (tris) | bones | blend shapes |\n|---|---:|---:|---:|---|---:|---:|")
+	_p("# Models\n\n| model | tris | verts | surfaces | LOD levels per surface | bones | blend shapes |\n|---|---:|---:|---:|---|---:|---:|")
 	var paths: Array = []
 	for dir in ["res://assets/models", "res://assets/models/decor", "res://assets/models/fauna"]:
 		for f in DirAccess.get_files_at(dir):
@@ -271,11 +271,7 @@ func _models() -> void:
 				tris += ic / 3 if ic > 0 else vc / 3
 				verts += vc
 				var l: PackedStringArray = []
-				var ld = sd.get("lods", [])
-				for lod in ld:
-					var data = lod.get("index_data") if lod is Dictionary else (lod[1] if lod is Array and lod.size() > 1 else null)
-					if data is PackedByteArray:
-						l.append("%d" % (int((data as PackedByteArray).size() / (4 if vc > 65535 else 2)) / 3))
+				l.append("%d" % (sd.get("lods", []) as Array).size())
 				lods.append(",".join(l))
 		var bones := 0
 		for sk in inst.find_children("*", "Skeleton3D", true, false):
