@@ -24,6 +24,16 @@ body { color: white; background-color: #16121f; overflow: hidden; touch-action: 
   box-shadow: 0 6px 0 #0d0a14; z-index: 1; user-select: text; -webkit-user-select: text; }
 #status-notice .reload { margin-top: 12px; font: inherit; font-weight: 700; color: #0d0a14; background: #ffd23f; border: 3px solid #0d0a14;
   border-radius: 12px; padding: 8px 22px; cursor: pointer; box-shadow: 0 4px 0 #0d0a14; }
+/* "Starting..." once downloaded: plain DOM + CSS transforms, which the compositor keeps animating
+   while the engine's compile and boot block the page (the canvas loader cannot draw then) */
+#boot { position: absolute; left: 0; right: 0; top: 80%; display: none; text-align: center; font-family: 'SlopLoader', system-ui, sans-serif;
+  font-size: 20px; line-height: 1; color: #fff; pointer-events: none;
+  text-shadow: 3px 0 #0d0a14, -3px 0 #0d0a14, 0 3px #0d0a14, 0 -3px #0d0a14, 2px 2px #0d0a14, -2px 2px #0d0a14, 2px -2px #0d0a14, -2px -2px #0d0a14; }
+#boot.on { display: block; }
+#boot i { display: inline-block; font-style: normal; animation: bootdot 0.9s ease-in-out infinite; will-change: transform; }
+#boot i:nth-child(2) { animation-delay: 0.15s; } #boot i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes bootdot { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-0.45em); } }
+@media (prefers-reduced-motion: reduce) { #boot i { animation: none; } }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 $GODOT_HEAD_INCLUDE
@@ -33,6 +43,7 @@ $GODOT_HEAD_INCLUDE
 <noscript>Your browser does not support JavaScript.</noscript>
 <div id="status">
   <canvas id="loader" aria-hidden="true"></canvas>
+  <div id="boot" aria-hidden="true">Starting<i>.</i><i>.</i><i>.</i></div>
   <div id="status-label" class="sr" role="status" aria-live="polite">AI SLOP ARENA: loading</div>
   <div id="status-notice" role="alert"></div>
 </div>
@@ -62,6 +73,7 @@ window.SlopLoader = (function () {
   const INK = '#0d0a14', BG = '#16121f', YEL = '#ffd23f';
   const status = document.getElementById('status');
   const label = document.getElementById('status-label');
+  const bootEl = document.getElementById('boot');
   const cv = document.getElementById('loader');
   const g = cv.getContext('2d');
   const rnd = (a, b) => a + Math.random() * (b - a);
@@ -160,6 +172,9 @@ window.SlopLoader = (function () {
     GY = portrait ? H * 0.72 : H * 0.79;
     const bw = Math.min(W * (portrait ? 0.8 : 0.56), 560), bh = clamp(F * 0.2, 14, 24);
     BAR = { x: (W - bw) / 2, y: GY + (H - GY) * 0.36, w: bw, h: bh };
+    const tfs = clamp(F * 0.3, 14, 26);   // drawBar()'s text size and line, for the DOM "Starting..."
+    bootEl.style.fontSize = tfs + 'px';
+    bootEl.style.top = (BAR.y + bh + Math.max(3, bh * 0.2) + tfs * 0.5) + 'px';
     g.font = F + 'px SlopLoader';
     const m = g.measureText('H');
     capH = m.actualBoundingBoxAscent || F * 0.7;
@@ -608,8 +623,10 @@ window.SlopLoader = (function () {
     let txt = pct + '%';
     if (total > 0) txt += '  ' + MB(Math.min(loaded, total)) + ' / ' + MB(total) + ' MB';
     else if (loaded > 0 && !DEMO) txt = MB(loaded) + ' MB';   // unknown total: no percent to make up
-    // downloaded, the engine compiles and boots (the page may freeze for a while): say so
-    if (!DEMO && (engineReady || prog >= 0.999)) txt = engineReady ? 'GO!' : 'Starting' + '.'.repeat(1 + Math.floor(time * 3) % 3);
+    // downloaded, the engine compiles and boots (the page may freeze for a while): the DOM #boot
+    // line says "Starting..." in place of the text, then "GO!" once the engine runs
+    if (!DEMO && engineReady) txt = 'GO!';
+    else if (!DEMO && prog >= 0.999) txt = '';
     const fs = clamp(F * 0.3, 14, 26);
     g.font = fs + 'px SlopLoader'; g.textAlign = 'center'; g.textBaseline = 'top'; g.lineJoin = 'round';
     g.lineWidth = fs * 0.28; g.strokeStyle = INK; g.strokeText(txt, W / 2, y + h + b + fs * 0.5);
@@ -720,16 +737,18 @@ window.SlopLoader = (function () {
       // creeps towards 95 % (the whole build is ~117 MB) and lets ready() finish the bar.
       const p = tot > 0 ? cur / tot : 0.95 * cur / (cur + 64 * 1048576);
       prog = Math.max(prog, clamp(p, 0, tot > 0 ? 1 : 0.95));
+      if (prog >= 0.999) bootEl.classList.add('on');
       label.textContent = 'AI SLOP ARENA: loading ' + Math.round(prog * 100) + '%';
     },
     ready() {
       if (engineReady) return;
       prog = 1; engineReady = true; readyT = 0; label.textContent = 'AI SLOP ARENA';
+      bootEl.classList.remove('on');
       clearNotice();   // the engine runs after all: drop the stall / slow boot / error notices
       setTimeout(hide, 2200);   // a background tab gets no animation frames: never keep the game hidden
     },
     notice: showNotice,
-    fail() { failed = true; soft = 'fail'; },
+    fail() { failed = true; soft = 'fail'; bootEl.classList.remove('on'); },
     isReady: () => engineReady,
     step(sec) { if (!MANUAL) return; for (let t = 0; t < sec; t += 1 / 60) update(1 / 60); draw(); return this.debug(); },
     debug: () => ({ phase, ft, prog, shown, loaded, total, engineReady, knocked, B: { x: B.x, home: B.home }, G: { x: G.x, stage: G.stage }, W, H, F, CH, soft }),
