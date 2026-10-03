@@ -733,12 +733,16 @@ func _decor_ring() -> void:
 			var mul := (0.8 + rng.randf() * 0.5) * low
 			if kind == "cliff":
 				mul *= 1.2 + rng.randf() * 0.9
-			if not by_kind.has(kind):
-				by_kind[kind] = []
-			by_kind[kind].append({"pos": pos, "yaw": rng.randf() * TAU, "mul": mul, "ysq": 0.9 + rng.randf() * 0.25})
-	for kind in by_kind:
+			# one MultiMesh per kind and per block of the ring (3 x 3 blocks around the arena, the middle
+			# one empty): the blocks out of view are culled, instead of the whole ring drawn every frame
+			var block := "%s:%d:%d" % [kind, (i + 6) * 3 / (n + 12), (j + 6) * 3 / (n + 12)]
+			if not by_kind.has(block):
+				by_kind[block] = []
+			by_kind[block].append({"pos": pos, "yaw": rng.randf() * TAU, "mul": mul, "ysq": 0.9 + rng.randf() * 0.25})
+	for block in by_kind:
+		var kind: String = String(block).get_slice(":", 0)
 		var prop := _snowy(TREE_PROP.get(kind, "tree_round"))
-		var list: Array = by_kind[kind]
+		var list: Array = by_kind[block]
 		list.shuffle() # the quality preset hides the tail of the list: keep the thinning even
 		var mmi := PropLib.multi(prop, TREE_FIT.get(kind, {"height": 4.6}), list, false)
 		if mmi:
