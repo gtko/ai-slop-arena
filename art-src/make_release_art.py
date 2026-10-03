@@ -1338,6 +1338,31 @@ def v0181():
     img.convert('RGB').save(os.path.join(OUT, 'v0.18.1-changes.png'), optimize=True)
 
 
+def v0182():
+    banner('v0.18.2', 'LIGHTER EVERYWHERE', 'Godot 4.5, and much lighter on phones.',
+           [('⚡', 'Godot 4.5'), ('📉', '2-3x fewer triangles'), ('🧠', 'Half the video memory'), ('📊', 'Performance overlay')],
+           'v0.18.2-banner.png', ('frostbite', 'volt', 'gunslinger'))
+
+    # what changed (PR #33: quality.gd LOW shaders, prop_lib low copies, textures, perf_probe, Godot 4.5.2): real numbers
+    W, H = 1600, 900
+    img = background(W, H, glow=(0.5, 0.35))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'MADE FOR PHONES AND TABLETS', display(50), YELLOW, anchor='ma')
+    rows = [('⚡', 'Godot 4.5.2', 'shaders compiled ahead of time on Android, Windows and Linux: fewer hitches'),
+            ('📉', '2-3x fewer triangles on Low', 'about 120-240k a frame instead of 220-630k, brawlers about 5k each'),
+            ('🧠', 'Half the video memory', 'model textures compressed for the GPU: 101-126 MB down to 50-59 MB on Low'),
+            ('🎨', 'Lighter shaders on Low', 'simpler materials and no full-screen copy: 16-28 % less GPU time'),
+            ('🔋', 'Less work every frame', 'fewer animals, lights and menu effects on Low phones'),
+            ('📊', 'See what slows you down', 'Options > General > Show performance: fps, GPU, triangles, bottleneck')]
+    for i, (icon, head, line) in enumerate(rows):
+        y = 120 + i * 124
+        card(img, (60, y, W - 60, y + 108), outline=(90, 150, 230), radius=20)
+        d.text((92, y + 26), icon, font=emoji(50), embedded_color=True)
+        d.text((175, y + 16), head, font=display(32), fill=YELLOW)
+        d.text((175, y + 62), line, font=body(23, 'Bold'), fill=TEXT)
+    img.convert('RGB').save(os.path.join(OUT, 'v0.18.2-changes.png'), optimize=True)
+
+
 if __name__ == '__main__':
     import sys
     os.makedirs(OUT, exist_ok=True)
@@ -1368,5 +1393,6 @@ if __name__ == '__main__':
     v0171()
     v0180()
     v0181()
+    v0182()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')

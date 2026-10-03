@@ -3,6 +3,14 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.18.2](docs/releases/v0.18.2.md): Lighter everywhere
+
+<a href="docs/releases/v0.18.2.md"><img src="docs/releases/img/v0.18.2-banner.png" alt="v0.18.2: lighter everywhere" width="100%"></a>
+
+- ⚡ Godot 4.5.2 with shaders compiled ahead of time on Android, Windows and Linux.
+- 📉 Low: 2-3x fewer triangles, half the video memory, lighter shaders, less work every frame.
+- 📊 A performance overlay in Options.
+
 ## [v0.18.1](docs/releases/v0.18.1.md): Teamwork
 
 <a href="docs/releases/v0.18.1.md"><img src="docs/releases/img/v0.18.1-banner.png" alt="v0.18.1: teamwork" width="100%"></a>
