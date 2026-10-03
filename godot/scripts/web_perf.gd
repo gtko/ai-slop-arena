@@ -1,9 +1,10 @@
 class_name WebPerf
 extends Node
 # Frame-rate keeper, added once by main.gd. On the web export it installs the WebGL state filter
-# (web_gl_filter.gd) and caches the menu layers (ui_cache.gd); everywhere it carries the `?perf`
-# probe (perf_probe.gd). `?nouicache` / `?noglfilter` (debug exports) turn the pieces off;
-# `-- --uicache` tries the menu cache on a native build.
+# (web_gl_filter.gd); on the web and on phones / tablets it caches the menu layers (ui_cache.gd),
+# runs the automatic quality (Quality.AUTO_STEPS) and the shader warm-up; everywhere it carries the
+# `?perf` probe (perf_probe.gd). `?nouicache` / `?noglfilter` (debug exports) turn the pieces off;
+# `-- --uicache` tries the menu cache on a desktop build.
 
 var _cached := false
 
@@ -28,12 +29,15 @@ func _process(delta: float) -> void:
 # additive flash, the first muzzle light each froze a frame of the first match. Once the menu's
 # arena is up, every effect material (fx_lib glow variants and particle layers) is drawn for a few
 # frames as a speck in front of the camera, with an omni and a spot light switched on, so those
-# programs are built behind the menu instead. `?nowarm` skips it.
+# programs are built behind the menu instead. Phones and tablets get it natively too: the Mobile
+# renderer (Vulkan) builds a pipeline per material x lighting variant at first use (4.4 hides it
+# behind ubershaders, still compiled in the background on a busy CPU), and the Compatibility one on
+# Android (Quality.renderer_probe) compiles like WebGL. `?nowarm` skips it.
 var _warm: Node3D
 var _warm_frames := -1
 
 func _warm_up() -> void:
-	if _warm_frames == 0 or not OS.has_feature("web") or DebugArgs.has("nowarm"):
+	if _warm_frames == 0 or not Quality.auto_keeper() or DebugArgs.has("nowarm"):
 		return
 	if _warm_frames > 0:
 		_warm_frames -= 1
@@ -90,14 +94,16 @@ var _good := 0
 var _failed := 0   # the best step that proved too slow this session, +1: no high/low/high oscillation
 var _cool := 3.0 * WINDOW # let the start (shader compiles, loading) settle
 
-# Web, quality "auto": measure the frame rate while the 3D view is drawn and the page is shown;
-# too slow -> one step down (Low, then Low at 80 % and 65 % resolution), smooth for a while and
-# under the GPU's ceiling -> one step up. `?noautoq` turns it off.
+# Web and phones / tablets, quality "auto": measure the frame rate while the 3D view is drawn and
+# the page / app is shown; too slow -> one step down (Low, then Low at 80 % and 65 % resolution,
+# then a steady 30 fps), smooth for a while and under the GPU's ceiling -> one step up. On Android,
+# still too slow at the last 60 fps step: the other renderer is tried at the next launch
+# (Quality.renderer_probe). `?noautoq` / `--noautoq` turns it off.
 func _keep_rate(delta: float) -> void:
-	if not OS.has_feature("web") or DebugArgs.has("noautoq"):
+	if not Quality.auto_keeper() or DebugArgs.has("noautoq"):
 		return
 	var active := Settings.gfx == "auto" and not Quality.saver and not get_viewport().disable_3d \
-		and DisplayServer.window_is_focused() and Engine.max_fps != 5
+		and (DisplayServer.window_is_focused() or PerfProbe.on) and Engine.max_fps != 5
 	if not active or delta > 0.25:   # a hidden tab, a load, a burst of shader compiles: no verdict
 		_t = 0.0
 		_frames = 0
@@ -121,6 +127,8 @@ func _keep_rate(delta: float) -> void:
 	if fps < slow and step < Quality.AUTO_STEPS.size() - 1:
 		_good = 0
 		_failed = maxi(_failed, step + 1)   # this step was too slow: never climb back to it this session
+		if int(Quality.AUTO_STEPS[step + 1][2]) < int(Quality.AUTO_STEPS[step][2]):
+			Quality.renderer_probe(fps)   # (Android: the other renderer at the next launch)
 		_move(step + 1, fps)
 	elif fps >= good and step > maxi(Quality.auto_max_step(), _failed):
 		_good += 1
@@ -131,7 +139,8 @@ func _keep_rate(delta: float) -> void:
 		_good = 0
 
 func _move(to: int, fps: float) -> void:
-	print("WEBQ auto quality %s -> %s (%.1f fps)" % [Quality.step_name(), "%s@%d%%" % [Quality.AUTO_STEPS[to][0], roundi(float(Quality.AUTO_STEPS[to][1]) * 100.0)], fps])
+	var t: Array = Quality.AUTO_STEPS[to]
+	print("WEBQ auto quality %s -> %s@%d%%@%dfps (%.1f fps)" % [Quality.step_name(), t[0], roundi(float(t[1]) * 100.0), int(t[2]), fps])
 	Quality.set_auto_step(to)
 	_cool = 2.0 * WINDOW   # the new settings settle (and compile) before the next verdict
 
@@ -143,7 +152,7 @@ func _cache_layers() -> void:
 	if not (ui is Control and opts is Control):
 		return
 	_cached = true
-	var use := (OS.has_feature("web") or DebugArgs.has("uicache")) and not DebugArgs.has("nouicache")
+	var use := (Quality.auto_keeper() or DebugArgs.has("uicache")) and not DebugArgs.has("nouicache")
 	if not use:
 		return
 	for n in [ui, opts]:

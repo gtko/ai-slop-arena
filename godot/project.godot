@@ -13,6 +13,7 @@ boot_splash/image="res://assets/ui/boot_logo.png"
 boot_splash/fullsize=false
 boot_splash/use_filter=true
 config/version="0.18.0"
+config/project_settings_override="user://renderer.cfg"
 
 [display]
 window/size/viewport_width=1280

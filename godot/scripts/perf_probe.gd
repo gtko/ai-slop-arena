@@ -21,6 +21,7 @@ var _worst := 0.0
 var _proc := 0.0
 var _phys := 0.0
 var _rcpu := 0.0
+var _rgpu := 0.0
 var _dc := 0.0
 
 func _init() -> void:
@@ -94,6 +95,41 @@ func _census() -> String:
 		parts.append("%s=%d" % [k, n[k]])
 	return " ".join(parts)
 
+# Where the triangles are (`?perf&perfmesh`): visible MeshInstance3D / MultiMeshInstance3D grouped by
+# their parent's name, triangles x instances (shadow and outline copies count as their own nodes).
+func _mesh_census() -> String:
+	var tri := {}
+	var cnt := {}
+	for c in get_tree().root.find_children("*", "GeometryInstance3D", true, false):
+		var g := c as GeometryInstance3D
+		if not g.is_visible_in_tree():
+			continue
+		var mesh: Mesh = null
+		var n := 1
+		if g is MeshInstance3D:
+			mesh = (g as MeshInstance3D).mesh
+		elif g is MultiMeshInstance3D and (g as MultiMeshInstance3D).multimesh:
+			var mm := (g as MultiMeshInstance3D).multimesh
+			mesh = mm.mesh
+			n = mm.visible_instance_count if mm.visible_instance_count >= 0 else mm.instance_count
+		if mesh == null:
+			continue
+		var t := 0
+		for s in mesh.get_surface_count():
+			var arr := mesh.surface_get_arrays(s)
+			var idx = arr[Mesh.ARRAY_INDEX]
+			t += (idx.size() if idx != null and idx.size() > 0 else (arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()) / 3
+		var mn := mesh.resource_path.get_file() if mesh.resource_path != "" else mesh.resource_name
+		var key := "%s/%s:%s" % [g.get_parent().name if g.get_parent() else "-", g.get_class(), mn]
+		tri[key] = int(tri.get(key, 0)) + t * n
+		cnt[key] = int(cnt.get(key, 0)) + n
+	var keys := tri.keys()
+	keys.sort_custom(func(a, b): return int(tri[a]) > int(tri[b]))
+	var parts: PackedStringArray = []
+	for k in keys.slice(0, 25):
+		parts.append("%s=%dk(x%d)" % [k, int(tri[k]) / 1000, cnt[k]])
+	return " ".join(parts)
+
 # Per-system timing (only with ?perf=sec): PerfProbe.begin("hud") ... PerfProbe.end("hud").
 static func begin(key: String) -> void:
 	if _sec:
@@ -105,6 +141,13 @@ static func end(key: String) -> void:
 
 func _process(delta: float) -> void:
 	_experiments()
+	# a run started from a terminal has no focus: main.gd's 5 fps background cap would be measured
+	if Engine.max_fps == 5 and not OS.has_feature("web"):
+		Engine.max_fps = Settings.max_fps()
+	# `--perfuncap`: no frame cap and no vsync, so the frame time shows the headroom (native)
+	if DebugArgs.has("perfuncap") and not OS.has_feature("web") and _frames == 0 and _t == 0.0:
+		Engine.max_fps = 0
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	_t += delta
 	_frames += 1
 	_worst = maxf(_worst, delta)
@@ -112,6 +155,7 @@ func _process(delta: float) -> void:
 	_phys += Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS)
 	_rcpu += RenderingServer.viewport_get_measured_render_time_cpu(get_viewport().get_viewport_rid()) \
 		+ RenderingServer.get_frame_setup_time_cpu()
+	_rgpu += RenderingServer.viewport_get_measured_render_time_gpu(get_viewport().get_viewport_rid())
 	_dc += Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
 	if _t < PERIOD:
 		return
@@ -119,8 +163,8 @@ func _process(delta: float) -> void:
 	var vp := get_viewport()
 	var size := vp.get_visible_rect().size
 	var win := DisplayServer.window_get_size()
-	var line := "PERF fps=%.1f worst=%.1fms process=%.2fms physics=%.2fms render_cpu=%.2fms draws=%d objects=%d prims=%dk nodes=%d q=%s scale=%.2f msaa=%d win=%dx%d vp=%dx%d 3d=%s" % [
-		n / _t, _worst * 1000.0, _proc / n * 1000.0, _phys / n * 1000.0, _rcpu / n, roundi(_dc / n),
+	var line := "PERF fps=%.1f worst=%.1fms frame=%.2fms process_max=%.2fms physics_max=%.2fms render_cpu=%.2fms gpu=%.2fms draws=%d objects=%d prims=%dk nodes=%d q=%s scale=%.2f msaa=%d win=%dx%d vp=%dx%d 3d=%s" % [
+		n / _t, _worst * 1000.0, _t / n * 1000.0, _proc / n * 1000.0, _phys / n * 1000.0, _rcpu / n, _rgpu / n, roundi(_dc / n),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME) / 1000.0),
 		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
@@ -128,13 +172,17 @@ func _process(delta: float) -> void:
 		"off" if vp.disable_3d else "on"]
 	if _sec and not _acc.is_empty():
 		var parts: PackedStringArray = []
-		for k in _acc:
+		var keys := _acc.keys()
+		keys.sort_custom(func(a, b): return int(_acc[a]) > int(_acc[b]))
+		for k in keys:
 			parts.append("%s=%.2f" % [k, float(_acc[k]) / n / 1000.0])
 		line += " | " + " ".join(parts)
 		_acc.clear()
 	print(line)
 	if DebugArgs.has("perftree"):
 		print("PERFTREE ", _census())
+	if DebugArgs.has("perfmesh"):
+		print("PERFMESH ", _mesh_census())
 	_label.text = line.replace(" ", "\n").replace("|\n", "")
 	_t = 0.0
 	_frames = 0
@@ -142,4 +190,5 @@ func _process(delta: float) -> void:
 	_proc = 0.0
 	_phys = 0.0
 	_rcpu = 0.0
+	_rgpu = 0.0
 	_dc = 0.0

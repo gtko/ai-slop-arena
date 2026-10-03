@@ -209,7 +209,7 @@ static func apply_audio() -> void:
 		a.call("_apply_mix")
 
 static func is_mobile() -> bool:
-	return OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios") or DisplayServer.is_touchscreen_available()
+	return Quality.mobile() or DisplayServer.is_touchscreen_available()
 
 static func is_desktop_window() -> bool:
 	return not OS.has_feature("mobile") and not OS.has_feature("web") and DisplayServer.get_name() != "headless"
@@ -220,6 +220,8 @@ static func max_fps() -> int:
 		return 30
 	if fps_cap >= 0:
 		return fps_cap
+	if gfx == "auto" and Quality.auto_fps == 30:   # the automatic quality's last step: a steady 30
+		return 30
 	return MOBILE_FPS if is_mobile() else 0
 
 # Window mode and vsync (desktop builds only; the web / phones own their window).
