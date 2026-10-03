@@ -10,6 +10,9 @@ extends Node
 # the GPU process, which is what held the web build far under 60 fps. Cached, the menu costs one
 # textured quad a frame and the full price only on the frames where it changes.
 #
+# On the web export and natively on phones / tablets (web_perf.gd): the Mobile and Compatibility
+# renderers pay for each of those draw calls too (the home screen: ~405 draw calls -> ~105).
+#
 # How: CanvasLayer.custom_viewport sends the layer's canvas to a SubViewport (window-sized in
 # physical pixels, the logical size as its 2D size, so text stays as sharp as before). The nodes do
 # not move: input, focus and layout still happen in the main viewport exactly as before; only the
@@ -85,8 +88,9 @@ func _exit_tree() -> void:
 func _resize() -> void:
 	var logical := get_viewport().get_visible_rect().size
 	var px := Vector2(DisplayServer.window_get_size())
-	if px.x < 1.0 or px.y < 1.0:
-		px = logical
+	var w := get_window()
+	if px.x < 1.0 or px.y < 1.0 or (w and w.content_scale_mode == Window.CONTENT_SCALE_MODE_VIEWPORT):
+		px = logical   # (phones / tablets: the frame budget draws the whole frame at the logical size)
 	_vp.size = Vector2i(maxi(1, int(px.x)), maxi(1, int(px.y)))
 	_vp.size_2d_override = Vector2i(maxi(1, int(logical.x)), maxi(1, int(logical.y)))
 	_mark()

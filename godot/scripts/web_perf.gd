@@ -1,10 +1,10 @@
 class_name WebPerf
 extends Node
 # Frame-rate keeper, added once by main.gd. On the web export it installs the WebGL state filter
-# (web_gl_filter.gd) and caches the menu layers (ui_cache.gd); on the web and on phones / tablets it
+# (web_gl_filter.gd); on the web and on phones / tablets it caches the menu layers (ui_cache.gd),
 # runs the automatic quality (Quality.AUTO_STEPS) and the shader warm-up; everywhere it carries the
 # `?perf` probe (perf_probe.gd). `?nouicache` / `?noglfilter` (debug exports) turn the pieces off;
-# `-- --uicache` tries the menu cache on a native build.
+# `-- --uicache` tries the menu cache on a desktop build.
 
 var _cached := false
 
@@ -152,7 +152,7 @@ func _cache_layers() -> void:
 	if not (ui is Control and opts is Control):
 		return
 	_cached = true
-	var use := (OS.has_feature("web") or DebugArgs.has("uicache")) and not DebugArgs.has("nouicache")
+	var use := (Quality.auto_keeper() or DebugArgs.has("uicache")) and not DebugArgs.has("nouicache")
 	if not use:
 		return
 	for n in [ui, opts]:
