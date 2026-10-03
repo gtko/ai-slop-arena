@@ -41,6 +41,32 @@ The Android app already on Google Play (Capacitor, up to v0.17.1) is replaced in
 build (same package `com.aislop.arena`, same upload key, higher versionCode); until then it keeps
 running its last web bundle ([ota-updates.md](ota-updates.md)).
 
+## Releases
+
+Pushing a tag `v*` (e.g. `git tag v0.2.0 && git push origin v0.2.0`) runs
+`.github/workflows/release.yml`, which exports the **Godot client** (`godot/`, Godot 4.4.1 in the
+`barichello/godot-ci` container) for every platform and attaches it to a GitHub release:
+
+| File | What |
+| --- | --- |
+| `AISlopArena-steam-windows.zip` | preset "Windows (Steam)", Windows x64 (exe + pck) |
+| `AISlopArena-steam-linux.tar.gz` | preset "Linux (Steam)", Linux x64 |
+| `AISlopArena-epic-windows.zip` | preset "Windows (Epic)", Windows x64 |
+| `AISlopArena-android.apk` | preset "Android" (arm64 + armv7), signed with the Play upload key, installable directly (debug-signed when the signing secrets are missing) |
+| `AISlopArena-android.aab` | preset "Android (Play)" (+ x86_64), the bundle to upload by hand in the Play Console (only with the signing secrets) |
+| `AISlopArena-ios-simulator.zip` | Godot's Xcode project built for the simulator on macOS (x86_64, the only simulator architecture Godot 4.4.1's library links; Rosetta on Apple silicon; MetalFX left out; unsigned: a device / App Store build needs the Apple certificates) |
+| `AISlopArena-web.zip` | the Godot web export alone, to self-host (the live one is uploaded to R2 by `npm run deploy:godot-web`) |
+
+Versions come from `package.json` (`npm run godot:version`, run by the workflow too): Android
+versionCode and iOS build number `(major*10000 + minor*100 + patch)*100 + 99` (`+N` for `-beta.N`),
+above the Capacitor app's codes so Play takes the Godot build as an update of `com.aislop.arena`.
+Android signing uses the GitHub secrets `ANDROID_UPLOAD_KEYSTORE_B64`, `ANDROID_UPLOAD_ALIAS`,
+`ANDROID_UPLOAD_PASSWORD` (see `.claude/skills/release/SKILL.md`).
+
+The workflow can also be started by hand: `gh workflow run release.yml --ref <branch>` is a dry run
+(everything is built, the builds are the run's artifacts, no release); `-f tag=vX.Y.Z -f dry_run=false`
+publishes.
+
 **Release notes**: write `docs/releases/<tag>.md` before tagging (banner and infographics from
 `art-src/make_release_art.py`, see [CHANGELOG.md](../CHANGELOG.md)); the workflow uses it as the
 release description, or GitHub's generated notes when the file does not exist.

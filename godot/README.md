@@ -74,6 +74,8 @@ downloads: Ubuntu's `apksigner zipalign adb` packages provide build-tools, plus 
 the editor settings `export/android/android_sdk_path`, `java_sdk_path`, `debug_keystore*`. Then:
 `godot --headless --path godot --export-debug "Android" build/android/ai-slop-arena.apk`
 (export templates 4.4.1 installed). Install with `adb install -r`. iOS needs a Mac with Xcode.
+Since the presets became store-ready (see "Export"), "Android" is a Gradle build: it also needs the
+build template and JDK 17.
 
 ## Web hosting note
 
@@ -111,8 +113,35 @@ is 11 MB): desktop and Android take it from the OS, the web export shows boxes. 
 
 ## Export
 
-`export_presets.cfg` has Web, Android, iOS, Linux and Windows presets (install the matching Godot
-export templates first; Android needs the SDK + a keystore, iOS needs a Mac). Example:
-`godot --headless --path godot --export-release "Web" build/web/index.html`.
+`export_presets.cfg` (owned by the release pipeline, `.github/workflows/release.yml`):
+
+| Preset | Output | Notes |
+| --- | --- | --- |
+| Web | `build/web/index.html` | no-threads template, custom shell `web_shell/` |
+| Android | `build/android/AISlopArena-android.apk` | Gradle build, `com.aislop.arena`, arm64-v8a + armeabi-v7a, min SDK 24, target SDK 36 |
+| Android (Play) | `build/android/AISlopArena-android.aab` | the same + x86_64, App Bundle for Google Play |
+| iOS | `build/ios/AISlopArena.ipa` | `ch.gtko.aisloparena`, Xcode project only (built on a Mac) |
+| Windows (Steam) / Windows (Epic) | `build/windows-steam/` / `build/windows-epic/` `AISlopArena.exe` | exe + pck, icon and version info (rcedit), features `steam` / `epic` |
+| Linux (Steam) | `build/linux-steam/AISlopArena.x86_64` | x86_64 + pck, feature `steam` |
+
+- **Versions**: `npm run godot:version` writes `package.json`'s version into `project.godot` and every
+  preset (Android versionCode / iOS build `(maj*10000+min*100+patch)*100+99`, `+N` for `-beta.N`);
+  `npm test` checks they are in sync.
+- **Icons**: `assets/icons/` from `icon.png` (`python art-src/make_godot_icons.py`): Android adaptive
+  icon like the Capacitor app's, Windows `.ico`.
+- **Android Gradle build template**: not committed (`godot/android/` is ignored). Unzip it from the
+  export templates as the editor's *Project → Install Android Build Template* does:
+  `unzip <templates>/4.4.1.stable/android_source.zip -d godot/android/build`, then
+  `printf 4.4.1.stable > godot/android/.build_version` and `touch godot/android/build/.gdignore`.
+  The Gradle build needs **JDK 17** exactly (Godot refuses 21) and the Android SDK.
+- **Signing**: release Android exports read the upload key from `GODOT_ANDROID_KEYSTORE_RELEASE_PATH`,
+  `_USER`, `_PASSWORD` (CI: GitHub secrets, see `.claude/skills/release/SKILL.md`); debug exports from the
+  editor settings' debug keystore or `GODOT_ANDROID_KEYSTORE_DEBUG_*`.
+- **Windows icon**: Godot 4.4 needs `rcedit` (editor setting *Export → Windows → rcedit*, plus *wine*
+  on Linux: the CI image has both); without it the export still works with Godot's icon.
+- **iOS**: Godot refuses to export without *App Store Team ID*; the committed value is empty and CI
+  fills `APPLE_TEAM_ID` or a placeholder (enough for the unsigned simulator build).
+
+Example: `godot --headless --path godot --export-release "Web" build/web/index.html`.
 The web preset uses the Compatibility (WebGL2) renderer automatically; native targets use Mobile
 (Vulkan / Metal).

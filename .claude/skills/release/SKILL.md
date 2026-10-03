@@ -26,7 +26,8 @@ git fetch origin && git status -sb && git log --oneline origin/main..HEAD
   explicitly, never `git add -A`. Mention leftovers to the user instead.
 - Pick the version (semver): new features -> minor (`0.5.0` -> `0.6.0`), fixes only -> patch.
   Ask the user if it is not obvious. Previous tags: `git tag --sort=-v:refname | head`.
-- Stop any dev server you started (`preview_stop`): Vite and wrangler watchers lock files.
+- Stop any dev server you started (`preview_stop`): Vite and wrangler watchers lock files, and a
+  running Godot editor rewrites `godot/export_presets.cfg`.
 
 ## 1. Tests and builds
 
@@ -44,17 +45,21 @@ All green before going on. If a feature changed online play, also run a local en
 ```bash
 # edit "version" in package.json, then
 npm install --package-lock-only
+npm run godot:version    # version into godot/project.godot + every export preset (npm test checks it)
 ```
 
-The Godot project and its export presets get the version from the release workflow (see the Godot
-jobs in `.github/workflows/release.yml`).
+`godot:version` (scripts/godot-version.mjs) sets the Android `version/code` and the iOS build number to
+`(major*10000 + minor*100 + patch)*100 + 99` (`x.y.z-beta.N` -> `+N`, 1..98): `0.17.1` -> `170199`. It is
+always above the old Capacitor app's codes (`1701` for 0.17.1), so Play installs the Godot build as an
+update of `com.aislop.arena`. Play refuses a versionCode it has already seen: a re-upload needs a new
+version (or a beta number).
 
-If the online protocol changed (`PROTOCOL` in worker/index.js and `godot/scripts/net_client.gd`), both
-must be bumped together, and the notes must carry the "update required" warning (old apps are refused
-online).
+If the online protocol changed (`PROTOCOL` in worker/index.js and `godot/scripts/net_client.gd`), both must be bumped
+together, and the notes must carry the "update required" warning (old apps are refused online).
 
-The old Capacitor apps (three.js, up to v0.17.1) get no more web bundles: `/app/latest.json` stays
-frozen on 0.17.1 (`FROZEN_APP_BUNDLE` in `src/updates.js`, docs/ota-updates.md). Never change it.
+Mobile apps are the Godot builds: they update through the stores only (the Capacitor apps' OTA
+manifest `/app/latest.json` stays frozen on 0.17.1, `FROZEN_APP_BUNDLE` in `src/updates.js`,
+docs/ota-updates.md: never change it; there is no `AISlopArena-app-bundle.zip` any more).
 
 ## 3. Graphic release notes
 
@@ -65,7 +70,8 @@ frozen on 0.17.1 (`FROZEN_APP_BUNDLE` in `src/updates.js`, docs/ota-updates.md).
    (Nunito lacks arrows/ticks: use `sym()`; black emoji vanish on dark pills).
 2. **Notes**: `docs/releases/vX.Y.Z.md`, in English like the repo: banner, one bold summary line,
    `## ✨ Highlights` with emoji sections and the infographics, then the `## ⬇️ Download` table
-   copied from the previous notes with the version replaced in every link. Images use
+   copied from the previous notes with the version replaced in every link (the line under the table
+   says "debug-signed APK" only while the Android signing secrets are missing, see step 5). Images use
    `https://raw.githubusercontent.com/gtko/ai-slop-arena/main/docs/releases/img/...` (pushed in step 5).
 3. **CHANGELOG.md**: new entry at the top (banner + 3-4 bullets).
 4. Commit: `Release vX.Y.Z: notes, art, version`.
@@ -107,7 +113,9 @@ git tag -a vX.Y.Z -m "AI SLOP ARENA X.Y.Z: <one-line summary>"
 git push origin vX.Y.Z
 ```
 
-Then watch the workflow in the background (the Godot exports; macOS/iOS is the slowest):
+Then watch the workflow in the background (~15-20 minutes: each Godot job exports the data, converts
+the models and imports the project; the Android Gradle build and the macOS/iOS simulator build are the
+slowest):
 
 ```bash
 ID=$(gh run list --workflow release.yml --limit 1 --json databaseId --jq '.[0].databaseId')
@@ -116,7 +124,36 @@ gh run view $ID --json jobs --jq '.jobs[] | "\(.name): \(.conclusion)"'
 ```
 
 If a job fails: `gh run view $ID --log-failed`, fix, commit, push, then re-run the failed jobs
-(`gh run rerun $ID --failed`) - never move or delete a published tag.
+(`gh run rerun $ID --failed`) - never move or delete a published tag. A failed iOS simulator build
+does not hold the release back (it is published without `-ios-simulator.zip`, with a warning).
+
+Dry run of the whole pipeline from a branch, without creating a release:
+`gh workflow run release.yml --ref <branch>` (inputs: `tag`, `dry_run` = true by default; the builds
+are the run's artifacts). `gh workflow run release.yml -f tag=vX.Y.Z -f dry_run=false` rebuilds and
+re-uploads the assets of an existing tag.
+
+### Android signing (GitHub secrets)
+
+The Android job signs with the Play **upload key** of the Capacitor app
+(`~/.android-keys/aisloparena-upload.jks`, certificate SHA-256 `5c7778cc...903357b`, checked by the job).
+The secrets are the user's: never print, copy or set them yourself. Once, the user runs (Git Bash):
+
+```bash
+base64 -w0 ~/.android-keys/aisloparena-upload.jks > /tmp/upload.b64
+gh secret set ANDROID_UPLOAD_KEYSTORE_B64 < /tmp/upload.b64 && rm /tmp/upload.b64
+gh secret set ANDROID_UPLOAD_ALIAS       # paste keyAlias from aisloparena-upload.properties
+gh secret set ANDROID_UPLOAD_PASSWORD    # paste storePassword (= keyPassword) from the .properties
+```
+
+Without them the release still ships, with a debug-signed APK and no AAB (warning in the run).
+Optional: `APPLE_TEAM_ID` (the iOS project's team; a placeholder is used for the simulator build).
+
+### Google Play (manual)
+
+Download `AISlopArena-android.aab` from the release and upload it in the Play Console (production or a
+test track; the console needs the user's clicks, and Chrome's file upload is capped at 10 MB: the user
+drags the file in). Same package `com.aislop.arena` + same upload key + higher versionCode = in-place
+update of the installed app, its data folder kept.
 
 ## 6. Verify the release
 
@@ -124,10 +161,12 @@ If a job fails: `gh run view $ID --log-failed`, fix, commit, push, then re-run t
 gh release view vX.Y.Z --json url,assets --jq '.url, (.assets[] | "\(.name) \(.size/1048576|floor) MB")'
 ```
 
-- The assets the Godot jobs of `release.yml` publish (Steam Windows / Linux, Epic Windows, Android,
-  iOS simulator, web): compare with the previous release. No `-app-bundle.zip` any more: the old
-  Capacitor apps stay on v0.17.1's (`curl -s https://ai-slop-arena.gtux-prog.workers.dev/app/latest.json`
-  must still name 0.17.1).
+- Seven assets, all Godot builds: `AISlopArena-steam-windows.zip`, `-steam-linux.tar.gz`,
+  `-epic-windows.zip` (exe + pck), `-android.apk` (signed with the upload key, or debug-signed without
+  the secrets), `-android.aab` (Play, only with the secrets), `-ios-simulator.zip` (unsigned .app),
+  `-web.zip` (the Godot web export alone; the live web build is the R2 upload of step 4).
+- The old Capacitor apps stay on v0.17.1's bundle: `curl -s https://ai-slop-arena.gtux-prog.workers.dev/app/latest.json`
+  must still name 0.17.1.
 - The description is the notes file (the workflow applies it; if not: `gh release edit vX.Y.Z --notes-file docs/releases/vX.Y.Z.md`).
 - Open the release page in the browser pane and look at it: banner and infographics load
   (raw.githubusercontent may take a few minutes to refresh an image that changed).
@@ -135,5 +174,5 @@ gh release view vX.Y.Z --json url,assets --jq '.url, (.assets[] | "\(.name) \(.s
 ## 7. Report to the user (in French)
 
 Link to the release, the assets with sizes, what was deployed, what was tested and what was not
-(e.g. real devices, Steam P2P with two accounts), and anything left for them (store uploads,
-signing keys, secrets). No push of other people's files, no auto-merge.
+(e.g. real devices, Steam with two accounts), and anything left for them (the Play upload of the
+AAB, signing keys, secrets). No push of other people's files, no auto-merge.
