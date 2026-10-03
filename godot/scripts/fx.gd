@@ -55,10 +55,12 @@ func setup(arena_: Arena, fighters_: Dictionary, local_id_: String) -> void:
 	if sparks:
 		return
 	_rng.randomize()
-	sparks = FxLayer.new(self, FxLib.octa(), FxLib.layer_material("sparks"), 800)
-	debris = FxLayer.new(self, FxLib.box(), FxLib.layer_material("debris"), 360)
-	smoke = FxLayer.new(self, FxLib.ico(1, 0.5), FxLib.layer_material("smoke"), 320)
-	fire = FxLayer.new(self, FxLib.ico(1, 0.5), FxLib.layer_material("fire"), 260)
+	# pools sized by the tier like the bursts that fill them (FxLib.n: half on Low): a full pool
+	# recycles a live particle, and every live one is stepped on the CPU each frame
+	sparks = FxLayer.new(self, FxLib.octa(), FxLib.layer_material("sparks"), FxLib.n(800))
+	debris = FxLayer.new(self, FxLib.box(), FxLib.layer_material("debris"), FxLib.n(360))
+	smoke = FxLayer.new(self, FxLib.ico(1, 0.5), FxLib.layer_material("smoke"), FxLib.n(320))
+	fire = FxLayer.new(self, FxLib.ico(1, 0.5), FxLib.layer_material("fire"), FxLib.n(260))
 	# the web keeps 12 point lights on desktop; fewer here: forward renderers pay per light, and the
 	# Mobile renderer lights a mesh with 8 omni lights at most, shared with the arena's lanterns
 	var nl: int = int(Quality.preset().get("lights", 2))   # 4 on High, 2 on Medium, none on Low or "dynamic lights" off
@@ -111,7 +113,10 @@ func rnd(a: float, b: float) -> float:
 
 # ---------------------------------------------------------------- effects.js API
 
+# (no light pool, Low: nothing to light, nothing kept)
 func flash(p: Vector3, col: Color, intensity: float, range_: float, life: float) -> void:
+	if _lights.is_empty():
+		return
 	_flashes.append({"p": p, "col": col, "i": intensity, "range": range_, "life": life, "max": life})
 
 func light_count() -> int:
@@ -119,6 +124,8 @@ func light_count() -> int:
 
 # A light for this frame only (projectiles, bombs): fx_combat calls it every frame.
 func emit_light(p: Vector3, col: Color, intensity: float, range_: float) -> void:
+	if _lights.is_empty():
+		return
 	_emit.append({"p": p, "col": col, "i": intensity, "range": range_})
 
 func spark_burst(p: Vector3, col: Color, n := 10, speed := 6.0, life := 0.35, size := 0.16) -> void:

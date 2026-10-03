@@ -310,6 +310,8 @@ func _process_timed(dt: float) -> void:
 	_update_zones(dt)
 	_update_windups(dt)
 	_update_waves(dt)
+	if fx.light_count() == 0:   # Low: no light pool
+		return
 	for B in bullets:
 		if B.emit:
 			fx.emit_light(Vector3(B.x, BULLET_Y + 0.2, B.z), B.lcol, 12.0 if B.big else 8.0, 6.5)
