@@ -648,6 +648,8 @@ func on_event(e: Dictionary) -> void:
 	match String(e.get("e", "")):
 		"kit":
 			kit.on_event(e)
+		"ice":   # Frostbite's Ice Wall (ice_walls.gd)
+			IceWalls.add_to(self, e.get("t", []))
 		"wall":
 			var c := center(int(e.i), int(e.j))
 			WorldFx.debris(self, Vector3(c.x, 1.0, c.z), GameData.color_of(map.get("debris", 0x9a8a70)), 12, 0.3, 6.0)

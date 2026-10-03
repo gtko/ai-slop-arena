@@ -45,6 +45,12 @@ var _emote: Label3D
 var _emote_t := 0.0
 # FX (fx.gd / brawler.js look): loadout gadget letter, hit squash spring, spawn pop, K.O. fall, status
 var gadget := "A"
+var star := 1                   # star power 1 / 2 (STARS: what the fx draw differently)
+# Star power ids of each brawler (src/gadgets.js STARS): index 0 = star 1, index 1 = star 2.
+const STARS := {
+	"blaster": ["sapRegen", "splinters"], "gunslinger": ["steadyAim", "axoRegen"], "bomber": ["magmaPuddle", "bigBang"],
+	"frostbite": ["deepFreeze", "permafrost"], "volt": ["conductor", "surge"], "kappa": ["hydrotherapy", "undertow"],
+	"pipchomp": ["huntersNose", "hungry"], "mochi": ["heavyweight", "secondHelping"]}
 var _base_scale := Vector3.ONE
 var _base_y := 0.0
 var _squash := 0.0
@@ -84,9 +90,14 @@ func setup(row: Dictionary, brawlers: Dictionary) -> void:
 	fname = row.name
 	var key := String(row.type).split(":")[0]
 	type = brawlers.get(key, brawlers.blaster)
-	var lo := String(row.type).split(":")   # 'volt:B2' = gadget B, star 2
-	if lo.size() > 1 and lo[1].begins_with("B"):
-		gadget = "B"
+	# loadout: the roster's `lo` ('B2' = gadget B, star power 2), else inside the type ('volt:B2'),
+	# like game.js newMatch
+	var lo: String = String(row.lo) if row.get("lo") is String and String(row.lo).length() == 2 else ""
+	var parts := String(row.type).split(":")
+	if lo == "" and parts.size() > 1:
+		lo = parts[1]
+	gadget = "B" if lo.begins_with("B") else "A"
+	star = 2 if lo.length() > 1 and lo[1] == "2" else 1
 	max_hp = float(type.hp)
 	hp = max_hp
 	var pal: Dictionary = type.palette
@@ -427,6 +438,10 @@ func _fire(clip: String) -> void:
 	_tree.set("parameters/up/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 
 # brawler.js face(): turn to the attack for half a second.
+func has_star(sid: String) -> bool:
+	var list: Array = STARS.get(String(type.get("key", "")), [])
+	return list.size() >= star and String(list[star - 1]) == sid
+
 func face(dx: float, dz: float) -> void:
 	if absf(dx) + absf(dz) < 1e-4:
 		return
