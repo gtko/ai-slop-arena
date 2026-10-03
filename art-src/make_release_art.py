@@ -1288,6 +1288,31 @@ def v0171():
     img.convert('RGB').save(os.path.join(OUT, 'v0.17.1-changes.png'), optimize=True)
 
 
+def v0180():
+    banner('v0.18.0', 'GODOT EVERYWHERE', 'One new engine for every version of the game.',
+           [('🎮', 'Godot on every build'), ('⚡', 'Smoother in the browser'), ('💾', 'Your progress kept'), ('🌱', 'A loader that never hangs')],
+           'v0.18.0-banner.png', ('mochi', 'frostbite', 'bomber'))
+
+    # what changed (PR #29: worker/godot-web.js, release.yml, web_gl_filter.gd, legacy_import.gd): real numbers
+    W, H = 1600, 900
+    img = background(W, H, glow=(0.5, 0.35))
+    d = ImageDraw.Draw(img)
+    outlined(d, (W // 2, 30), 'ONE ENGINE FOR EVERY VERSION', display(50), YELLOW, anchor='ma')
+    rows = [('🎮', 'Play opens the Godot game', 'on the website, and every download is now built with Godot'),
+            ('⚡', 'Smoother in your browser', 'menu 48 -> 80 fps, matches 41 -> 75 fps on our test PC'),
+            ('🧹', 'Far fewer GPU calls', 'about 16,000 graphics calls a frame on the menu down to about 2,300'),
+            ('💾', 'Your web progress comes along', 'coins, gems, brawlers, skins, trophies and rank, at the first launch'),
+            ('🌱', 'A loader that never hangs', '"Starting..." while the engine boots, a Reload button if it fails'),
+            ('🔗', 'Invite links still work', '/play?room=CODE drops you straight into your friend\'s room')]
+    for i, (icon, head, line) in enumerate(rows):
+        y = 120 + i * 124
+        card(img, (60, y, W - 60, y + 108), outline=(90, 150, 230), radius=20)
+        d.text((92, y + 26), icon, font=emoji(50), embedded_color=True)
+        d.text((175, y + 16), head, font=display(32), fill=YELLOW)
+        d.text((175, y + 62), line, font=body(23, 'Bold'), fill=TEXT)
+    img.convert('RGB').save(os.path.join(OUT, 'v0.18.0-changes.png'), optimize=True)
+
+
 if __name__ == '__main__':
     import sys
     os.makedirs(OUT, exist_ok=True)
@@ -1316,5 +1341,6 @@ if __name__ == '__main__':
     v0161()
     v0170()
     v0171()
+    v0180()
     for f in sorted(os.listdir(OUT)):
         print(f, os.path.getsize(os.path.join(OUT, f)) // 1024, 'KB')

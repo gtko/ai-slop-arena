@@ -3,6 +3,14 @@
 Every version is built for all platforms and attached to its [GitHub release](https://github.com/gtko/ai-slop-arena/releases).
 Full notes, with downloads: [docs/releases](docs/releases).
 
+## [v0.18.0](docs/releases/v0.18.0.md): Godot everywhere
+
+<a href="docs/releases/v0.18.0.md"><img src="docs/releases/img/v0.18.0-banner.png" alt="v0.18.0: Godot everywhere" width="100%"></a>
+
+- 🎮 Play opens the Godot game; every download is a Godot build; the three.js version is gone.
+- ⚡ Much smoother in the browser (menu 48 → ~80 fps, matches 41 → 75 fps); 💾 your web progress comes along.
+- 🌱 A loader that never hangs. 📱 Google Play players: keep the current app for now.
+
 ## [v0.17.1](docs/releases/v0.17.1.md): Godot on the web
 
 <a href="docs/releases/v0.17.1.md"><img src="docs/releases/img/v0.17.1-banner.png" alt="v0.17.1: Godot on the web" width="100%"></a>
