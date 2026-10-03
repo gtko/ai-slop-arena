@@ -15,7 +15,11 @@ void vertex() {
 	vec3 w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	vec3 moved = w;
 	fh = fol_sway(moved, MODEL_MATRIX[3].xz, VERTEX.y);
+#ifdef LOW
+	VERTEX += toon_to_local(mat3(MODEL_MATRIX), moved - w);
+#else
 	VERTEX += inverse(mat3(MODEL_MATRIX)) * (moved - w);
+#endif
 	wpos = w;
 }
 

@@ -45,7 +45,12 @@ vec3 fol_tint(vec3 c, float leaf, float h) {
 
 // FOL_LIGHT: sun-coloured rim where light grazes the foliage, and light shining through it
 void fol_sun(vec3 n, vec3 v, vec3 l, vec3 lc, float leaf, inout vec3 diff) {
+#ifdef LOW
+	float e1 = 1.0 - clamp(dot(n, v), 0.0, 1.0);
+	float edge = e1 * e1 * sqrt(e1);
+#else
 	float edge = pow(1.0 - clamp(dot(n, v), 0.0, 1.0), 2.5);
+#endif
 	float sun_side = clamp(dot(n, l) * 0.6 + 0.4, 0.0, 1.0);
 	float toward = clamp(dot(-v, l) * 0.5 + 0.5, 0.0, 1.0);
 	float through = clamp(-dot(n, l), 0.0, 1.0) * toward * toward;

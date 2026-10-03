@@ -5,11 +5,13 @@
 //  - cartoon maps (Oasis, Windmill Isles): two flat tones in a checker and faint speckles;
 //  - outer land: the picture repeated every `period` metres, no checker.
 // Colours are blended in sRGB like the web's canvas, then converted to linear.
+// LOW (quality.gd): one texture fetch (the picture at the unwrapped tile coordinate: the same texel,
+// mips from the hardware derivatives), no normal map, no speckles; the shading stays (toon LOW).
 
 #include "res://assets/shaders/toon.gdshaderinc"
 
-uniform sampler2D albedo_tex : filter_linear_mipmap_anisotropic, repeat_enable;
-uniform sampler2D normal_tex : filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D albedo_tex : TEX_FILTER, repeat_enable;
+uniform sampler2D normal_tex : TEX_FILTER, repeat_enable;
 uniform float use_tex = 1.0;
 uniform float use_normal = 1.0;
 uniform float normal_scale = 0.8;
@@ -58,17 +60,24 @@ void fragment() {
 	vec2 g = (wpos.xz + origin) / period;
 	vec2 cell = floor(g);
 	vec2 f = g - cell;
+#ifndef LOW
 	vec2 gx = dFdx(g);
 	vec2 gy = dFdy(g); // continuous derivatives: no seam of tiny mips where fract() wraps
+#endif
 	float odd = mod(cell.x + cell.y, 2.0);
 	vec3 c;
 	if (use_tex > 0.5) {
+#ifdef LOW
+		c = texture(albedo_tex, g).rgb;   // repeat: the texel of f, with continuous derivatives
+#else
 		c = textureGrad(albedo_tex, f, gx, gy).rgb;
+#endif
 		c = mix(c, checker.rgb, checker.a * odd);
 		float e = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));
 		c = mix(c, seam.rgb, seam.a * (1.0 - smoothstep(seam_w * 0.6, seam_w * 1.4, e)));
 	} else {
 		c = mix(tone_a.rgb, tone_b.rgb, odd);
+#ifndef LOW
 		if (speckles > 0.0) {
 			// faint round blotches, a few per tile
 			vec2 sp = wpos.xz * 4.5;
@@ -80,10 +89,12 @@ void fragment() {
 			vec3 sc_col = h > 0.78 ? vec3(1.0, 0.9, 0.78) : vec3(0.67, 0.31, 0.16);
 			c = mix(c, sc_col, dot_ * (h > 0.78 ? 0.1 : 0.08) * speckles);
 		}
+#endif
 	}
 	ALBEDO = to_linear(c * tint.rgb);
 	ROUGHNESS = roughness;
 	METALLIC = 0.0;
+#ifndef LOW
 	if (use_normal > 0.5) {
 		vec2 nn = textureGrad(normal_tex, f, gx, gy).rg * 2.0 - 1.0;
 		// picture right = +x, picture up = -z (the web's uv), z out of the floor
@@ -94,6 +105,7 @@ void fragment() {
 #endif
 		NORMAL = normalize((VIEW_MATRIX * vec4(wn, 0.0)).xyz);
 	}
+#endif
 }
 
 void light() {

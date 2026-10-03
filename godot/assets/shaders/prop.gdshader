@@ -5,7 +5,7 @@ shader_type spatial;
 
 #include "res://assets/shaders/toon.gdshaderinc"
 
-uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D albedo_tex : source_color, TEX_FILTER, repeat_enable;
 uniform vec4 albedo : source_color = vec4(1.0);
 uniform float use_tex = 1.0;
 uniform float roughness = 0.78;
@@ -19,7 +19,11 @@ void vertex() {
 		vec2 seed = MODEL_MATRIX[3].xz;
 		float bend = h * h * 0.012 * g_wind * sway;
 		vec3 d = vec3(sin(TIME * 1.3 + seed.x * 0.37 + seed.y * 0.21) * bend, 0.0, sin(TIME * 1.1 + seed.y * 0.41) * bend * 0.7);
+#ifdef LOW
+		VERTEX += toon_to_local(mat3(MODEL_MATRIX), d);
+#else
 		VERTEX += inverse(mat3(MODEL_MATRIX)) * d;
+#endif
 	}
 }
 
