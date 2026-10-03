@@ -68,6 +68,32 @@ func _experiments() -> void:
 			elif _x.has("noui") and not (c is Sight):
 				(c as CanvasLayer).visible = false
 
+# What the visible 2D tree is made of (each style box, clip, material or texture switch costs a
+# draw call in the Compatibility renderer): `?perf&perftree`.
+func _census() -> String:
+	var n := {}
+	var add := func(k: String, v := 1) -> void: n[k] = int(n.get(k, 0)) + v
+	for c in get_tree().root.find_children("*", "CanvasItem", true, false):
+		var ci := c as CanvasItem
+		if not ci.is_visible_in_tree():
+			continue
+		add.call(ci.get_class())
+		if ci.get_script() != null:
+			add.call("scripted")
+		if ci.material != null:
+			add.call("material")
+		if ci is Control:
+			var ct := ci as Control
+			if ct.clip_contents:
+				add.call("clip")
+			for sb in ["panel", "normal", "focus", "hover"]:
+				if ct.has_theme_stylebox_override(sb):
+					add.call("sb_" + sb)
+	var parts: PackedStringArray = []
+	for k in n:
+		parts.append("%s=%d" % [k, n[k]])
+	return " ".join(parts)
+
 # Per-system timing (only with ?perf=sec): PerfProbe.begin("hud") ... PerfProbe.end("hud").
 static func begin(key: String) -> void:
 	if _sec:
@@ -107,6 +133,8 @@ func _process(delta: float) -> void:
 		line += " | " + " ".join(parts)
 		_acc.clear()
 	print(line)
+	if DebugArgs.has("perftree"):
+		print("PERFTREE ", _census())
 	_label.text = line.replace(" ", "\n").replace("|\n", "")
 	_t = 0.0
 	_frames = 0

@@ -360,7 +360,7 @@ func _build_scene() -> void:
 	env.environment = e
 	add_child(env)
 	add_child(Sight.new(self))   # line-of-sight dimming (sight.gd, src/sight.js)
-	add_child(PerfProbe.new())   # ?perf: frame-cost overlay and log (perf_probe.gd)
+	add_child(WebPerf.new())   # web: WebGL state filter, frame-rate keeper; ?perf probe (web_perf.gd)
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
