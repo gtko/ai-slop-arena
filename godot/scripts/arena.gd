@@ -33,6 +33,7 @@ var _ground_slots: Dictionary = {}   # tile key -> [MultiMesh, index]
 
 func build(map_data: Dictionary) -> void:
 	map = map_data
+	Quality.flush_shaders()   # a LOW / FULL shader switch held back during the last match lands now
 	items = Items.new()   # power cubes on the ground ('item' / 'pick' events)
 	add_child(items)
 	Foliage.ensure_globals() # the world shaders read global parameters (wind, reveal, rim, sky)

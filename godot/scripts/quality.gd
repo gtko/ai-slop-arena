@@ -342,18 +342,45 @@ static func low_shaders() -> bool:
 			return a == "--shaders=low"
 	return mobile() and int(preset().get("shade", 1)) == 0
 
+# The Shader resources are held here: the resource cache only keeps weak references, so a shader no
+# material uses at the moment of the switch would be freed and load() would give back the file's FULL
+# code later (and the LOW sight mode would then grey nothing).
+static var _shaders: Dictionary = {}
+static var _want_low := false
+
+# Called by apply(): the variant switch recompiles every world shader, so during a match (an auto
+# quality step) it waits for the next arena build (flush_shaders, from Arena.build).
 static func apply_shaders(low: bool) -> void:
+	_pin_shaders()
+	_want_low = low
+	var m := main_node()
+	if m != null and m.get("arena") != null and low != shaders_low:
+		return
+	_switch_shaders(low)
+
+static func flush_shaders() -> void:
+	_pin_shaders()
+	_switch_shaders(_want_low)
+
+static func _pin_shaders() -> void:
+	if not _shaders.is_empty():
+		return
+	for n in LOW_SHADERS:
+		var sh := load("res://assets/shaders/%s.gdshader" % n) as Shader
+		if sh != null:
+			_shaders[n] = sh
+			_shader_code[n] = sh.code
+
+static func _switch_shaders(low: bool) -> void:
 	if low == shaders_low:
 		return
 	shaders_low = low
 	Foliage.ensure_globals()   # (their global uniforms must exist before they compile)
 	Sight.ensure_globals()
 	for n in LOW_SHADERS:
-		var sh := load("res://assets/shaders/%s.gdshader" % n) as Shader
+		var sh: Shader = _shaders.get(n)
 		if sh == null:
 			continue
-		if not _shader_code.has(n):
-			_shader_code[n] = sh.code
 		var src := String(_shader_code[n])
 		var nl := src.find("\n")
 		sh.code = src.substr(0, nl + 1) + "#define LOW\n" + src.substr(nl + 1) if low else src
