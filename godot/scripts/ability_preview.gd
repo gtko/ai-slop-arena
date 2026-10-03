@@ -132,10 +132,10 @@ static func _later(b: Control, secs: float, fn: Callable) -> void:
 
 # Touch / click on a hooked button: the badge opens the card (and doesn't pick the ability), a long
 # press opens it too (and the release that follows doesn't pick either).
-static func _input_on(menu, b: Control, badge: Control, spec: Dictionary, ev: InputEvent) -> void:
+static func _input_on(menu, b: Control, _badge: Control, spec: Dictionary, ev: InputEvent) -> void:
 	if ev is InputEventMouseButton and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 		var mb := ev as InputEventMouseButton
-		if mb.pressed and Rect2(badge.global_position - b.global_position - Vector2(8, 8), badge.size + Vector2(16, 16)).has_point(mb.position):
+		if mb.pressed and Rect2(b.size.x - 28.0, 0.0, 28.0, 24.0).has_point(mb.position):   # the badge corner (b's own px)
 			b.accept_event()
 			var c = _find(menu)
 			if c and c.visible and c._anchor == b and c._pinned:
