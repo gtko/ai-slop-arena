@@ -40,6 +40,10 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: barichello/godot-ci:4.4.1
+    env:
+      # rcedit runs under wine, which refuses HOME=/github/home (not owned by the container's root)
+      WINEPREFIX: /tmp/wine
+      WINEDEBUG: -all
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/godot-prepare
@@ -124,7 +128,10 @@ jobs:
         run: |
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           "$BT/apksigner" verify --print-certs out/AISlopArena-android.apk | grep -v '^WARNING' | tee certs.txt
-          "$BT/aapt" dump badging out/AISlopArena-android.apk | grep -E "^package|sdkVersion|native-code|application-label:"
+          "$BT/aapt" dump badging out/AISlopArena-android.apk | grep -iE "^package|sdkVersion|native-code|application-label:" | tee badging.txt
+          # Play only takes recent target SDKs: the APK must carry the preset's target_sdk (Gradle build)
+          TARGET=$(sed -n 's/^gradle_build\/target_sdk="\([0-9]*\)".*/\1/p' godot/export_presets.cfg | head -1)
+          grep -q "targetSdkVersion:'$TARGET'" badging.txt || { echo "::error::targetSdkVersion is not $TARGET"; exit 1; }
           if [ "${SIGNED:-0}" = 1 ]; then
             grep -qi "SHA-256 digest: $UPLOAD_CERT_SHA256" certs.txt || { echo "::error::APK not signed with the Play upload certificate"; exit 1; }
             keytool -printcert -jarfile out/AISlopArena-android.aab | grep -i "SHA256:" | tr -d ': \t' | grep -qi "SHA256$UPLOAD_CERT_SHA256" \
@@ -147,6 +154,9 @@ jobs:
       # A device / App Store build needs the Apple certificates (see docs/platforms.md).
       - name: Build
         run: |
+          # The simulator SDK has no MetalFX; Godot's simulator library does not use it (only the
+          # device one does), so the simulator build drops the framework from the link.
+          sed -i '' '/MetalFX.framework/d' ios/AISlopArena.xcodeproj/project.pbxproj
           xcodebuild -project ios/AISlopArena.xcodeproj -scheme AISlopArena -configuration Release \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
             ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build | tail -n 40

@@ -10,6 +10,8 @@ on:
 
 env:
   GODOT_VERSION: 4.4.1
+  WINEPREFIX: /tmp/wine # rcedit (Windows icon) runs under wine, which refuses HOME=/github/home
+  WINEDEBUG: -all
 
 defaults:
   run:
