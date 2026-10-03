@@ -1,0 +1,14 @@
+; QuickJSVM: QuickJS-ng (MIT) embedded for the offline local room (scripts/local_room.gd).
+; Built from native/quickjs (see docs/local-sim.md). Only the Windows library is built so far;
+; the other platforms are listed for when their builds land (a missing one only disables offline play).
+[configuration]
+entry_symbol = "quickjs_library_init"
+compatibility_minimum = "4.4"
+reloadable = false
+
+[libraries]
+windows.x86_64 = "res://addons/quickjs/bin/libquickjs.windows.template_release.x86_64.dll"
+linux.x86_64 = "res://addons/quickjs/bin/libquickjs.linux.template_release.x86_64.so"
+android.arm64 = "res://addons/quickjs/bin/libquickjs.android.template_release.arm64.so"
+android.arm32 = "res://addons/quickjs/bin/libquickjs.android.template_release.arm32.so"
+ios.arm64 = "res://addons/quickjs/bin/libquickjs.ios.template_release.arm64.xcframework"

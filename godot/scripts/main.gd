@@ -6,6 +6,8 @@ extends Node3D
 # Screens (all built from code): MainMenu (menu.gd), Lobby (lobby.gd), MatchLoad (match_load.gd: loading +
 # 3-2-1), ResultView (result_view.gd), all laid out in the web's CSS px (UiKit.css_scale, css_view.gd).
 # Network: NetClient (room socket), MatchmakingClient (quick play queue, /mm), Profile (rank).
+# Offline: LocalRoom (local_room.gd) runs the server's rules in the client for SOLO (with `--local`, or
+# when the server cannot be reached) and TRAINING (the dojo); `net` points at one or the other.
 #   MENU     main menu. QUICK PLAY -> QUEUE; PRIVATE ROOM create / join -> LOBBY.
 #   QUEUE    matchmaking overlay on the menu; "matched" -> room socket -> LOBBY (a matchmade room
 #            starts by itself).
@@ -19,7 +21,9 @@ const MenuShowcase := preload("res://scripts/menu_showcase.gd")
 # QUEUE is last so the numbers of the older states stay the same (the autotest prints them)
 enum State { MENU, LOBBY, LOADING, COUNTDOWN, PLAYING, OVER, QUEUE }
 
-var net: NetClient
+var net: NetClient                 # the room this client talks to: online or offline
+var online: NetClient              # the room socket (Cloudflare)
+var offline: LocalRoom             # the local room (offline solo, training dojo)
 var mm: MatchmakingClient
 var profile: Profile
 var state := State.MENU
@@ -92,10 +96,14 @@ func _ready() -> void:
 	audio = AudioManager.new()   # AUDIO HOOK
 	add_child(audio)
 	audio.play_music("menu")
-	net = NetClient.new()
-	add_child(net)
-	net.message.connect(_on_message)
-	net.closed.connect(_on_net_closed)
+	online = NetClient.new()
+	add_child(online)
+	offline = LocalRoom.new()
+	add_child(offline)
+	for n: NetClient in [online, offline]:
+		n.message.connect(_on_message)
+		n.closed.connect(_on_net_closed)
+	net = online
 	mm = MatchmakingClient.new()
 	add_child(mm)
 	mm.queue.connect(func(m: Dictionary): menu.update_queue(m))
@@ -236,6 +244,7 @@ func _fake_load(counting: bool) -> void:
 # Headless end-to-end check against a local server:
 #   godot --headless --path godot -- --autotest ws://localhost:8787 [--quick] [--map=grove] [--shot=/tmp/x.png] [--lobbyshot=/tmp/l.png]
 # Default: a private room, the leader starts. --quick: matchmaking queue, then "play now with bots".
+# --local: no server at all, the local room (local_room.gd) vs 7 bots; --local --dojo: the training dojo.
 func _autotest() -> void:
 	var args := DebugArgs.list()
 	var url := NetClient.default_origin()
@@ -254,6 +263,8 @@ func _autotest() -> void:
 	var quick := args.has("--quick")
 	if quick:
 		_quick_play()
+	elif args.has("--local"):
+		_open_room("LOCAL", false, true, args.has("--dojo"))
 	else:
 		_open_room("T" + _random_code().substr(0, 3), false)
 	var t0 := Time.get_ticks_msec()
@@ -310,6 +321,8 @@ func _autotest() -> void:
 		print("FEELLOG interp=%s moving_frames=%d speed_mean=%.2f speed_cv=%.3f jerk=%.3f stalls=%d fps=%d" % ["glide" if Fighter.interp_glide else "buffer",
 			tot.n, tot.mean / maxf(1, tot.n), tot.cv / maxf(1, tot.n), tot.jerk / maxf(1, tot.n), tot.stall, Engine.get_frames_per_second()])
 	print("AUTOTEST-INPUT touchsize=%s touchscreen=%s touch_visible=%s touch_moved=%s touch_fired=%s start=%s end=%s" % [touch.size, DisplayServer.is_touchscreen_available(), touch.visible, stats.get("touch_moved", false), stats.get("touch_fired", false), stats.get("start_pos", Vector3.ZERO), me.position if me else Vector3.ZERO])
+	if net == offline:
+		print("AUTOTEST-LOCAL %s" % JSON.stringify(offline.stats()))
 	print("AUTOTEST state=%d snaps=%d me=%s hp=%s pos=%s fighters=%d arena=%s matchmade=%s" % [state, stats.snaps, me != null, me.hp if me else -1, me.position if me else Vector3.ZERO, fighters.size(), arena != null, net.matchmade])
 	get_tree().quit(0 if stats.snaps > 20 and me != null else 1)
 
@@ -440,8 +453,15 @@ func _build_screens() -> void:
 	menu.settings_changed.connect(_on_settings_changed)
 	menu.open_settings.connect(func(): settings_view.open())
 	menu.profile_changed.connect(_send_pick)
-	menu.solo_play.connect(func(): UiKit.click(); _auto_start = true; _open_room(_random_code(), false))
-	menu.training.connect(func(): UiKit.click(); _open_room(_random_code(), false))
+	menu.solo_play.connect(func(): UiKit.click(); _auto_start = true; _open_room(_random_code(), false, _solo_local()))
+	# TRAINING: the dojo (dummies that never fall) in the local room; a private room without it
+	menu.training.connect(func():
+		UiKit.click()
+		if LocalRoom.available():
+			_auto_start = true
+			_open_room("LOCAL", false, true, true)
+		else:
+			_open_room(_random_code(), false))
 	menu.showcase_changed.connect(func(): showcase.refresh())
 	ui.add_child(menu)
 	lobby = Lobby.new()
@@ -557,9 +577,18 @@ func _on_mm_failed(msg: String, code: String) -> void:
 
 # ---------------------------------------------------------------- rooms
 
-func _open_room(code: String, matchmade: bool) -> void:
+# SOLO offline: asked for (`--local`, web `?local`), the server is not reachable (see _on_net_closed).
+func _solo_local() -> bool:
+	return LocalRoom.available() and DebugArgs.has("local")
+
+func _open_room(code: String, matchmade: bool, local := false, dojo := false) -> void:
+	if net != (offline if local else online):
+		net.close()
+	net = offline if local else online
+	offline.dojo = dojo
+	hud_ui.net = net
 	_room_code = code
-	_vs_bots = _auto_start
+	_vs_bots = _auto_start and not dojo
 	_room_matchmade = matchmade
 	_room_msg = {}
 	_retries = 0
@@ -594,6 +623,11 @@ func _send_pick() -> void:
 
 func _on_net_closed() -> void:
 	if _leaving or not _in_match_room:
+		return
+	# SOLO and the server never answered (offline, server down): play it in the local room
+	if net == online and _auto_start and not online.welcomed and LocalRoom.available():
+		print("solo: server unreachable, playing offline")
+		_open_room("LOCAL", false, true)
 		return
 	if state == State.LOBBY and _retries < 3 and _room_code != "":
 		# a room that is still alive takes us back (a new socket: same code, new id)
