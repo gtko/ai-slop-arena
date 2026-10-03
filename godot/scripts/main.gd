@@ -77,6 +77,7 @@ func _ready() -> void:
 	# root Window, not DisplayServer: the Window rewrites its title on every locale change.
 	get_window().title = "AI SLOP ARENA"
 	Settings.load_all()
+	LegacyImport.run()   # web, first launch: the old three.js client's saves (localStorage) -> user://
 	Controls.setup()   # the rebindable keys + gamepad buttons in the InputMap (controls.gd)
 	if not DebugArgs.has("autotest") and not Array(DebugArgs.list()).any(func(a): return String(a).begins_with("--menushot")):
 		Settings.apply_display()   # window mode + vsync (desktop)
