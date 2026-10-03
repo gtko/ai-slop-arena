@@ -1,9 +1,10 @@
 # Blender (headless) decimation of one GLB, called by convert-models.mjs for the decor drawn by the
 # hundred (bushes, wall blocks):
-#   blender --background --factory-startup --python godot/tools/decimate.py -- in.glb out.glb 0.3
+#   blender --background --factory-startup --python godot/tools/decimate.py -- in.glb out.glb 0.3 [nomat]
 # Welds the corners by position (the UVs stay per corner, so the texture seams are kept as such), runs
 # a collapse decimation to the given ratio of triangles, shades flat (the decor's faceted look in
-# Godot: convert-models computes flat normals) and writes the GLB back with its texture.
+# Godot: convert-models computes flat normals) and writes the GLB back with its texture, or with its
+# UVs but no material ("nomat": the Low tier's *_low.glb copies, drawn with the full prop's material).
 import sys
 
 import bmesh
@@ -11,6 +12,7 @@ import bpy
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 src, dst, ratio = argv[0], argv[1], float(argv[2])
+nomat = len(argv) > 3 and argv[3] == "nomat"
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=src)
@@ -34,5 +36,5 @@ for ob in meshes:
     after += sum(len(p.vertices) - 2 for p in ob.data.polygons)
 
 bpy.ops.export_scene.gltf(filepath=dst, export_format="GLB", export_normals=True, export_texcoords=True,
-                          export_materials="EXPORT", export_animations=False, export_yup=True)
+                          export_materials="NONE" if nomat else "EXPORT", export_animations=False, export_yup=True)
 print("DECIMATE %s: %d -> %d triangles" % (src, before, after))

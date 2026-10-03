@@ -29,6 +29,16 @@ const DECIMATE = {
   'decor/wall_canyon.glb': 0.35,
   'decor/wall_ice.glb': 0.35,
 };
+// Low tier copies (<prop>_low.glb, ratio of the shipped GLB's triangles): the props drawn by the dozen
+// in MultiMeshes, whose single LOD for the whole MultiMesh stays at full detail at the game camera.
+// PropLib swaps them in on Low (prop_lib.gd set_low); no material (the full prop's is used).
+const LOW = {
+  'decor/tree_round.glb': 0.2, 'decor/tree_pine.glb': 0.2, 'decor/tree_pine_snow.glb': 0.2,
+  'decor/tree_dead.glb': 0.2, 'decor/cactus.glb': 0.25, 'decor/rock_canyon.glb': 0.25,
+  'decor/boulder.glb': 0.25, 'decor/boulder_snow.glb': 0.25, 'decor/stump.glb': 0.25,
+  'decor/crate.glb': 0.25, 'decor/lantern.glb': 0.25,
+  'decor/wall_canyon.glb': 0.45, 'decor/wall_ice.glb': 0.45, 'decor/wall_moss.glb': 0.45,
+};
 const BLENDER = process.env.BLENDER || 'C:/Program Files/Blender Foundation/Blender 5.2/blender.exe';
 const here = dirname(fileURLToPath(import.meta.url));
 const src = join(here, '../../public/assets/models');
@@ -64,6 +74,12 @@ async function convert(dir) {
       rmSync(tmp, { force: true });
     } else {
       await io.write(join(out, f), doc);
+    }
+    if (LOW[key]) {
+      const low = join(out, f.replace(/\.glb$/, '_low.glb'));
+      const r = spawnSync(BLENDER, ['--background', '--factory-startup', '--python', join(here, 'decimate.py'), '--', join(out, f), low, String(LOW[key]), 'nomat'], { encoding: 'utf8' });
+      const line = (r.stdout || '').split(/\r?\n/).find(l => l.startsWith('DECIMATE'));
+      console.log(line || `${key}: no Blender (${r.error || r.status}), kept the committed ${existsSync(low) ? 'low copy' : 'full mesh only (no low copy)'}`);
     }
     bytes += statSync(join(out, f)).size; n++;
   }

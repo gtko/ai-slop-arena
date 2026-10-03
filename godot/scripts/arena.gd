@@ -465,6 +465,11 @@ func apply_quality() -> void:
 		mmi.multimesh.visible_instance_count = int(ceilf(int(d[1]) * float(q.ring)))
 		# the web's ring casts shadows down to detail 0.6 (desktop and mobile high)
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if float(q.ring) >= 1.0 else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Low: the decor MultiMeshes (ring, walls, rocks, crates, lanterns) draw their decimated copies
+	var low := Quality.name_now() == "low"
+	for c in get_children():
+		if c is MultiMeshInstance3D and c.has_meta("prop"):
+			PropLib.set_low(c, low)
 
 # Flat pentagon stepping stones with a darker rim on the open floor (arena.js buildStones, Oasis).
 func _stones() -> void:
