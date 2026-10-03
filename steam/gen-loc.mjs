@@ -5,7 +5,7 @@
 //
 // Steamworks names achievement tokens after the order they were created in:
 // NEW_ACHIEVEMENT_1_0 for the first one, then 1_1, 1_2... Create them in the order of ACHIEVEMENTS
-// in src/achievements.js (the same order as steam/README.md), or export the file from Steamworks
+// in src/achievements.json (the same order as steam/README.md), or export the file from Steamworks
 // first and adjust ORDER below to match its tokens.
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -13,8 +13,7 @@ import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const en = (await import(pathToFileURL(join(root, 'src/i18n/en.js')))).default;
-const src = readFileSync(join(root, 'src/i18n/index.js'), 'utf8');
-const LANGS = [...src.matchAll(/\['([\w-]+)', '[^']+', '(\w+)'\]/g)].map(m => [m[1], m[2]]);
+const LANGS = JSON.parse(readFileSync(join(root, 'src/i18n/langs.json'), 'utf8')).map(([code, , steamLang]) => [code, steamLang]);
 const ORDER = ['FIRST_KO', 'FIRST_WIN', 'RAMPAGE', 'POWER_HUNGRY', 'ONLINE_WIN', 'SQUAD_UP', 'WORLD_TOUR', 'JACK_OF_ALL', 'VETERAN', 'CENTURION', 'PODIUM', 'SUPER_KO', 'NIGHT_OWL', 'CRATE_CRUSHER', 'CHAMPION'];
 
 const locales = Object.fromEntries(readdirSync(join(root, 'src/i18n/locales'))

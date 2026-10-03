@@ -3,7 +3,7 @@
 For each language: six "## " sections in the expected order (preview.mjs parses them), short description
 at most 300 characters, the three description GIFs, no em/en dash, typographic quotes, ellipsis or arrows
 (the achievements table is exempt: it must match the game word for word), every achievement of
-src/achievements.js exactly as the game has it (src/i18n/locales/<lang>.json, or src/i18n/en.js for
+src/achievements.json exactly as the game has it (src/i18n/locales/<lang>.json, or src/i18n/en.js for
 English) and the five arena names as the game spells them.
 Also warns when a Steam language has no page. Exit code 1 on any error.
 Usage: python steam/store/check.py
@@ -14,7 +14,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
 STORE = os.path.join(ROOT, 'steam', 'store')
 LOCALES = os.path.join(ROOT, 'src', 'i18n', 'locales')
-ACH = re.findall(r'^  ([A-Z_]+): \{', open(os.path.join(ROOT, 'src', 'achievements.js'), encoding='utf-8').read(), re.M)
+ACH = list(json.load(open(os.path.join(ROOT, 'src', 'achievements.json'), encoding='utf-8'))['achievements'])
 MAPS = ['oasis', 'dunes', 'grove', 'frost', 'marsh']
 GIFS = ['battle.gif', 'weather.gif', 'daynight.gif']
 BANNED = re.compile('[—–«»„“”‘’…→]')

@@ -19,9 +19,7 @@ for (const f of readdirSync(new URL('../../src/i18n/locales/', import.meta.url))
   write(code, { ...dict, ...(extra[code] || {}) });
   codes.push(code);
 }
-// the language list ([code, native name]) for the settings screen: read from src/i18n/index.js
-// as text (that module needs a browser)
-const src = readFileSync(new URL('../../src/i18n/index.js', import.meta.url), 'utf8');
-const langs = [...src.matchAll(/^\s*\['([\w-]+)', '([^']+)', '\w+'\],?$/gm)].map(m => ({ code: m[1], name: m[2] }));
+// the language list for the settings screen: src/i18n/langs.json ([code, native name, Steam name])
+const langs = JSON.parse(readFileSync(new URL('../../src/i18n/langs.json', import.meta.url), 'utf8')).map(([code, name]) => ({ code, name }));
 writeFileSync(new URL('langs.json', out), JSON.stringify(langs));
 console.log(`i18n: en + ${codes.length} locales, ${langs.length} languages, ${Object.keys(en).length + Object.keys(extra.en).length} keys`);

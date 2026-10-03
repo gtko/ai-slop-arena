@@ -1,0 +1,20 @@
+{
+  "achievements": {
+    "FIRST_KO": {"name":"First Blood","desc":"Knock out a brawler."},
+    "FIRST_WIN": {"name":"Last One Standing","desc":"Win a match."},
+    "RAMPAGE": {"name":"Rampage","desc":"Knock out 3 brawlers in one match."},
+    "POWER_HUNGRY": {"name":"Power Hungry","desc":"Hold 8 power cubes in one match."},
+    "ONLINE_WIN": {"name":"Crowd Pleaser","desc":"Win an online match against another human."},
+    "SQUAD_UP": {"name":"Squad Up","desc":"Play an online match with a friend."},
+    "WORLD_TOUR": {"name":"World Tour","desc":"Play on all five arenas."},
+    "JACK_OF_ALL": {"name":"Jack of All Slops","desc":"Win a match with each of the five brawlers."},
+    "VETERAN": {"name":"Veteran","desc":"Play 25 matches."},
+    "CENTURION": {"name":"Centurion","desc":"Knock out 100 brawlers."},
+    "PODIUM": {"name":"Podium Finish","desc":"Finish a match in the top 3."},
+    "SUPER_KO": {"name":"Super Finish","desc":"Knock out a brawler with your super."},
+    "NIGHT_OWL": {"name":"Night Owl","desc":"Win a match at night."},
+    "CRATE_CRUSHER": {"name":"Crate Crusher","desc":"Break 50 crates."},
+    "CHAMPION": {"name":"Champion","desc":"Win 10 matches."}
+  },
+  "stats": ["MATCHES","WINS","KOS","MAPS_MASK","WINS_MASK","CRATES"]
+}

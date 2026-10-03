@@ -9,8 +9,7 @@ import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const en = (await import(pathToFileURL(join(root, 'src/i18n/en.js')))).default;
-const src = readFileSync(join(root, 'src/i18n/index.js'), 'utf8');
-const LANGS = [...src.matchAll(/\['([\w-]+)', '([^']+)', '\w+'\]/g)].map(m => [m[1], m[2]]);
+const LANGS = JSON.parse(readFileSync(join(root, 'src/i18n/langs.json'), 'utf8')).map(([code, name]) => [code, name]);
 const ORDER = ['FIRST_KO', 'FIRST_WIN', 'RAMPAGE', 'POWER_HUNGRY', 'ONLINE_WIN', 'SQUAD_UP', 'WORLD_TOUR', 'JACK_OF_ALL', 'VETERAN', 'CENTURION', 'PODIUM', 'SUPER_KO', 'NIGHT_OWL', 'CRATE_CRUSHER', 'CHAMPION'];
 
 const locales = Object.fromEntries(readdirSync(join(root, 'src/i18n/locales'))
