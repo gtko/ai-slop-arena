@@ -7,6 +7,7 @@ extends RefCounted
 
 const MenuShop := preload("res://scripts/menu_shop.gd")
 const MenuTap := preload("res://scripts/menu_tap.gd")
+const AbilityPreview := preload("res://scripts/ability_preview.gd")
 
 const KINDS := ["skin", "trail", "ko", "emote", "frame", "title", "icon"]
 
@@ -106,6 +107,7 @@ func build(head: HBoxContainer, v: VBoxContainer, aw: float) -> void:
 	v.add_child(S.tab_row(items, tab, func(k: String): tab = k; m._fill_page("collection")))
 	if tab == "skin":
 		v.add_child(S.brawler_pick(key, func(k: String): skin_of = k; m._fill_page("collection")))
+		v.add_child(AbilityPreview.chips(m, key, small))   # its gadgets and star powers, with their preview clips
 	var ids := _ids(tab, key)
 	var show_preview := not small and aw >= 900.0 - 64.0
 	var gap := 8.0 if small else 14.0
