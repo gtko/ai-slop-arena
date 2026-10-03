@@ -1,14 +1,19 @@
 name: Godot client
 
-# Builds the Godot 4 client (godot/) for Web, Linux, Windows and Android. Comparison branch: the
-# three.js game and its release workflow are untouched. Export templates come from the godot-ci image.
+# Quick check of the Godot 4 client (godot/) on every push that touches it: Web, Linux, Windows and a
+# debug Android APK (Gradle build). The full store builds (signed APK + AAB, Epic, iOS) are made by
+# release.yml (dry run: `gh workflow run release.yml --ref <branch>`).
 on:
   workflow_dispatch:
   push:
-    paths: ['godot/**', '.github/workflows/godot.yml']
+    paths: ['godot/**', 'scripts/godot-version.mjs', '.github/actions/godot-prepare/**', '.github/workflows/godot.yml']
 
 env:
   GODOT_VERSION: 4.4.1
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   export:
@@ -17,33 +22,22 @@ jobs:
       image: barichello/godot-ci:4.4.1
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22 }
-      - name: Game data and models (maps, brawlers, i18n, cosmetics, meshopt -> plain GLB)
-        run: |
-          node godot/tools/export-data.mjs
-          cd godot/tools && npm ci && node convert-models.mjs
-      - name: Templates
-        run: |
-          mkdir -p ~/.local/share/godot/export_templates ~/.config/godot
-          mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable ~/.local/share/godot/export_templates/ 2>/dev/null || true
-          # the image's editor settings carry the Java / Android SDK paths; Actions runs with HOME=/github/home
-          cp -r /root/.config/godot/. ~/.config/godot/ 2>/dev/null || true
-      - name: Import
-        run: godot --headless --path godot --import || true
+      - uses: ./.github/actions/godot-prepare
       - name: Web
         run: mkdir -p godot/build/web && godot --headless --path godot --export-release "Web" build/web/index.html
       - name: Linux
-        run: mkdir -p godot/build/linux && godot --headless --path godot --export-release "Linux (Steam)" build/linux/AISlopArena.x86_64
+        run: mkdir -p godot/build/linux-steam && godot --headless --path godot --export-release "Linux (Steam)" build/linux-steam/AISlopArena.x86_64
       - name: Windows
-        run: mkdir -p godot/build/windows && godot --headless --path godot --export-release "Windows (Steam/Epic)" build/windows/AISlopArena.exe
+        run: mkdir -p godot/build/windows-steam && godot --headless --path godot --export-release "Windows (Steam)" build/windows-steam/AISlopArena.exe
       - name: Android (debug keystore)
         run: |
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
           export GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$PWD/debug.keystore GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
           mkdir -p godot/build/android
-          godot --headless --path godot --export-debug "Android" build/android/ai-slop-arena.apk
+          godot --headless --path godot --export-debug "Android" build/android/AISlopArena-android.apk
+          test -s godot/build/android/AISlopArena-android.apk
       - uses: actions/upload-artifact@v4
         with:
           name: godot-builds
           path: godot/build/**
+          retention-days: 7

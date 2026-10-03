@@ -1,6 +1,10 @@
-# Builds every version of the game and attaches them to a GitHub release.
-# Runs on a pushed tag v* (git tag v0.2.0 && git push origin v0.2.0), or by hand from the
-# Actions tab with a tag name (the release is created if it does not exist yet).
+# Builds the Godot client (godot/) for every platform and attaches the builds to a GitHub release.
+# Runs on a pushed tag v* (git tag v0.2.0 && git push origin v0.2.0), or by hand from the Actions tab:
+#   gh workflow run release.yml --ref <branch>                          dry run: builds, no release
+#   gh workflow run release.yml -f tag=v0.2.0 -f dry_run=false          builds + creates / updates the release
+# The web build is NOT uploaded to R2 here: `npm run deploy:godot-web` does it from the release machine,
+# next to `wrangler deploy`, because /godot/ redirects to the version of the deployed Worker and the
+# Cloudflare token stays off CI (see .claude/skills/release/SKILL.md).
 name: Release
 
 on:
@@ -9,108 +13,165 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag (e.g. v0.2.0)
-        required: true
+        description: Release tag (e.g. v0.2.0); needed when dry_run is false
+        required: false
+      dry_run:
+        description: Build every platform without creating the release
+        type: boolean
+        default: true
 
 permissions:
   contents: write
 
 env:
   TAG: ${{ github.event.inputs.tag || github.ref_name }}
-  # optional: with it, every build uploads its source maps to Sentry (vite.config.js)
-  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  GODOT_VERSION: 4.4.1
+  # SHA-256 of the Play upload certificate (~/.android-keys/aisloparena-upload.jks, the Capacitor app's):
+  # a signed build with another certificate is refused, Play would reject it.
+  UPLOAD_CERT_SHA256: 5c7778cc08b62841d0eb26824af500d06e997b0af9802b4e5a171b291903357b
+
+defaults:
+  run:
+    shell: bash # -eo pipefail, also inside the container
 
 jobs:
-  windows:
-    name: Windows (Steam + Epic)
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
-      - run: npm ci
-      - run: npx vite build
-      - run: npx electron-builder --win --x64 --dir --publish never
-      - run: npx electron-builder --win --x64 --dir --publish never --config electron/builder-epic.cjs
-      - name: Zip
-        shell: pwsh
-        run: |
-          Compress-Archive -Path release/win-unpacked/* -DestinationPath AISlopArena-steam-windows.zip
-          Compress-Archive -Path release/epic/win-unpacked/* -DestinationPath AISlopArena-epic-windows.zip
-      - uses: actions/upload-artifact@v4
-        with: { name: windows, path: 'AISlopArena-*.zip' }
-
-  linux:
-    name: Linux (Steam) + web
+  desktop:
+    name: Windows (Steam + Epic), Linux (Steam), web, iOS project
     runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.4.1
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
-      - run: npm ci
-      - run: npx vite build
-      - run: npx electron-builder --linux --x64 --dir --publish never
-      - run: tar -czf AISlopArena-steam-linux.tar.gz -C release/linux-unpacked .
-      - run: cd dist && zip -qr ../AISlopArena-web.zip .
+      - uses: ./.github/actions/godot-prepare
+      - name: Tag matches package.json
+        if: github.event_name == 'push'
+        run: |
+          V="v$(node -p "require('./package.json').version")"
+          [ "$V" = "$TAG" ] || { echo "::error::tag $TAG but package.json is $V"; exit 1; }
+      - name: Export
+        run: |
+          set -o pipefail
+          export_preset() { # preset, path relative to godot/
+            mkdir -p "godot/$(dirname "$2")"
+            godot --headless --path godot --export-release "$1" "$2" 2>&1 | tee -a export.log
+            test -s "godot/$2"
+          }
+          export_preset "Windows (Steam)" build/windows-steam/AISlopArena.exe
+          export_preset "Windows (Epic)" build/windows-epic/AISlopArena.exe
+          export_preset "Linux (Steam)" build/linux-steam/AISlopArena.x86_64
+          export_preset "Web" build/web/index.html
+          # Xcode project only (the .ipa needs a Mac); the team id is only used to sign, not by the
+          # simulator build: APPLE_TEAM_ID (secret) when there is one, else a placeholder
+          sed -i "s/^application\/app_store_team_id=.*/application\/app_store_team_id=\"${APPLE_TEAM_ID:-SIMULATOR}\"/" godot/export_presets.cfg
+          export_preset "iOS" build/ios/AISlopArena.ipa || test -d godot/build/ios/AISlopArena.xcodeproj
+          if grep -q "rcedit" export.log; then echo "::warning::rcedit failed: the Windows exe keeps Godot's icon and version info"; fi
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - name: Package
+        run: |
+          mkdir -p out
+          (cd godot/build/windows-steam && zip -qr "$GITHUB_WORKSPACE/out/AISlopArena-steam-windows.zip" AISlopArena.exe AISlopArena.pck)
+          (cd godot/build/windows-epic && zip -qr "$GITHUB_WORKSPACE/out/AISlopArena-epic-windows.zip" AISlopArena.exe AISlopArena.pck)
+          chmod +x godot/build/linux-steam/AISlopArena.x86_64
+          tar -czf out/AISlopArena-steam-linux.tar.gz -C godot/build/linux-steam AISlopArena.x86_64 AISlopArena.pck
+          # the Godot web export alone (index.html at the root), to self-host; the site is deployed by wrangler
+          (cd godot/build/web && zip -qr "$GITHUB_WORKSPACE/out/AISlopArena-web.zip" .)
+          tar -czf ios-xcode.tar.gz -C godot/build ios
+          ls -la out ios-xcode.tar.gz
       - uses: actions/upload-artifact@v4
-        with: { name: linux, path: 'AISlopArena-*' }
+        with: { name: desktop, path: out/*, retention-days: 7 }
+      - uses: actions/upload-artifact@v4
+        with: { name: ios-xcode, path: ios-xcode.tar.gz, retention-days: 1, compression-level: 0 }
 
   android:
-    name: Android
+    name: Android (APK + Play AAB)
     runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.4.1
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
-      - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: 21, cache: gradle }
-      - run: npm ci
-      - run: npx vite build --mode app && npx cap sync android
-      # The same web bundle, zipped with index.html at the root: the over-the-air update the installed
-      # apps download (src/ota.js, served by the Worker's /app/latest.json, docs/ota-updates.md).
-      - run: cd dist-app && zip -qr ../AISlopArena-app-bundle.zip .
-      - name: Debug APK
-        working-directory: android
-        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
-      - run: cp android/app/build/outputs/apk/debug/app-debug.apk AISlopArena-android.apk
+      - uses: ./.github/actions/godot-prepare
+      - name: Export
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_B64 }}
+          KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_PASSWORD }}
+        run: |
+          mkdir -p godot/build/android out
+          if [ -n "$KEYSTORE_B64" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            # Play upload key: release APK for GitHub + AAB for Play (Godot signs both)
+            printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/upload.jks"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_USER="$KEY_ALIAS"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$KEY_PASSWORD"
+            godot --headless --path godot --export-release "Android" build/android/AISlopArena-android.apk
+            godot --headless --path godot --export-release "Android (Play)" build/android/AISlopArena-android.aab
+            rm -f "$RUNNER_TEMP/upload.jks"
+            test -s godot/build/android/AISlopArena-android.aab
+            cp godot/build/android/AISlopArena-android.aab out/
+            echo "SIGNED=1" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No Android upload key secrets: debug-signed APK, no AAB (see .claude/skills/release/SKILL.md)"
+            keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore "$RUNNER_TEMP/debug.keystore" \
+              -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+            export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$RUNNER_TEMP/debug.keystore"
+            export GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
+            godot --headless --path godot --export-debug "Android" build/android/AISlopArena-android.apk
+          fi
+          test -s godot/build/android/AISlopArena-android.apk
+          cp godot/build/android/AISlopArena-android.apk out/
+      - name: Check signature and manifest
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/apksigner" verify --print-certs out/AISlopArena-android.apk | grep -v '^WARNING' | tee certs.txt
+          "$BT/aapt" dump badging out/AISlopArena-android.apk | grep -E "^package|sdkVersion|native-code|application-label:"
+          if [ "${SIGNED:-0}" = 1 ]; then
+            grep -qi "SHA-256 digest: $UPLOAD_CERT_SHA256" certs.txt || { echo "::error::APK not signed with the Play upload certificate"; exit 1; }
+            keytool -printcert -jarfile out/AISlopArena-android.aab | grep -i "SHA256:" | tr -d ': \t' | grep -qi "SHA256$UPLOAD_CERT_SHA256" \
+              || { echo "::error::AAB not signed with the Play upload certificate"; exit 1; }
+          fi
+          ls -la out
       - uses: actions/upload-artifact@v4
-        with:
-          name: android
-          path: |
-            AISlopArena-android.apk
-            AISlopArena-app-bundle.zip
+        with: { name: android, path: out/*, retention-days: 7 }
 
   ios:
     name: iOS (simulator)
+    needs: desktop
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
-      - run: npm ci
-      - run: npx vite build --mode app && node scripts/native-version.mjs && npx cap sync ios
-      # Unsigned simulator build: proves the project compiles and runs in Xcode's simulator.
-      # Version and build number come from package.json (scripts/native-version.mjs), like Android's.
+      - uses: actions/download-artifact@v4
+        with: { name: ios-xcode }
+      - run: tar -xzf ios-xcode.tar.gz
+      # Unsigned simulator build of the Godot Xcode project: proves it compiles and runs in Xcode's
+      # simulator. Version and build number come from package.json (scripts/godot-version.mjs).
       # A device / App Store build needs the Apple certificates (see docs/platforms.md).
       - name: Build
         run: |
-          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
-            -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
-      - run: cd build/Build/Products/Release-iphonesimulator && zip -qry "$GITHUB_WORKSPACE/AISlopArena-ios-simulator.zip" App.app
+          xcodebuild -project ios/AISlopArena.xcodeproj -scheme AISlopArena -configuration Release \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build | tail -n 40
+          test -d build/Build/Products/Release-iphonesimulator/AISlopArena.app
+      - run: cd build/Build/Products/Release-iphonesimulator && zip -qry "$GITHUB_WORKSPACE/AISlopArena-ios-simulator.zip" AISlopArena.app
       - uses: actions/upload-artifact@v4
-        with: { name: ios, path: AISlopArena-ios-simulator.zip }
+        with: { name: ios, path: AISlopArena-ios-simulator.zip, retention-days: 7 }
 
   release:
     name: GitHub release
-    needs: [windows, linux, android, ios]
+    needs: [desktop, android, ios]
+    # the iOS simulator build is a bonus: a failure there does not hold the release back
+    if: >-
+      !cancelled() && needs.desktop.result == 'success' && needs.android.result == 'success'
+      && (github.event_name == 'push' || github.event.inputs.dry_run == 'false')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
-        with: { path: out, merge-multiple: true }
+        with: { path: out, merge-multiple: true, pattern: '{desktop,android,ios}' }
       - name: Publish
         env: { GH_TOKEN: '${{ github.token }}' }
         run: |
+          case "$TAG" in v*) ;; *) echo "::error::no release tag (got '$TAG'): pass -f tag=vX.Y.Z"; exit 1 ;; esac
+          [ -f out/AISlopArena-ios-simulator.zip ] || echo "::warning::no iOS simulator build in this release"
           ls -la out
           # Hand-written notes with graphics (docs/releases/<tag>.md, see CHANGELOG.md) when there are
           # some, otherwise GitHub's generated list of changes.
