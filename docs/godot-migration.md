@@ -67,8 +67,13 @@ Taken with the user on 2026-10-03: **D1 local simulation** (spike first), **D2 k
 
 ## Release pipeline
 
-New Godot jobs in `.github/workflows/release.yml` (image `barichello/godot-ci:4.4.1`), first next to
-the three.js jobs with `-godot` assets, then replacing them:
+Godot jobs in `.github/workflows/release.yml` (image `barichello/godot-ci:4.4.1`). Since the three.js
+client removal they **replace** the Electron/Capacitor jobs and produce the same asset names (+
+`AISlopArena-android.aab`, - `AISlopArena-app-bundle.zip`); details in docs/platforms.md "Releases".
+Differences with the plan below: the web build is uploaded to R2 by `npm run deploy:godot-web` from the
+release machine, not by CI (the Worker's `/godot/` redirect follows the deployed Worker's version, and
+the Cloudflare token stays off CI); no OTA PCK yet; target SDK 36 is set on Godot 4.4.1's Gradle
+template (compileSdk 34).
 
 - **prepare**: data, i18n and model export, `scripts/godot-version.mjs` (new: writes the version into
   `project.godot` and every preset), import.
