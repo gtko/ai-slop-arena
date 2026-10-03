@@ -30,23 +30,26 @@ const FIVE := ["blaster", "gunslinger", "bomber", "frostbite", "volt"]
 static func run() -> void:
 	if not OS.has_feature("web") or Settings.test_run() or FileAccess.file_exists(FLAG):
 		return
-	var old := _read_storage()
-	if not old.is_empty():
+	var old: Variant = _read_storage()
+	if old == null:
+		return   # localStorage could not be read (blocked): try again next launch, don't mark it done
+	if not (old as Dictionary).is_empty():
 		_import(old)
 	var f := FileAccess.open(FLAG, FileAccess.WRITE)
 	if f:
 		f.store_string(JSON.stringify({"migrated": true, "at": int(Time.get_unix_time_from_system()), "keys": old.keys()}))
 
-# Every key of the old client: {key: raw string}. Empty when there is none (or no localStorage).
-static func _read_storage() -> Dictionary:
+# Every key of the old client: {key: raw string}. Empty when there is none; null when localStorage
+# could not be read (blocked storage, eval failure).
+static func _read_storage() -> Variant:
 	var js := "(() => { try { const o = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i);" \
 		+ " if (k.startsWith('iaslop-') || k === 'brawl-arena-audio') o[k] = localStorage.getItem(k); } return JSON.stringify(o); }" \
-		+ " catch (e) { return '{}'; } })()"
+		+ " catch (e) { return 'ERR'; } })()"
 	var s = JavaScriptBridge.eval(js, true)
-	if typeof(s) != TYPE_STRING:
-		return {}
+	if typeof(s) != TYPE_STRING or String(s) == "ERR":
+		return null
 	var d: Variant = JSON.parse_string(String(s))
-	return d if d is Dictionary else {}
+	return d if d is Dictionary else null
 
 static func _json(old: Dictionary, key: String) -> Variant:
 	return JSON.parse_string(String(old[key])) if old.has(key) else null
@@ -109,6 +112,15 @@ static func _adopt_cid(old: Dictionary) -> void:
 	var cid := String(old.get("iaslop-cid", "")).strip_edges()
 	if not RegEx.create_from_string("^[\\w-]{8,40}$").search(cid):
 		return
+	# the old client's cid carries the player's real rank; a cid of this client (the /godot/ preview)
+	# is kept aside, never lost
+	if FileAccess.file_exists(CID):
+		var cur := FileAccess.get_file_as_string(CID).strip_edges()
+		if cur != "" and cur != cid:
+			DirAccess.make_dir_recursive_absolute(RAW.get_base_dir())
+			var b := FileAccess.open("user://legacy/cid.godot", FileAccess.WRITE)
+			if b:
+				b.store_string(cur)
 	var f := FileAccess.open(CID, FileAccess.WRITE)
 	if f:
 		f.store_string(cid)

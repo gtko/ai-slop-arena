@@ -87,6 +87,7 @@ const UP_WINDOWS := 5
 var _t := 0.0
 var _frames := 0
 var _good := 0
+var _failed := 0   # the best step that proved too slow this session, +1: no high/low/high oscillation
 var _cool := 3.0 * WINDOW # let the start (shader compiles, loading) settle
 
 # Web, quality "auto": measure the frame rate while the 3D view is drawn and the page is shown;
@@ -119,8 +120,9 @@ func _keep_rate(delta: float) -> void:
 	var good := GOOD_FPS * minf(cap, 60.0) / 60.0
 	if fps < slow and step < Quality.AUTO_STEPS.size() - 1:
 		_good = 0
+		_failed = maxi(_failed, step + 1)   # this step was too slow: never climb back to it this session
 		_move(step + 1, fps)
-	elif fps >= good and step > Quality.auto_max_step():
+	elif fps >= good and step > maxi(Quality.auto_max_step(), _failed):
 		_good += 1
 		if _good >= UP_WINDOWS:
 			_good = 0

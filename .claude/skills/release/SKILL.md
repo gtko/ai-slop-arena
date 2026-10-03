@@ -155,6 +155,12 @@ test track; the console needs the user's clicks, and Chrome's file upload is cap
 drags the file in). Same package `com.aislop.arena` + same upload key + higher versionCode = in-place
 update of the installed app, its data folder kept.
 
+**Not to production yet.** The app on Play is the old Capacitor one, which kept the player's progress
+(coins, brawlers, trophies, the `cid` their rank and bans hang on) in its WebView storage. The Godot
+build only imports old saves on the web (`godot/scripts/legacy_import.gd`); until it also reads the
+Android WebView storage (docs/godot-migration.md, package B), the Godot AAB goes to the internal or
+closed test track only: promoting it to production would wipe every Android player's progress.
+
 ## 6. Verify the release
 
 ```bash

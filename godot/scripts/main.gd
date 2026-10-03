@@ -131,6 +131,8 @@ func _join_invite() -> void:
 	var code := String(q).strip_edges().to_upper() if typeof(q) == TYPE_STRING else ""
 	var re := RegEx.create_from_string("^[A-Z0-9]{4,6}$")
 	if re.search(code) != null:
+		# drop ?room= from the address bar: a reload (or the loader's Reload button) must not drag you back
+		JavaScriptBridge.eval("history.replaceState(null, '', location.pathname)")
 		_open_room(code, false)
 
 # Screenshot of the menu (or one of its overlays) for layout checks:

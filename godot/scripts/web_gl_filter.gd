@@ -33,6 +33,9 @@ const JS := """
     const d = Object.getOwnPropertyDescriptor(P, k);
     if (d && typeof d.value === 'function') o[k] = d.value;
   }
+  // a browser that keeps these on another prototype: leave WebGL untouched rather than break it
+  if (!['enable', 'disable', 'isEnabled', 'getParameter', 'useProgram', 'bindBuffer', 'bindTexture',
+        'activeTexture', 'bindVertexArray', 'drawArrays', 'drawElements'].every(k => o[k])) return 'missing';
   const NONE = {};
   const ELEMENT = 34963, ARRAY = 34962;
   let S = new WeakMap();
