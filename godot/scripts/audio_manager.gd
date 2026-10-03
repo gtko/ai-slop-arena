@@ -173,11 +173,13 @@ func _stream(base: String, path_dir: String = "") -> AudioStream:
 	if _cache.has(key):
 		return _cache[key]
 	var s: AudioStream = null
+	var t0 := PerfProbe.now()
 	for dir in ([path_dir] if path_dir != "" else [SFX_DIR, MUSIC_DIR]):
 		var path: String = dir + base + ".ogg"
 		if ResourceLoader.exists(path):
 			s = load(path) as AudioStream
 			break
+	PerfProbe.add("audio.load", t0)
 	_cache[key] = s
 	return s
 
@@ -243,10 +245,12 @@ func play(sound: String, world_pos: Variant = null, vol: float = 1.0, rate: floa
 	var p := _free_voice(now, gain)
 	if p == null:
 		return
+	var t0 := PerfProbe.now()
 	p.stream = stream
 	p.volume_db = _db(gain)
 	p.pitch_scale = pitch if pitch > 0.0 else randf_range(0.94, 1.06)
 	p.play()
+	PerfProbe.add("audio.play", t0)
 
 func _free_voice(now: int, gain: float) -> AudioStreamPlayer:
 	var oldest := 0

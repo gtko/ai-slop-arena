@@ -280,7 +280,7 @@ func _window_done() -> void:
 	_other = maxf(0.0, float(_avg.nodes) - claimed)
 	_acc.clear()
 	if on:
-		var line := "PERF fps=%.1f worst=%.1fms frame=%.2fms process_max=%.2fms physics_max=%.2fms nodes=%.2fms render_cpu=%.2fms gpu=%.2fms draws=%d objects=%d prims=%dk nodes=%d q=%s scale=%.2f msaa=%d win=%dx%d vp=%dx%d 3d=%s" % [
+		var line := "PERF fps=%.1f worst=%.1fms frame=%.2fms process_max=%.2fms physics_max=%.2fms nodes=%.2fms render_cpu=%.2fms gpu=%.2fms draws=%d objects=%d prims=%dk tree=%d q=%s scale=%.2f msaa=%d win=%dx%d vp=%dx%d 3d=%s" % [
 			_avg.fps, _avg.worst, _avg.frame, _avg.proc, _avg.phys, _avg.nodes, _avg.rcpu, _avg.gpu, _avg.draws, _avg.obj,
 			int(_avg.prims / 1000.0), int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
 			Quality.step_name(), vp.scaling_3d_scale, int(vp.msaa_3d), win.x, win.y, size.x, size.y,

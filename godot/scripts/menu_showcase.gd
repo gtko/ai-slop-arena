@@ -343,12 +343,18 @@ func _process_timed(delta: float) -> void:
 		return
 	if _rec != null:
 		_t += delta
+		var tp := PerfProbe.now()
 		_pump()
+		PerfProbe.add("showcase.replay", tp)
 		if _t >= _rec.dur:
 			_start()   # game.js: a new match 3 s after the last K.O.
 			return
 		_focus = _focus.lerp(_clamp_focus(_star.position), 1.0 - exp(-2.2 * delta))
 		if AudioManager.current:
 			AudioManager.current.listener = _focus
+	var tc := PerfProbe.now()
 	_place_camera(delta)
+	PerfProbe.add("showcase.camera", tc)
+	var ta := PerfProbe.now()
 	arena.update(delta)
+	PerfProbe.add("showcase.arena", ta)
