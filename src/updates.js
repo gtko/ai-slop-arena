@@ -1,11 +1,16 @@
-// Over-the-air updates of the mobile apps' web bundle (docs/ota-updates.md). Pure logic, shared by the
-// app (src/ota.js), the Worker (GET /app/latest.json) and tests/updates.test.mjs: no DOM, no Capacitor.
+// Over-the-air updates of the old mobile apps' web bundle (docs/ota-updates.md). Pure logic, shared by
+// the Worker (GET /app/latest.json) and tests/updates.test.mjs; the apps' side (src/ota.js) shipped
+// with the three.js client, which is gone: the rules below are what those installed apps still run.
 
-// Lowest native shell (APK / iOS app version) able to run the current web bundle. Raise it to the
-// version being released whenever that release adds, removes or updates a native Capacitor plugin
-// (package.json @capacitor/* / @capgo/*, android/, ios/): older shells then keep their bundle until the
-// player installs the new app from the store. 0.16.1: the first shell with @capacitor/network (src/ota.js
-// needs it; the 0.16.0 shell never had the updater, so none of them reads this anyway).
+// The three.js client is gone (the game is the Godot client), so no new web bundle will ever exist for
+// the Capacitor apps already installed: /app/latest.json stays frozen on the last one, v0.17.1 (its
+// AISlopArena-app-bundle.zip is on that GitHub release). Apps on 0.17.1 see nothing newer and keep
+// running; older ones still get 0.17.1. The Godot Android app replaces them through the store.
+export const FROZEN_APP_BUNDLE = '0.17.1';
+
+// Lowest native shell (APK / iOS app version) able to run the frozen web bundle. 0.16.1: the first shell
+// with @capacitor/network (src/ota.js needed it; the 0.16.0 shell never had the updater, so none of them
+// reads this anyway). Never changes again: the Capacitor shells are gone too.
 export const MIN_NATIVE = '0.16.1';
 
 export const REPO = 'gtko/ai-slop-arena';
@@ -30,8 +35,8 @@ export function compareVersions(a, b) {
 }
 const newer = (a, b) => compareVersions(a, b) === 1;
 
-// Build number of a version, the same on both platforms: Android versionCode (android/app/build.gradle)
-// and iOS CFBundleVersion (scripts/native-version.mjs). '0.16.1' -> 1601.
+// Build number of a version, the same on both platforms in the Capacitor apps (until 0.17.1): Android
+// versionCode and iOS CFBundleVersion. '0.16.1' -> 1601.
 export function buildNumber(v) {
   const p = parseVersion(v);
   return p ? p[0] * 10000 + p[1] * 100 + p[2] : null;
@@ -45,8 +50,8 @@ export function nativeVersion(reported, stored) {
   return parseVersion(stored) ? stored : null;
 }
 
-// What the Worker serves at /app/latest.json.
-export function manifestFor(version, minNative = MIN_NATIVE) {
+// What the Worker serves at /app/latest.json: manifestFor(FROZEN_APP_BUNDLE).
+export function manifestFor(version = FROZEN_APP_BUNDLE, minNative = MIN_NATIVE) {
   return { version, url: bundleUrl(version), minNative };
 }
 
