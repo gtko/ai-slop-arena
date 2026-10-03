@@ -20,12 +20,13 @@ export { EVENT_OF } from '../events.js';
 export { PERSONAS } from '../ai.js';
 
 export class ServerMatch {
+  // dojo: training (the local room only, src/server/local.js): the bots are dummies that never fall.
   // send(msg): to every player; sendTo(id, msg): one player; onEnd(): match over; onCheat(id, kind)
-  constructor({ map, roster, mut = null, send, sendTo, onEnd, onCheat }) {
+  constructor({ map, roster, mut = null, dojo = false, send, sendTo, onEnd, onCheat }) {
     const input = { rumble: noop, endFrame: noop, usingPad: false, usingTouch: false, touch: null };
     const g = this.game = new Game({ scene: new THREE.Scene(), camera: new THREE.PerspectiveCamera(), lighting: {}, lights: stub(), hud: stub(), input });
     g.weatherDensity = 0; // no particles to simulate
-    g.newMatch({ mapKey: map, roster, localId: null, headless: true, net: { role: 'host', send, sendTo }, mutator: mut });
+    g.newMatch({ mapKey: map, roster, localId: null, headless: true, net: { role: 'host', send, sendTo }, mutator: mut, dojo });
     g.onMatchEnd = onEnd;
     g.onCheat = (b, kind) => onCheat && onCheat(b.id, kind, b.guard ? b.guard.strikes : 0);
     this.acc = 0;

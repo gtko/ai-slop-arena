@@ -55,6 +55,19 @@ const serverBuild = {
   },
 };
 
+// Local room (`vite build --mode localsim`; vite reserves "local"): the same rules and stubs as the server, plus the room logic
+// for one human and bots (src/server/local.js), as one classic script (no module loader: QuickJS
+// evaluates it as is on native Godot builds, JavaScriptBridge on the web) defining globalThis.SlopLocal.
+// Written to godot/local/sim_local.js and exported inside the Godot pack (offline solo and dojo).
+const localBuild = {
+  resolve: serverBuild.resolve,
+  publicDir: false,
+  build: {
+    outDir: 'godot/local', emptyOutDir: false, minify: true, target: 'es2020', reportCompressedSize: false,
+    lib: { entry: resolve(__dirname, 'src/server/local.js'), formats: ['iife'], name: 'SlopLocalBundle', fileName: () => 'sim_local.js' },
+  },
+};
+
 // Crash reports readable in Sentry: with SENTRY_AUTH_TOKEN set (a Sentry "organization token"), the
 // build makes source maps, uploads them for this release (src/telemetry.js) and deletes them, so
 // players never download them. Without the token the build is unchanged.
@@ -69,7 +82,7 @@ const sourceMaps = out => SOURCE_MAPS ? [sentryVitePlugin({
 })] : [];
 
 // Three pages: the landing site (index.html, "/"), the roadmap (roadmap.html, "/roadmap") and the game (play.html, "/play").
-export default defineConfig(({ mode }) => mode === 'server' ? serverBuild : mode === 'app' ? {
+export default defineConfig(({ mode }) => mode === 'server' ? serverBuild : mode === 'localsim' ? localBuild : mode === 'app' ? {
   plugins: [appBuild, ...sourceMaps('dist-app')],
   build: { outDir: 'dist-app', sourcemap: SOURCE_MAPS ? 'hidden' : false, rollupOptions: { input: { play: resolve(__dirname, 'play.html') } } },
 } : {

@@ -233,6 +233,8 @@ export class Game {
     if (this.star) this.stageStar(); // after the reset: it sets the menu zoom straight away
     // supply drops (authority schedules, everyone sees): ~40-50 s and ~85-95 s into the match
     for (const D of this.dropping || []) this.fx.remove(D.beam, D.ring);
+    // the training hero: you, or (local room, src/server/local.js: headless) the one human
+    this.dojoHero = dojo ? this.player || this.brawlers.find(b => b.human) || null : null;
     if (dojo) this.setupDojo();
     this.drops = this.mode === 'play' && !dojo ? [40 + Math.random() * 10, 85 + Math.random() * 10] : [];
     // the arena's own event, between the two drops (the authority starts it)
@@ -556,8 +558,8 @@ export class Game {
     if (target.ghostT > 0 && source !== target) return; // Tail Roll
     if (this.mode === 'attract' && target === this.star && amount >= target.hp) amount = Math.max(0, target.hp - 1); // the menu's star
     if (this.dojo) { // dummies never fall: one that would, fills back up
-      if (target === this.player) return;
-      if (source === this.player) this.dojoLog.push([this.time, Math.round(amount)]);
+      if (target === this.dojoHero) return;
+      if (source === this.dojoHero) this.dojoLog.push([this.time, Math.round(amount)]);
       if (amount >= target.hp) target.hp = amount + target.maxHp * 0.999; // lands at (almost) full health
     }
     if (target.armorT > 0) amount *= 0.65;               // Bark Skin
@@ -806,7 +808,8 @@ export class Game {
   // Training dojo: the other brawlers stand in a loose row a few metres ahead, as dummies.
   setupDojo() {
     this.brains.clear();
-    const P = this.player, A = this.arena, spot = new THREE.Vector3();
+    const P = this.dojoHero, A = this.arena, spot = new THREE.Vector3();
+    if (!P) return;
     // the most open spot near the middle for you, the dummies around it
     let best = null, bs = -1;
     for (let j = 7; j < 18; j++) for (let i = 7; i < 18; i++) {
@@ -816,6 +819,7 @@ export class Game {
     }
     A.center(best[0], best[1], spot);
     P.pos.set(spot.x, 0, spot.z + 3);
+    P.net.set(P.pos.x, P.pos.z); // a network player is told where to stand by its first snapshot
     let k = 0;
     for (const b of this.brawlers) {
       if (b === P) continue;
@@ -827,7 +831,7 @@ export class Game {
   }
 
   updateDojo() {
-    const P = this.player;
+    const P = this.dojoHero;
     if (P) { P.gadgetCharges = 3; P.hp = P.maxHp; }
     for (const b of this.brawlers) {
       if (b === P) continue;

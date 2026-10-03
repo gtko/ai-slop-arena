@@ -68,6 +68,9 @@ export class Poison {
         this.active.push({ i, j, t0: this.timer, ph: Math.random() * 10, y0: r === 0 ? BOUND_H : 0 });
       }
     }
+    // the rest only draws (the gas clouds, the warning frame): nothing to draw on a headless
+    // simulation (the server, the client's local room), and it was most of its CPU late in a match
+    if (this.g.headless) return;
     const A = this.g.arena, c = _p;
     let n = 0;
     for (const a of this.active) {
