@@ -5,7 +5,7 @@ shader_type spatial;
 
 #include "res://assets/shaders/foliage.gdshaderinc"
 
-uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D albedo_tex : source_color, TEX_FILTER, repeat_enable;
 uniform vec4 albedo : source_color = vec4(1.0);
 uniform float use_tex = 1.0;
 uniform float roughness = 0.75;
@@ -19,7 +19,11 @@ void vertex() {
 	vec3 w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	vec3 moved = w;
 	fh = fol_sway(moved, MODEL_MATRIX[3].xz, w.y - MODEL_MATRIX[3].y);
+#ifdef LOW
+	VERTEX += toon_to_local(mat3(MODEL_MATRIX), (moved - w) * sway);
+#else
 	VERTEX += inverse(mat3(MODEL_MATRIX)) * ((moved - w) * sway);
+#endif
 	wpos = w;
 }
 
@@ -39,6 +43,9 @@ void fragment() {
 	ALBEDO = col;
 	ROUGHNESS = roughness;
 	METALLIC = 0.0;
+#ifdef LOW
+	SIGHT_SHADE(wpos)
+#endif
 }
 
 void light() {

@@ -163,6 +163,10 @@ func apply() -> void:
 	# three fogs by view depth, Godot by distance: 4 % further covers the difference off-axis
 	env.fog_depth_begin = (float(S.fogNear) + fog_shift) * 1.04
 	env.fog_depth_end = (float(S.fogFar) + fog_shift) * 1.04
+	if Quality.shaders_low:   # the LOW world shaders draw this fog themselves (toon.gdshaderinc SIGHT_SHADE)
+		var fl := fog.srgb_to_linear() * env.fog_light_energy
+		RenderingServer.global_shader_parameter_set("g_fog", Vector4(fl.r, fl.g, fl.b, 1.0))
+		RenderingServer.global_shader_parameter_set("g_fog_range", Vector4(env.fog_depth_begin, env.fog_depth_end, 0.0, 0.0))
 	env.background_color = _sky_override if _sky_override.a > 0.0 else fog
 	env.tonemap_exposure = brightness * float(S.exposure) * STYLE.exposure * (LUT_SCALE if env.adjustment_enabled and _use_lut() else 1.0 if compat_grade() else COMPAT_EXPOSURE)
 	env.glow_enabled = bool(q.glow)

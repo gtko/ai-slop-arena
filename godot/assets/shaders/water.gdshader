@@ -5,7 +5,8 @@ shader_type spatial;
 // the ripple rings (shots, blasts, idle plops: water.gd ripple), roughness 0.16 for the sun glint and
 // a fresnel sky reflection in the time of day's colour. Transparent: the sandy bed and its caustics
 // (water_bed.gdshader) show through the shallows. Misty Marsh: olive swamp colours (water.gd).
-// `detail` 0 (Quality low) keeps a flat surface (no normal map, no ripples).
+// `detail` 0 (Quality low) keeps a flat surface (no normal map, no ripples); the LOW variant
+// (quality.gd: Low on phones / tablets) compiles them out and lights it like `detail` 0.
 render_mode blend_mix, depth_draw_never, cull_back;
 
 #include "res://assets/shaders/toon.gdshaderinc"
@@ -36,6 +37,7 @@ void fragment() {
 	float nz = texture(water_n, p * 0.35 + t * 0.02).r;
 	float ripple = 0.0;
 	vec2 rgrad = vec2(0.0);
+#ifndef LOW
 	if (detail > 0.5) {
 		for (int k = 0; k < 8; k++) {
 			vec4 R = rip[k];
@@ -51,6 +53,7 @@ void fragment() {
 			rgrad += d / r * ring * sin(front * 14.0);
 		}
 	}
+#endif
 	float depth = smoothstep(0.05, 0.95, sd);
 	vec3 col = mix(shallow, deep, depth);
 	float a = mix(0.45, 0.8, depth);
@@ -60,6 +63,7 @@ void fragment() {
 	col = mix(col, vec3(0.95, 0.98, 1.0), foam);
 	a = mix(a, 0.95, foam);
 	vec3 n = vec3(0.0, 1.0, 0.0);
+#ifndef LOW
 	if (detail > 0.5) {
 		vec3 n1 = texture(water_n, p * 0.21 + vec2(t * 0.031, t * 0.017)).xyz * 2.0 - 1.0;
 		vec3 n2 = texture(water_n, p * 0.47 + vec2(-t * 0.024, t * 0.038)).xyz * 2.0 - 1.0;
@@ -69,12 +73,21 @@ void fragment() {
 	}
 	NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
 	float fres = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 4.0);
+#else
+	NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
+	float fr1 = 1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0);
+	fr1 *= fr1;
+	float fres = fr1 * fr1;
+#endif
 	ALBEDO = col;
 	ALPHA = a;
 	ROUGHNESS = mix(0.16, 0.85, foam);
 	METALLIC = 0.0;
 	// the web's cheap sky reflection (uSky = sky colour * 0.25)
 	EMISSION = g_sky.rgb * 0.25 * (0.04 + fres * 0.7) * (1.0 - foam);
+#ifdef LOW
+	SIGHT_SHADE(wpos)
+#endif
 }
 
 void light() {

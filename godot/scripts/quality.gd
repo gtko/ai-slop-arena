@@ -43,8 +43,9 @@ const LEVELS := ["low", "medium", "high", "ultra"]
 # outline: the fighters' inverted-hull outline (a second skinned copy of every fighter mesh): 0 none, 1 yours only, 2 all
 # anim: the other fighters' animation trees advance every `anim` frames (yours every frame)
 # alights: the arena's lantern / crate lights on at once (arena.gd _glow)
+# shade: 0 = the cheap world shaders and line-of-sight pass on phones / tablets (apply_shaders), 1 = full
 const PRESETS := {
-	"low": {"scale": 0.7, "mscale": 1.0, "frame": 1.3, "msaa": 0, "shadow": 0, "atlas": 1024, "weather": 0.25, "ring": 0.35, "fauna": 0.4, "glow": false, "water": 0, "lights": 0, "outline": 1, "anim": 2, "alights": 2},
+	"low": {"shade": 0,"scale": 0.7, "mscale": 1.0, "frame": 1.3, "msaa": 0, "shadow": 0, "atlas": 1024, "weather": 0.25, "ring": 0.35, "fauna": 0.4, "glow": false, "water": 0, "lights": 0, "outline": 1, "anim": 2, "alights": 2},
 	"medium": {"scale": 0.85, "mscale": 0.85, "frame": 2.3, "msaa": 0, "shadow": 1024, "atlas": 1024, "weather": 0.5, "ring": 0.6, "fauna": 0.7, "glow": false, "water": 1, "lights": 2, "outline": 2, "anim": 1, "alights": 3},
 	"high": {"scale": 1.0, "mscale": 1.0, "frame": 3.7, "msaa": 2, "shadow": 2048, "atlas": 2048, "weather": 1.0, "ring": 1.0, "fauna": 1.0, "glow": true, "water": 2, "lights": 4, "outline": 2, "anim": 1, "alights": 4},
 	"ultra": {"scale": 1.0, "mscale": 1.0, "frame": 0.0, "msaa": 4, "shadow": 4096, "atlas": 4096, "weather": 1.0, "ring": 1.0, "fauna": 1.0, "glow": true, "water": 2, "lights": 4, "outline": 2, "anim": 1, "alights": 4},
@@ -288,6 +289,7 @@ static func main_node() -> Node:
 # Push the preset to the viewport and to the world (arena: lighting, weather, fauna, trees), plus the
 # options that are not part of a tier (FXAA, shadow filter and softness).
 static func apply() -> void:
+	apply_shaders(low_shaders())
 	var p := preset()
 	outline_level = int(p.get("outline", 2))
 	outlines = outline_level > 0
@@ -320,11 +322,47 @@ static func apply() -> void:
 	elif sun is DirectionalLight3D:
 		sun.shadow_enabled = int(p.shadow) > 0
 
+# ---------------------------------------------------------------- shader variants
+# Phones / tablets at Low (and the battery saver there) draw the world with the LOW variant of its
+# shaders: each world shader has `#ifdef LOW` paths (no normal maps, one texture fetch on the floor,
+# no specular on rough surfaces, one clear-coat lobe on the fighters, no water ripples / caustics,
+# one crack pattern on the ice, trilinear instead of anisotropic filtering), and sight.gd swaps its
+# screen-copy pass for a blended one. The materials are shared (every one is made from these Shader
+# resources), so the switch rewrites the resources' code: `#define LOW` after `shader_type`, and
+# every material follows. A switch recompiles them (a hitch, only when the tier crosses Low).
+# Desktops keep the full shaders at every tier. `--shaders=low|full` forces one (measures, shots).
+const LOW_SHADERS := ["fighter", "ground", "ground_field", "ground_bank", "prop", "foliage", "grass",
+	"water", "water_bed", "ice", "shore", "reed"]
+static var shaders_low := false     # the variant the shaders run now
+static var _shader_code: Dictionary = {}
+
+static func low_shaders() -> bool:
+	for a in DebugArgs.list():
+		if a == "--shaders=low" or a == "--shaders=full":
+			return a == "--shaders=low"
+	return mobile() and int(preset().get("shade", 1)) == 0
+
+static func apply_shaders(low: bool) -> void:
+	if low == shaders_low:
+		return
+	shaders_low = low
+	Foliage.ensure_globals()   # (their global uniforms must exist before they compile)
+	Sight.ensure_globals()
+	for n in LOW_SHADERS:
+		var sh := load("res://assets/shaders/%s.gdshader" % n) as Shader
+		if sh == null:
+			continue
+		if not _shader_code.has(n):
+			_shader_code[n] = sh.code
+		var src := String(_shader_code[n])
+		var nl := src.find("\n")
+		sh.code = src.substr(0, nl + 1) + "#define LOW\n" + src.substr(nl + 1) if low else src
+
 # A short name of what runs now, for the perf probe (perf_probe.gd).
 static func step_name() -> String:
 	if saver:
 		return "saver"
-	return level + ("@%d%%" % roundi(auto_scale * 100.0) if auto_scale < 1.0 else "") + ("@30fps" if auto_fps == 30 else "")
+	return level + ("@%d%%" % roundi(auto_scale * 100.0) if auto_scale < 1.0 else "") + ("@30fps" if auto_fps == 30 else "") + ("/lowsh" if shaders_low else "")
 
 # ---------------------------------------------------------------- Android renderer probe
 # Godot's Mobile renderer (Vulkan) is the default on Android. Some GPUs / drivers (Adreno 6xx among
