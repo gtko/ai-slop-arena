@@ -1,40 +1,46 @@
 # Steam release
 
-> **v0.18: the three.js client and its Electron / Capacitor shells are gone.** The game is the Godot
-> client (`godot/`); the store builds come from the Godot jobs of `.github/workflows/release.yml`.
-> The integration described below is the one of the old client (code in git history, tag `v0.17.1`):
-> its Godot port is listed in `docs/godot-migration.md` (feature inventory). The store data here
-> (ids, achievements, texts, graphics) stays valid.
-
-The desktop app is the same game as the website, wrapped in Electron (`electron/`) with
-[steamworks.js](https://github.com/ceifa/steamworks.js) for the Steam features:
+The game is the Godot client (`godot/`); the Steam builds are its "Windows (Steam)" and "Linux (Steam)"
+presets (CI: `.github/workflows/release.yml`). Steam features come from the
+[GodotSteam](https://codeberg.org/godotsteam/godotsteam) GDExtension over Steamworks SDK 1.65:
 
 | Feature | How |
 | --- | --- |
-| **Achievements + stats** | `src/achievements.json` (list and stats). Progress is kept locally and mirrored to Steam, so anything earned offline unlocks the next time Steam is running. |
-| **Friends** | Online rooms are Steam lobbies: *Invite Steam friends* opens the overlay invite dialog, friends can *Join game* from their friends list (running or not: `+connect_lobby`), and rich presence shows what you are doing and groups you with your party. |
-| **Networking** | `src/steamnet.js`: the lobby owner hosts the match and everyone talks to them over Steam P2P (relayed by Steam, no port forwarding, no server). Host leaves > Steam hands the lobby to someone else, who takes over. Room codes still work. |
-| **Cross-play** | On Steam, *Cross-play room* creates a room on the website's relay instead of a Steam lobby: browser players join it with its code or link. Joining by code tries Steam lobbies first, then web rooms, so Steam players can also enter any browser room. |
-| **Overlay** | Shift+Tab, enabled in `electron/main.cjs`. |
-| **30 languages** | Every language Steam supports (`src/i18n/`). The game follows the language picked for it in Steam, else the system language; Options > Language overrides it. |
+| **Achievements + stats** | `godot/scripts/achievements.gd` (the 15 achievements and 6 stats of `src/achievements.json`, fed by `main.gd` from the match events). Progress is kept in the profile and mirrored to Steam, so anything earned offline unlocks the next time Steam is running. |
+| **Language** | The game follows the language picked in Steam (Properties > Language), else the system language; Options > Language overrides it. |
+| **Rich presence + friends** | "In the menu / Looking for a match / In a lobby / In a match" (`rich_presence.vdf`). In a private room the friends list shows *Join game* and Steam's invite dialog works: the `connect` value starts the game with `-- --room=CODE`, or reaches the running game, which opens that room. |
+| **Overlay** | Shift+Tab, works in the exported build (not in the editor). |
+| **Online play** | Not Steam networking: matches run on the Cloudflare rooms server like on every platform (cross-play with web, Epic, Android, iOS). |
 
-Without Steam running, the app still works: online play falls back to the Cloudflare rooms of
-the website and achievements are only tracked locally.
+Everything lives in `godot/scripts/steam_platform.gd`, which talks to the extension through
+`Engine.get_singleton("Steam")`: without the extension (web, mobile, Epic, a checkout that did not
+install it) or without Steam running, the game plays the same and progress is only kept locally.
 
 ## Run it
 
+The plugin and the Steamworks redistributables (`steam_api64.dll`, `libsteam_api.so`) are **not
+committed** (the repository is public, the redistributables belong to Valve's SDK licence). Install the
+plugin once per checkout, with the `sdk` folder of the Steamworks SDK zip:
+
 ```
-npm run desktop        # build, then open the desktop app (Steam must be running for Steam features)
-npm run desktop:dev    # against `npm run dev` for live page reloads
-npm run dist:steam     # packaged Windows build in release/win-unpacked (dist:steam:linux for Linux)
+npm run godot:steam -- --sdk C:\path\to\steamworks_sdk\sdk     # or set STEAMWORKS_SDK
 ```
 
-The app id is `steam.appId` in `package.json` (or the `STEAM_APP_ID` environment variable). The
-website reads it too: once it is not 480, every Steam button on the site links to the store page.
-It is **480 (Spacewar)**, Valve's public test app, until you have your own: lobbies, P2P, the
-overlay and rich presence all work with 480, but our achievements do not exist there, so
-`activate()` returns false (local progress is kept anyway). With a real app id, a packaged build
-started outside Steam relaunches itself through Steam.
+It downloads GodotSteam 4.23.2 into `godot/addons/godotsteam/` (git-ignored) and copies the SDK's
+redistributables over the plugin's. Then open `godot/` in Godot 4.5 with Steam running and the game
+connects to Steam as app 480. Only the Steam presets pack the plugin (`addons/godotsteam/*` is excluded
+from the others; Epic builds never start Steam). CI runs the same script without `--sdk`: the plugin zip's
+own redistributables are used, and a warning says so when it has none.
+
+Test checks: `node tests/steam.test.mjs` (in `npm test`) for the shared data, and
+`godot --headless --path godot --script tools/test_steam.gd` for the achievements rules and the Steam
+sink against a stand-in for the extension.
+
+The app id is `steam.appId` in `package.json` (`node godot/tools/export-data.mjs` copies it to
+`godot/data/steam.json`; the `STEAM_APP_ID` environment variable overrides it for a test run). It is
+**480 (Spacewar)**, Valve's public test app, until you have your own: the overlay, rich presence and
+friends all work with 480, but our achievements do not exist there, so they are only kept locally. With a
+real app id a shipped build started outside Steam relaunches itself through Steam.
 
 ## Steamworks setup (partner.steamgames.com)
 
@@ -58,6 +64,10 @@ started outside Steam relaunches itself through Steam.
    | `CRATE_CRUSHER` | Crate Crusher | Break 50 crates. |
    | `CHAMPION` | Champion | Win 10 matches. |
 
+   `WORLD_TOUR` and `JACK_OF_ALL` count every arena (6) and every brawler (8) the game has today, read
+   from the game data: their texts still say "five" (`src/achievements.json`, the locales and the
+   Steamworks page).
+
 2. **Stats** (INT, set by client): `MATCHES`, `WINS`, `KOS`, `MAPS_MASK`, `WINS_MASK`, `CRATES`.
    Optionally tie `VETERAN` to `MATCHES` (25), `CENTURION` to `KOS` (100), `CRATE_CRUSHER` to
    `CRATES` (50) and `CHAMPION` to `WINS` (10) to show progress bars.
@@ -68,13 +78,21 @@ started outside Steam relaunches itself through Steam.
 4. **Supported languages**: tick all 30 languages (interface + subtitles) on the store page so
    Steam offers them in the game's Language property.
 5. **Publish** the Stats & Achievements changes.
-6. Put your app id in `package.json` (`steam.appId`) and in `steam/app_build.vdf` (with your depot id),
-   set the launch option to `AISlopArena.exe`, then:
+6. Put your app id in `package.json` (`steam.appId`, then `node godot/tools/export-data.mjs`) and in
+   `steam/app_build.vdf` (with your depot ids), set the launch option to `AISlopArena.exe`.
+7. **Rich presence localization** (Community > Rich Presence): upload `steam/rich_presence.vdf`
+   (English; other languages can be added there, the tokens are `#Status_Menu`, `#Status_Queue`,
+   `#Status_Lobby`, `#Status_Match`).
+8. **Build and upload**: the release workflow attaches `AISlopArena-steam-windows.zip` and
+   `AISlopArena-steam-linux.tar.gz`; unzip them into `steam/build/windows` / `steam/build/linux` (they
+   hold the exe or binary, the `.pck` and, with the plugin, the `addons` folder next to them: keep every
+   file) and run:
 
    ```
-   npm run dist:steam
    steamcmd +login <builder account> +run_app_build %CD%\steam\app_build.vdf +quit
    ```
+
+   Ship no `steam_appid.txt`.
 
 ## Store page
 

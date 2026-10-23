@@ -28,3 +28,5 @@ godot/build/*
 # GodotSteam GDExtension + the Steamworks redistributables (SDK licence, public repo): npm run godot:steam
 godot/addons/godotsteam/
 godot/steam_appid.txt
+steam/build/
+steam/output/

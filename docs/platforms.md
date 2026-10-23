@@ -7,7 +7,7 @@ with the shared rules of `src/` (`src/server/sim.js`).
 | Platform | Build | Online play |
 | --- | --- | --- |
 | Web | Godot "Web" preset, uploaded to R2 by `npm run deploy:godot-web`, served at `/godot/<version>/` | Cloudflare rooms |
-| Steam (Windows, Linux) | Godot "Windows (Steam)" / "Linux (Steam)" presets | Cloudflare rooms (cross-play) |
+| Steam (Windows, Linux) | Godot "Windows (Steam)" / "Linux (Steam)" presets + the GodotSteam plugin (achievements, language, rich presence: [steam/README.md](../steam/README.md)) | Cloudflare rooms (cross-play) |
 | Epic Games Store (Windows) | Godot "Windows (Epic)" preset | Cloudflare rooms (cross-play) |
 | Android | Godot "Android" preset (Gradle build, `com.aislop.arena`) | Cloudflare rooms (cross-play) |
 | iOS / iPadOS | Godot "iOS" preset (Xcode project, on a Mac) | Cloudflare rooms (cross-play) |
