@@ -11,7 +11,8 @@ extends RefCounted
 
 const IDS := ["FIRST_KO", "FIRST_WIN", "RAMPAGE", "POWER_HUNGRY", "ONLINE_WIN", "SQUAD_UP", "WORLD_TOUR",
 	"JACK_OF_ALL", "VETERAN", "CENTURION", "PODIUM", "SUPER_KO", "NIGHT_OWL", "CRATE_CRUSHER", "CHAMPION"]
-# Int stats (same names on Steam). MAPS_MASK / WINS_MASK: one bit per map / brawler, in data order.
+# Int stats (same names on Steam). MAPS_MASK / WINS_MASK: one bit per map / brawler, in data order: the
+# data files (maps.json, brawlers.json) are append-only (tests/steam.test.mjs pins the current order).
 const STATS := ["MATCHES", "WINS", "KOS", "MAPS_MASK", "WINS_MASK", "CRATES"]
 
 static var sinks: Array = []
@@ -35,11 +36,11 @@ static func match_start(map_key: String, brawler: String, online: bool, humans: 
 
 # Every server event of the match (main.gd "ev"): the local player's K.O.s (and the super ones) and crates.
 static func on_event(e: Dictionary, my_id: String) -> void:
-	if _match.is_empty() or my_id == "" or String(e.get("by", "")) != my_id:
+	if _match.is_empty() or my_id == "" or str(e.get("by", "")) != my_id:   # `by` is null for a fall or the gas (str(), not String())
 		return
-	match String(e.get("e", "")):
+	match str(e.get("e", "")):
 		"kill":
-			if String(e.get("id", "")) == my_id:
+			if str(e.get("id", "")) == my_id:
 				return   # your own fall (gas, a mistake) is not a K.O.
 			_ko(int(e.get("sup", 0)) != 0)
 		"crate":
@@ -102,11 +103,12 @@ static func unlock(id: String) -> void:
 	if not IDS.has(id):
 		return
 	var u: Dictionary = _data().unlocked
-	if not u.has(id):
-		u[id] = int(Time.get_unix_time_from_system())
-		_save()
+	if u.has(id):
+		return   # (cubes() asks every snapshot) sinks already have it; a sink that comes up later gets sync()
+	u[id] = int(Time.get_unix_time_from_system())
+	_save()
 	for s in sinks:
-		s.achieve(id)   # idempotent; also re-syncs anything earned offline
+		s.achieve(id)
 
 static func is_unlocked(id: String) -> bool:
 	return _data().unlocked.has(id)
@@ -120,6 +122,19 @@ static func sync(sink: Object) -> void:
 	for id in _data().unlocked:
 		sink.achieve(String(id))
 	sink.set_stats(_stats())
+
+# What Steam already holds (another PC, a deleted profile): counters take the larger value, masks are or-ed,
+# so pushing the local stats never lowers the progress Steam has. remote_unlocked: achievement ids it has.
+static func merge_remote(remote_stats: Dictionary, remote_unlocked: Array) -> void:
+	var s := _stats()
+	for k in STATS:
+		var r := int(remote_stats.get(k, 0))
+		s[k] = (int(s[k]) | r) if k.ends_with("_MASK") else maxi(int(s[k]), r)
+	var u: Dictionary = _data().unlocked
+	for id in remote_unlocked:
+		if IDS.has(id) and not u.has(id):
+			u[id] = int(Time.get_unix_time_from_system())
+	_save()
 
 static func _push_stats() -> void:
 	_save()

@@ -18,6 +18,9 @@ import { fileURLToPath } from 'node:url';
 const VERSION = 'v4.23.2-gde'; // GodotSteam for Godot 4.4+ (we ship 4.5.x), built against Steamworks SDK 1.65
 const ASSET = 'godotsteam-4.23.2-gdextension-plugin-4.4.zip';
 const URL_ = `https://codeberg.org/godotsteam/godotsteam/releases/download/${VERSION}/${ASSET}`;
+// sha256 of the release zip: it ships in the players' builds, so a replaced asset must stop the script.
+// Empty = not pinned yet: the script prints the hash and refuses to go on without --allow-unpinned.
+const SHA256 = '';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const dest = join(root, 'godot', 'addons', 'godotsteam');
@@ -36,7 +39,10 @@ try {
     zip = join(work, ASSET);
     writeFileSync(zip, Buffer.from(await res.arrayBuffer()));
   }
-  console.log(`sha256 ${createHash('sha256').update(readFileSync(zip)).digest('hex')}  ${ASSET}`);
+  const sum = createHash('sha256').update(readFileSync(zip)).digest('hex');
+  console.log(`sha256 ${sum}  ${ASSET}`);
+  if (SHA256 && sum !== SHA256) throw new Error(`sha256 mismatch (expected ${SHA256}): the release asset changed`);
+  if (!SHA256 && !args.includes('--allow-unpinned')) throw new Error('SHA256 is not pinned in this script: check the hash above against the release, set SHA256, or pass --allow-unpinned');
 
   const out = join(work, 'x');
   mkdirSync(out);

@@ -155,8 +155,8 @@ func _join_steam_invite() -> void:
 func _on_steam_join(code: String) -> void:
 	if state == State.LOADING or state == State.COUNTDOWN or state == State.PLAYING or code == _room_code:
 		return
-	if state == State.LOBBY:
-		_leave_room()
+	if state != State.MENU:
+		_leave_room()   # (lobby, queue, result screen) through _to_menu: cancels the queue and clears the match
 	_open_room(code, false)
 
 # Steam rich presence: what we are doing, and the private room friends can join.
@@ -168,7 +168,7 @@ func _steam_presence() -> void:
 		State.QUEUE: what = "queue"
 		State.LOBBY: what = "lobby"
 		State.LOADING, State.COUNTDOWN, State.PLAYING, State.OVER: what = "match"
-	steam.set_presence(what, "" if _room_matchmade or _vs_bots else _room_code)
+	steam.set_presence(what, _room_code if what == "lobby" and not _room_matchmade and not _vs_bots else "")   # joinable while waiting in a private room only
 
 # The local player's real match is built: the achievements' counters start (never the menu's attract mode).
 func _achievements_begin(m: Dictionary) -> void:

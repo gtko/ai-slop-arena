@@ -12,13 +12,21 @@ class FakeSteam:
 	var stored := 0
 	var rich: Dictionary = {}
 	var callbacks := 0
+	var held_stats: Dictionary = {}      # what Steam already knows (another PC)
+	var held_achieved: Array = []
+	var set_calls := 0
 	func restartAppIfNecessary(_id: int) -> bool:
 		return false
 	func steamInitEx(_id: int) -> Dictionary:
 		return {"status": init_status, "verbal": "fake"}
 	func run_callbacks() -> void:
 		callbacks += 1
+	func getStatInt(k: String) -> int:
+		return int(held_stats.get(k, 0))
+	func getAchievement(id: String) -> Dictionary:
+		return {"ret": true, "achieved": held_achieved.has(id)}
 	func setAchievement(id: String) -> bool:
+		set_calls += 1
 		if not achieved.has(id):
 			achieved.append(id)
 		return true
@@ -68,6 +76,8 @@ func _init() -> void:
 	check(joined == ["AB12"], "join_game_requested -> join_room(AB12) (got %s)" % [joined])
 	fake.join_game_requested.emit(1, "garbage")
 	check(joined.size() == 1, "a connect string without a room is ignored")
+	fake.join_game_requested.emit(1, "-- --room=ABCDEFGH")
+	check(joined.size() == 1, "a connect string with a too long room code is ignored")
 	s.set_presence("lobby", "AB12")
 	check(fake.rich.get("steam_display") == "#Status_Lobby" and fake.rich.get("connect") == "-- --room=AB12", "presence in a private room")
 	s.set_presence("menu", "")
@@ -86,6 +96,8 @@ func _init() -> void:
 	Achievements.on_event({"e": "kill", "id": "p3", "by": me, "sup": 1}, me)
 	Achievements.on_event({"e": "kill", "id": "p4", "by": "p9"}, me)   # someone else's K.O.
 	Achievements.on_event({"e": "kill", "id": me, "by": me}, me)       # your own fall
+	Achievements.on_event({"e": "kill", "id": "p6", "by": null}, me)   # a fall / the gas: the server sends by: null
+	Achievements.on_event({"e": "crate", "i": 9, "j": 9, "by": null}, me)
 	check(fake.achieved.has("FIRST_KO") and fake.achieved.has("SUPER_KO"), "FIRST_KO + SUPER_KO")
 	check(not fake.achieved.has("RAMPAGE"), "two K.O.s are no rampage (own fall / others do not count)")
 	Achievements.on_event({"e": "kill", "id": "p5", "by": me}, me)
@@ -96,6 +108,10 @@ func _init() -> void:
 	check(not fake.achieved.has("POWER_HUNGRY"), "7 cubes are not enough")
 	Achievements.cubes(8)
 	check(fake.achieved.has("POWER_HUNGRY"), "POWER_HUNGRY at 8 cubes")
+	var calls := fake.set_calls
+	for i in 30:   # held every snapshot: Steam is asked once
+		Achievements.cubes(9)
+	check(fake.set_calls == calls, "an unlocked achievement is not sent again every snapshot")
 	Achievements.result(1, true, true)
 	for id in ["FIRST_WIN", "PODIUM", "NIGHT_OWL", "ONLINE_WIN"]:
 		check(fake.achieved.has(id), id)
@@ -118,6 +134,21 @@ func _init() -> void:
 	root.add_child(s2)
 	check(s2.start(late), "second sink")
 	check(late.achieved.has("FIRST_WIN") and int(late.stats.get("WINS", 0)) == 1, "offline progress re-synced to a new sink")
+
+	# Steam knows more than this device (another PC): pushing ours never lowers it
+	MetaProfile.P = MetaProfile._blank()
+	Achievements.sinks.clear()
+	var other := FakeSteam.new()
+	other.held_stats = {"KOS": 90, "WINS": 4, "MAPS_MASK": 0b11, "WINS_MASK": 0b100}
+	other.held_achieved = ["FIRST_KO"]
+	var s3 := SteamPlatform.new()
+	root.add_child(s3)
+	check(s3.start(other), "third sink")
+	check(Achievements.is_unlocked("FIRST_KO"), "an achievement Steam has is kept locally")
+	Achievements.match_start(map_key, brawler, false, 1, false)
+	check(int(other.stats.get("KOS", 0)) == 90 and int(other.stats.get("WINS", 0)) == 4, "Steam's counters are not lowered")
+	check(int(other.stats.get("MAPS_MASK", 0)) & 0b11 == 0b11 and int(other.stats.get("WINS_MASK", 0)) == 0b100, "Steam's masks are or-ed")
+	Achievements.end()
 
 	# unlocks a day-one 25-match veteran / world tour
 	MetaProfile.P = MetaProfile._blank()

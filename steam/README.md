@@ -30,7 +30,10 @@ It downloads GodotSteam 4.23.2 into `godot/addons/godotsteam/` (git-ignored) and
 redistributables over the plugin's. Then open `godot/` in Godot 4.5 with Steam running and the game
 connects to Steam as app 480. Only the Steam presets pack the plugin (`addons/godotsteam/*` is excluded
 from the others; Epic builds never start Steam). CI runs the same script without `--sdk`: the plugin zip's
-own redistributables are used, and a warning says so when it has none.
+own redistributables are used, and a warning says so when it has none. The plugin zip is pinned by its
+sha256 (`SHA256` in `scripts/fetch-godotsteam.mjs`, empty until the first download was checked: the script
+prints the hash and stops, `--allow-unpinned` goes on anyway for a local try). The release workflow fails
+when the Steam exports lack the `steam_api` libraries, and ships the whole export folder.
 
 Test checks: `node tests/steam.test.mjs` (in `npm test`) for the shared data, and
 `godot --headless --path godot --script tools/test_steam.gd` for the achievements rules and the Steam

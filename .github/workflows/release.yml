@@ -81,10 +81,14 @@ jobs:
       - name: Package
         run: |
           mkdir -p out
-          (cd godot/build/windows-steam && zip -qr "$GITHUB_WORKSPACE/out/AISlopArena-steam-windows.zip" AISlopArena.exe AISlopArena.pck)
+          # Steam: the whole export folder (exe, pck and the GodotSteam + steam_api libraries Godot puts beside them)
+          for d in windows-steam linux-steam; do
+            find godot/build/$d -name '*steam_api*' | grep -q . || { echo "::error::GodotSteam / Steamworks libraries missing from the $d export (npm run godot:steam, scripts/fetch-godotsteam.mjs)"; exit 1; }
+          done
+          (cd godot/build/windows-steam && zip -qr "$GITHUB_WORKSPACE/out/AISlopArena-steam-windows.zip" .)
           (cd godot/build/windows-epic && zip -qr "$GITHUB_WORKSPACE/out/AISlopArena-epic-windows.zip" AISlopArena.exe AISlopArena.pck)
           chmod +x godot/build/linux-steam/AISlopArena.x86_64
-          tar -czf out/AISlopArena-steam-linux.tar.gz -C godot/build/linux-steam AISlopArena.x86_64 AISlopArena.pck
+          tar -czf out/AISlopArena-steam-linux.tar.gz -C godot/build/linux-steam .
           # the Godot web export alone (index.html at the root), to self-host; the site is deployed by wrangler
           (cd godot/build/web && zip -qr "$GITHUB_WORKSPACE/out/AISlopArena-web.zip" .)
           tar -czf ios-xcode.tar.gz -C godot/build ios

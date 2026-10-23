@@ -15,7 +15,7 @@ signal join_room(code: String)
 const APP_DATA := "res://data/steam.json"   # {"appId": n}, written by tools/export-data.mjs from package.json steam.appId
 const SPACEWAR := 480                       # Valve's public test app: our achievements do not exist there
 const STORE_DELAY := 1.5                    # stats go to Steam in one batch this long after the last change
-const ROOM_RE := "room=([A-Za-z0-9]{4,6})"
+const ROOM_RE := "--room=([A-Za-z0-9]{4,6})"
 
 var api: Object = null       # the "Steam" singleton (or a stand-in in tests)
 var ready_ok := false
@@ -48,6 +48,15 @@ func start(stand_in: Object = null) -> bool:
 		return false
 	_langs = _read_json("res://data/i18n/steam_langs.json")
 	api.join_game_requested.connect(_on_join_game_requested)
+	# Steam may know more than this device (another PC, a deleted profile): merge before pushing ours
+	var remote := {}
+	for k in Achievements.STATS:
+		remote[k] = int(api.getStatInt(k))
+	var earned: Array = []
+	for id in Achievements.IDS:
+		if bool(api.getAchievement(id).get("achieved", false)):
+			earned.append(id)
+	Achievements.merge_remote(remote, earned)
 	Achievements.connect_sink(self)   # re-sends what was earned offline
 	return true
 
@@ -114,7 +123,7 @@ static func launch_room() -> String:
 	return _room_in(OS.get_cmdline_user_args() + OS.get_cmdline_args())
 
 static func _room_in(args: PackedStringArray) -> String:
-	var re := RegEx.create_from_string("^--" + ROOM_RE + "$")
+	var re := RegEx.create_from_string("^" + ROOM_RE + "$")
 	for a in args:
 		var m := re.search(a)
 		if m:
@@ -122,7 +131,7 @@ static func _room_in(args: PackedStringArray) -> String:
 	return ""
 
 func _on_join_game_requested(_friend: int, connect: String) -> void:
-	var m := RegEx.create_from_string(ROOM_RE).search(connect)
+	var m := RegEx.create_from_string(ROOM_RE + "$").search(connect)
 	if m:
 		join_room.emit(m.get_string(1).to_upper())
 

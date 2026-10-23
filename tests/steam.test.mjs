@@ -29,6 +29,14 @@ test('steam_langs.json maps every Steam language name to a game language (node g
   for (const [code, , steam] of rows) assert.equal(map[steam], code, steam);
 });
 
+test('map and brawler keys are append-only: MAPS_MASK / WINS_MASK bits follow the data order', () => {
+  const keys = f => Object.keys(json(f));
+  const maps = ['oasis', 'dunes', 'grove', 'frost', 'isles', 'marsh'];
+  const brawlers = ['blaster', 'gunslinger', 'bomber', 'frostbite', 'volt', 'kappa', 'pipchomp', 'mochi'];
+  assert.deepEqual(keys('godot/data/maps.json').slice(0, maps.length), maps);
+  assert.deepEqual(keys('godot/data/brawlers.json').slice(0, brawlers.length), brawlers);
+});
+
 test('rich presence: every token steam_platform.gd can set is localised in steam/rich_presence.vdf', () => {
   const vdf = read('steam/rich_presence.vdf');
   for (const what of ['menu', 'queue', 'lobby', 'match']) assert.ok(vdf.includes(`"#Status_${what[0].toUpperCase()}${what.slice(1)}"`), what);
