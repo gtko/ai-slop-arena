@@ -25,3 +25,6 @@ godot/tools/node_modules/
 godot/android/
 godot/build/*
 !godot/build/.gdignore
+# GodotSteam GDExtension + the Steamworks redistributables (SDK licence, public repo): npm run godot:steam
+godot/addons/godotsteam/
+godot/steam_appid.txt
