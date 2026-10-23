@@ -20,6 +20,8 @@ const ROOM_RE := "--room=([A-Za-z0-9]{4,6})"
 var api: Object = null       # the "Steam" singleton (or a stand-in in tests)
 var ready_ok := false
 var app_id := SPACEWAR
+var _syncing := false        # waiting for Steam's stats before merging with ours (_try_sync)
+var _sync_wait := 0.0
 var _dirty := false
 var _store_in := 0.0
 var _langs: Dictionary = {}  # Steam language name -> game language code
@@ -48,13 +50,21 @@ func start(stand_in: Object = null) -> bool:
 		return false
 	_langs = _read_json("res://data/i18n/steam_langs.json")
 	api.join_game_requested.connect(_on_join_game_requested)
-	# Steam may know more than this device (another PC, a deleted profile): merge before pushing ours
+	_syncing = not _try_sync()
+	return true
+
+# Steam may know more than this device (another PC, a deleted profile): merge before pushing ours.
+# false = Steam has not delivered this user's stats yet (getAchievement answers ret:false): try again later.
+func _try_sync() -> bool:
 	var remote := {}
 	for k in Achievements.STATS:
 		remote[k] = int(api.getStatInt(k))
 	var earned: Array = []
 	for id in Achievements.IDS:
-		if bool(api.getAchievement(id).get("achieved", false)):
+		var r: Dictionary = api.getAchievement(id)
+		if not bool(r.get("ret", false)):
+			return false
+		if bool(r.get("achieved", false)):
 			earned.append(id)
 	Achievements.merge_remote(remote, earned)
 	Achievements.connect_sink(self)   # re-sends what was earned offline
@@ -64,6 +74,13 @@ func _process(delta: float) -> void:
 	if not ready_ok:
 		return
 	api.run_callbacks()
+	if _syncing:
+		_sync_wait += delta
+		if fmod(_sync_wait, 0.5) < delta:
+			_syncing = not _try_sync()
+		if _syncing and _sync_wait > 10.0:
+			_syncing = false
+			push_warning("Steam: stats never arrived, this session's progress is kept locally only")
 	if _dirty:
 		_store_in -= delta
 		if _store_in <= 0.0:

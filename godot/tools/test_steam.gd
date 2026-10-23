@@ -15,6 +15,7 @@ class FakeSteam:
 	var held_stats: Dictionary = {}      # what Steam already knows (another PC)
 	var held_achieved: Array = []
 	var set_calls := 0
+	var stats_ready := true              # false: Steam has not delivered the user's stats yet
 	func restartAppIfNecessary(_id: int) -> bool:
 		return false
 	func steamInitEx(_id: int) -> Dictionary:
@@ -24,7 +25,7 @@ class FakeSteam:
 	func getStatInt(k: String) -> int:
 		return int(held_stats.get(k, 0))
 	func getAchievement(id: String) -> Dictionary:
-		return {"ret": true, "achieved": held_achieved.has(id)}
+		return {"ret": stats_ready, "achieved": held_achieved.has(id) and stats_ready}
 	func setAchievement(id: String) -> bool:
 		set_calls += 1
 		if not achieved.has(id):
@@ -149,6 +150,20 @@ func _init() -> void:
 	check(int(other.stats.get("KOS", 0)) == 90 and int(other.stats.get("WINS", 0)) == 4, "Steam's counters are not lowered")
 	check(int(other.stats.get("MAPS_MASK", 0)) & 0b11 == 0b11 and int(other.stats.get("WINS_MASK", 0)) == 0b100, "Steam's masks are or-ed")
 	Achievements.end()
+
+	# Steam's stats not delivered yet: nothing is pushed (it would lower them) until they are
+	MetaProfile.P = MetaProfile._blank()
+	Achievements.sinks.clear()
+	var slow := FakeSteam.new()
+	slow.stats_ready = false
+	slow.held_stats = {"KOS": 50}
+	var s4 := SteamPlatform.new()
+	root.add_child(s4)
+	check(s4.start(slow), "fourth sink")
+	check(Achievements.sinks.is_empty(), "no sink while Steam's stats are missing")
+	slow.stats_ready = true
+	s4._process(0.6)
+	check(Achievements.sinks.size() == 1 and int(slow.stats.get("KOS", 0)) == 50, "synced once the stats are there, without lowering them")
 
 	# unlocks a day-one 25-match veteran / world tour
 	MetaProfile.P = MetaProfile._blank()
