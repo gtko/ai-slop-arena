@@ -1,0 +1,11 @@
+"lang"
+{
+	"Language"	"english"
+	"Tokens"
+	{
+		"#Status_Menu"	"In the menu"
+		"#Status_Queue"	"Looking for a match"
+		"#Status_Lobby"	"In a lobby"
+		"#Status_Match"	"In a match"
+	}
+}

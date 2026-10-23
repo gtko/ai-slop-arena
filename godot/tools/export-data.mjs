@@ -28,6 +28,10 @@ const start = src.indexOf('export const TYPES = {');
 const end = src.indexOf('\n};', start);
 const types = new Function(`return ${src.slice(start + 'export const TYPES = '.length, end + 3)}`)();
 for (const t of Object.values(types)) delete t.desc;
+// the Steam app id (package.json steam.appId, 480 = Valve's Spacewar test app until the real one exists)
+const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+writeFileSync(new URL('../data/steam.json', import.meta.url), JSON.stringify({ appId: pkg.steam.appId }));
+
 writeFileSync(new URL('../data/brawlers.json', import.meta.url), JSON.stringify(types, null, 1));
 
 // Cosmetics: src/cosmetics.js is pure data (skins with their recolours, trails, K.O. effects, the `cos`

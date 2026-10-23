@@ -20,6 +20,9 @@ for (const f of readdirSync(new URL('../../src/i18n/locales/', import.meta.url))
   codes.push(code);
 }
 // the language list for the settings screen: src/i18n/langs.json ([code, native name, Steam name])
-const langs = JSON.parse(readFileSync(new URL('../../src/i18n/langs.json', import.meta.url), 'utf8')).map(([code, name]) => ({ code, name }));
+const langRows = JSON.parse(readFileSync(new URL('../../src/i18n/langs.json', import.meta.url), 'utf8'));
+const langs = langRows.map(([code, name]) => ({ code, name }));
 writeFileSync(new URL('langs.json', out), JSON.stringify(langs));
+// Steam's language name (getCurrentGameLanguage) -> our code, for steam_platform.gd
+writeFileSync(new URL('steam_langs.json', out), JSON.stringify(Object.fromEntries(langRows.map(([code, , steam]) => [steam, code]))));
 console.log(`i18n: en + ${codes.length} locales, ${langs.length} languages, ${Object.keys(en).length + Object.keys(extra.en).length} keys`);
