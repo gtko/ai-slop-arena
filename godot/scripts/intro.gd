@@ -181,7 +181,7 @@ func _build_title() -> void:
 		var w: float = widths[i]
 		if c == " ":
 			if i > 3:
-				gold = false   # "ARENA" is white
+				gold = false   # "ROYALE" is white
 			x += w + track
 			continue
 		var lb := _label(c, GOLD if gold else WHITE, FS, 44)

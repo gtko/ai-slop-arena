@@ -115,7 +115,7 @@ ffmpeg -y -ss 0.5 -t 3 -i $S/trailer.mp4 -vf "fps=10,scale=616:-1:flags=lanczos,
 
 `python art-src/make_steam_trailer.py` renders `steam/store/trailer.mp4` (1080p30 H.264 + AAC) from the
 frames `.ai3d/capture/trailer/f*.jpg` recorded by `src/trailer.js`, with `battle.mp3` starting so that
-its drop (11.15 s into the track) lands on the logo: "AI", "SLOP", "ARENA" slam in on the music's
+its drop (11.15 s into the track) lands on the logo: "SHELF", "ROYALE" slam in on the music's
 accents, the logo comes back at the end. Record new frames first if the game changed visually.
 Steam wants gameplay from the first second (the logo sits over gameplay, no title card) and 30 to 60 s
 ideally; the current one is 25 s.
