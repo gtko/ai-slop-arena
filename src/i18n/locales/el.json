@@ -163,7 +163,7 @@
   "err.notFound": "Δεν βρέθηκε δωμάτιο {code}",
   "err.noAnswer": "Ο οικοδεσπότης δεν απάντησε",
   "err.left": "Έφυγες από το δωμάτιο",
-  "err.notOurs": "Αυτό δεν είναι δωμάτιο του AI SLOP ARENA",
+  "err.notOurs": "Αυτό δεν είναι δωμάτιο του SHELF ROYALE",
   "err.noSteam": "Το Steam δεν εκτελείται",
   "pause.title": "ΠΑΥΣΗ",
   "pause.resume": "ΣΥΝΕΧΕΙΑ",

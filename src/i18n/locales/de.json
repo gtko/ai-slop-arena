@@ -163,7 +163,7 @@
   "err.notFound": "Kein Raum {code} gefunden",
   "err.noAnswer": "Der Host hat nicht geantwortet",
   "err.left": "Raum verlassen",
-  "err.notOurs": "Das ist kein AI SLOP ARENA-Raum",
+  "err.notOurs": "Das ist kein SHELF ROYALE-Raum",
   "err.noSteam": "Steam läuft nicht",
   "pause.title": "PAUSE",
   "pause.resume": "WEITER",

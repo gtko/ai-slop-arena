@@ -245,7 +245,7 @@ export default {
   'err.notFound': 'No room {code} found',
   'err.noAnswer': 'The host did not answer',
   'err.left': 'Left the room',
-  'err.notOurs': 'That is not an AI SLOP ARENA room',
+  'err.notOurs': 'That is not an SHELF ROYALE room',
   'err.noSteam': 'Steam is not running',
 
   // pause

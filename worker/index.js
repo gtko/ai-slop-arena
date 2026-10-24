@@ -6,7 +6,7 @@ import { rate, tierOf, pickGroup, partyMmr, botLevelFor, START_MMR } from './ran
 import { manifestFor, FROZEN_APP_BUNDLE } from '../src/updates.js';
 import { isGodotPath, serveGodot, isPlayPath, redirectToGodot } from './godot-web.js';
 
-// AI SLOP ARENA — online server.
+// SHELF ROYALE — online server.
 //
 // The Worker serves the built site/game from static assets and routes:
 //   /ws/<ROOM>   one Room Durable Object per room: it RUNS the match (src/server/sim.js, the same

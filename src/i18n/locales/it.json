@@ -163,7 +163,7 @@
   "err.notFound": "Nessuna stanza {code} trovata",
   "err.noAnswer": "L'host non ha risposto",
   "err.left": "Hai lasciato la stanza",
-  "err.notOurs": "Questa non è una stanza di AI SLOP ARENA",
+  "err.notOurs": "Questa non è una stanza di SHELF ROYALE",
   "err.noSteam": "Steam non è in esecuzione",
   "pause.title": "PAUSA",
   "pause.resume": "RIPRENDI",

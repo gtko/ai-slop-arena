@@ -163,7 +163,7 @@
   "err.notFound": "Nincs {code} kódú szoba",
   "err.noAnswer": "A házigazda nem válaszolt",
   "err.left": "Kiléptél a szobából",
-  "err.notOurs": "Ez nem AI SLOP ARENA szoba",
+  "err.notOurs": "Ez nem SHELF ROYALE szoba",
   "err.noSteam": "A Steam nem fut",
   "pause.title": "SZÜNET",
   "pause.resume": "FOLYTATÁS",

@@ -5,7 +5,7 @@ De lipit în Steamworks (Store Page Admin > Description), la limba "Română".
 ## Numele jocului
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## Descriere scurtă (max. 300 de caractere)

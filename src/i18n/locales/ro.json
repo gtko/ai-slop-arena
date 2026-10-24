@@ -163,7 +163,7 @@
   "err.notFound": "Camera {code} nu a fost găsită",
   "err.noAnswer": "Gazda nu a răspuns",
   "err.left": "Ai părăsit camera",
-  "err.notOurs": "Aceasta nu e o cameră AI SLOP ARENA",
+  "err.notOurs": "Aceasta nu e o cameră SHELF ROYALE",
   "err.noSteam": "Steam nu rulează",
   "pause.title": "PAUZĂ",
   "pause.resume": "CONTINUĂ",

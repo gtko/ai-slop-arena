@@ -5,7 +5,7 @@ Vložte do Steamworks (Store Page Admin > Description) pod jazykem "Čeština".
 ## Název hry
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## Krátký popis (max. 300 znaků)

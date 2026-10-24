@@ -1,7 +1,7 @@
 extends CanvasLayer
 # Boot intro of the native builds (Windows / Linux / Android), the web loader's gag
 # (godot/web_shell) played with the real figurines: Blaster runs in and lobs seeds at the
-# AI SLOP ARENA title, each hit letter wobbles, drops and bounces on the ground; Gunslinger runs in,
+# SHELF ROYALE title, each hit letter wobbles, drops and bounces on the ground; Gunslinger runs in,
 # zaps him, Blaster panics and runs off; the overlay fades on the menu (built behind it).
 # ~3.6 s, once per launch (main.gd adds it at the end of _ready), skipped by any key / click / tap /
 # pad button. Not on web (the HTML shell already plays it) nor under the --autotest / --menushot /
@@ -15,7 +15,7 @@ const INK := Color("0d0a14")
 const BG := Color("16121f")
 const GOLD := Color("ffc93a")
 const WHITE := Color("f4f0ff")
-const TITLE := "AI SLOP ARENA"
+const TITLE := "SHELF ROYALE"
 const FS := 150                 # Label3D font size / pixel size: ~0.9 m tall capitals
 const PS := 0.0058
 const TITLE_Y := 4.05

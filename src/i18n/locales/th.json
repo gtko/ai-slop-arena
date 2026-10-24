@@ -163,7 +163,7 @@
   "err.notFound": "ไม่พบห้อง {code}",
   "err.noAnswer": "โฮสต์ไม่ตอบสนอง",
   "err.left": "ออกจากห้องแล้ว",
-  "err.notOurs": "นี่ไม่ใช่ห้องของ AI SLOP ARENA",
+  "err.notOurs": "นี่ไม่ใช่ห้องของ SHELF ROYALE",
   "err.noSteam": "Steam ไม่ได้เปิดอยู่",
   "pause.title": "หยุดชั่วคราว",
   "pause.resume": "เล่นต่อ",

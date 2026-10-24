@@ -163,7 +163,7 @@
   "err.notFound": "Room {code} tidak ditemukan",
   "err.noAnswer": "Host tidak merespons",
   "err.left": "Keluar dari room",
-  "err.notOurs": "Itu bukan room AI SLOP ARENA",
+  "err.notOurs": "Itu bukan room SHELF ROYALE",
   "err.noSteam": "Steam tidak berjalan",
   "pause.title": "JEDA",
   "pause.resume": "LANJUT",

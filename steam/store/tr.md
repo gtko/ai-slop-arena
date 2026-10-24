@@ -5,7 +5,7 @@ Steamworks'te (Store Page Admin > Description) "Türkçe" (Turkish) dili altına
 ## Oyunun adı
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## Kısa açıklama (en fazla 300 karakter)

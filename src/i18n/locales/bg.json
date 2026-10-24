@@ -163,7 +163,7 @@
   "err.notFound": "Няма стая {code}",
   "err.noAnswer": "Домакинът не отговори",
   "err.left": "Напусна стаята",
-  "err.notOurs": "Това не е стая на AI SLOP ARENA",
+  "err.notOurs": "Това не е стая на SHELF ROYALE",
   "err.noSteam": "Steam не е стартиран",
   "pause.title": "ПАУЗА",
   "pause.resume": "ПРОДЪЛЖИ",

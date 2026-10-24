@@ -163,7 +163,7 @@
   "err.notFound": "Místnost {code} nenalezena",
   "err.noAnswer": "Hostitel neodpověděl",
   "err.left": "Opustil jsi místnost",
-  "err.notOurs": "Tohle není místnost AI SLOP ARENA",
+  "err.notOurs": "Tohle není místnost SHELF ROYALE",
   "err.noSteam": "Steam není spuštěný",
   "pause.title": "PAUZA",
   "pause.resume": "POKRAČOVAT",

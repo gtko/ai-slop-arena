@@ -5,7 +5,7 @@ Liitä jokainen lohko vastaavaan kenttään Steamworksissa (Store Page Admin > D
 ## Pelin nimi
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## Lyhyt kuvaus (enintään 300 merkkiä)

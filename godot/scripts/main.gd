@@ -77,7 +77,7 @@ func _ready() -> void:
 	Fonts.setup()   # the bundled emoji font as a fallback of every UI font (before any copy is made)
 	# the window / browser tab title (config/name keeps "(Godot)": it names the user:// folder). On the
 	# root Window, not DisplayServer: the Window rewrites its title on every locale change.
-	get_window().title = "AI SLOP ARENA"
+	get_window().title = "SHELF ROYALE"
 	Settings.load_all()
 	Quality.renderer_boot_check()   # Android: a renderer still on trial falls back by itself after a crash
 	LegacyImport.run()   # web, first launch: the old three.js client's saves (localStorage) -> user://

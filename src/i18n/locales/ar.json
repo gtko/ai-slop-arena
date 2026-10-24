@@ -163,7 +163,7 @@
   "err.notFound": "لا توجد غرفة بالرمز {code}",
   "err.noAnswer": "المضيف لم يستجب",
   "err.left": "غادرت الغرفة",
-  "err.notOurs": "هذه ليست غرفة AI SLOP ARENA",
+  "err.notOurs": "هذه ليست غرفة SHELF ROYALE",
   "err.noSteam": "Steam غير مُشغَّل",
   "pause.title": "متوقف مؤقتًا",
   "pause.resume": "استئناف",

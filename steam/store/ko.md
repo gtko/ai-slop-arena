@@ -5,7 +5,7 @@ Steamworks(Store Page Admin > Description)에서 "한국어"(Korean) 언어에 �
 ## 게임 이름
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## 짧은 설명 (최대 300자)

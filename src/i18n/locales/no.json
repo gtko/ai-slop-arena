@@ -163,7 +163,7 @@
   "err.notFound": "Fant ikke rom {code}",
   "err.noAnswer": "Verten svarte ikke",
   "err.left": "Forlot rommet",
-  "err.notOurs": "Det er ikke et AI SLOP ARENA-rom",
+  "err.notOurs": "Det er ikke et SHELF ROYALE-rom",
   "err.noSteam": "Steam kjører ikke",
   "pause.title": "PAUSE",
   "pause.resume": "FORTSETT",

@@ -5,7 +5,7 @@ Da incollare in Steamworks (Store Page Admin > Description), lingua "Italiano".
 ## Nome del gioco
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## Descrizione breve (max 300 caratteri)

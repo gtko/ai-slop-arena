@@ -1,9 +1,9 @@
 ---
 name: release
-description: Ship a new version of AI SLOP ARENA end to end - tests, version bump, graphic release notes, Cloudflare deploy (site, server, Godot web build), git tag, GitHub release with every Godot platform build (Steam, Epic, Android, iOS, web), then verification. Use when the user asks to release, publish a version, "faire une release", tag vX.Y.Z or ship to GitHub.
+description: Ship a new version of SHELF ROYALE end to end - tests, version bump, graphic release notes, Cloudflare deploy (site, server, Godot web build), git tag, GitHub release with every Godot platform build (Steam, Epic, Android, iOS, web), then verification. Use when the user asks to release, publish a version, "faire une release", tag vX.Y.Z or ship to GitHub.
 ---
 
-# Release AI SLOP ARENA
+# Release SHELF ROYALE
 
 A release = the website/server and the Godot web build deployed on Cloudflare + a git tag `vX.Y.Z`
 whose GitHub Actions run (`.github/workflows/release.yml`, the Godot jobs) exports every platform from
@@ -109,7 +109,7 @@ for i in 1 2 3 4 5 6; do if npm run check:prod > "$TEMP/prod.log" 2>&1; then bre
 
 ```bash
 git push origin main
-git tag -a vX.Y.Z -m "AI SLOP ARENA X.Y.Z: <one-line summary>"
+git tag -a vX.Y.Z -m "SHELF ROYALE X.Y.Z: <one-line summary>"
 git push origin vX.Y.Z
 ```
 

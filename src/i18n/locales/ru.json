@@ -163,7 +163,7 @@
   "err.notFound": "Комната {code} не найдена",
   "err.noAnswer": "Хост не отвечает",
   "err.left": "Ты покинул комнату",
-  "err.notOurs": "Это не комната AI SLOP ARENA",
+  "err.notOurs": "Это не комната SHELF ROYALE",
   "err.noSteam": "Steam не запущен",
   "pause.title": "ПАУЗА",
   "pause.resume": "ПРОДОЛЖИТЬ",

@@ -1,4 +1,4 @@
-# AI SLOP ARENA — Final roadmap (v0.11 → v0.16, then Later)
+# SHELF ROYALE — Final roadmap (v0.11 → v0.16, then Later)
 
 Gameplay roadmap from a 5-iteration brainstorm between two gameplay specialists: MAYA (systems) and KENJI (feel, content, art).
 The iterations are in [brainstorm/](brainstorm/); backlog IDs refer to [iter4_maya.md](brainstorm/iter4_maya.md) §1.

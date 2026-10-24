@@ -28,7 +28,7 @@ func _build() -> void:
 	var w := minf(320.0 if phone else 360.0, W - 28.0)
 	var col := _box(7 if phone else 12, true)
 	col.custom_minimum_size.x = w
-	var t := _title("AI SLOP ARENA" if home else I18n.t("pause.title"), 40 if phone else 72, Color.WHITE, 4.0 if phone else 5.0, 4.0 if phone else 6.0)
+	var t := _title("SHELF ROYALE" if home else I18n.t("pause.title"), 40 if phone else 72, Color.WHITE, 4.0 if phone else 5.0, 4.0 if phone else 6.0)
 	var ta := UiKit.anim(t)
 	col.add_child(ta)
 	col.add_child(_gap(2 if phone else 8))

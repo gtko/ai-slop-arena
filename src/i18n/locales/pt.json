@@ -163,7 +163,7 @@
   "err.notFound": "Sala {code} não encontrada",
   "err.noAnswer": "O anfitrião não respondeu",
   "err.left": "Saíste da sala",
-  "err.notOurs": "Isto não é uma sala do AI SLOP ARENA",
+  "err.notOurs": "Isto não é uma sala do SHELF ROYALE",
   "err.noSteam": "O Steam não está em execução",
   "pause.title": "PAUSA",
   "pause.resume": "CONTINUAR",

@@ -26,7 +26,7 @@ Contact: gtux.prog@gmail.com. Category: Game > Action. Free, no ads, no in-app p
 **App name** (30 max)
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 **Short description** (80 max)
@@ -74,7 +74,7 @@ Made with AI: the code, art, 3D models, music and sounds were generated with AI 
 **Nom de l'application**
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 **Description courte** (80 max.)

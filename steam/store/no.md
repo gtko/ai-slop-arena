@@ -5,7 +5,7 @@ Lim inn hver blokk i tilsvarende felt i Steamworks (Store Page Admin > Descripti
 ## Spillets navn
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## Kort beskrivelse (maks. 300 tegn)

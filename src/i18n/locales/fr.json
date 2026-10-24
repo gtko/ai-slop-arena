@@ -163,7 +163,7 @@
   "err.notFound": "Aucun salon {code} trouvé",
   "err.noAnswer": "L'hôte n'a pas répondu",
   "err.left": "Tu as quitté le salon",
-  "err.notOurs": "Ce n'est pas un salon AI SLOP ARENA",
+  "err.notOurs": "Ce n'est pas un salon SHELF ROYALE",
   "err.noSteam": "Steam n'est pas lancé",
   "pause.title": "PAUSE",
   "pause.resume": "REPRENDRE",

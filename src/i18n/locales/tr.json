@@ -163,7 +163,7 @@
   "err.notFound": "{code} odası bulunamadı",
   "err.noAnswer": "Kurucu yanıt vermedi",
   "err.left": "Odadan ayrıldın",
-  "err.notOurs": "Bu bir AI SLOP ARENA odası değil",
+  "err.notOurs": "Bu bir SHELF ROYALE odası değil",
   "err.noSteam": "Steam çalışmıyor",
   "pause.title": "DURAKLATILDI",
   "pause.resume": "DEVAM ET",
