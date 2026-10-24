@@ -1,8 +1,8 @@
 "AppBuild"
 {
 	"AppID"	"480"	// your app id
-	"Desc"	"AI SLOP ARENA desktop build"
-	"ContentRoot"	"..\release\win-unpacked\"
+	"Desc"	"AI SLOP ARENA Windows build"
+	"ContentRoot"	".\build\windows\"	// the unzipped AISlopArena-steam-windows.zip (exe, pck, addons)
 	"BuildOutput"	".\output\"
 	"Depots"
 	{

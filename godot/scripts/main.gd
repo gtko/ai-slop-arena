@@ -22,6 +22,7 @@ enum State { MENU, LOBBY, LOADING, COUNTDOWN, PLAYING, OVER, QUEUE }
 var net: NetClient
 var mm: MatchmakingClient
 var profile: Profile
+var steam: SteamPlatform           # Steam: achievements, language, rich presence, invites (steam_platform.gd); inert without it
 var state := State.MENU
 var arena: Arena
 var fighters: Dictionary = {}     # id -> Fighter
@@ -91,7 +92,12 @@ func _ready() -> void:
 		elif a.begins_with("--server="):     # `-- --server=ws://...` / debug web `?server=ws://...`: a test server (not saved)
 			Settings.server = a.substr(9).uri_decode()
 			Settings.server_override = true
-	I18n.use(Settings.lang if Settings.lang != "" else I18n.detect())
+	steam = SteamPlatform.new()
+	add_child(steam)
+	steam.start()   # false (and every call a no-op) where Steam is absent: web, mobile, Epic, Steam not running
+	steam.join_room.connect(_on_steam_join)
+	var steam_lang := steam.language_code()   # the language picked in Steam, until Options > Language says otherwise
+	I18n.use(Settings.lang if Settings.lang != "" else (steam_lang if steam_lang != "" else I18n.detect()))
 	Settings.apply_audio()
 	audio = AudioManager.new()   # AUDIO HOOK
 	add_child(audio)
@@ -124,6 +130,7 @@ func _ready() -> void:
 			if a.begins_with("--menushot="):
 				_menushot(a.substr(11), args)
 		_join_invite()
+		_join_steam_invite()
 
 # Web invite links (/play?room=CODE, redirected to /godot/<v>/?room=CODE): straight into that room.
 # Release builds too (DebugArgs only reads the URL on debug ones): only a room code is taken from it.
@@ -137,6 +144,39 @@ func _join_invite() -> void:
 		# drop ?room= from the address bar: a reload (or the loader's Reload button) must not drag you back
 		JavaScriptBridge.eval("history.replaceState(null, '', location.pathname)")
 		_open_room(code, false)
+
+# Steam: started by a friend's invite (`-- --room=CODE`, the connect string of our rich presence).
+func _join_steam_invite() -> void:
+	var code := SteamPlatform.launch_room()
+	if code != "" and steam.ready_ok:
+		_open_room(code, false)
+
+# Steam: a friend chose "Join game" while we run. Not while a match is going: it would drop us from it.
+func _on_steam_join(code: String) -> void:
+	if state == State.LOADING or state == State.COUNTDOWN or state == State.PLAYING or code == _room_code:
+		return
+	if state != State.MENU:
+		_leave_room()   # (lobby, queue, result screen) through _to_menu: cancels the queue and clears the match
+	_open_room(code, false)
+
+# Steam rich presence: what we are doing, and the private room friends can join.
+func _steam_presence() -> void:
+	if steam == null:
+		return
+	var what := "menu"
+	match state:
+		State.QUEUE: what = "queue"
+		State.LOBBY: what = "lobby"
+		State.LOADING, State.COUNTDOWN, State.PLAYING, State.OVER: what = "match"
+	steam.set_presence(what, _room_code if what == "lobby" and not _room_matchmade and not _vs_bots else "")   # joinable while waiting in a private room only
+
+# The local player's real match is built: the achievements' counters start (never the menu's attract mode).
+func _achievements_begin(m: Dictionary) -> void:
+	var humans := 0
+	for row in m.get("roster", []):
+		if row.get("human", false):
+			humans += 1
+	Achievements.match_start(String(m.get("map", "")), me.type.key if me != null else Settings.brawler, not _vs_bots, humans, not _room_matchmade)
 
 # Screenshot of the menu (or one of its overlays) for layout checks:
 #   godot --path godot -- --menushot=/tmp/menu.png [--overlay=settings|room|queue] [--brawler=volt]
@@ -598,6 +638,7 @@ func _random_code() -> String:
 
 func _set_state(s: State) -> void:
 	state = s
+	_steam_presence()
 	if home_menu and s != State.MENU:
 		home_menu.visible = false   # (a queue match, an invite) the home Escape menu never covers a room or a match
 	_show_screen()
@@ -724,6 +765,7 @@ func _clear_match() -> void:
 	for f in fighters.values():
 		f.queue_free()
 	fighters.clear()
+	Achievements.end()
 	for p in projectiles:
 		p.node.queue_free()
 	projectiles.clear()
@@ -769,7 +811,9 @@ func _show_result() -> void:
 		var st: Dictionary = result._stats.get(String(me.id), {})
 		var place := 1 if won else maxi(_my_place, 1)
 		# Duo: 1st-4th team; progression counts them like 1st, 3rd, 5th and 7th of 8 (main.js onResult)
-		MetaProfile.award_match(place * 2 - 1 if result.duo else place, int(st.get("kos", 0)), won, Settings.brawler, _vs_bots)
+		var rank := place * 2 - 1 if result.duo else place
+		MetaProfile.award_match(rank, int(st.get("kos", 0)), won, Settings.brawler, _vs_bots)
+		Achievements.result(rank, won, arena != null and arena.lighting != null and float(arena.lighting.state.get("night", 0.0)) >= 0.8)
 	_result_shown = true
 	# the web's #result: SPECTATE while the others still fight, PLAY AGAIN / MENU once it is over
 	var over := _winner != "" or _match_done
@@ -865,6 +909,7 @@ func _on_message(m: Dictionary) -> void:
 				_match_over()
 		"start":
 			_start_match(m)
+			_achievements_begin(m)
 			result.begin_match(m.get("roster", []), net.id)
 			matchload.show_load(String(m.get("map", "")), m.get("roster", []), net.id)
 		"lprog":
@@ -875,10 +920,13 @@ func _on_message(m: Dictionary) -> void:
 			_set_state(State.COUNTDOWN)
 		"snap":
 			_apply_snap(m)
+			if me != null:
+				Achievements.cubes(me.cubes)
 			hud_ui.on_snapshot(m)   # HUD hook
 		"ev":
 			for e in m.list:
 				result.track(e)   # the result screen's stats / podium
+				Achievements.on_event(e, net.id)
 				if _hold_attack(e):
 					continue
 				_apply_event(e)

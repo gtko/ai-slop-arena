@@ -41,9 +41,9 @@ Taken with the user on 2026-10-03: **D1 local simulation** (spike first), **D2 k
 
 | Feature | Godot | Port | Effort |
 |---|---|---|---|
-| Steam achievements / stats | ❌ | GodotSteam GDExtension, `platform/steam.gd`, sink of the achievements API | M |
-| Steam overlay, rich presence, language | ❌ | GodotSteam | S |
-| Steam lobbies / invites / P2P | ❌ | No P2P (Godot has no rules): a Steam lobby carries the server room code | M |
+| Steam achievements / stats | 🟡 | `achievements.gd` + `steam_platform.gd` over the GodotSteam GDExtension (`npm run godot:steam`); written and unit-tested against a stand-in, **not yet run against a real Steam** | M |
+| Steam overlay, rich presence, language | 🟡 | `steam_platform.gd` (same status as above) | S |
+| Steam lobbies / invites / P2P | 🟡 | No P2P (Godot has no rules): friends join the private room through the `connect` rich presence (Join game), no Steam lobby | M |
 | Epic | ❌ | "Windows (Epic)" preset, `-epicusername` / `-epiclocale` args | S |
 | Google Play Games | ❌ | godot-play-game-services plugin (Gradle build) | M |
 | Native shell (orientation, immersive, back button) | ✅ | safe area in the HUD, OpenGL fallback | S |
