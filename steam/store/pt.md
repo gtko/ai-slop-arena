@@ -5,7 +5,7 @@ Colar no Steamworks (Store Page Admin > Description), idioma "Português - Portu
 ## Nome do jogo
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## Descrição curta (máx. 300 caracteres)

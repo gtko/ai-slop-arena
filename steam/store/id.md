@@ -5,7 +5,7 @@ Tempel ke Steamworks (Store Page Admin > Description), bahasa "Bahasa Indonesia"
 ## Nama game
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## Deskripsi singkat (maks. 300 karakter)

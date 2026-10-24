@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, viewport-fit=cover">
 <title>$GODOT_PROJECT_NAME</title>
-<!-- AI SLOP ARENA web shell (godot/web_shell/src/shell.template.html, built into shell.html by
+<!-- SHELF ROYALE web shell (godot/web_shell/src/shell.template.html, built into shell.html by
      godot/web_shell/build_shell.py: the font and the two sprites are inlined, so the loader shows up
      with the page itself, before the engine's ~117 MB start downloading). -->
 <style>
@@ -44,7 +44,7 @@ $GODOT_HEAD_INCLUDE
 <div id="status">
   <canvas id="loader" aria-hidden="true"></canvas>
   <div id="boot" aria-hidden="true">Starting<i>.</i><i>.</i><i>.</i></div>
-  <div id="status-label" class="sr" role="status" aria-live="polite">AI SLOP ARENA: loading</div>
+  <div id="status-label" class="sr" role="status" aria-live="polite">SHELF ROYALE: loading</div>
   <div id="status-notice" role="alert"></div>
 </div>
 <script>
@@ -146,7 +146,7 @@ window.SlopLoader = (function () {
 
   // ------------------------------------------------------------------ layout
   let GK = 1, W = 0, H = 0, DPR = 1, F = 80, CH = 160, GY = 600, BAR = { x: 0, y: 0, w: 1, h: 1 }, portrait = false, capH = 50;
-  const TITLE = [['AI SLOP', true], ['ARENA', false]];
+  const TITLE = [['SHELF', true], ['ROYALE', false]];
   const letters = [];
   for (let li = 0; li < TITLE.length; li++) {
     for (const c of TITLE[li][0]) {
@@ -154,7 +154,7 @@ window.SlopLoader = (function () {
       letters.push({ c, line: li, gold: TITLE[li][1], hx: 0, hy: 0, x: 0, y: 0, w: 10, rot: 0, vx: 0, vy: 0, vr: 0,
         st: 0, t: 0, sq: 0, wob: 0, wobv: 0, hb: Math.random() * 6, aimed: false, dim: 0, k: 1 });
     }
-    if (li < TITLE.length - 1) letters.push({ sp: true, a: li, b: li + 1 });   // between "SLOP" and "ARENA" (one line only)
+    if (li < TITLE.length - 1) letters.push({ sp: true, a: li, b: li + 1 });   // between "SHELF" and "ROYALE" (one line only)
   }
   const L = letters.filter((l) => !l.sp);
 
@@ -179,7 +179,7 @@ window.SlopLoader = (function () {
     const m = g.measureText('H');
     capH = m.actualBoundingBoxAscent || F * 0.7;
     const track = F * 0.04;
-    // lines: one in landscape ("AI SLOP ARENA"), two in portrait ("AI SLOP" / "ARENA")
+    // lines: one in landscape ("SHELF ROYALE"), two in portrait ("SHELF" / "ROYALE")
     const lines = portrait ? [[0], [1]] : [[0, 1]];
     const cy0 = portrait ? H * 0.27 : H * 0.37;
     lines.forEach((set, row) => {
@@ -738,11 +738,11 @@ window.SlopLoader = (function () {
       const p = tot > 0 ? cur / tot : 0.95 * cur / (cur + 64 * 1048576);
       prog = Math.max(prog, clamp(p, 0, tot > 0 ? 1 : 0.95));
       if (prog >= 0.999) bootEl.classList.add('on');
-      label.textContent = 'AI SLOP ARENA: loading ' + Math.round(prog * 100) + '%';
+      label.textContent = 'SHELF ROYALE: loading ' + Math.round(prog * 100) + '%';
     },
     ready() {
       if (engineReady) return;
-      prog = 1; engineReady = true; readyT = 0; label.textContent = 'AI SLOP ARENA';
+      prog = 1; engineReady = true; readyT = 0; label.textContent = 'SHELF ROYALE';
       bootEl.classList.remove('on');
       clearNotice();   // the engine runs after all: drop the stall / slow boot / error notices
       setTimeout(hide, 2200);   // a background tab gets no animation frames: never keep the game hidden

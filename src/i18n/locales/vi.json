@@ -163,7 +163,7 @@
   "err.notFound": "Không tìm thấy phòng {code}",
   "err.noAnswer": "Chủ phòng không phản hồi",
   "err.left": "Đã rời phòng",
-  "err.notOurs": "Đây không phải phòng AI SLOP ARENA",
+  "err.notOurs": "Đây không phải phòng SHELF ROYALE",
   "err.noSteam": "Steam chưa được mở",
   "pause.title": "TẠM DỪNG",
   "pause.resume": "TIẾP TỤC",

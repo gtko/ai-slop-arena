@@ -163,7 +163,7 @@
   "err.notFound": "找不到房間 {code}",
   "err.noAnswer": "房主沒有回應",
   "err.left": "已離開房間",
-  "err.notOurs": "這不是 AI SLOP ARENA 的房間",
+  "err.notOurs": "這不是 SHELF ROYALE 的房間",
   "err.noSteam": "Steam 未執行",
   "pause.title": "已暫停",
   "pause.resume": "繼續",

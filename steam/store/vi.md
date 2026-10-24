@@ -5,7 +5,7 @@ Dán vào Steamworks (Store Page Admin > Description), ngôn ngữ "Tiếng Vi�
 ## Tên trò chơi
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## Mô tả ngắn (tối đa 300 ký tự)

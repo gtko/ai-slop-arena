@@ -1,4 +1,4 @@
-# Working on AI SLOP ARENA
+# Working on SHELF ROYALE
 
 Instructions for coding agents. Talk to the user in French; code, commits and docs stay in English.
 

@@ -5,7 +5,7 @@ Plakken in Steamworks (Store Page Admin > Description), taal "Nederlands".
 ## Naam van de game
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## Korte beschrijving (max. 300 tekens)

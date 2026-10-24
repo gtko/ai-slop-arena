@@ -163,7 +163,7 @@
   "err.notFound": "Huonetta {code} ei löytynyt",
   "err.noAnswer": "Isäntä ei vastannut",
   "err.left": "Poistuit huoneesta",
-  "err.notOurs": "Tämä ei ole AI SLOP ARENA -huone",
+  "err.notOurs": "Tämä ei ole SHELF ROYALE -huone",
   "err.noSteam": "Steam ei ole käynnissä",
   "pause.title": "TAUKO",
   "pause.resume": "JATKA",

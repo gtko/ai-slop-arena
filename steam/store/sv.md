@@ -5,7 +5,7 @@ Klistra in varje block i motsvarande fält i Steamworks (Store Page Admin > Desc
 ## Spelets namn
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## Kort beskrivning (max 300 tecken)

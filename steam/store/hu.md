@@ -5,7 +5,7 @@ Illeszd be a Steamworksbe (Store Page Admin > Description) a "Magyar" nyelvnél.
 ## A játék neve
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## Rövid leírás (legfeljebb 300 karakter)

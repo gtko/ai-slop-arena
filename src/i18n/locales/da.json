@@ -163,7 +163,7 @@
   "err.notFound": "Intet rum {code} fundet",
   "err.noAnswer": "Værten svarede ikke",
   "err.left": "Forlod rummet",
-  "err.notOurs": "Det er ikke et AI SLOP ARENA-rum",
+  "err.notOurs": "Det er ikke et SHELF ROYALE-rum",
   "err.noSteam": "Steam kører ikke",
   "pause.title": "PAUSE",
   "pause.resume": "FORTSÆT",

@@ -163,7 +163,7 @@
   "err.notFound": "Nie znaleziono pokoju {code}",
   "err.noAnswer": "Host nie odpowiedział",
   "err.left": "Opuszczono pokój",
-  "err.notOurs": "To nie jest pokój AI SLOP ARENA",
+  "err.notOurs": "To nie jest pokój SHELF ROYALE",
   "err.noSteam": "Steam nie jest uruchomiony",
   "pause.title": "PAUZA",
   "pause.resume": "WZNÓW",

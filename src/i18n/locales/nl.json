@@ -163,7 +163,7 @@
   "err.notFound": "Geen kamer {code} gevonden",
   "err.noAnswer": "De host reageerde niet",
   "err.left": "Kamer verlaten",
-  "err.notOurs": "Dat is geen AI SLOP ARENA-kamer",
+  "err.notOurs": "Dat is geen SHELF ROYALE-kamer",
   "err.noSteam": "Steam is niet actief",
   "pause.title": "GEPAUZEERD",
   "pause.resume": "HERVATTEN",

@@ -5,7 +5,7 @@ Steamworks（Store Page Admin > Description）の言語「日本語」(Japanese)
 ## ゲーム名
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## 短い説明（最大300文字）

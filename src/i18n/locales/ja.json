@@ -163,7 +163,7 @@
   "err.notFound": "ルーム {code} が見つかりません",
   "err.noAnswer": "ホストから応答がありません",
   "err.left": "ルームを退出しました",
-  "err.notOurs": "AI SLOP ARENA のルームではありません",
+  "err.notOurs": "SHELF ROYALE のルームではありません",
   "err.noSteam": "Steamが起動していません",
   "pause.title": "ポーズ中",
   "pause.resume": "再開",

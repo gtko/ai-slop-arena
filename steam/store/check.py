@@ -44,7 +44,7 @@ def check(path):
         errors.append('sections 1 to 4 must each hold a code block')
         return lang, errors, None
     name, short, about, _ = (c.group(1) for c in codes)
-    if name != 'AI SLOP ARENA':
+    if name != 'SHELF ROYALE':
         errors.append(f'game name is {name!r}')
     if len(short) > 300:
         errors.append(f'short description is {len(short)} characters (max 300)')

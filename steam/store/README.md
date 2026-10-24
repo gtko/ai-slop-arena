@@ -1,4 +1,4 @@
-# Fiche Steam : AI SLOP ARENA
+# Fiche Steam : SHELF ROYALE
 
 Tout ce qu'il faut pour remplir la page Steam dans Steamworks. Les textes à coller sont dans :
 
@@ -43,7 +43,7 @@ Les images de la description sont dans [extras/](extras/) (616 px de large, la l
 
 | Champ | Valeur |
 | --- | --- |
-| Nom | `AI SLOP ARENA` |
+| Nom | `SHELF ROYALE` |
 | Développeur / Éditeur | `gtko` |
 | Genres | Action, Casual, Free to Play (si gratuit, voir §5), Indie |
 | Catégories | Single-player, Online PvP, Steam Achievements, Steam Stats, Partial Controller Support (voir §7) |
@@ -120,7 +120,7 @@ Dans le questionnaire de contenu (Content Survey), section "AI Generated Content
 
 Ce texte est affiché publiquement sur la page. C'est cohérent avec le nom et l'histoire du jeu :
 on assume à fond au lieu de subir. Valve vérifie cette section à la revue ; la laisser vide pour un
-jeu qui s'appelle "AI SLOP" serait un refus assuré.
+jeu entièrement fait par IA serait un refus assuré.
 
 ## 5. Prix : recommandation "gratuit"
 
@@ -166,7 +166,7 @@ Par ordre d'importance :
    (`src/i18n/locales/*.json`, clés `ach.*`). À saisir dans Steamworks > Achievements, onglet de chaque langue.
    Si les traductions du jeu changent, reprendre les mêmes textes pour que Steam et le jeu disent la même chose.
 5. **Steam Cloud** : la progression locale est dans le `localStorage` d'Electron. Activer l'Auto-Cloud sur
-   `%APPDATA%/AI SLOP ARENA/Local Storage` pour la garder d'un PC à l'autre (les succès, eux, sont déjà sur Steam).
+   `%APPDATA%/SHELF ROYALE/Local Storage` pour la garder d'un PC à l'autre (les succès, eux, sont déjà sur Steam).
 6. **Rich presence** : les chaînes (`presence.*`, "Solo on {map}"...) se déclarent aussi par langue dans Steamworks.
 
 ## 9. Calendrier

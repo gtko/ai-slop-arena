@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="docs/readme/logo.png" alt="AI SLOP ARENA" width="640">
+  <img src="docs/readme/logo.png" alt="SHELF ROYALE" width="640">
 </p>
 
 <p align="center">
   <b>A cute top-down 3D brawler that runs in your browser.</b><br>
-  Brawl Stars–style Showdown in Godot 4 · real-time lighting and shadows · 5 arenas with live weather · online multiplayer
+  Last-one-standing arena brawler in Godot 4 · real-time lighting and shadows · 5 arenas with live weather · online multiplayer
 </p>
 
 <p align="center">
@@ -23,12 +23,12 @@ No install, no account: it runs in any modern browser, with mouse and keyboard, 
 
 ## Made by an AI in two evenings
 
-AI SLOP ARENA was built in **two evenings**, on September 22 and 23, 2026, after the kids went to bed: from 9 pm to midnight,
+SHELF ROYALE was built in **two evenings**, on September 22 and 23, 2026, after the kids went to bed: from 9 pm to midnight,
 twice in a row, while watching *Frieren*. So my involvement was very moderate.
 
 **Claude Opus 5.5**, running in **Claude Code Desktop in full-auto mode**, had all the ideas: it wrote the code, generated the assets,
 played the game in a browser to test it and fixed whatever was wrong. I only prompted and supervised: 35 prompts between two episodes,
-and saying "that's ugly" when it was ugly. The name is an honest nod: **everything** here was made by AI.
+and saying "that's ugly" when it was ugly. **Everything** here was made by AI, and the game says so.
 
 | 2 | 35 | ≈ 7,800 | 20 | $2.61 |
 | :---: | :---: | :---: | :---: | :---: |

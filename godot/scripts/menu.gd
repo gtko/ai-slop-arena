@@ -430,8 +430,8 @@ func _build_topnav() -> void:
 	if not phone:
 		var logo := _vbox(-6)
 		logo.alignment = BoxContainer.ALIGNMENT_CENTER
-		var l1 := _disp("AI SLOP", 22, UiKit.YELLOW, 6)
-		var l2 := _disp("ARENA", 17, Color.WHITE, 6, 2)
+		var l1 := _disp("SHELF", 22, UiKit.YELLOW, 6)
+		var l2 := _disp("ROYALE", 17, Color.WHITE, 6, 2)
 		logo.add_child(l1)
 		logo.add_child(l2)
 		row.add_child(logo)

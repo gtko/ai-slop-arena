@@ -6,7 +6,7 @@ Para "Español - Latinoamérica", usar es-419.md.
 ## Nombre del juego
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## Descripción breve (máx. 300 caracteres)

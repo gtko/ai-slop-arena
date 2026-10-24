@@ -1,4 +1,4 @@
-# AI SLOP ARENA, the Godot 4 client
+# SHELF ROYALE, the Godot 4 client
 
 The game client on every platform (web, Windows / Linux for Steam, Windows for Epic, Android, iOS).
 Nothing of the rules is ported: the Cloudflare room (`worker/index.js`) runs every match with the

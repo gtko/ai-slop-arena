@@ -5,7 +5,7 @@
 ## 游戏名称
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## 简短描述（最多 300 个字符）

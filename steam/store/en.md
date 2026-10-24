@@ -6,7 +6,7 @@ English is the default language: every other language falls back to it.
 ## Game name
 
 ```
-AI SLOP ARENA
+SHELF ROYALE
 ```
 
 ## Short description (max 300 characters)
