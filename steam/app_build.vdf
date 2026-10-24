@@ -1,8 +1,8 @@
 "AppBuild"
 {
 	"AppID"	"480"	// your app id
-	"Desc"	"SHELF ROYALE desktop build"
-	"ContentRoot"	"..\release\win-unpacked\"
+	"Desc"	"SHELF ROYALE Windows build"
+	"ContentRoot"	".\build\windows\"	// the unzipped AISlopArena-steam-windows.zip (exe, pck, addons)
 	"BuildOutput"	".\output\"
 	"Depots"
 	{

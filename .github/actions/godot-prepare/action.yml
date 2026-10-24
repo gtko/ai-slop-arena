@@ -16,6 +16,10 @@ runs:
         node godot/tools/export-data.mjs
         node godot/tools/export-i18n.mjs
         (cd godot/tools && npm ci && node convert-models.mjs)
+    - name: GodotSteam GDExtension (the Steam presets pack it; not committed, see scripts/fetch-godotsteam.mjs)
+      shell: bash
+      run: |
+        node scripts/fetch-godotsteam.mjs || echo "::warning::GodotSteam is not installed, the Steam builds will have no Steam features"
     - name: Version (package.json -> project.godot + every export preset)
       shell: bash
       run: node scripts/godot-version.mjs

@@ -96,7 +96,7 @@ static func _platform() -> String:
 		"Android": return "android"
 		"iOS": return "ios"
 		"Web": return "web"
-	return "steam"
+	return "epic" if OS.has_feature("epic") else "steam"
 
 static func _client_id() -> String:
 	var path := "user://cid"

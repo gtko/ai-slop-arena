@@ -126,8 +126,8 @@ is 11 MB): desktop and Android take it from the OS, the web export shows boxes. 
 | Android | `build/android/AISlopArena-android.apk` | Gradle build, `com.aislop.arena`, arm64-v8a + armeabi-v7a, min SDK 24, target SDK 36 |
 | Android (Play) | `build/android/AISlopArena-android.aab` | the same + x86_64, App Bundle for Google Play |
 | iOS | `build/ios/AISlopArena.ipa` | `ch.gtko.aisloparena`, Xcode project only (built on a Mac) |
-| Windows (Steam) / Windows (Epic) | `build/windows-steam/` / `build/windows-epic/` `AISlopArena.exe` | exe + pck, icon and version info (rcedit), features `steam` / `epic` |
-| Linux (Steam) | `build/linux-steam/AISlopArena.x86_64` | x86_64 + pck, feature `steam` |
+| Windows (Steam) / Windows (Epic) | `build/windows-steam/` / `build/windows-epic/` `AISlopArena.exe` | exe + pck, icon and version info (rcedit), features `steam` / `epic`; the Steam presets also pack the GodotSteam plugin (`npm run godot:steam`, [steam/README.md](../steam/README.md)) |
+| Linux (Steam) | `build/linux-steam/AISlopArena.x86_64` | x86_64 + pck, feature `steam`, GodotSteam plugin |
 
 - **Versions**: `npm run godot:version` writes `package.json`'s version into `project.godot` and every
   preset (Android versionCode / iOS build `(maj*10000+min*100+patch)*100+99`, `+N` for `-beta.N`);
